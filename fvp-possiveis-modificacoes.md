@@ -1714,7 +1714,8 @@ só acha registros do usuário logado; para os outros devolve `null`.
 No controller:
 
 ```php
-$event = $this->current_user->events()->findById((int) $request->getParam('id'));
+$id = (int) $request->getParam('id');
+$event = $this->current_user->events()->findById($id);
 
 if ($event === null) {
     throw new HTTPException('Evento não encontrado', 404);
