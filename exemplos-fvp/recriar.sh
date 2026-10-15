@@ -33,9 +33,13 @@ recriar() {
         return 0
     fi
 
-    git bundle verify "$dir/solucao.bundle" >/dev/null
+    # git clone valida o bundle; git bundle verify exigiria estar num repo.
     tmp="$(mktemp -d)"
-    git clone --quiet --branch "$branch" "$dir/solucao.bundle" "$tmp"
+    if ! git clone --quiet --branch "$branch" "$dir/solucao.bundle" "$tmp"; then
+        rm -rf "$tmp"
+        echo "bundle inválido ou corrompido: $dir/solucao.bundle" >&2
+        return 1
+    fi
     mkdir -p "$dir/projeto"
     mv "$tmp/.git" "$dir/projeto/.git"
     rm -rf "$tmp"
