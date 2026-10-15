@@ -1,0 +1,24 @@
+<form action="<?= $action ?>" method="post" novalidate>
+    <?php if (isset($method)) : ?>
+        <input type="hidden" name="_method" value="<?= $method ?>">
+    <?php endif; ?>
+
+    <div class="mb-3">
+        <label for="event_title" class="form-label">Título</label>
+        <input type="text" name="event[title]" id="event_title"
+               class="form-control <?= $event->errors('title') ? 'is-invalid' : '' ?>"
+               value="<?= htmlspecialchars((string) $event->title) ?>">
+        <div class="invalid-feedback"><?= $event->errors('title') ?></div>
+    </div>
+
+    <div class="mb-3">
+        <label for="event_starts_at" class="form-label">Início</label>
+        <input type="datetime-local" name="event[starts_at]" id="event_starts_at"
+               class="form-control <?= $event->errors('starts_at') ? 'is-invalid' : '' ?>"
+               value="<?= $event->startsAtForInput() ?>">
+        <div class="invalid-feedback"><?= $event->errors('starts_at') ?></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary"><?= $submitLabel ?></button>
+    <a href="<?= route('events.index') ?>" class="btn btn-link">Cancelar</a>
+</form>

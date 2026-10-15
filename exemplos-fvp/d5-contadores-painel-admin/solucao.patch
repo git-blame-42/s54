@@ -1,0 +1,167 @@
+From dc2f0b7d71b1d8f763f6482293739fc31d2cb141 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:10:55 -0300
+Subject: [PATCH] feat: Show user counters on admin dashboard
+
+---
+ app/Controllers/Admin/DashboardController.php | 10 ++++-
+ app/Models/User.php                           |  8 ++++
+ app/views/admin/dashboard/index.phtml         |  6 +++
+ tests/Acceptance/admin/AdminDashboardCest.php |  3 ++
+ .../Admin/DashboardControllerTest.php         | 42 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 21 ++++++++++
+ 6 files changed, 89 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Admin/DashboardController.php b/app/Controllers/Admin/DashboardController.php
+index 0a3e62f..1192a8a 100644
+--- a/app/Controllers/Admin/DashboardController.php
++++ b/app/Controllers/Admin/DashboardController.php
+@@ -2,13 +2,21 @@
+ 
+ namespace App\Controllers\Admin;
+ 
++use App\Models\User;
+ use Core\Http\Controllers\Controller;
+ 
+ class DashboardController extends Controller
+ {
+     public function index(): void
+     {
++        $totalUsers = count(User::all());
++        $totalAdmins = User::countByRole('admin');
++        $totalParticipants = User::countByRole('participant');
++
+         $title = 'Painel Administrativo';
+-        $this->render('admin/dashboard/index', compact('title'));
++        $this->render(
++            'admin/dashboard/index',
++            compact('title', 'totalUsers', 'totalAdmins', 'totalParticipants')
++        );
+     }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..f092c42 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -59,6 +59,14 @@ class User extends Model
+         return User::findBy(['email' => $email]);
+     }
+ 
++    /**
++     * Conta os usuários de um perfil usando o where() do ActiveRecord.
++     */
++    public static function countByRole(string $role): int
++    {
++        return count(static::where(['role' => $role]));
++    }
++
+     public function isAdmin(): bool
+     {
+         return $this->role === 'admin';
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index 05be497..c6f07ae 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1 +1,7 @@
+ <p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
++
++<ul>
++    <li>Usuários cadastrados: <?= $totalUsers ?></li>
++    <li>Administradores: <?= $totalAdmins ?></li>
++    <li>Participantes: <?= $totalParticipants ?></li>
++</ul>
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..38bae7b 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -53,5 +53,8 @@ class AdminDashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
++        $page->see('Usuários cadastrados: 2');
++        $page->see('Administradores: 1');
++        $page->see('Participantes: 1');
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..0fb08fe
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function test_index_should_show_user_counters(): void
++    {
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++
++        foreach (['fulano', 'beltrano'] as $name) {
++            (new User([
++                'name' => ucfirst($name),
++                'email' => "{$name}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456',
++            ]))->save();
++        }
++
++        Auth::login($admin);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\DashboardController'
++        );
++
++        $this->assertStringContainsString('Usuários cadastrados: 3', $response);
++        $this->assertStringContainsString('Administradores: 1', $response);
++        $this->assertStringContainsString('Participantes: 2', $response);
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..d27e1f1 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,25 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_where_should_filter_by_role(): void
++    {
++        $this->user->role = 'admin';
++        $this->user->save();
++
++        $admins = User::where(['role' => 'admin']);
++
++        $this->assertCount(1, $admins);
++        $this->assertEquals($this->user->id, $admins[0]->id);
++    }
++
++    public function test_count_by_role_should_count_users_with_the_role(): void
++    {
++        $this->user->role = 'admin';
++        $this->user->save();
++
++        $this->assertEquals(1, User::countByRole('admin'));
++        $this->assertEquals(1, User::countByRole('participant'));
++        $this->assertEquals(0, User::countByRole('moderator'));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

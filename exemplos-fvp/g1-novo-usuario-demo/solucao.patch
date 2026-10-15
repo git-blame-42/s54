@@ -1,0 +1,70 @@
+From 54da0e0095382d9856012d3b31d8d2a2d9c0ba6e Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:56:24 -0300
+Subject: [PATCH] chore: Add demo users to populate script
+
+---
+ README.md                      |  9 +++++++++
+ database/Populate/populate.php | 22 +++++++++++++++++++++-
+ 2 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index edcb07a..fa4275d 100644
+--- a/README.md
++++ b/README.md
+@@ -52,6 +52,15 @@ $ ./run db:reset
+ $ ./run db:populate
+ ```
+ 
++O populate recria as tabelas (chama `Database::migrate()`) e cria os usuários de demonstração, todos com a senha `123456`:
++
++| E-mail               | Nome               | Papel         |
++|----------------------|--------------------|---------------|
++| `admin@example.com`  | Administrador      | `admin`       |
++| `gestor@example.com` | Gestor             | `admin`       |
++| `user@example.com`   | Usuário            | `participant` |
++| `maria@example.com`  | Maria Participante | `participant` |
++
+ ### Fixed uploads folder permission
+ 
+ ```
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..77f965e 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -16,6 +16,15 @@ $admin = new User([
+ ]);
+ $admin->save();
+ 
++$manager = new User([
++    'name' => 'Gestor',
++    'email' => 'gestor@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'role' => 'admin'
++]);
++$manager->save();
++
+ $user = new User([
+     'name' => 'Usuário',
+     'email' => 'user@example.com',
+@@ -24,4 +33,15 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++$maria = new User([
++    'name' => 'Maria Participante',
++    'email' => 'maria@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456'
++]);
++$maria->save();
++
++echo "Usuários criados (senha 123456):\n";
++foreach ([$admin, $manager, $user, $maria] as $created) {
++    echo "  {$created->email} ({$created->role})\n";
++}
+-- 
+2.54.0 (Apple Git-157)
+

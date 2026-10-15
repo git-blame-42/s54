@@ -1,0 +1,250 @@
+From 7bc6f6244ffd25e83b8edb80a338d1c3b8d41790 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:10:43 -0300
+Subject: [PATCH] feat: Lock account after repeated failed logins
+
+---
+ app/Controllers/AuthenticationsController.php |  7 ++-
+ app/Models/User.php                           | 24 ++++++++-
+ database/schema.sql                           |  1 +
+ .../Acceptance/authentications/LoginCest.php  | 14 ++++++
+ .../AuthenticationsControllerTest.php         | 49 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 47 ++++++++++++++++++
+ 6 files changed, 140 insertions(+), 2 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..cd567da 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -21,11 +21,16 @@ class AuthenticationsController extends Controller
+         $params = $request->getParam('user');
+         $user = User::findByEmail($params['email']);
+ 
+-        if ($user && $user->authenticate($params['password'])) {
++        if ($user && $user->isLocked()) {
++            FlashMessage::danger('Conta bloqueada por excesso de tentativas.');
++            $this->redirectTo(route('users.login'));
++        } elseif ($user && $user->authenticate($params['password'])) {
++            $user->resetFailedAttempts();
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+         } else {
++            $user?->registerFailedAttempt();
+             FlashMessage::danger('E-mail ou senha inválidos!');
+             $this->redirectTo(route('users.login'));
+         }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..99a5dec 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -12,11 +12,14 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $encrypted_password
+  * @property string $role
+  * @property string|null $last_login_at
++ * @property int $failed_attempts
+  */
+ class User extends Model
+ {
+     protected static string $table = 'users';
+-    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
++    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at', 'failed_attempts'];
++
++    public const MAX_ATTEMPTS = 5;
+ 
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+@@ -31,6 +34,10 @@ class User extends Model
+         if ($this->role === null) {
+             $this->role = 'participant';
+         }
++
++        if ($this->failed_attempts === null) {
++            $this->failed_attempts = 0;
++        }
+     }
+ 
+     public function validates(): void
+@@ -69,6 +76,21 @@ class User extends Model
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+     }
+ 
++    public function registerFailedAttempt(): bool
++    {
++        return $this->update(['failed_attempts' => (int) $this->failed_attempts + 1]);
++    }
++
++    public function resetFailedAttempts(): bool
++    {
++        return $this->update(['failed_attempts' => 0]);
++    }
++
++    public function isLocked(): bool
++    {
++        return (int) $this->failed_attempts >= self::MAX_ATTEMPTS;
++    }
++
+     public function __set(string $property, mixed $value): void
+     {
+         parent::__set($property, $value);
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..0e94d29 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -9,6 +9,7 @@ CREATE TABLE users (
+     encrypted_password VARCHAR(255) NOT NULL,
+     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
+     last_login_at TIMESTAMP NULL,
++    failed_attempts INT NOT NULL DEFAULT 0,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     UNIQUE KEY uq_users_email (email)
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..786e29e 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -28,6 +28,20 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('E-mail ou senha inválidos!');
+     }
+ 
++    public function loginShouldBeBlockedAfterMaxFailedAttempts(AcceptanceTester $page): void
++    {
++        for ($i = 0; $i < User::MAX_ATTEMPTS; $i++) {
++            $page->login('fulano@example.com', 'wrong');
++            $page->see('E-mail ou senha inválidos!');
++        }
++
++        $page->login('fulano@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Conta bloqueada por excesso de tentativas.');
++        $page->dontSee('Login realizado com sucesso!');
++    }
++
+     public function loginWithValidCredentials(AcceptanceTester $page): void
+     {
+         $page->login('fulano@example.com', '123456');
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..d837eb3 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -53,6 +53,40 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /login', $response);
+     }
+ 
++    public function test_authenticate_with_invalid_credentials_should_increment_failed_attempts(): void
++    {
++        $this->loginWith('wrong');
++
++        $this->assertSame(1, (int) User::findById($this->user->id)->failed_attempts);
++    }
++
++    public function test_authenticate_after_max_failed_attempts_should_lock_account(): void
++    {
++        for ($i = 0; $i < User::MAX_ATTEMPTS; $i++) {
++            $this->loginWith('wrong');
++        }
++        unset($_SESSION['flash']);
++
++        $response = $this->loginWith('123456');
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertSame(1, substr_count($response, 'Location:'));
++        $this->assertSame('Conta bloqueada por excesso de tentativas.', $_SESSION['flash']['danger'] ?? null);
++    }
++
++    public function test_authenticate_with_valid_credentials_should_reset_failed_attempts(): void
++    {
++        for ($i = 1; $i < User::MAX_ATTEMPTS; $i++) {
++            $this->loginWith('wrong');
++        }
++
++        $this->loginWith('123456');
++
++        $this->assertTrue(Auth::check());
++        $this->assertSame(0, (int) User::findById($this->user->id)->failed_attempts);
++    }
++
+     public function test_destroy_should_logout(): void
+     {
+         Auth::login($this->user);
+@@ -62,4 +96,19 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertFalse(Auth::check());
+         $this->assertStringContainsString('Location: /login', $response);
+     }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    private function loginWith(string $password): string
++    {
++        return $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'fulano@example.com', 'password' => $password]]
++        );
++    }
+ }
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..84166d9 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,51 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_failed_attempts_should_be_zero_by_default(): void
++    {
++        $user = User::findById($this->user->id);
++
++        $this->assertSame(0, (int) $user->failed_attempts);
++        $this->assertFalse($user->isLocked());
++    }
++
++    public function test_register_failed_attempt_should_increment_counter(): void
++    {
++        $this->user->registerFailedAttempt();
++        $this->user->registerFailedAttempt();
++
++        $this->assertSame(2, (int) User::findById($this->user->id)->failed_attempts);
++    }
++
++    public function test_is_locked_should_be_false_before_max_attempts(): void
++    {
++        for ($i = 1; $i < User::MAX_ATTEMPTS; $i++) {
++            $this->user->registerFailedAttempt();
++        }
++
++        $this->assertFalse(User::findById($this->user->id)->isLocked());
++    }
++
++    public function test_is_locked_should_be_true_after_max_attempts(): void
++    {
++        for ($i = 0; $i < User::MAX_ATTEMPTS; $i++) {
++            $this->user->registerFailedAttempt();
++        }
++
++        $this->assertTrue(User::findById($this->user->id)->isLocked());
++    }
++
++    public function test_reset_failed_attempts_should_zero_counter_and_unlock(): void
++    {
++        for ($i = 0; $i < User::MAX_ATTEMPTS; $i++) {
++            $this->user->registerFailedAttempt();
++        }
++
++        $this->user->resetFailedAttempts();
++
++        $user = User::findById($this->user->id);
++        $this->assertSame(0, (int) $user->failed_attempts);
++        $this->assertFalse($user->isLocked());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,81 @@
+From 0dd5970586e434b82ac0e12b2ec44d7897505dba Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:43:08 -0300
+Subject: [PATCH] feat: Add warning and info flash message types
+
+---
+ lib/FlashMessage.php                | 10 ++++++++++
+ tests/Unit/Lib/FlashMessageTest.php | 26 ++++++++++++++++++++++++++
+ 2 files changed, 36 insertions(+)
+
+diff --git a/lib/FlashMessage.php b/lib/FlashMessage.php
+index 081732f..b3119f2 100644
+--- a/lib/FlashMessage.php
++++ b/lib/FlashMessage.php
+@@ -14,6 +14,16 @@ class FlashMessage
+         self::message('danger', $value);
+     }
+ 
++    public static function warning(string $value): void
++    {
++        self::message('warning', $value);
++    }
++
++    public static function info(string $value): void
++    {
++        self::message('info', $value);
++    }
++
+     public static function get(): array
+     {
+         $flash = $_SESSION['flash'] ?? [];
+diff --git a/tests/Unit/Lib/FlashMessageTest.php b/tests/Unit/Lib/FlashMessageTest.php
+index 5712587..3423db4 100644
+--- a/tests/Unit/Lib/FlashMessageTest.php
++++ b/tests/Unit/Lib/FlashMessageTest.php
+@@ -25,10 +25,30 @@ class FlashMessageTest extends TestCase
+         $this->assertEquals('Danger message', $flash['danger']);
+     }
+ 
++    public function test_warning(): void
++    {
++        FlashMessage::warning('Warning message');
++        $flash = FlashMessage::get();
++
++        $this->assertArrayHasKey('warning', $flash);
++        $this->assertEquals('Warning message', $flash['warning']);
++    }
++
++    public function test_info(): void
++    {
++        FlashMessage::info('Info message');
++        $flash = FlashMessage::get();
++
++        $this->assertArrayHasKey('info', $flash);
++        $this->assertEquals('Info message', $flash['info']);
++    }
++
+     public function test_get(): void
+     {
+         FlashMessage::success('Success message');
+         FlashMessage::danger('Danger message');
++        FlashMessage::warning('Warning message');
++        FlashMessage::info('Info message');
+ 
+         $flash = FlashMessage::get();
+         $this->assertEmpty(FlashMessage::get());
+@@ -38,5 +58,11 @@ class FlashMessageTest extends TestCase
+ 
+         $this->assertArrayHasKey('danger', $flash);
+         $this->assertEquals('Danger message', $flash['danger']);
++
++        $this->assertArrayHasKey('warning', $flash);
++        $this->assertEquals('Warning message', $flash['warning']);
++
++        $this->assertArrayHasKey('info', $flash);
++        $this->assertEquals('Info message', $flash['info']);
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

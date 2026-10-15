@@ -1,0 +1,146 @@
+From cb172dda401fcdff241ce6dcbd668eb91a161dd0 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:16 -0300
+Subject: [PATCH] refactor: Replace role magic strings with constants
+
+---
+ app/Models/User.php                           | 12 +++++-
+ database/Populate/populate.php                |  4 +-
+ tests/Acceptance/admin/AdminDashboardCest.php |  2 +-
+ tests/Unit/Models/Users/UserTest.php          | 41 ++++++++++++++++++-
+ 4 files changed, 52 insertions(+), 7 deletions(-)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..ea25224 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -15,6 +15,9 @@ use Core\Database\ActiveRecord\Model;
+  */
+ class User extends Model
+ {
++    public const ROLE_ADMIN = 'admin';
++    public const ROLE_PARTICIPANT = 'participant';
++
+     protected static string $table = 'users';
+     protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
+ 
+@@ -29,7 +32,7 @@ class User extends Model
+         parent::__construct($params);
+ 
+         if ($this->role === null) {
+-            $this->role = 'participant';
++            $this->role = self::ROLE_PARTICIPANT;
+         }
+     }
+ 
+@@ -61,7 +64,12 @@ class User extends Model
+ 
+     public function isAdmin(): bool
+     {
+-        return $this->role === 'admin';
++        return $this->role === self::ROLE_ADMIN;
++    }
++
++    public function isParticipant(): bool
++    {
++        return $this->role === self::ROLE_PARTICIPANT;
+     }
+ 
+     public function registerLogin(): bool
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..bdd5e95 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -12,7 +12,7 @@ $admin = new User([
+     'email' => 'admin@example.com',
+     'password' => '123456',
+     'password_confirmation' => '123456',
+-    'role' => 'admin'
++    'role' => User::ROLE_ADMIN
+ ]);
+ $admin->save();
+ 
+@@ -24,4 +24,4 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo "Usuários criados: {$admin->email} ({$admin->role}) e {$user->email} ({$user->role}), senha 123456\n";
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..4bce636 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -16,7 +16,7 @@ class AdminDashboardCest extends BaseAcceptanceCest
+             'email' => 'admin@example.com',
+             'password' => '123456',
+             'password_confirmation' => '123456',
+-            'role' => 'admin'
++            'role' => User::ROLE_ADMIN
+         ]);
+         $admin->save();
+ 
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..bb2597c 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -133,18 +133,55 @@ class UserTest extends TestCase
+ 
+     public function test_is_admin_should_return_false_by_default(): void
+     {
+-        $this->assertEquals('participant', User::findById($this->user->id)->role);
++        $this->assertEquals(User::ROLE_PARTICIPANT, User::findById($this->user->id)->role);
+         $this->assertFalse($this->user->isAdmin());
+     }
+ 
+     public function test_is_admin_should_return_true_for_admin_role(): void
+     {
+-        $this->user->role = 'admin';
++        $this->user->role = User::ROLE_ADMIN;
+         $this->user->save();
+ 
+         $this->assertTrue(User::findById($this->user->id)->isAdmin());
+     }
+ 
++    public function test_role_constants_should_match_database_enum_values(): void
++    {
++        $this->assertSame('admin', User::ROLE_ADMIN);
++        $this->assertSame('participant', User::ROLE_PARTICIPANT);
++    }
++
++    public function test_new_user_should_have_participant_role_by_default(): void
++    {
++        $user = new User(['name' => 'Novo', 'email' => 'novo@example.com']);
++
++        $this->assertSame(User::ROLE_PARTICIPANT, $user->role);
++    }
++
++    public function test_is_participant_should_return_true_by_default(): void
++    {
++        $this->assertTrue($this->user->isParticipant());
++        $this->assertTrue(User::findById($this->user->id)->isParticipant());
++    }
++
++    public function test_is_participant_should_return_false_for_admin_role(): void
++    {
++        $this->user->role = User::ROLE_ADMIN;
++        $this->user->save();
++
++        $admin = User::findById($this->user->id);
++        $this->assertFalse($admin->isParticipant());
++        $this->assertTrue($admin->isAdmin());
++    }
++
++    public function test_role_given_in_constructor_should_be_kept(): void
++    {
++        $admin = new User(['name' => 'Admin', 'email' => 'admin@example.com', 'role' => User::ROLE_ADMIN]);
++
++        $this->assertSame(User::ROLE_ADMIN, $admin->role);
++        $this->assertTrue($admin->isAdmin());
++    }
++
+     public function test_last_login_at_should_be_null_by_default(): void
+     {
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+-- 
+2.54.0 (Apple Git-157)
+

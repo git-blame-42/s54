@@ -1,0 +1,120 @@
+From 180d2a6babdcb51905dd82a2143913ad990504dc Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:07:34 -0300
+Subject: [PATCH] refactor: Move populate logic into classes
+
+---
+ database/Populate/UsersPopulate.php           | 30 +++++++++++++++++++
+ database/Populate/populate.php                | 21 ++-----------
+ .../Database/Populate/UsersPopulateTest.php   | 29 ++++++++++++++++++
+ 3 files changed, 61 insertions(+), 19 deletions(-)
+ create mode 100644 database/Populate/UsersPopulate.php
+ create mode 100644 tests/Unit/Database/Populate/UsersPopulateTest.php
+
+diff --git a/database/Populate/UsersPopulate.php b/database/Populate/UsersPopulate.php
+new file mode 100644
+index 0000000..94a97eb
+--- /dev/null
++++ b/database/Populate/UsersPopulate.php
+@@ -0,0 +1,30 @@
++<?php
++
++namespace Database\Populate;
++
++use App\Models\User;
++
++class UsersPopulate
++{
++    public static function populate(): void
++    {
++        $admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $user = new User([
++            'name' => 'Usuário',
++            'email' => 'user@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++    }
++}
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..2803745 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -2,26 +2,9 @@
+ 
+ require __DIR__ . '/../../config/bootstrap.php';
+ 
+-use App\Models\User;
+ use Core\Database\Database;
++use Database\Populate\UsersPopulate;
+ 
+ Database::migrate();
+ 
+-$admin = new User([
+-    'name' => 'Administrador',
+-    'email' => 'admin@example.com',
+-    'password' => '123456',
+-    'password_confirmation' => '123456',
+-    'role' => 'admin'
+-]);
+-$admin->save();
+-
+-$user = new User([
+-    'name' => 'Usuário',
+-    'email' => 'user@example.com',
+-    'password' => '123456',
+-    'password_confirmation' => '123456'
+-]);
+-$user->save();
+-
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++UsersPopulate::populate();
+diff --git a/tests/Unit/Database/Populate/UsersPopulateTest.php b/tests/Unit/Database/Populate/UsersPopulateTest.php
+new file mode 100644
+index 0000000..0fa87e6
+--- /dev/null
++++ b/tests/Unit/Database/Populate/UsersPopulateTest.php
+@@ -0,0 +1,29 @@
++<?php
++
++namespace Tests\Unit\Database\Populate;
++
++use App\Models\User;
++use Database\Populate\UsersPopulate;
++use Tests\TestCase;
++
++class UsersPopulateTest extends TestCase
++{
++    public function test_populate_should_create_admin_and_participant(): void
++    {
++        $output = $this->getOutput(fn() => UsersPopulate::populate());
++
++        $this->assertCount(2, User::all());
++
++        $admin = User::findByEmail('admin@example.com');
++        $this->assertNotNull($admin);
++        $this->assertSame('admin', $admin->role);
++        $this->assertTrue($admin->authenticate('123456'));
++
++        $user = User::findByEmail('user@example.com');
++        $this->assertNotNull($user);
++        $this->assertSame('participant', $user->role);
++        $this->assertTrue($user->authenticate('123456'));
++
++        $this->assertStringContainsString('Usuários criados', $output);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

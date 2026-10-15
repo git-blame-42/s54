@@ -1,0 +1,679 @@
+From ed929f839929f1de1e7f37016ea76edc7543ad15 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:08:49 -0300
+Subject: [PATCH 1/7] feat: Redirect to home after logout
+
+---
+ app/Controllers/AuthenticationsController.php                  | 2 +-
+ tests/Acceptance/authentications/LoginCest.php                 | 2 +-
+ .../Integration/Controllers/AuthenticationsControllerTest.php  | 3 ++-
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..e0e9148 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -35,6 +35,6 @@ class AuthenticationsController extends Controller
+     {
+         Auth::logout();
+         FlashMessage::success('Logout realizado com sucesso!');
+-        $this->redirectTo(route('users.login'));
++        $this->redirectTo(route('root'));
+     }
+ }
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..36b4dc3 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -42,7 +42,7 @@ class LoginCest extends BaseAcceptanceCest
+         $page->login('fulano@example.com', '123456');
+         $page->logout();
+ 
+-        $page->seeCurrentUrlEquals('/login');
++        $page->seeCurrentUrlEquals('/');
+         $page->see('Logout realizado com sucesso!');
+         $page->see('Login');
+     }
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..ac6b1ce 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -60,6 +60,7 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $response = $this->get(action: 'destroy', controllerName: 'App\Controllers\AuthenticationsController');
+ 
+         $this->assertFalse(Auth::check());
+-        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertStringContainsString('Location: /', $response);
++        $this->assertStringNotContainsString('Location: /login', $response);
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From d6b53abc5c432fa529c9f7ef9d20273882b1e816 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:11:15 -0300
+Subject: [PATCH 2/7] feat: Distinguish unknown email from wrong password on
+ login
+
+---
+ app/Controllers/AuthenticationsController.php | 19 ++++++++++-----
+ .../Acceptance/authentications/LoginCest.php  | 12 ++++++++--
+ .../AuthenticationsControllerTest.php         | 24 ++++++++++++++++++-
+ 3 files changed, 46 insertions(+), 9 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index e0e9148..0f115c2 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -21,14 +21,21 @@ class AuthenticationsController extends Controller
+         $params = $request->getParam('user');
+         $user = User::findByEmail($params['email']);
+ 
+-        if ($user && $user->authenticate($params['password'])) {
+-            Auth::login($user);
+-            FlashMessage::success('Login realizado com sucesso!');
+-            $this->redirectTo(route('dashboard.index'));
+-        } else {
+-            FlashMessage::danger('E-mail ou senha inválidos!');
++        if ($user === null) {
++            FlashMessage::danger('E-mail não cadastrado!');
+             $this->redirectTo(route('users.login'));
++            return;
+         }
++
++        if (!$user->authenticate($params['password'])) {
++            FlashMessage::danger('Senha incorreta!');
++            $this->redirectTo(route('users.login'));
++            return;
++        }
++
++        Auth::login($user);
++        FlashMessage::success('Login realizado com sucesso!');
++        $this->redirectTo(route('dashboard.index'));
+     }
+ 
+     public function destroy(): void
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 36b4dc3..30aceee 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -20,12 +20,20 @@ class LoginCest extends BaseAcceptanceCest
+         $user->save();
+     }
+ 
+-    public function loginWithInvalidCredentials(AcceptanceTester $page): void
++    public function loginWithWrongPassword(AcceptanceTester $page): void
+     {
+         $page->login('fulano@example.com', 'wrong');
+ 
+         $page->seeCurrentUrlEquals('/login');
+-        $page->see('E-mail ou senha inválidos!');
++        $page->see('Senha incorreta!');
++    }
++
++    public function loginWithUnknownEmail(AcceptanceTester $page): void
++    {
++        $page->login('ninguem@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('E-mail não cadastrado!');
+     }
+ 
+     public function loginWithValidCredentials(AcceptanceTester $page): void
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index ac6b1ce..3d46614 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Integration\Controllers;
+ 
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use Lib\FlashMessage;
+ 
+ class AuthenticationsControllerTest extends ControllerTestCase
+ {
+@@ -21,6 +22,13 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->user->save();
+     }
+ 
++    public function tearDown(): void
++    {
++        // O ControllerTestCase limpa só $_SESSION['user']; o flash vazaria para o próximo teste.
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
+     public function test_render_login_page(): void
+     {
+         $response = $this->get(action: 'new', controllerName: 'App\Controllers\AuthenticationsController');
+@@ -41,7 +49,7 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /dashboard', $response);
+     }
+ 
+-    public function test_authenticate_with_invalid_credentials_should_not_login(): void
++    public function test_authenticate_with_wrong_password_should_not_login(): void
+     {
+         $response = $this->post(
+             action: 'authenticate',
+@@ -51,6 +59,20 @@ class AuthenticationsControllerTest extends ControllerTestCase
+ 
+         $this->assertFalse(Auth::check());
+         $this->assertStringContainsString('Location: /login', $response);
++        $this->assertEquals(['danger' => 'Senha incorreta!'], FlashMessage::get());
++    }
++
++    public function test_authenticate_with_unknown_email_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'ninguem@example.com', 'password' => '123456']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertEquals(['danger' => 'E-mail não cadastrado!'], FlashMessage::get());
+     }
+ 
+     public function test_destroy_should_logout(): void
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 6b5b91e6c0e714cfeb35c55184b73953e8243706 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:12:02 -0300
+Subject: [PATCH 3/7] feat: Use page title in the document title
+
+---
+ app/views/layouts/application.phtml                        | 2 +-
+ tests/Acceptance/home/HomeIndexCest.php                    | 1 +
+ .../Controllers/AuthenticationsControllerTest.php          | 7 +++++++
+ 3 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/app/views/layouts/application.phtml b/app/views/layouts/application.phtml
+index 5e52801..6aa5407 100644
+--- a/app/views/layouts/application.phtml
++++ b/app/views/layouts/application.phtml
+@@ -3,7 +3,7 @@
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <title>Eventos do Câmpus</title>
++    <title><?= $title ?> - Eventos do Câmpus</title>
+ 
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+     <script src="/assets/js/application.js"></script>
+diff --git a/tests/Acceptance/home/HomeIndexCest.php b/tests/Acceptance/home/HomeIndexCest.php
+index 4f53a9c..4a595d5 100644
+--- a/tests/Acceptance/home/HomeIndexCest.php
++++ b/tests/Acceptance/home/HomeIndexCest.php
+@@ -11,5 +11,6 @@ class HomeIndexCest extends BaseAcceptanceCest
+     {
+         $page->amOnPage('/');
+         $page->see('Home Page', '//h1');
++        $page->seeInTitle('Home Page - Eventos do Câmpus');
+     }
+ }
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 3d46614..49d0093 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -37,6 +37,13 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertMatchesRegularExpression('/Entrar/', $response);
+     }
+ 
++    public function test_render_login_page_should_use_page_title_in_document_title(): void
++    {
++        $response = $this->get(action: 'new', controllerName: 'App\Controllers\AuthenticationsController');
++
++        $this->assertStringContainsString('<title>Login - Eventos do Câmpus</title>', $response);
++    }
++
+     public function test_authenticate_with_valid_credentials_should_login(): void
+     {
+         $response = $this->post(
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 05bc3fb4de1f51b8aec1106a9f34cf5bba9774d6 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:13:50 -0300
+Subject: [PATCH 4/7] feat: Show admin-only content on user dashboard
+
+---
+ app/views/dashboard/index.phtml               |  7 +++
+ tests/Acceptance/dashboard/DashboardCest.php  | 20 ++++++++
+ .../Controllers/DashboardControllerTest.php   | 46 +++++++++++++++++++
+ 3 files changed, 73 insertions(+)
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index 0d90364..f65deab 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1 +1,8 @@
+ <p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++
++<?php if ($this->currentUser()->isAdmin()) : ?>
++    <div class="alert alert-info">
++        Você é administrador(a).
++        <a href="<?= route('admin.dashboard.index') ?>">Ir para a área administrativa</a>
++    </div>
++<?php endif; ?>
+diff --git a/tests/Acceptance/dashboard/DashboardCest.php b/tests/Acceptance/dashboard/DashboardCest.php
+index a82e911..4b3426a 100644
+--- a/tests/Acceptance/dashboard/DashboardCest.php
++++ b/tests/Acceptance/dashboard/DashboardCest.php
+@@ -35,5 +35,25 @@ class DashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel do Usuário', '//h1');
+         $page->see('Bem-vindo(a), Fulano!');
++        $page->dontSee('Você é administrador(a).');
++    }
++
++    public function accessDashboardAsAdminShowsAdminOnlyContent(AcceptanceTester $page): void
++    {
++        $admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/dashboard');
++
++        $page->see('Você é administrador(a).');
++        $page->click('Ir para a área administrativa');
++        $page->seeCurrentUrlEquals('/admin');
+     }
+ }
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..87aa483
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,46 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    /**
++     * @param array<string, mixed> $attributes
++     */
++    private function createUser(array $attributes = []): User
++    {
++        $user = new User(array_merge([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ], $attributes));
++        $user->save();
++
++        return $user;
++    }
++
++    public function test_index_as_admin_should_show_admin_only_content(): void
++    {
++        Auth::login($this->createUser(['email' => 'admin@example.com', 'role' => 'admin']));
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Bem-vindo(a), Fulano!', $response);
++        $this->assertStringContainsString('Você é administrador(a).', $response);
++        $this->assertStringContainsString('Ir para a área administrativa', $response);
++    }
++
++    public function test_index_as_regular_user_should_hide_admin_only_content(): void
++    {
++        Auth::login($this->createUser());
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Bem-vindo(a), Fulano!', $response);
++        $this->assertStringNotContainsString('Você é administrador(a).', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 1e6ea6444aea488ee3ab0744169c3385842db56d Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:14:50 -0300
+Subject: [PATCH 5/7] feat: Redirect authenticated users from home to dashboard
+
+---
+ app/Controllers/HomeController.php            |  6 +++++
+ tests/Acceptance/home/HomeIndexCest.php       | 18 +++++++++++++++
+ .../Controllers/HomeControllerTest.php        | 23 +++++++++++++++++++
+ 3 files changed, 47 insertions(+)
+
+diff --git a/app/Controllers/HomeController.php b/app/Controllers/HomeController.php
+index fce215f..bfb3615 100644
+--- a/app/Controllers/HomeController.php
++++ b/app/Controllers/HomeController.php
+@@ -3,11 +3,17 @@
+ namespace App\Controllers;
+ 
+ use Core\Http\Controllers\Controller;
++use Lib\Authentication\Auth;
+ 
+ class HomeController extends Controller
+ {
+     public function index(): void
+     {
++        if (Auth::check()) {
++            $this->redirectTo(route('dashboard.index'));
++            return;
++        }
++
+         $title = 'Home Page';
+         $this->render('home/index', compact('title'));
+     }
+diff --git a/tests/Acceptance/home/HomeIndexCest.php b/tests/Acceptance/home/HomeIndexCest.php
+index 4a595d5..ea6a97f 100644
+--- a/tests/Acceptance/home/HomeIndexCest.php
++++ b/tests/Acceptance/home/HomeIndexCest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Tests\Acceptance\home;
+ 
++use App\Models\User;
+ use Tests\Acceptance\BaseAcceptanceCest;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -13,4 +14,21 @@ class HomeIndexCest extends BaseAcceptanceCest
+         $page->see('Home Page', '//h1');
+         $page->seeInTitle('Home Page - Eventos do Câmpus');
+     }
++
++    public function authenticatedUserIsRedirectedToDashboard(AcceptanceTester $page): void
++    {
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Painel do Usuário', '//h1');
++    }
+ }
+diff --git a/tests/Integration/Controllers/HomeControllerTest.php b/tests/Integration/Controllers/HomeControllerTest.php
+index b258185..747d922 100644
+--- a/tests/Integration/Controllers/HomeControllerTest.php
++++ b/tests/Integration/Controllers/HomeControllerTest.php
+@@ -2,6 +2,9 @@
+ 
+ namespace Tests\Integration\Controllers;
+ 
++use App\Models\User;
++use Lib\Authentication\Auth;
++
+ class HomeControllerTest extends ControllerTestCase
+ {
+     public function test_render_home_page(): void
+@@ -14,4 +17,24 @@ class HomeControllerTest extends ControllerTestCase
+         $this->assertMatchesRegularExpression('/<h1>\s*Home Page\s*<\/h1>/', $response);
+         $this->assertMatchesRegularExpression('/TSI3D Framework Template/', $response);
+     }
++
++    public function test_index_when_authenticated_should_redirect_to_dashboard(): void
++    {
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++        Auth::login($user);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\HomeController'
++        );
++
++        $this->assertStringContainsString('Location: /dashboard', $response);
++        $this->assertStringNotContainsString('TSI3D Framework Template', $response);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 4aa27c0515b1afc78b1477e8f06d840fbf20b98e Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:16:06 -0300
+Subject: [PATCH 6/7] refactor: Rename participant role to user
+
+---
+ app/Models/User.php                  | 2 +-
+ database/Populate/populate.php       | 2 +-
+ database/schema.sql                  | 2 +-
+ tests/Unit/Models/Users/UserTest.php | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..92dfddd 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -29,7 +29,7 @@ class User extends Model
+         parent::__construct($params);
+ 
+         if ($this->role === null) {
+-            $this->role = 'participant';
++            $this->role = 'user';
+         }
+     }
+ 
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..690ef83 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -24,4 +24,4 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo "Usuários criados: {$admin->email} (admin) e {$user->email} (user), senha 123456\n";
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..9561236 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -7,7 +7,7 @@ CREATE TABLE users (
+     name VARCHAR(255) NOT NULL,
+     email VARCHAR(255) NOT NULL,
+     encrypted_password VARCHAR(255) NOT NULL,
+-    role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
++    role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+     last_login_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..d23adcb 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -133,7 +133,7 @@ class UserTest extends TestCase
+ 
+     public function test_is_admin_should_return_false_by_default(): void
+     {
+-        $this->assertEquals('participant', User::findById($this->user->id)->role);
++        $this->assertEquals('user', User::findById($this->user->id)->role);
+         $this->assertFalse($this->user->isAdmin());
+     }
+ 
+-- 
+2.54.0 (Apple Git-157)
+
+
+From ee55056a867abad124bf8f57de7347a149f55b2f Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:17:43 -0300
+Subject: [PATCH 7/7] feat: Show member since date on profile
+
+---
+ app/Models/User.php                           | 25 +++++++++++++++++
+ app/views/dashboard/index.phtml               |  1 +
+ tests/Acceptance/dashboard/DashboardCest.php  |  1 +
+ .../Controllers/DashboardControllerTest.php   | 12 +++++++++
+ tests/Unit/Models/Users/UserTest.php          | 27 +++++++++++++++++++
+ 5 files changed, 66 insertions(+)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 92dfddd..65056b5 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -4,6 +4,8 @@ namespace App\Models;
+ 
+ use Lib\Validations;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use DateTimeImmutable;
+ 
+ /**
+  * @property int $id
+@@ -69,6 +71,29 @@ class User extends Model
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+     }
+ 
++    /**
++     * Data de cadastro, lida direto do banco. `created_at` fica fora de `$columns`
++     * de propósito: lá dentro, save() mandaria NULL para uma coluna NOT NULL.
++     */
++    public function createdAt(string $format = 'Y-m-d H:i:s'): ?string
++    {
++        if ($this->newRecord()) {
++            return null;
++        }
++
++        $table = static::$table;
++        $stmt = Database::getDatabaseConn()->prepare("SELECT created_at FROM {$table} WHERE id = :id");
++        $stmt->bindValue(':id', $this->id);
++        $stmt->execute();
++
++        $createdAt = $stmt->fetchColumn();
++        if ($createdAt === false || $createdAt === null) {
++            return null;
++        }
++
++        return (new DateTimeImmutable((string) $createdAt))->format($format);
++    }
++
+     public function __set(string $property, mixed $value): void
+     {
+         parent::__set($property, $value);
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index f65deab..16129e1 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1,4 +1,5 @@
+ <p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++<p>Membro desde <?= $this->currentUser()->createdAt('d/m/Y') ?>.</p>
+ 
+ <?php if ($this->currentUser()->isAdmin()) : ?>
+     <div class="alert alert-info">
+diff --git a/tests/Acceptance/dashboard/DashboardCest.php b/tests/Acceptance/dashboard/DashboardCest.php
+index 4b3426a..b4ec9dd 100644
+--- a/tests/Acceptance/dashboard/DashboardCest.php
++++ b/tests/Acceptance/dashboard/DashboardCest.php
+@@ -35,6 +35,7 @@ class DashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel do Usuário', '//h1');
+         $page->see('Bem-vindo(a), Fulano!');
++        $page->see('Membro desde');
+         $page->dontSee('Você é administrador(a).');
+     }
+ 
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+index 87aa483..b66a868 100644
+--- a/tests/Integration/Controllers/DashboardControllerTest.php
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Integration\Controllers;
+ 
+ use App\Models\User;
++use Core\Database\Database;
+ use Lib\Authentication\Auth;
+ 
+ class DashboardControllerTest extends ControllerTestCase
+@@ -43,4 +44,15 @@ class DashboardControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Bem-vindo(a), Fulano!', $response);
+         $this->assertStringNotContainsString('Você é administrador(a).', $response);
+     }
++
++    public function test_index_should_show_member_since_date(): void
++    {
++        $user = $this->createUser();
++        Database::exec("UPDATE users SET created_at = '2024-03-15 10:30:00' WHERE id = {$user->id}");
++        Auth::login($user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Membro desde 15/03/2024.', $response);
++    }
+ }
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index d23adcb..55c8ef4 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Unit\Models\Users;
+ 
+ use App\Models\User;
++use Core\Database\Database;
+ use Tests\TestCase;
+ 
+ class UserTest extends TestCase
+@@ -165,4 +166,30 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_created_at_should_be_filled_by_the_database(): void
++    {
++        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $this->user->createdAt());
++    }
++
++    public function test_created_at_should_use_the_given_format(): void
++    {
++        Database::exec("UPDATE users SET created_at = '2024-03-15 10:30:00' WHERE id = {$this->user->id}");
++
++        $this->assertEquals('2024-03-15 10:30:00', $this->user->createdAt());
++        $this->assertEquals('15/03/2024', $this->user->createdAt('d/m/Y'));
++    }
++
++    public function test_created_at_should_be_null_for_new_record(): void
++    {
++        $this->assertNull((new User())->createdAt());
++    }
++
++    public function test_save_should_keep_working_without_created_at_in_columns(): void
++    {
++        $this->assertNotContains('created_at', User::columns());
++        $this->user->name = 'Outro nome';
++
++        $this->assertTrue($this->user->save());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

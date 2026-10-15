@@ -1,0 +1,93 @@
+From 5e1eeb1f530c5253c4a9e2a2b6d314215296913f Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:45:27 -0300
+Subject: [PATCH] feat: Redirect admin to admin dashboard after login
+
+---
+ app/Controllers/AuthenticationsController.php |  7 +++++-
+ tests/Acceptance/admin/AdminDashboardCest.php | 17 ++++++++++++++
+ .../AuthenticationsControllerTest.php         | 22 +++++++++++++++++++
+ 3 files changed, 45 insertions(+), 1 deletion(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..572b559 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -24,7 +24,12 @@ class AuthenticationsController extends Controller
+         if ($user && $user->authenticate($params['password'])) {
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+-            $this->redirectTo(route('dashboard.index'));
++
++            // Administrador cai direto no painel administrativo.
++            $target = $user->isAdmin()
++                ? route('admin.dashboard.index')
++                : route('dashboard.index');
++            $this->redirectTo($target);
+         } else {
+             FlashMessage::danger('E-mail ou senha inválidos!');
+             $this->redirectTo(route('users.login'));
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..3eaf210 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -46,6 +46,23 @@ class AdminDashboardCest extends BaseAcceptanceCest
+         $page->see('Acesso restrito a administradores');
+     }
+ 
++    public function loginAsAdminShouldLandOnAdminDashboard(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/admin');
++        $page->see('Login realizado com sucesso!');
++        $page->see('Painel Administrativo', '//h1');
++    }
++
++    public function loginAsCommonUserShouldLandOnUserDashboard(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Painel do Usuário', '//h1');
++    }
++
+     public function accessAdminAsAdmin(AcceptanceTester $page): void
+     {
+         $page->login('admin@example.com', '123456');
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..6d649b7 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -41,6 +41,28 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /dashboard', $response);
+     }
+ 
++    public function test_authenticate_admin_should_redirect_to_admin_dashboard(): void
++    {
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'admin@example.com', 'password' => '123456']]
++        );
++
++        $this->assertTrue(Auth::check());
++        $this->assertStringContainsString('Location: /admin', $response);
++        $this->assertStringNotContainsString('Location: /dashboard', $response);
++    }
++
+     public function test_authenticate_with_invalid_credentials_should_not_login(): void
+     {
+         $response = $this->post(
+-- 
+2.54.0 (Apple Git-157)
+

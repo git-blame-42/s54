@@ -1,0 +1,359 @@
+From 432adce34dea78ee6984a6d5b4743906b91b1dec Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:42:10 -0300
+Subject: [PATCH 1/2] refactor: Centralize redirect logic in BaseMiddleware
+
+---
+ app/Middleware/Admin.php          | 13 ++-----------
+ app/Middleware/Authenticate.php   | 13 ++-----------
+ app/Middleware/BaseMiddleware.php | 32 +++++++++++++++++++++++++++++++
+ 3 files changed, 36 insertions(+), 22 deletions(-)
+ create mode 100644 app/Middleware/BaseMiddleware.php
+
+diff --git a/app/Middleware/Admin.php b/app/Middleware/Admin.php
+index 782069b..aff8484 100644
+--- a/app/Middleware/Admin.php
++++ b/app/Middleware/Admin.php
+@@ -2,12 +2,10 @@
+ 
+ namespace App\Middleware;
+ 
+-use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+-use Lib\FlashMessage;
+ 
+-class Admin implements Middleware
++class Admin extends BaseMiddleware
+ {
+     public function handle(Request $request): void
+     {
+@@ -15,14 +13,7 @@ class Admin implements Middleware
+ 
+         // Sem usuário logado, quem redireciona é o middleware Authenticate.
+         if ($user !== null && !$user->isAdmin()) {
+-            FlashMessage::danger('Acesso restrito a administradores');
+-            $this->redirectTo(route('dashboard.index'));
++            $this->deny('Acesso restrito a administradores', 'dashboard.index');
+         }
+     }
+-
+-    private function redirectTo(string $location): void
+-    {
+-        header('Location: ' . $location);
+-        exit;
+-    }
+ }
+diff --git a/app/Middleware/Authenticate.php b/app/Middleware/Authenticate.php
+index 11872f6..77af4c5 100644
+--- a/app/Middleware/Authenticate.php
++++ b/app/Middleware/Authenticate.php
+@@ -2,24 +2,15 @@
+ 
+ namespace App\Middleware;
+ 
+-use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+-use Lib\FlashMessage;
+ 
+-class Authenticate implements Middleware
++class Authenticate extends BaseMiddleware
+ {
+     public function handle(Request $request): void
+     {
+         if (!Auth::check()) {
+-            FlashMessage::danger('Você deve estar logado para acessar essa página');
+-            $this->redirectTo(route('users.login'));
++            $this->deny('Você deve estar logado para acessar essa página', 'users.login');
+         }
+     }
+-
+-    private function redirectTo(string $location): void
+-    {
+-        header('Location: ' . $location);
+-        exit;
+-    }
+ }
+diff --git a/app/Middleware/BaseMiddleware.php b/app/Middleware/BaseMiddleware.php
+new file mode 100644
+index 0000000..b9937b5
+--- /dev/null
++++ b/app/Middleware/BaseMiddleware.php
+@@ -0,0 +1,32 @@
++<?php
++
++namespace App\Middleware;
++
++use Core\Http\Middleware\Middleware;
++use Lib\FlashMessage;
++
++/**
++ * Classe base dos middlewares da aplicação.
++ *
++ * Centraliza o que `Authenticate` e `Admin` faziam em duplicidade:
++ * registrar uma mensagem flash de erro e redirecionar para uma rota
++ * nomeada. Cada middleware concreto só decide QUANDO negar o acesso;
++ * o COMO negar fica aqui.
++ */
++abstract class BaseMiddleware implements Middleware
++{
++    /**
++     * Nega o acesso: grava a mensagem de erro e redireciona para a rota.
++     */
++    protected function deny(string $message, string $routeName): void
++    {
++        FlashMessage::danger($message);
++        $this->redirectTo(route($routeName));
++    }
++
++    protected function redirectTo(string $location): void
++    {
++        header('Location: ' . $location);
++        exit;
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 42bc22a4444dfd08b7d5bd7add3f35096bf178e1 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:04:39 -0300
+Subject: [PATCH 2/2] test: Add unit tests for Authenticate and Admin
+ middlewares
+
+---
+ tests/Unit/App/Middleware/AdminDouble.php     | 21 +++++++
+ tests/Unit/App/Middleware/AdminTest.php       | 45 +++++++++++++++
+ .../App/Middleware/AuthenticateDouble.php     | 21 +++++++
+ .../Unit/App/Middleware/AuthenticateTest.php  | 44 ++++++++++++++
+ .../App/Middleware/MiddlewareTestCase.php     | 57 +++++++++++++++++++
+ 5 files changed, 188 insertions(+)
+ create mode 100644 tests/Unit/App/Middleware/AdminDouble.php
+ create mode 100644 tests/Unit/App/Middleware/AdminTest.php
+ create mode 100644 tests/Unit/App/Middleware/AuthenticateDouble.php
+ create mode 100644 tests/Unit/App/Middleware/AuthenticateTest.php
+ create mode 100644 tests/Unit/App/Middleware/MiddlewareTestCase.php
+
+diff --git a/tests/Unit/App/Middleware/AdminDouble.php b/tests/Unit/App/Middleware/AdminDouble.php
+new file mode 100644
+index 0000000..a9a0c52
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AdminDouble.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\Admin;
++
++/**
++ * Dublê do middleware Admin para testes unitários.
++ *
++ * O `redirectTo` real envia o cabeçalho e encerra o processo com `exit`.
++ * Aqui ele só guarda o destino, para o teste conferir se houve redirecionamento.
++ */
++class AdminDouble extends Admin
++{
++    public ?string $location = null;
++
++    protected function redirectTo(string $location): void
++    {
++        $this->location = $location;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AdminTest.php b/tests/Unit/App/Middleware/AdminTest.php
+new file mode 100644
+index 0000000..a11190f
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AdminTest.php
+@@ -0,0 +1,45 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++class AdminTest extends MiddlewareTestCase
++{
++    public function test_handle_without_session_should_not_redirect(): void
++    {
++        // Sem sessão, quem nega o acesso é o Authenticate, que roda no mesmo grupo de rotas.
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertNull($middleware->location);
++        $this->assertEquals([], FlashMessage::get());
++    }
++
++    public function test_handle_with_participant_session_should_redirect_to_dashboard_with_flash(): void
++    {
++        Auth::login($this->createUser('participant'));
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertEquals('/dashboard', $middleware->location);
++        $this->assertEquals(
++            ['danger' => 'Acesso restrito a administradores'],
++            FlashMessage::get()
++        );
++    }
++
++    public function test_handle_with_admin_session_should_not_redirect(): void
++    {
++        Auth::login($this->createUser('admin'));
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertNull($middleware->location);
++        $this->assertEquals([], FlashMessage::get());
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AuthenticateDouble.php b/tests/Unit/App/Middleware/AuthenticateDouble.php
+new file mode 100644
+index 0000000..4ca66ed
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AuthenticateDouble.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\Authenticate;
++
++/**
++ * Dublê do middleware Authenticate para testes unitários.
++ *
++ * O `redirectTo` real envia o cabeçalho e encerra o processo com `exit`.
++ * Aqui ele só guarda o destino, para o teste conferir se houve redirecionamento.
++ */
++class AuthenticateDouble extends Authenticate
++{
++    public ?string $location = null;
++
++    protected function redirectTo(string $location): void
++    {
++        $this->location = $location;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AuthenticateTest.php b/tests/Unit/App/Middleware/AuthenticateTest.php
+new file mode 100644
+index 0000000..bad7486
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AuthenticateTest.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++class AuthenticateTest extends MiddlewareTestCase
++{
++    public function test_handle_without_session_should_redirect_to_login_with_flash(): void
++    {
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertEquals('/login', $middleware->location);
++        $this->assertEquals(
++            ['danger' => 'Você deve estar logado para acessar essa página'],
++            FlashMessage::get()
++        );
++    }
++
++    public function test_handle_with_participant_session_should_not_redirect(): void
++    {
++        Auth::login($this->createUser('participant'));
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertNull($middleware->location);
++        $this->assertEquals([], FlashMessage::get());
++    }
++
++    public function test_handle_with_admin_session_should_not_redirect(): void
++    {
++        Auth::login($this->createUser('admin'));
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request());
++
++        $this->assertNull($middleware->location);
++        $this->assertEquals([], FlashMessage::get());
++    }
++}
+diff --git a/tests/Unit/App/Middleware/MiddlewareTestCase.php b/tests/Unit/App/Middleware/MiddlewareTestCase.php
+new file mode 100644
+index 0000000..a2e4578
+--- /dev/null
++++ b/tests/Unit/App/Middleware/MiddlewareTestCase.php
+@@ -0,0 +1,57 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Models\User;
++use Core\Constants\Constants;
++use Core\Http\Request;
++use Core\Router\Router;
++use Tests\TestCase;
++
++/**
++ * Base dos testes de middleware.
++ *
++ * Carrega as rotas (o `route()` do `deny` precisa delas fora do nginx),
++ * monta uma requisição GET e limpa a sessão antes e depois de cada teste.
++ * Estende `Tests\TestCase` porque `Auth::check()` consulta a tabela `users`.
++ */
++abstract class MiddlewareTestCase extends TestCase
++{
++    public function setUp(): void
++    {
++        parent::setUp();
++        Router::reset();
++        require Constants::rootPath()->join('config/routes.php');
++
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/dashboard';
++        $_SESSION = [];
++    }
++
++    public function tearDown(): void
++    {
++        Router::reset();
++        unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
++        $_SESSION = [];
++        parent::tearDown();
++    }
++
++    protected function request(): Request
++    {
++        return new Request();
++    }
++
++    protected function createUser(string $role): User
++    {
++        $user = new User([
++            'name' => 'User ' . $role,
++            'email' => $role . '@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,201 @@
+From cee5f93c550d1d8e15232df0ed107bd685c8038c Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:51:42 -0300
+Subject: [PATCH] feat: Block login of inactive users
+
+---
+ app/Controllers/AuthenticationsController.php   | 11 +++++++----
+ app/Models/User.php                             | 14 +++++++++++++-
+ database/Populate/populate.php                  | 11 ++++++++++-
+ database/schema.sql                             |  1 +
+ tests/Acceptance/authentications/LoginCest.php  | 17 +++++++++++++++++
+ .../AuthenticationsControllerTest.php           | 14 ++++++++++++++
+ tests/Unit/Models/Users/UserTest.php            | 12 ++++++++++++
+ 7 files changed, 74 insertions(+), 6 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..01da43d 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -21,13 +21,16 @@ class AuthenticationsController extends Controller
+         $params = $request->getParam('user');
+         $user = User::findByEmail($params['email']);
+ 
+-        if ($user && $user->authenticate($params['password'])) {
++        if ($user === null || !$user->authenticate($params['password'])) {
++            FlashMessage::danger('E-mail ou senha inválidos!');
++            $this->redirectTo(route('users.login'));
++        } elseif (!$user->isActive()) {
++            FlashMessage::danger('Usuário inativo. Procure a administração.');
++            $this->redirectTo(route('users.login'));
++        } else {
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+-        } else {
+-            FlashMessage::danger('E-mail ou senha inválidos!');
+-            $this->redirectTo(route('users.login'));
+         }
+     }
+ 
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..431a9a0 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -11,12 +11,13 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $email
+  * @property string $encrypted_password
+  * @property string $role
++ * @property int|string $active
+  * @property string|null $last_login_at
+  */
+ class User extends Model
+ {
+     protected static string $table = 'users';
+-    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
++    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'active', 'last_login_at'];
+ 
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+@@ -31,6 +32,11 @@ class User extends Model
+         if ($this->role === null) {
+             $this->role = 'participant';
+         }
++
++        // Usuário novo nasce ativo; o schema tem DEFAULT 1, mas o INSERT envia todas as colunas.
++        if ($this->active === null) {
++            $this->active = 1;
++        }
+     }
+ 
+     public function validates(): void
+@@ -64,6 +70,12 @@ class User extends Model
+         return $this->role === 'admin';
+     }
+ 
++    public function isActive(): bool
++    {
++        // TINYINT chega do PDO como string "1" ou "0"; o cast resolve.
++        return (bool) $this->active;
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..64e29a5 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -24,4 +24,13 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++$inactive = new User([
++    'name' => 'Usuário Inativo',
++    'email' => 'inativo@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'active' => 0
++]);
++$inactive->save();
++
++echo "Usuários criados: {$admin->email} (admin), {$user->email} (participant) e {$inactive->email} (inativo), senha 123456\n";
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..d350e10 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -8,6 +8,7 @@ CREATE TABLE users (
+     email VARCHAR(255) NOT NULL,
+     encrypted_password VARCHAR(255) NOT NULL,
+     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
++    active TINYINT(1) NOT NULL DEFAULT 1,
+     last_login_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..2d0c395 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -18,6 +18,15 @@ class LoginCest extends BaseAcceptanceCest
+             'password_confirmation' => '123456'
+         ]);
+         $user->save();
++
++        $inactive = new User([
++            'name' => 'Inativo',
++            'email' => 'inativo@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'active' => 0
++        ]);
++        $inactive->save();
+     }
+ 
+     public function loginWithInvalidCredentials(AcceptanceTester $page): void
+@@ -28,6 +37,14 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('E-mail ou senha inválidos!');
+     }
+ 
++    public function loginWithInactiveUser(AcceptanceTester $page): void
++    {
++        $page->login('inativo@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Usuário inativo. Procure a administração.');
++    }
++
+     public function loginWithValidCredentials(AcceptanceTester $page): void
+     {
+         $page->login('fulano@example.com', '123456');
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..c128c26 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -53,6 +53,20 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /login', $response);
+     }
+ 
++    public function test_authenticate_inactive_user_should_not_login(): void
++    {
++        $this->user->update(['active' => 0]);
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'fulano@example.com', 'password' => '123456']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++    }
++
+     public function test_destroy_should_logout(): void
+     {
+         Auth::login($this->user);
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..44c83db 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -150,6 +150,18 @@ class UserTest extends TestCase
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+     }
+ 
++    public function test_is_active_should_return_true_by_default(): void
++    {
++        $this->assertTrue(User::findById($this->user->id)->isActive());
++    }
++
++    public function test_is_active_should_return_false_after_deactivation(): void
++    {
++        $this->user->update(['active' => 0]);
++
++        $this->assertFalse(User::findById($this->user->id)->isActive());
++    }
++
+     public function test_register_login_should_set_last_login_at(): void
+     {
+         $this->user->registerLogin();
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,67 @@
+From de8a4695c5ff59bbd4d6db939989c8b606181ac5 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:57:00 -0300
+Subject: [PATCH] chore: Add db:seed and ci tasks to run script
+
+---
+ README.md | 14 ++++++++++++++
+ run       | 14 ++++++++++++++
+ 2 files changed, 28 insertions(+)
+
+diff --git a/README.md b/README.md
+index edcb07a..8eae031 100644
+--- a/README.md
++++ b/README.md
+@@ -52,6 +52,12 @@ $ ./run db:reset
+ $ ./run db:populate
+ ```
+ 
++Ou, em um passo só (`db:reset` seguido de `db:populate`):
++
++```
++$ ./run db:seed
++```
++
+ ### Fixed uploads folder permission
+ 
+ ```
+@@ -84,4 +90,12 @@ $ ./run phpcs
+ $ ./run phpstan
+ ```
+ 
++#### Run the CI checks locally
++
++Roda as mesmas verificações do job `code_quality` do CI (PSR-4, PHPCS e PHPStan):
++
++```
++$ ./run ci
++```
++
+ Access [localhost](http://localhost)
+diff --git a/run b/run
+index 5a7c91b..c72fe9e 100755
+--- a/run
++++ b/run
+@@ -90,5 +90,19 @@ function db:populate {
+     docker compose exec php php database/Populate/populate.php
+ }
+ 
++# Recria as tabelas e popula o banco com os dados iniciais.
++function db:seed {
++    db:reset
++    db:populate
++}
++
++# Roda localmente as verificações do job code_quality do CI
++# (o codecept build já é feito dentro de phpstan).
++function ci {
++    composer dump-autoload --optimize --strict-psr
++    phpcs
++    phpstan
++}
++
+ TIMEFORMAT=$'\nTask completed in %3lR'
+ time ${@}
+-- 
+2.54.0 (Apple Git-157)
+

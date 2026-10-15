@@ -1,0 +1,49 @@
+<div class="card login mx-auto">
+    <div class="card-body">
+        <form action="<?= route('users.create') ?>" method="post" novalidate>
+            <div class="mb-3">
+                <label for="user_name" class="form-label">Nome</label>
+                <input
+                    type="text"
+                    class="form-control <?= $user->errors('name') ? 'is-invalid' : '' ?>"
+                    id="user_name"
+                    name="user[name]"
+                    value="<?= htmlspecialchars($user->name ?? '') ?>"
+                >
+                <div class="invalid-feedback"><?= $user->errors('name') ?></div>
+            </div>
+            <div class="mb-3">
+                <label for="user_email" class="form-label">E-mail</label>
+                <input
+                    type="email"
+                    class="form-control <?= $user->errors('email') ? 'is-invalid' : '' ?>"
+                    id="user_email"
+                    name="user[email]"
+                    value="<?= htmlspecialchars($user->email ?? '') ?>"
+                >
+                <div class="invalid-feedback"><?= $user->errors('email') ?></div>
+            </div>
+            <div class="mb-3">
+                <label for="user_password" class="form-label">Senha</label>
+                <input
+                    type="password"
+                    class="form-control <?= $user->errors('password') ? 'is-invalid' : '' ?>"
+                    id="user_password"
+                    name="user[password]"
+                >
+                <div class="invalid-feedback"><?= $user->errors('password') ?></div>
+            </div>
+            <div class="mb-3">
+                <label for="user_password_confirmation" class="form-label">Confirmação da senha</label>
+                <input
+                    type="password"
+                    class="form-control"
+                    id="user_password_confirmation"
+                    name="user[password_confirmation]"
+                >
+            </div>
+            <button type="submit" class="btn btn-primary">Cadastrar</button>
+            <a class="btn btn-link" href="<?= route('users.login') ?>">Já tenho conta</a>
+        </form>
+    </div>
+</div>

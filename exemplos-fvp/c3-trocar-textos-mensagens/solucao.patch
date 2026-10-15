@@ -1,0 +1,82 @@
+From 0ef57086296af72b2bdeb90768cf12cd95de4634 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:53:12 -0300
+Subject: [PATCH] chore: Update login and validation messages
+
+---
+ app/Controllers/AuthenticationsController.php  | 4 ++--
+ lib/Validations.php                            | 2 +-
+ tests/Acceptance/authentications/LoginCest.php | 4 ++--
+ tests/Unit/Models/Users/UserTest.php           | 4 ++--
+ 4 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..457d588 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -23,10 +23,10 @@ class AuthenticationsController extends Controller
+ 
+         if ($user && $user->authenticate($params['password'])) {
+             Auth::login($user);
+-            FlashMessage::success('Login realizado com sucesso!');
++            FlashMessage::success('Bem-vindo(a) de volta!');
+             $this->redirectTo(route('dashboard.index'));
+         } else {
+-            FlashMessage::danger('E-mail ou senha inválidos!');
++            FlashMessage::danger('Credenciais inválidas. Confira e-mail e senha.');
+             $this->redirectTo(route('users.login'));
+         }
+     }
+diff --git a/lib/Validations.php b/lib/Validations.php
+index 6f392ce..d809d38 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -9,7 +9,7 @@ class Validations
+     public static function notEmpty($attribute, $obj)
+     {
+         if ($obj->$attribute === null || $obj->$attribute === '') {
+-            $obj->addError($attribute, 'não pode ser vazio!');
++            $obj->addError($attribute, 'é obrigatório!');
+             return false;
+         }
+ 
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..e602568 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -25,7 +25,7 @@ class LoginCest extends BaseAcceptanceCest
+         $page->login('fulano@example.com', 'wrong');
+ 
+         $page->seeCurrentUrlEquals('/login');
+-        $page->see('E-mail ou senha inválidos!');
++        $page->see('Credenciais inválidas. Confira e-mail e senha.');
+     }
+ 
+     public function loginWithValidCredentials(AcceptanceTester $page): void
+@@ -33,7 +33,7 @@ class LoginCest extends BaseAcceptanceCest
+         $page->login('fulano@example.com', '123456');
+ 
+         $page->seeCurrentUrlEquals('/dashboard');
+-        $page->see('Login realizado com sucesso!');
++        $page->see('Bem-vindo(a) de volta!');
+         $page->see('fulano@example.com');
+     }
+ 
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..89b5f5a 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -81,8 +81,8 @@ class UserTest extends TestCase
+         $this->assertFalse($user->save());
+         $this->assertTrue($user->hasErrors());
+ 
+-        $this->assertEquals('não pode ser vazio!', $user->errors('name'));
+-        $this->assertEquals('não pode ser vazio!', $user->errors('email'));
++        $this->assertEquals('é obrigatório!', $user->errors('name'));
++        $this->assertEquals('é obrigatório!', $user->errors('email'));
+     }
+ 
+     public function test_errors_should_return_password_confirmation_error(): void
+-- 
+2.54.0 (Apple Git-157)
+

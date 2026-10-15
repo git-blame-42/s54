@@ -1,0 +1,84 @@
+From ce82a9a5f55ef3d6c7298bade55964b9f4d9ad4e Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:44:30 -0300
+Subject: [PATCH] feat: Restrict logout route to authenticated users
+
+---
+ config/routes.php                             |  4 ++-
+ .../Acceptance/authentications/LoginCest.php  |  8 ++++++
+ tests/Integration/Access/LogoutAccessTest.php | 28 +++++++++++++++++++
+ 3 files changed, 39 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Integration/Access/LogoutAccessTest.php
+
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..fb34d44 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -11,10 +11,12 @@ Route::get('/', [HomeController::class, 'index'])->name('root');
+ // Authentication
+ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.login');
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
+-Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
+ // Área do usuário (somente autenticados)
+ Route::middleware('auth')->group(function () {
++    // Só quem está logado pode sair; sem sessão, o middleware redireciona ao login.
++    Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
++
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
+     // Área administrativa (somente autenticados com perfil admin)
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..04fde82 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -46,4 +46,12 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('Logout realizado com sucesso!');
+         $page->see('Login');
+     }
++
++    public function logoutWithoutLoginRedirectsToLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/logout');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
+ }
+diff --git a/tests/Integration/Access/LogoutAccessTest.php b/tests/Integration/Access/LogoutAccessTest.php
+new file mode 100644
+index 0000000..bfc919d
+--- /dev/null
++++ b/tests/Integration/Access/LogoutAccessTest.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class LogoutAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_logout_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/logout');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

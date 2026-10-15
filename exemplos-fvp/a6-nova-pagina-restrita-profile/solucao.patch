@@ -1,0 +1,229 @@
+From 00be6680421031db3e48b644cca599d83a427842 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:46:22 -0300
+Subject: [PATCH] feat: Add profile page for authenticated users
+
+---
+ app/Controllers/ProfileController.php         | 14 ++++++
+ app/views/layouts/_navbar.phtml               |  1 +
+ app/views/profile/show.phtml                  | 10 ++++
+ config/routes.php                             |  2 +
+ tests/Acceptance/profile/ProfileCest.php      | 50 +++++++++++++++++++
+ .../Integration/Access/ProfileAccessTest.php  | 28 +++++++++++
+ .../Controllers/ProfileControllerTest.php     | 42 ++++++++++++++++
+ 7 files changed, 147 insertions(+)
+ create mode 100644 app/Controllers/ProfileController.php
+ create mode 100644 app/views/profile/show.phtml
+ create mode 100644 tests/Acceptance/profile/ProfileCest.php
+ create mode 100644 tests/Integration/Access/ProfileAccessTest.php
+ create mode 100644 tests/Integration/Controllers/ProfileControllerTest.php
+
+diff --git a/app/Controllers/ProfileController.php b/app/Controllers/ProfileController.php
+new file mode 100644
+index 0000000..cdd7c97
+--- /dev/null
++++ b/app/Controllers/ProfileController.php
+@@ -0,0 +1,14 @@
++<?php
++
++namespace App\Controllers;
++
++use Core\Http\Controllers\Controller;
++
++class ProfileController extends Controller
++{
++    public function show(): void
++    {
++        $title = 'Meu Perfil';
++        $this->render('profile/show', compact('title'));
++    }
++}
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..0a80bce 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -20,6 +20,7 @@
+                         <?= $this->currentUser()->email ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
++                        <li><a class="dropdown-item" href="<?= route('profile.show') ?>">Perfil</a></li>
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+                     </ul>
+                 </li>
+diff --git a/app/views/profile/show.phtml b/app/views/profile/show.phtml
+new file mode 100644
+index 0000000..47bfb62
+--- /dev/null
++++ b/app/views/profile/show.phtml
+@@ -0,0 +1,10 @@
++<?php $user = $this->currentUser(); ?>
++<ul class="list-group profile">
++    <li class="list-group-item">Nome: <?= $user->name ?></li>
++    <li class="list-group-item">E-mail: <?= $user->email ?></li>
++    <li class="list-group-item">Perfil: <?= $user->isAdmin() ? 'Administrador' : 'Participante' ?></li>
++    <li class="list-group-item">
++        Último acesso:
++        <?= $user->last_login_at ? date('d/m/Y H:i', strtotime($user->last_login_at)) : 'primeiro acesso' ?>
++    </li>
++</ul>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..965a366 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\ProfileController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -16,6 +17,7 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ // Área do usuário (somente autenticados)
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
++    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+ 
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+diff --git a/tests/Acceptance/profile/ProfileCest.php b/tests/Acceptance/profile/ProfileCest.php
+new file mode 100644
+index 0000000..d2c23d2
+--- /dev/null
++++ b/tests/Acceptance/profile/ProfileCest.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace Tests\Acceptance\profile;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class ProfileCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++
++    public function accessProfileWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/profile');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function accessProfileAfterLogin(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/profile');
++
++        $page->see('Meu Perfil', '//h1');
++        $page->see('Nome: Fulano');
++        $page->see('E-mail: fulano@example.com');
++    }
++
++    public function navbarLinksToProfile(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->click('fulano@example.com');
++        $page->click('Perfil');
++
++        $page->seeCurrentUrlEquals('/profile');
++        $page->see('Meu Perfil', '//h1');
++    }
++}
+diff --git a/tests/Integration/Access/ProfileAccessTest.php b/tests/Integration/Access/ProfileAccessTest.php
+new file mode 100644
+index 0000000..13668d5
+--- /dev/null
++++ b/tests/Integration/Access/ProfileAccessTest.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class ProfileAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_profile_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/profile');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/ProfileControllerTest.php b/tests/Integration/Controllers/ProfileControllerTest.php
+new file mode 100644
+index 0000000..fda29ff
+--- /dev/null
++++ b/tests/Integration/Controllers/ProfileControllerTest.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class ProfileControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++        Auth::login($this->user);
++    }
++
++    public function test_show_should_render_current_user_data(): void
++    {
++        $response = $this->get(action: 'show', controllerName: 'App\Controllers\ProfileController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Meu Perfil\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Nome: Fulano', $response);
++        $this->assertStringContainsString('E-mail: fulano@example.com', $response);
++        $this->assertStringContainsString('Perfil: Participante', $response);
++    }
++
++    public function test_show_should_render_last_login(): void
++    {
++        $response = $this->get(action: 'show', controllerName: 'App\Controllers\ProfileController');
++
++        $this->assertStringContainsString('Último acesso:', $response);
++        $this->assertStringNotContainsString('primeiro acesso', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

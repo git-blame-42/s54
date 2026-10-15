@@ -1,0 +1,669 @@
+From 7c8d56cfe2fd39cea09f660ba461dda246880e59 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:45:12 -0300
+Subject: [PATCH 1/2] feat: List users with pagination in admin area
+
+---
+ app/Controllers/Admin/UsersController.php     | 23 +++++
+ app/views/admin/users/index.phtml             | 24 ++++++
+ app/views/layouts/_navbar.phtml               |  3 +
+ config/routes.php                             |  5 ++
+ tests/Acceptance/admin/AdminUsersCest.php     | 86 +++++++++++++++++++
+ .../Access/AdminUsersAccessTest.php           | 36 ++++++++
+ .../Controllers/Admin/UsersControllerTest.php | 70 +++++++++++++++
+ 7 files changed, 247 insertions(+)
+ create mode 100644 app/Controllers/Admin/UsersController.php
+ create mode 100644 app/views/admin/users/index.phtml
+ create mode 100644 tests/Acceptance/admin/AdminUsersCest.php
+ create mode 100644 tests/Integration/Access/AdminUsersAccessTest.php
+ create mode 100644 tests/Integration/Controllers/Admin/UsersControllerTest.php
+
+diff --git a/app/Controllers/Admin/UsersController.php b/app/Controllers/Admin/UsersController.php
+new file mode 100644
+index 0000000..d85914a
+--- /dev/null
++++ b/app/Controllers/Admin/UsersController.php
+@@ -0,0 +1,23 @@
++<?php
++
++namespace App\Controllers\Admin;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++
++class UsersController extends Controller
++{
++    public function index(Request $request): void
++    {
++        $paginator = User::paginate(
++            page: (int) $request->getParam('page', 1),
++            per_page: 10,
++            route: 'admin.users.paginate'
++        );
++        $users = $paginator->registers();
++
++        $title = 'Usuários';
++        $this->render('admin/users/index', compact('users', 'paginator', 'title'));
++    }
++}
+diff --git a/app/views/admin/users/index.phtml b/app/views/admin/users/index.phtml
+new file mode 100644
+index 0000000..eff8997
+--- /dev/null
++++ b/app/views/admin/users/index.phtml
+@@ -0,0 +1,24 @@
++<table class="table table-striped">
++    <thead>
++        <tr>
++            <th>#</th>
++            <th>Nome</th>
++            <th>E-mail</th>
++            <th>Perfil</th>
++            <th>Último acesso</th>
++        </tr>
++    </thead>
++    <tbody>
++        <?php foreach ($users as $user) : ?>
++            <tr>
++                <td><?= $user->id ?></td>
++                <td><?= $user->name ?></td>
++                <td><?= $user->email ?></td>
++                <td><?= $user->role ?></td>
++                <td><?= $user->last_login_at ?? 'nunca' ?></td>
++            </tr>
++        <?php endforeach; ?>
++    </tbody>
++</table>
++
++<?php $paginator->renderPagesNavigation(); ?>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..bed1d8a 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -14,6 +14,9 @@
+                     <li class="nav-item">
+                         <a class="nav-link" href="<?= route('admin.dashboard.index') ?>">Administração</a>
+                     </li>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('admin.users.index') ?>">Usuários</a>
++                    </li>
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..674a5d5 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -1,6 +1,7 @@
+ <?php
+ 
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
++use App\Controllers\Admin\UsersController as AdminUsersController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
+@@ -20,5 +21,9 @@ Route::middleware('auth')->group(function () {
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
++
++        // Usuários cadastrados, com paginação
++        Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
++        Route::get('/admin/users/page/{page}', [AdminUsersController::class, 'index'])->name('admin.users.paginate');
+     });
+ });
+diff --git a/tests/Acceptance/admin/AdminUsersCest.php b/tests/Acceptance/admin/AdminUsersCest.php
+new file mode 100644
+index 0000000..da7a5b9
+--- /dev/null
++++ b/tests/Acceptance/admin/AdminUsersCest.php
+@@ -0,0 +1,86 @@
++<?php
++
++namespace Tests\Acceptance\admin;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class AdminUsersCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        for ($i = 1; $i <= 10; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++    }
++
++    public function accessUsersListWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function accessUsersListAsCommonUser(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a administradores');
++    }
++
++    public function listUsersAsAdmin(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->click('Usuários');
++
++        $page->seeCurrentUrlEquals('/admin/users');
++        $page->see('Usuários', '//h1');
++        $page->see('admin@example.com');
++        $page->see('fulano@example.com');
++        $page->see('Mostrando 1 - 10 de 12');
++    }
++
++    public function navigateToTheSecondPage(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        // O link fica na borda inferior da janela do Selenium; conferir o href e
++        // navegar evita o "element click intercepted" do Chrome headless.
++        $page->seeLink('Próxima', '/admin/users/page/2');
++        $page->amOnPage('/admin/users/page/2');
++
++        $page->seeCurrentUrlEquals('/admin/users/page/2');
++        $page->see('participante9@example.com');
++        $page->see('participante10@example.com');
++        $page->dontSee('fulano@example.com');
++        $page->see('Mostrando 11 - 12 de 12');
++    }
++}
+diff --git a/tests/Integration/Access/AdminUsersAccessTest.php b/tests/Integration/Access/AdminUsersAccessTest.php
+new file mode 100644
+index 0000000..d15fff6
+--- /dev/null
++++ b/tests/Integration/Access/AdminUsersAccessTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class AdminUsersAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_users_index_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_users_paginate_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users/page/2');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/UsersControllerTest.php b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+new file mode 100644
+index 0000000..f6db95a
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+@@ -0,0 +1,70 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class UsersControllerTest extends ControllerTestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $this->admin->save();
++
++        for ($i = 1; $i <= 12; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++
++        Auth::login($this->admin);
++    }
++
++    public function test_index_should_list_the_first_page_of_users(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Usuários\s*<\/h1>/', $response);
++        $this->assertStringContainsString('admin@example.com', $response);
++        $this->assertStringContainsString('participante9@example.com', $response);
++        $this->assertStringNotContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('Mostrando 1 - 10 de 13', $response);
++    }
++
++    public function test_index_should_list_the_requested_page(): void
++    {
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['page' => 2]
++        );
++
++        // O e-mail do admin logado aparece na navbar; conferimos um participante da página 1.
++        $this->assertStringNotContainsString('participante9@example.com', $response);
++        $this->assertStringContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('participante12@example.com', $response);
++        $this->assertStringContainsString('Mostrando 11 - 13 de 13', $response);
++    }
++
++    public function test_index_should_render_pagination_links_with_the_admin_route(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertStringContainsString('href="/admin/users/page/2"', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 14c719382267c8132ca89e322a756a18d738da5b Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:16 -0300
+Subject: [PATCH 2/2] feat: Allow admin to change user role
+
+---
+ app/Controllers/Admin/UsersController.php     | 21 +++++
+ app/Models/User.php                           | 16 ++++
+ app/views/admin/users/index.phtml             | 18 +++-
+ config/routes.php                             |  3 +
+ tests/Acceptance/admin/AdminUsersCest.php     | 22 +++++
+ .../Access/AdminUsersAccessTest.php           |  8 ++
+ .../Controllers/Admin/UsersControllerTest.php | 83 +++++++++++++++++++
+ .../Unit/Models/Users/UserChangeRoleTest.php  | 47 +++++++++++
+ 8 files changed, 217 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Unit/Models/Users/UserChangeRoleTest.php
+
+diff --git a/app/Controllers/Admin/UsersController.php b/app/Controllers/Admin/UsersController.php
+index d85914a..c93a072 100644
+--- a/app/Controllers/Admin/UsersController.php
++++ b/app/Controllers/Admin/UsersController.php
+@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
+ use App\Models\User;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
++use Lib\FlashMessage;
+ 
+ class UsersController extends Controller
+ {
+@@ -20,4 +21,24 @@ class UsersController extends Controller
+         $title = 'Usuários';
+         $this->render('admin/users/index', compact('users', 'paginator', 'title'));
+     }
++
++    public function update(Request $request): void
++    {
++        $user = User::findById((int) $request->getParam('id'));
++        $params = $request->getParam('user');
++        $role = is_array($params) ? (string) ($params['role'] ?? '') : '';
++
++        if ($user === null) {
++            FlashMessage::danger('Não foi possível alterar o perfil.');
++        } elseif ((int) $user->id === (int) $this->currentUser()?->id) {
++            // Rebaixar a si mesmo tiraria o acesso à área administrativa na hora.
++            FlashMessage::danger('Você não pode alterar o próprio perfil.');
++        } elseif (!$user->changeRole($role)) {
++            FlashMessage::danger('Não foi possível alterar o perfil.');
++        } else {
++            FlashMessage::success('Perfil alterado com sucesso!');
++        }
++
++        $this->redirectTo(route('admin.users.index'));
++    }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..e022776 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -18,6 +18,9 @@ class User extends Model
+     protected static string $table = 'users';
+     protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
+ 
++    /** Perfis aceitos pelo ENUM da coluna `role`. */
++    public const ROLES = ['admin', 'participant'];
++
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+ 
+@@ -64,6 +67,19 @@ class User extends Model
+         return $this->role === 'admin';
+     }
+ 
++    /**
++     * Troca o perfil do usuário. Recusa valores fora do ENUM da coluna `role`
++     * (no banco eles virariam PDOException).
++     */
++    public function changeRole(string $role): bool
++    {
++        if (!in_array($role, self::ROLES, true)) {
++            return false;
++        }
++
++        return $this->update(['role' => $role]);
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/app/views/admin/users/index.phtml b/app/views/admin/users/index.phtml
+index eff8997..90a2f43 100644
+--- a/app/views/admin/users/index.phtml
++++ b/app/views/admin/users/index.phtml
+@@ -14,7 +14,23 @@
+                 <td><?= $user->id ?></td>
+                 <td><?= $user->name ?></td>
+                 <td><?= $user->email ?></td>
+-                <td><?= $user->role ?></td>
++                <td>
++                    <?php if ((int) $user->id === (int) $this->currentUser()?->id) : ?>
++                        <?= $user->role ?>
++                    <?php else : ?>
++                        <form action="<?= route('admin.users.update', ['id' => $user->id]) ?>" method="post"
++                              class="d-flex gap-2" novalidate>
++                            <input type="hidden" name="_method" value="PUT">
++                            <select name="user[role]" class="form-select form-select-sm" aria-label="Perfil">
++                                <option value="participant" <?= $user->role === 'participant' ? 'selected' : '' ?>>
++                                    participant
++                                </option>
++                                <option value="admin" <?= $user->role === 'admin' ? 'selected' : '' ?>>admin</option>
++                            </select>
++                            <button type="submit" class="btn btn-sm btn-outline-primary">Salvar</button>
++                        </form>
++                    <?php endif; ?>
++                </td>
+                 <td><?= $user->last_login_at ?? 'nunca' ?></td>
+             </tr>
+         <?php endforeach; ?>
+diff --git a/config/routes.php b/config/routes.php
+index 674a5d5..f4f5173 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -25,5 +25,8 @@ Route::middleware('auth')->group(function () {
+         // Usuários cadastrados, com paginação
+         Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
+         Route::get('/admin/users/page/{page}', [AdminUsersController::class, 'index'])->name('admin.users.paginate');
++
++        // Promover/rebaixar o perfil de um usuário
++        Route::put('/admin/users/{id}', [AdminUsersController::class, 'update'])->name('admin.users.update');
+     });
+ });
+diff --git a/tests/Acceptance/admin/AdminUsersCest.php b/tests/Acceptance/admin/AdminUsersCest.php
+index da7a5b9..4691e65 100644
+--- a/tests/Acceptance/admin/AdminUsersCest.php
++++ b/tests/Acceptance/admin/AdminUsersCest.php
+@@ -83,4 +83,26 @@ class AdminUsersCest extends BaseAcceptanceCest
+         $page->dontSee('fulano@example.com');
+         $page->see('Mostrando 11 - 12 de 12');
+     }
++
++    public function promoteUserAsAdmin(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        $row = '//tr[contains(., "fulano@example.com")]';
++        $page->selectOption($row . '//select[@name="user[role]"]', 'admin');
++        $page->click($row . '//button[text()="Salvar"]');
++
++        $page->seeCurrentUrlEquals('/admin/users');
++        $page->see('Perfil alterado com sucesso!');
++        $page->seeOptionIsSelected($row . '//select[@name="user[role]"]', 'admin');
++    }
++
++    public function adminCannotChangeOwnRole(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        $page->dontSeeElement('//tr[contains(., "admin@example.com")]//select[@name="user[role]"]');
++    }
+ }
+diff --git a/tests/Integration/Access/AdminUsersAccessTest.php b/tests/Integration/Access/AdminUsersAccessTest.php
+index d15fff6..5312234 100644
+--- a/tests/Integration/Access/AdminUsersAccessTest.php
++++ b/tests/Integration/Access/AdminUsersAccessTest.php
+@@ -33,4 +33,12 @@ class AdminUsersAccessTest extends TestCase
+         $this->assertEquals(302, $response->getStatusCode());
+         $this->assertEquals('/login', $response->getHeaderLine('Location'));
+     }
++
++    public function test_users_update_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->put('/admin/users/1', ['form_params' => ['user' => ['role' => 'admin']]]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/UsersControllerTest.php b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+index f6db95a..efe3a5e 100644
+--- a/tests/Integration/Controllers/Admin/UsersControllerTest.php
++++ b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Integration\Controllers\Admin;
+ 
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use Lib\FlashMessage;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class UsersControllerTest extends ControllerTestCase
+@@ -33,6 +34,8 @@ class UsersControllerTest extends ControllerTestCase
+         }
+ 
+         Auth::login($this->admin);
++        // O tearDown da base limpa só a sessão do usuário; a flash vazaria entre testes.
++        unset($_SESSION['flash']);
+     }
+ 
+     public function test_index_should_list_the_first_page_of_users(): void
+@@ -67,4 +70,84 @@ class UsersControllerTest extends ControllerTestCase
+ 
+         $this->assertStringContainsString('href="/admin/users/page/2"', $response);
+     }
++
++    public function test_update_should_promote_participant_to_admin(): void
++    {
++        $user = User::findByEmail('participante1@example.com');
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['id' => $user->id, 'user' => ['role' => 'admin']]
++        );
++
++        $this->assertEquals('Location: /admin/users', $response);
++        $this->assertTrue(User::findById($user->id)->isAdmin());
++        $this->assertEquals(['success' => 'Perfil alterado com sucesso!'], FlashMessage::get());
++    }
++
++    public function test_update_should_demote_admin_to_participant(): void
++    {
++        $user = User::findByEmail('participante2@example.com');
++        $user->changeRole('admin');
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['id' => $user->id, 'user' => ['role' => 'participant']]
++        );
++
++        $this->assertEquals('Location: /admin/users', $response);
++        $this->assertFalse(User::findById($user->id)->isAdmin());
++    }
++
++    public function test_update_should_not_change_the_own_role(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['id' => $this->admin->id, 'user' => ['role' => 'participant']]
++        );
++
++        $this->assertEquals('Location: /admin/users', $response);
++        $this->assertTrue(User::findById($this->admin->id)->isAdmin());
++        $this->assertEquals(['danger' => 'Você não pode alterar o próprio perfil.'], FlashMessage::get());
++    }
++
++    public function test_update_should_reject_unknown_role(): void
++    {
++        $user = User::findByEmail('participante3@example.com');
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['id' => $user->id, 'user' => ['role' => 'organizer']]
++        );
++
++        $this->assertEquals('Location: /admin/users', $response);
++        $this->assertSame('participant', User::findById($user->id)->role);
++        $this->assertEquals(['danger' => 'Não foi possível alterar o perfil.'], FlashMessage::get());
++    }
++
++    public function test_update_should_ignore_unknown_user(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['id' => 9999, 'user' => ['role' => 'admin']]
++        );
++
++        $this->assertEquals('Location: /admin/users', $response);
++        $this->assertEquals(['danger' => 'Não foi possível alterar o perfil.'], FlashMessage::get());
++    }
++
++    public function test_index_should_not_render_role_form_in_own_row(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $other = User::findByEmail('participante1@example.com');
++
++        $this->assertStringContainsString('action="/admin/users/' . $other->id . '"', $response);
++        $this->assertStringNotContainsString('action="/admin/users/' . $this->admin->id . '"', $response);
++    }
+ }
+diff --git a/tests/Unit/Models/Users/UserChangeRoleTest.php b/tests/Unit/Models/Users/UserChangeRoleTest.php
+new file mode 100644
+index 0000000..ef54b21
+--- /dev/null
++++ b/tests/Unit/Models/Users/UserChangeRoleTest.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace Tests\Unit\Models\Users;
++
++use App\Models\User;
++use Tests\TestCase;
++
++class UserChangeRoleTest extends TestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++    }
++
++    public function test_change_role_should_promote_participant_to_admin(): void
++    {
++        $this->assertTrue($this->user->changeRole('admin'));
++
++        $this->assertTrue(User::findById($this->user->id)->isAdmin());
++    }
++
++    public function test_change_role_should_demote_admin_to_participant(): void
++    {
++        $this->user->changeRole('admin');
++
++        $this->assertTrue($this->user->changeRole('participant'));
++
++        $this->assertFalse(User::findById($this->user->id)->isAdmin());
++    }
++
++    public function test_change_role_should_reject_unknown_role(): void
++    {
++        $this->assertFalse($this->user->changeRole('organizer'));
++
++        $this->assertSame('participant', User::findById($this->user->id)->role);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

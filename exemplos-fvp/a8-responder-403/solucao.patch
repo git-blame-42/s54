@@ -1,0 +1,221 @@
+From b44267e33a3b6837c72e884b1931aa32efe745ad Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:49:48 -0300
+Subject: [PATCH] feat: Respond 403 to non-admin users in admin area
+
+---
+ app/Middleware/Admin.php                      | 13 +---
+ tests/Acceptance/admin/AdminDashboardCest.php |  5 +-
+ tests/Integration/Access/AdminAccessTest.php  | 63 +++++++++++++++
+ tests/Unit/App/Middleware/AdminTest.php       | 78 +++++++++++++++++++
+ 4 files changed, 148 insertions(+), 11 deletions(-)
+ create mode 100644 tests/Integration/Access/AdminAccessTest.php
+ create mode 100644 tests/Unit/App/Middleware/AdminTest.php
+
+diff --git a/app/Middleware/Admin.php b/app/Middleware/Admin.php
+index 782069b..1cc8d18 100644
+--- a/app/Middleware/Admin.php
++++ b/app/Middleware/Admin.php
+@@ -2,10 +2,10 @@
+ 
+ namespace App\Middleware;
+ 
++use Core\Exceptions\HTTPException;
+ use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+-use Lib\FlashMessage;
+ 
+ class Admin implements Middleware
+ {
+@@ -14,15 +14,10 @@ class Admin implements Middleware
+         $user = Auth::user();
+ 
+         // Sem usuário logado, quem redireciona é o middleware Authenticate.
++        // Logado sem perfil admin: resposta 403 (Forbidden), sem redirecionar.
++        // O ErrorsHandler converte a HTTPException no status HTTP da resposta.
+         if ($user !== null && !$user->isAdmin()) {
+-            FlashMessage::danger('Acesso restrito a administradores');
+-            $this->redirectTo(route('dashboard.index'));
++            throw new HTTPException('Acesso restrito a administradores', 403);
+         }
+     }
+-
+-    private function redirectTo(string $location): void
+-    {
+-        header('Location: ' . $location);
+-        exit;
+-    }
+ }
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..30120e3 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -42,8 +42,9 @@ class AdminDashboardCest extends BaseAcceptanceCest
+         $page->login('fulano@example.com', '123456');
+         $page->amOnPage('/admin');
+ 
+-        $page->seeCurrentUrlEquals('/dashboard');
+-        $page->see('Acesso restrito a administradores');
++        $page->seeCurrentUrlEquals('/admin');
++        $page->see('Acesso restrito a administradores', '//h1');
++        $page->dontSee('Painel Administrativo');
+     }
+ 
+     public function accessAdminAsAdmin(AcceptanceTester $page): void
+diff --git a/tests/Integration/Access/AdminAccessTest.php b/tests/Integration/Access/AdminAccessTest.php
+new file mode 100644
+index 0000000..8e8dc22
+--- /dev/null
++++ b/tests/Integration/Access/AdminAccessTest.php
+@@ -0,0 +1,63 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use App\Models\User;
++use GuzzleHttp\Client;
++use Tests\TestCase;
++
++/**
++ * Acessa /admin com sessão de verdade (cookie do Guzzle) para provar o
++ * status HTTP que o middleware Admin devolve a cada perfil.
++ */
++class AdminAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'http_errors' => false,
++            'cookies' => true,
++            'base_uri' => 'http://web:8080',
++        ]);
++    }
++
++    public function test_admin_route_should_respond_403_for_common_user(): void
++    {
++        $this->createUserAndLogin('participant');
++
++        $response = $this->client->get('/admin');
++
++        $this->assertEquals(403, $response->getStatusCode());
++        $this->assertStringContainsString('Acesso restrito a administradores', (string) $response->getBody());
++    }
++
++    public function test_admin_route_should_respond_200_for_admin(): void
++    {
++        $this->createUserAndLogin('admin');
++
++        $response = $this->client->get('/admin');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Painel Administrativo', (string) $response->getBody());
++    }
++
++    private function createUserAndLogin(string $role): void
++    {
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        $this->client->post('/login', [
++            'form_params' => ['user' => ['email' => 'fulano@example.com', 'password' => '123456']],
++        ]);
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AdminTest.php b/tests/Unit/App/Middleware/AdminTest.php
+new file mode 100644
+index 0000000..28b3124
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AdminTest.php
+@@ -0,0 +1,78 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\Admin;
++use App\Models\User;
++use Core\Exceptions\HTTPException;
++use Core\Http\Request;
++use Lib\Authentication\Auth;
++use Tests\TestCase;
++
++class AdminTest extends TestCase
++{
++    private Admin $middleware;
++    private Request $request;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION = [];
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/admin';
++
++        $this->middleware = new Admin();
++        $this->request = new Request();
++    }
++
++    public function tearDown(): void
++    {
++        $_SESSION = [];
++        unset($_SERVER['REQUEST_METHOD']);
++        unset($_SERVER['REQUEST_URI']);
++        parent::tearDown();
++    }
++
++    public function test_handle_should_throw_403_for_common_user(): void
++    {
++        Auth::login($this->createUser('participant'));
++
++        try {
++            $this->middleware->handle($this->request);
++            $this->fail('Esperava HTTPException para usuário sem perfil admin');
++        } catch (HTTPException $e) {
++            $this->assertEquals(403, $e->getStatusCode());
++            $this->assertEquals('Acesso restrito a administradores', $e->getMessage());
++        }
++    }
++
++    public function test_handle_should_allow_admin_user(): void
++    {
++        Auth::login($this->createUser('admin'));
++
++        $this->middleware->handle($this->request);
++
++        $this->assertTrue(Auth::check());
++    }
++
++    public function test_handle_should_ignore_request_without_session(): void
++    {
++        $this->middleware->handle($this->request);
++
++        $this->assertFalse(Auth::check());
++    }
++
++    private function createUser(string $role): User
++    {
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

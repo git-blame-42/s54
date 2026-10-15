@@ -1,0 +1,125 @@
+From 19021f1f5e7724bdeff90d178a20e3a88bf35513 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:43:34 -0300
+Subject: [PATCH] feat: Validate minimum password length
+
+---
+ app/Models/User.php                           |  1 +
+ lib/Validations.php                           | 18 ++++++++++
+ .../Unit/Lib/Validations/ValidationsTest.php  | 34 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 15 ++++++++
+ 4 files changed, 68 insertions(+)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..a8aa0b8 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -41,6 +41,7 @@ class User extends Model
+         Validations::uniqueness('email', $this);
+ 
+         if ($this->newRecord()) {
++            Validations::minLength('password', 6, $this);
+             Validations::passwordConfirmation($this);
+         }
+     }
+diff --git a/lib/Validations.php b/lib/Validations.php
+index 6f392ce..042bb4a 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -16,6 +16,24 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * Garante que o atributo tenha ao menos $min caracteres (ignora nulo;
++     * o vazio fica a cargo de notEmpty).
++     *
++     * @param object $obj modelo com addError()
++     */
++    public static function minLength(string $attribute, int $min, $obj): bool
++    {
++        $value = $obj->$attribute;
++
++        if ($value !== null && mb_strlen((string) $value) < $min) {
++            $obj->addError($attribute, "deve ter pelo menos {$min} caracteres!");
++            return false;
++        }
++
++        return true;
++    }
++
+     public static function passwordConfirmation($obj)
+     {
+         if ($obj->password !== $obj->password_confirmation) {
+diff --git a/tests/Unit/Lib/Validations/ValidationsTest.php b/tests/Unit/Lib/Validations/ValidationsTest.php
+index dd52e90..ea3ac4e 100644
+--- a/tests/Unit/Lib/Validations/ValidationsTest.php
++++ b/tests/Unit/Lib/Validations/ValidationsTest.php
+@@ -35,4 +35,38 @@ class ValidationsTest extends TestCase
+         $model->password_confirmation = '123456'; // @phpstan-ignore-line
+         $this->assertTrue(Validations::passwordConfirmation($model));
+     }
++
++    public function test_min_length_should_reject_short_value(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['password'];
++        };
++
++        $model->password = '123'; // @phpstan-ignore-line
++
++        $this->assertFalse(Validations::minLength('password', 6, $model));
++        $this->assertEquals('deve ter pelo menos 6 caracteres!', $model->errors('password'));
++    }
++
++    public function test_min_length_should_accept_value_with_min_or_more_chars(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['password'];
++        };
++
++        $model->password = '123456'; // @phpstan-ignore-line
++        $this->assertTrue(Validations::minLength('password', 6, $model));
++
++        $model->password = '1234567';
++        $this->assertTrue(Validations::minLength('password', 6, $model));
++    }
++
++    public function test_min_length_should_ignore_null_value(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['password'];
++        };
++
++        $this->assertTrue(Validations::minLength('password', 6, $model));
++    }
+ }
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..aeedf50 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -85,6 +85,21 @@ class UserTest extends TestCase
+         $this->assertEquals('não pode ser vazio!', $user->errors('email'));
+     }
+ 
++    public function test_errors_should_return_short_password_error(): void
++    {
++        $user = new User([
++            'name' => 'User 4',
++            'email' => 'fulano4@example.com',
++            'password' => '123',
++            'password_confirmation' => '123'
++        ]);
++
++        $this->assertFalse($user->isValid());
++        $this->assertFalse($user->save());
++
++        $this->assertEquals('deve ter pelo menos 6 caracteres!', $user->errors('password'));
++    }
++
+     public function test_errors_should_return_password_confirmation_error(): void
+     {
+         $user = new User([
+-- 
+2.54.0 (Apple Git-157)
+

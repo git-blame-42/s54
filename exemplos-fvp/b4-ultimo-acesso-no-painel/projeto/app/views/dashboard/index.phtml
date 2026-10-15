@@ -1,0 +1,6 @@
+<p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
+<?php if ($previousLoginAt === null) : ?>
+    <p>Este é o seu primeiro acesso.</p>
+<?php else : ?>
+    <p>Último acesso: <?= date('d/m/Y H:i', strtotime($previousLoginAt)) ?></p>
+<?php endif; ?>

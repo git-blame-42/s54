@@ -1,0 +1,60 @@
+From 7ef4f4375e86e7e79588a353492efa93bb7ddbb5 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:04 -0300
+Subject: [PATCH] test: Make LoginHelper logout independent of the user email
+
+---
+ app/views/layouts/_navbar.phtml               |  2 +-
+ tests/Acceptance/admin/AdminDashboardCest.php | 11 +++++++++++
+ tests/Support/Helper/LoginHelper.php          |  2 +-
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..84dd973 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -16,7 +16,7 @@
+                     </li>
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
++                    <a class="nav-link dropdown-toggle" id="user_menu" href="#" role="button" data-bs-toggle="dropdown">
+                         <?= $this->currentUser()->email ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..4f8dabe 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -54,4 +54,15 @@ class AdminDashboardCest extends BaseAcceptanceCest
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
+     }
++
++    public function logoutAsAdmin(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin');
++        $page->logout();
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Logout realizado com sucesso!');
++        $page->dontSee('admin@example.com');
++    }
+ }
+diff --git a/tests/Support/Helper/LoginHelper.php b/tests/Support/Helper/LoginHelper.php
+index 729b7a1..80bbe3a 100644
+--- a/tests/Support/Helper/LoginHelper.php
++++ b/tests/Support/Helper/LoginHelper.php
+@@ -22,7 +22,7 @@ class LoginHelper extends Module
+     {
+         /** @var \Tests\Support\AcceptanceTester $page */
+         $page = $this->getModule('WebDriver');
+-        $page->click('fulano@example.com');
++        $page->click('#user_menu');
+         $page->click('Sair');
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

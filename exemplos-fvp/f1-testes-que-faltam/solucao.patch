@@ -1,0 +1,426 @@
+From f573233211d81761067bc44bf119383455015729 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:56:39 -0300
+Subject: [PATCH] test: Add missing controller, access and middleware tests for
+ authentication
+
+---
+ app/Middleware/Admin.php                      |  2 +-
+ app/Middleware/Authenticate.php               |  2 +-
+ .../Acceptance/authentications/LoginCest.php  | 10 ++
+ .../Admin/DashboardControllerTest.php         | 38 ++++++++
+ .../Controllers/DashboardControllerTest.php   | 36 +++++++
+ tests/Unit/App/Middleware/AdminDouble.php     | 20 ++++
+ tests/Unit/App/Middleware/AdminTest.php       | 93 +++++++++++++++++++
+ .../App/Middleware/AuthenticateDouble.php     | 20 ++++
+ .../Unit/App/Middleware/AuthenticateTest.php  | 76 +++++++++++++++
+ tests/Unit/Lib/Authentication/AuthTest.php    | 25 +++++
+ 10 files changed, 320 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+ create mode 100644 tests/Unit/App/Middleware/AdminDouble.php
+ create mode 100644 tests/Unit/App/Middleware/AdminTest.php
+ create mode 100644 tests/Unit/App/Middleware/AuthenticateDouble.php
+ create mode 100644 tests/Unit/App/Middleware/AuthenticateTest.php
+
+diff --git a/app/Middleware/Admin.php b/app/Middleware/Admin.php
+index 782069b..39fe818 100644
+--- a/app/Middleware/Admin.php
++++ b/app/Middleware/Admin.php
+@@ -20,7 +20,7 @@ class Admin implements Middleware
+         }
+     }
+ 
+-    private function redirectTo(string $location): void
++    protected function redirectTo(string $location): void
+     {
+         header('Location: ' . $location);
+         exit;
+diff --git a/app/Middleware/Authenticate.php b/app/Middleware/Authenticate.php
+index 11872f6..02dd4d2 100644
+--- a/app/Middleware/Authenticate.php
++++ b/app/Middleware/Authenticate.php
+@@ -17,7 +17,7 @@ class Authenticate implements Middleware
+         }
+     }
+ 
+-    private function redirectTo(string $location): void
++    protected function redirectTo(string $location): void
+     {
+         header('Location: ' . $location);
+         exit;
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..d479052 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -46,4 +46,14 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('Logout realizado com sucesso!');
+         $page->see('Login');
+     }
++
++    public function accessDashboardAfterLogout(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->logout();
++        $page->amOnPage('/dashboard');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..dbc1206
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,38 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function setUp(): void
++    {
++        parent::setUp();
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++        Auth::login($admin);
++    }
++
++    public function test_index_should_render_admin_dashboard_title(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\DashboardController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel Administrativo\s*<\/h1>/', $response);
++    }
++
++    public function test_index_should_greet_admin_by_name(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\DashboardController');
++
++        $this->assertStringContainsString('Olá, Admin!', $response);
++    }
++}
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..d16e845
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function setUp(): void
++    {
++        parent::setUp();
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++        Auth::login($user);
++    }
++
++    public function test_index_should_render_user_dashboard_title(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel do Usuário\s*<\/h1>/', $response);
++    }
++
++    public function test_index_should_greet_logged_user_by_name(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Bem-vindo(a), Fulano!', $response);
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AdminDouble.php b/tests/Unit/App/Middleware/AdminDouble.php
+new file mode 100644
+index 0000000..d9c1e6e
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AdminDouble.php
+@@ -0,0 +1,20 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\Admin;
++
++/**
++ * Dublê de teste: captura o destino do redirecionamento em vez de chamar
++ * header() + exit, no mesmo espírito do redirectTo sobrescrito em
++ * ControllerTestCase.
++ */
++class AdminDouble extends Admin
++{
++    public ?string $redirectedTo = null;
++
++    protected function redirectTo(string $location): void
++    {
++        $this->redirectedTo = $location;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AdminTest.php b/tests/Unit/App/Middleware/AdminTest.php
+new file mode 100644
+index 0000000..74597db
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AdminTest.php
+@@ -0,0 +1,93 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Models\User;
++use Core\Constants\Constants;
++use Core\Http\Request;
++use Core\Router\Router;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++use Tests\TestCase;
++
++class AdminTest extends TestCase
++{
++    private Request $request;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION = [];
++        Router::reset();
++        require Constants::rootPath()->join('config/routes.php');
++
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/admin';
++        $this->request = new Request();
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SERVER['REQUEST_METHOD']);
++        unset($_SERVER['REQUEST_URI']);
++        $_SESSION = [];
++        Router::reset();
++        parent::tearDown();
++    }
++
++    public function test_handle_with_participant_should_redirect_to_dashboard(): void
++    {
++        Auth::login($this->createUser('participant'));
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertEquals('/dashboard', $middleware->redirectedTo);
++    }
++
++    public function test_handle_with_participant_should_set_danger_flash_message(): void
++    {
++        Auth::login($this->createUser('participant'));
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertEquals(['danger' => 'Acesso restrito a administradores'], FlashMessage::get());
++    }
++
++    public function test_handle_with_admin_should_not_redirect(): void
++    {
++        Auth::login($this->createUser('admin'));
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertNull($middleware->redirectedTo);
++        $this->assertEmpty(FlashMessage::get());
++    }
++
++    public function test_handle_without_session_should_not_redirect(): void
++    {
++        // Sem sessão quem barra é o Authenticate; o Admin só deixa passar.
++        $middleware = new AdminDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertNull($middleware->redirectedTo);
++        $this->assertEmpty(FlashMessage::get());
++    }
++
++    private function createUser(string $role): User
++    {
++        $user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role
++        ]);
++        $user->save();
++
++        return $user;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AuthenticateDouble.php b/tests/Unit/App/Middleware/AuthenticateDouble.php
+new file mode 100644
+index 0000000..9400320
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AuthenticateDouble.php
+@@ -0,0 +1,20 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\Authenticate;
++
++/**
++ * Dublê de teste: captura o destino do redirecionamento em vez de chamar
++ * header() + exit, no mesmo espírito do redirectTo sobrescrito em
++ * ControllerTestCase.
++ */
++class AuthenticateDouble extends Authenticate
++{
++    public ?string $redirectedTo = null;
++
++    protected function redirectTo(string $location): void
++    {
++        $this->redirectedTo = $location;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/AuthenticateTest.php b/tests/Unit/App/Middleware/AuthenticateTest.php
+new file mode 100644
+index 0000000..edff4da
+--- /dev/null
++++ b/tests/Unit/App/Middleware/AuthenticateTest.php
+@@ -0,0 +1,76 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Models\User;
++use Core\Constants\Constants;
++use Core\Http\Request;
++use Core\Router\Router;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++use Tests\TestCase;
++
++class AuthenticateTest extends TestCase
++{
++    private Request $request;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION = [];
++        Router::reset();
++        require Constants::rootPath()->join('config/routes.php');
++
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/dashboard';
++        $this->request = new Request();
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SERVER['REQUEST_METHOD']);
++        unset($_SERVER['REQUEST_URI']);
++        $_SESSION = [];
++        Router::reset();
++        parent::tearDown();
++    }
++
++    public function test_handle_without_session_should_redirect_to_login(): void
++    {
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertEquals('/login', $middleware->redirectedTo);
++    }
++
++    public function test_handle_without_session_should_set_danger_flash_message(): void
++    {
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertEquals(
++            ['danger' => 'Você deve estar logado para acessar essa página'],
++            FlashMessage::get()
++        );
++    }
++
++    public function test_handle_with_session_should_not_redirect(): void
++    {
++        $user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++        Auth::login($user);
++        $middleware = new AuthenticateDouble();
++
++        $middleware->handle($this->request);
++
++        $this->assertNull($middleware->redirectedTo);
++        $this->assertEmpty(FlashMessage::get());
++    }
++}
+diff --git a/tests/Unit/Lib/Authentication/AuthTest.php b/tests/Unit/Lib/Authentication/AuthTest.php
+index 1394c4e..372a417 100644
+--- a/tests/Unit/Lib/Authentication/AuthTest.php
++++ b/tests/Unit/Lib/Authentication/AuthTest.php
+@@ -60,4 +60,29 @@ class AuthTest extends TestCase
+ 
+         $this->assertFalse(Auth::check());
+     }
++
++    public function test_logout_should_remove_user_id_from_session(): void
++    {
++        Auth::login($this->user);
++        Auth::logout();
++
++        $this->assertArrayNotHasKey('id', $_SESSION['user'] ?? []);
++    }
++
++    public function test_user_without_session_should_return_null(): void
++    {
++        $this->assertNull(Auth::user());
++    }
++
++    public function test_check_without_session_should_return_false(): void
++    {
++        $this->assertFalse(Auth::check());
++    }
++
++    public function test_check_with_nonexistent_user_id_should_return_false(): void
++    {
++        $_SESSION['user']['id'] = $this->user->id + 1000;
++
++        $this->assertFalse(Auth::check());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

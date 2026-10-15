@@ -1,0 +1,328 @@
+From 7c8d56cfe2fd39cea09f660ba461dda246880e59 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:45:12 -0300
+Subject: [PATCH] feat: List users with pagination in admin area
+
+---
+ app/Controllers/Admin/UsersController.php     | 23 +++++
+ app/views/admin/users/index.phtml             | 24 ++++++
+ app/views/layouts/_navbar.phtml               |  3 +
+ config/routes.php                             |  5 ++
+ tests/Acceptance/admin/AdminUsersCest.php     | 86 +++++++++++++++++++
+ .../Access/AdminUsersAccessTest.php           | 36 ++++++++
+ .../Controllers/Admin/UsersControllerTest.php | 70 +++++++++++++++
+ 7 files changed, 247 insertions(+)
+ create mode 100644 app/Controllers/Admin/UsersController.php
+ create mode 100644 app/views/admin/users/index.phtml
+ create mode 100644 tests/Acceptance/admin/AdminUsersCest.php
+ create mode 100644 tests/Integration/Access/AdminUsersAccessTest.php
+ create mode 100644 tests/Integration/Controllers/Admin/UsersControllerTest.php
+
+diff --git a/app/Controllers/Admin/UsersController.php b/app/Controllers/Admin/UsersController.php
+new file mode 100644
+index 0000000..d85914a
+--- /dev/null
++++ b/app/Controllers/Admin/UsersController.php
+@@ -0,0 +1,23 @@
++<?php
++
++namespace App\Controllers\Admin;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++
++class UsersController extends Controller
++{
++    public function index(Request $request): void
++    {
++        $paginator = User::paginate(
++            page: (int) $request->getParam('page', 1),
++            per_page: 10,
++            route: 'admin.users.paginate'
++        );
++        $users = $paginator->registers();
++
++        $title = 'Usuários';
++        $this->render('admin/users/index', compact('users', 'paginator', 'title'));
++    }
++}
+diff --git a/app/views/admin/users/index.phtml b/app/views/admin/users/index.phtml
+new file mode 100644
+index 0000000..eff8997
+--- /dev/null
++++ b/app/views/admin/users/index.phtml
+@@ -0,0 +1,24 @@
++<table class="table table-striped">
++    <thead>
++        <tr>
++            <th>#</th>
++            <th>Nome</th>
++            <th>E-mail</th>
++            <th>Perfil</th>
++            <th>Último acesso</th>
++        </tr>
++    </thead>
++    <tbody>
++        <?php foreach ($users as $user) : ?>
++            <tr>
++                <td><?= $user->id ?></td>
++                <td><?= $user->name ?></td>
++                <td><?= $user->email ?></td>
++                <td><?= $user->role ?></td>
++                <td><?= $user->last_login_at ?? 'nunca' ?></td>
++            </tr>
++        <?php endforeach; ?>
++    </tbody>
++</table>
++
++<?php $paginator->renderPagesNavigation(); ?>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..bed1d8a 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -14,6 +14,9 @@
+                     <li class="nav-item">
+                         <a class="nav-link" href="<?= route('admin.dashboard.index') ?>">Administração</a>
+                     </li>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('admin.users.index') ?>">Usuários</a>
++                    </li>
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..674a5d5 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -1,6 +1,7 @@
+ <?php
+ 
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
++use App\Controllers\Admin\UsersController as AdminUsersController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
+@@ -20,5 +21,9 @@ Route::middleware('auth')->group(function () {
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
++
++        // Usuários cadastrados, com paginação
++        Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
++        Route::get('/admin/users/page/{page}', [AdminUsersController::class, 'index'])->name('admin.users.paginate');
+     });
+ });
+diff --git a/tests/Acceptance/admin/AdminUsersCest.php b/tests/Acceptance/admin/AdminUsersCest.php
+new file mode 100644
+index 0000000..da7a5b9
+--- /dev/null
++++ b/tests/Acceptance/admin/AdminUsersCest.php
+@@ -0,0 +1,86 @@
++<?php
++
++namespace Tests\Acceptance\admin;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class AdminUsersCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        for ($i = 1; $i <= 10; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++    }
++
++    public function accessUsersListWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function accessUsersListAsCommonUser(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a administradores');
++    }
++
++    public function listUsersAsAdmin(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->click('Usuários');
++
++        $page->seeCurrentUrlEquals('/admin/users');
++        $page->see('Usuários', '//h1');
++        $page->see('admin@example.com');
++        $page->see('fulano@example.com');
++        $page->see('Mostrando 1 - 10 de 12');
++    }
++
++    public function navigateToTheSecondPage(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        // O link fica na borda inferior da janela do Selenium; conferir o href e
++        // navegar evita o "element click intercepted" do Chrome headless.
++        $page->seeLink('Próxima', '/admin/users/page/2');
++        $page->amOnPage('/admin/users/page/2');
++
++        $page->seeCurrentUrlEquals('/admin/users/page/2');
++        $page->see('participante9@example.com');
++        $page->see('participante10@example.com');
++        $page->dontSee('fulano@example.com');
++        $page->see('Mostrando 11 - 12 de 12');
++    }
++}
+diff --git a/tests/Integration/Access/AdminUsersAccessTest.php b/tests/Integration/Access/AdminUsersAccessTest.php
+new file mode 100644
+index 0000000..d15fff6
+--- /dev/null
++++ b/tests/Integration/Access/AdminUsersAccessTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class AdminUsersAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_users_index_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_users_paginate_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users/page/2');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/UsersControllerTest.php b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+new file mode 100644
+index 0000000..f6db95a
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+@@ -0,0 +1,70 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class UsersControllerTest extends ControllerTestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $this->admin->save();
++
++        for ($i = 1; $i <= 12; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++
++        Auth::login($this->admin);
++    }
++
++    public function test_index_should_list_the_first_page_of_users(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Usuários\s*<\/h1>/', $response);
++        $this->assertStringContainsString('admin@example.com', $response);
++        $this->assertStringContainsString('participante9@example.com', $response);
++        $this->assertStringNotContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('Mostrando 1 - 10 de 13', $response);
++    }
++
++    public function test_index_should_list_the_requested_page(): void
++    {
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['page' => 2]
++        );
++
++        // O e-mail do admin logado aparece na navbar; conferimos um participante da página 1.
++        $this->assertStringNotContainsString('participante9@example.com', $response);
++        $this->assertStringContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('participante12@example.com', $response);
++        $this->assertStringContainsString('Mostrando 11 - 13 de 13', $response);
++    }
++
++    public function test_index_should_render_pagination_links_with_the_admin_route(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertStringContainsString('href="/admin/users/page/2"', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

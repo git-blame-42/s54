@@ -1,0 +1,102 @@
+From 0b7ef7c1b3677a9cbe60851b12620b470ac4b4ec Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:52:51 -0300
+Subject: [PATCH] feat: Show user name instead of email in navbar
+
+---
+ app/views/layouts/_navbar.phtml               |  2 +-
+ .../Acceptance/authentications/LoginCest.php  |  3 +-
+ .../Controllers/DashboardControllerTest.php   | 40 +++++++++++++++++++
+ tests/Support/Helper/LoginHelper.php          |  2 +-
+ 4 files changed, 44 insertions(+), 3 deletions(-)
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..bde7626 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -17,7 +17,7 @@
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+-                        <?= $this->currentUser()->email ?>
++                        <?= $this->currentUser()->name ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..216d9cd 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -34,7 +34,8 @@ class LoginCest extends BaseAcceptanceCest
+ 
+         $page->seeCurrentUrlEquals('/dashboard');
+         $page->see('Login realizado com sucesso!');
+-        $page->see('fulano@example.com');
++        $page->see('Fulano');
++        $page->dontSee('fulano@example.com', '.navbar');
+     }
+ 
+     public function logout(AcceptanceTester $page): void
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..192e360
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++        Auth::login($this->user);
++    }
++
++    public function test_index_should_render_user_dashboard(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel do Usuário\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Bem-vindo(a), Fulano!', $response);
++    }
++
++    public function test_navbar_should_show_user_name_instead_of_email(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertMatchesRegularExpression('/dropdown-toggle[^>]*>\s*Fulano\s*</', $response);
++        $this->assertStringNotContainsString('fulano@example.com', $response);
++    }
++}
+diff --git a/tests/Support/Helper/LoginHelper.php b/tests/Support/Helper/LoginHelper.php
+index 729b7a1..dd885f4 100644
+--- a/tests/Support/Helper/LoginHelper.php
++++ b/tests/Support/Helper/LoginHelper.php
+@@ -22,7 +22,7 @@ class LoginHelper extends Module
+     {
+         /** @var \Tests\Support\AcceptanceTester $page */
+         $page = $this->getModule('WebDriver');
+-        $page->click('fulano@example.com');
++        $page->click('.dropdown-toggle');
+         $page->click('Sair');
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

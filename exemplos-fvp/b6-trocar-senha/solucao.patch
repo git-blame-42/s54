@@ -1,0 +1,383 @@
+From 8fac90f2461d1a46295b09d50cf1a71735bed80b Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:53:24 -0300
+Subject: [PATCH] feat: Allow users to change their password
+
+---
+ app/Controllers/PasswordsController.php       | 37 ++++++++++
+ app/Models/User.php                           | 23 +++++++
+ app/views/layouts/_navbar.phtml               |  1 +
+ app/views/passwords/edit.phtml                | 19 +++++
+ config/routes.php                             |  5 ++
+ .../passwords/ChangePasswordCest.php          | 64 +++++++++++++++++
+ .../Integration/Access/PasswordAccessTest.php | 36 ++++++++++
+ .../Controllers/PasswordsControllerTest.php   | 69 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 25 +++++++
+ 9 files changed, 279 insertions(+)
+ create mode 100644 app/Controllers/PasswordsController.php
+ create mode 100644 app/views/passwords/edit.phtml
+ create mode 100644 tests/Acceptance/passwords/ChangePasswordCest.php
+ create mode 100644 tests/Integration/Access/PasswordAccessTest.php
+ create mode 100644 tests/Integration/Controllers/PasswordsControllerTest.php
+
+diff --git a/app/Controllers/PasswordsController.php b/app/Controllers/PasswordsController.php
+new file mode 100644
+index 0000000..5a0531d
+--- /dev/null
++++ b/app/Controllers/PasswordsController.php
+@@ -0,0 +1,37 @@
++<?php
++
++namespace App\Controllers;
++
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++class PasswordsController extends Controller
++{
++    public function edit(): void
++    {
++        $user = $this->current_user;
++        $title = 'Trocar senha';
++        $this->render('passwords/edit', compact('user', 'title'));
++    }
++
++    public function update(Request $request): void
++    {
++        $params = $request->getParam('user', []);
++        $user = $this->current_user;
++
++        $changed = $user !== null && $user->changePassword(
++            $params['password'] ?? '',
++            $params['password_confirmation'] ?? ''
++        );
++
++        if ($changed) {
++            FlashMessage::success('Senha alterada com sucesso!');
++            $this->redirectTo(route('dashboard.index'));
++        } else {
++            FlashMessage::danger('Não foi possível alterar a senha.');
++            $title = 'Trocar senha';
++            $this->render('passwords/edit', compact('user', 'title'));
++        }
++    }
++}
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..65006f9 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -69,6 +69,29 @@ class User extends Model
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+     }
+ 
++    /**
++     * Troca a senha de um usuário já salvo. O __set só gera o hash em
++     * registro novo; por isso o hash é feito aqui e gravado via update().
++     */
++    public function changePassword(string $password, string $confirmation): bool
++    {
++        $this->errors = [];
++        $this->password = $password;
++        $this->password_confirmation = $confirmation;
++
++        if (!Validations::notEmpty('password', $this)) {
++            return false;
++        }
++
++        if (!Validations::passwordConfirmation($this)) {
++            return false;
++        }
++
++        return $this->update([
++            'encrypted_password' => password_hash($password, PASSWORD_DEFAULT),
++        ]);
++    }
++
+     public function __set(string $property, mixed $value): void
+     {
+         parent::__set($property, $value);
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..551be6a 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -20,6 +20,7 @@
+                         <?= $this->currentUser()->email ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
++                        <li><a class="dropdown-item" href="<?= route('passwords.edit') ?>">Trocar senha</a></li>
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+                     </ul>
+                 </li>
+diff --git a/app/views/passwords/edit.phtml b/app/views/passwords/edit.phtml
+new file mode 100644
+index 0000000..e7c10c4
+--- /dev/null
++++ b/app/views/passwords/edit.phtml
+@@ -0,0 +1,19 @@
++<div class="card login mx-auto">
++    <div class="card-body">
++        <form action="<?= route('passwords.update') ?>" method="post" novalidate>
++            <input type="hidden" name="_method" value="PUT">
++            <div class="mb-3">
++                <label for="user_password" class="form-label">Nova senha</label>
++                <input type="password" class="form-control <?= $user->errors('password') ? 'is-invalid' : '' ?>"
++                       id="user_password" name="user[password]">
++                <div class="invalid-feedback"><?= $user->errors('password') ?></div>
++            </div>
++            <div class="mb-3">
++                <label for="user_password_confirmation" class="form-label">Confirme a nova senha</label>
++                <input type="password" class="form-control" id="user_password_confirmation"
++                       name="user[password_confirmation]">
++            </div>
++            <button type="submit" class="btn btn-primary">Salvar</button>
++        </form>
++    </div>
++</div>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..5cc811c 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\PasswordsController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -17,6 +18,10 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Troca de senha do usuário logado
++    Route::get('/password/edit', [PasswordsController::class, 'edit'])->name('passwords.edit');
++    Route::put('/password', [PasswordsController::class, 'update'])->name('passwords.update');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/tests/Acceptance/passwords/ChangePasswordCest.php b/tests/Acceptance/passwords/ChangePasswordCest.php
+new file mode 100644
+index 0000000..fb36d62
+--- /dev/null
++++ b/tests/Acceptance/passwords/ChangePasswordCest.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace Tests\Acceptance\passwords;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class ChangePasswordCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++
++    public function accessChangePasswordWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/password/edit');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function changePasswordAndLoginWithTheNewOne(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/password/edit');
++        $page->see('Trocar senha', '//h1');
++
++        $page->fillField('user[password]', '654321');
++        $page->fillField('user[password_confirmation]', '654321');
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Senha alterada com sucesso!');
++
++        $page->logout();
++        $page->login('fulano@example.com', '654321');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Login realizado com sucesso!');
++    }
++
++    public function changePasswordWithMismatchedConfirmation(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/password/edit');
++
++        $page->fillField('user[password]', '654321');
++        $page->fillField('user[password_confirmation]', 'outra');
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals('/password');
++        $page->see('Não foi possível alterar a senha.');
++        $page->see('as senhas devem ser idênticas!');
++    }
++}
+diff --git a/tests/Integration/Access/PasswordAccessTest.php b/tests/Integration/Access/PasswordAccessTest.php
+new file mode 100644
+index 0000000..f2573cb
+--- /dev/null
++++ b/tests/Integration/Access/PasswordAccessTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class PasswordAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_edit_password_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/password/edit');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_update_password_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->put('/password');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/PasswordsControllerTest.php b/tests/Integration/Controllers/PasswordsControllerTest.php
+new file mode 100644
+index 0000000..04a8b22
+--- /dev/null
++++ b/tests/Integration/Controllers/PasswordsControllerTest.php
+@@ -0,0 +1,69 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class PasswordsControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++        Auth::login($this->user);
++    }
++
++    public function test_edit_should_render_the_change_password_form(): void
++    {
++        $response = $this->get(action: 'edit', controllerName: 'App\Controllers\PasswordsController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Trocar senha\s*<\/h1>/', $response);
++        $this->assertStringContainsString('user[password_confirmation]', $response);
++    }
++
++    public function test_update_with_valid_password_should_redirect_to_dashboard(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\PasswordsController',
++            params: ['user' => ['password' => '654321', 'password_confirmation' => '654321']]
++        );
++
++        $this->assertStringContainsString('Location: /dashboard', $response);
++        $this->assertTrue(User::findById($this->user->id)->authenticate('654321'));
++        $this->assertFalse(User::findById($this->user->id)->authenticate('123456'));
++    }
++
++    public function test_update_with_mismatched_confirmation_should_render_the_error(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\PasswordsController',
++            params: ['user' => ['password' => '654321', 'password_confirmation' => 'outra']]
++        );
++
++        $this->assertStringContainsString('as senhas devem ser idênticas!', $response);
++        $this->assertTrue(User::findById($this->user->id)->authenticate('123456'));
++    }
++
++    public function test_update_with_empty_password_should_render_the_error(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\PasswordsController',
++            params: ['user' => ['password' => '', 'password_confirmation' => '']]
++        );
++
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++        $this->assertTrue(User::findById($this->user->id)->authenticate('123456'));
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..ddb4478 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,29 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_change_password_should_replace_the_password(): void
++    {
++        $this->assertTrue($this->user->changePassword('654321', '654321'));
++
++        $reloaded = User::findById($this->user->id);
++        $this->assertTrue($reloaded->authenticate('654321'));
++        $this->assertFalse($reloaded->authenticate('123456'));
++    }
++
++    public function test_change_password_should_fail_when_confirmation_differs(): void
++    {
++        $this->assertFalse($this->user->changePassword('654321', 'outra'));
++
++        $this->assertEquals('as senhas devem ser idênticas!', $this->user->errors('password'));
++        $this->assertTrue(User::findById($this->user->id)->authenticate('123456'));
++    }
++
++    public function test_change_password_should_fail_when_empty(): void
++    {
++        $this->assertFalse($this->user->changePassword('', ''));
++
++        $this->assertEquals('não pode ser vazio!', $this->user->errors('password'));
++        $this->assertTrue(User::findById($this->user->id)->authenticate('123456'));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

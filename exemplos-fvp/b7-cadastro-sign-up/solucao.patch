@@ -1,0 +1,337 @@
+From 627f95b43894f040ee380d1ac20dd4633850a8a2 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:53:37 -0300
+Subject: [PATCH] feat: Add user sign up
+
+---
+ app/Controllers/UsersController.php           | 41 ++++++++++
+ app/views/authentications/new.phtml           |  1 +
+ app/views/users/new.phtml                     | 49 ++++++++++++
+ config/routes.php                             |  5 ++
+ tests/Acceptance/users/SignUpCest.php         | 47 ++++++++++++
+ tests/Integration/Access/SignUpAccessTest.php | 36 +++++++++
+ .../Controllers/UsersControllerTest.php       | 76 +++++++++++++++++++
+ 7 files changed, 255 insertions(+)
+ create mode 100644 app/Controllers/UsersController.php
+ create mode 100644 app/views/users/new.phtml
+ create mode 100644 tests/Acceptance/users/SignUpCest.php
+ create mode 100644 tests/Integration/Access/SignUpAccessTest.php
+ create mode 100644 tests/Integration/Controllers/UsersControllerTest.php
+
+diff --git a/app/Controllers/UsersController.php b/app/Controllers/UsersController.php
+new file mode 100644
+index 0000000..0c9ba0f
+--- /dev/null
++++ b/app/Controllers/UsersController.php
+@@ -0,0 +1,41 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++class UsersController extends Controller
++{
++    public function new(): void
++    {
++        $user = new User();
++        $title = 'Cadastro';
++        $this->render('users/new', compact('user', 'title'));
++    }
++
++    public function create(Request $request): void
++    {
++        $params = $request->getParam('user', []);
++
++        // Lista explícita de campos: nunca `new User($params)`, senão um
++        // `user[role]=admin` enviado no POST criaria um administrador.
++        $user = new User([
++            'name' => $params['name'] ?? null,
++            'email' => $params['email'] ?? null,
++            'password' => $params['password'] ?? null,
++            'password_confirmation' => $params['password_confirmation'] ?? null,
++        ]);
++
++        if ($user->save()) {
++            FlashMessage::success('Cadastro realizado! Faça login.');
++            $this->redirectTo(route('users.login'));
++        } else {
++            FlashMessage::danger('Existem dados incorretos!');
++            $title = 'Cadastro';
++            $this->render('users/new', compact('user', 'title'));
++        }
++    }
++}
+diff --git a/app/views/authentications/new.phtml b/app/views/authentications/new.phtml
+index 42c41a2..d9f3e76 100644
+--- a/app/views/authentications/new.phtml
++++ b/app/views/authentications/new.phtml
+@@ -10,6 +10,7 @@
+                 <input type="password" class="form-control" id="user_password" name="user[password]" required>
+             </div>
+             <button type="submit" class="btn btn-primary">Entrar</button>
++            <a class="btn btn-link" href="<?= route('users.new') ?>">Cadastre-se</a>
+         </form>
+     </div>
+ </div>
+diff --git a/app/views/users/new.phtml b/app/views/users/new.phtml
+new file mode 100644
+index 0000000..2391c31
+--- /dev/null
++++ b/app/views/users/new.phtml
+@@ -0,0 +1,49 @@
++<div class="card login mx-auto">
++    <div class="card-body">
++        <form action="<?= route('users.create') ?>" method="post" novalidate>
++            <div class="mb-3">
++                <label for="user_name" class="form-label">Nome</label>
++                <input
++                    type="text"
++                    class="form-control <?= $user->errors('name') ? 'is-invalid' : '' ?>"
++                    id="user_name"
++                    name="user[name]"
++                    value="<?= htmlspecialchars($user->name ?? '') ?>"
++                >
++                <div class="invalid-feedback"><?= $user->errors('name') ?></div>
++            </div>
++            <div class="mb-3">
++                <label for="user_email" class="form-label">E-mail</label>
++                <input
++                    type="email"
++                    class="form-control <?= $user->errors('email') ? 'is-invalid' : '' ?>"
++                    id="user_email"
++                    name="user[email]"
++                    value="<?= htmlspecialchars($user->email ?? '') ?>"
++                >
++                <div class="invalid-feedback"><?= $user->errors('email') ?></div>
++            </div>
++            <div class="mb-3">
++                <label for="user_password" class="form-label">Senha</label>
++                <input
++                    type="password"
++                    class="form-control <?= $user->errors('password') ? 'is-invalid' : '' ?>"
++                    id="user_password"
++                    name="user[password]"
++                >
++                <div class="invalid-feedback"><?= $user->errors('password') ?></div>
++            </div>
++            <div class="mb-3">
++                <label for="user_password_confirmation" class="form-label">Confirmação da senha</label>
++                <input
++                    type="password"
++                    class="form-control"
++                    id="user_password_confirmation"
++                    name="user[password_confirmation]"
++                >
++            </div>
++            <button type="submit" class="btn btn-primary">Cadastrar</button>
++            <a class="btn btn-link" href="<?= route('users.login') ?>">Já tenho conta</a>
++        </form>
++    </div>
++</div>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..82615be 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\UsersController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -13,6 +14,10 @@ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.log
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
+ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
++// Cadastro (público): 'users.login' já existe, por isso os nomes users.new e users.create
++Route::get('/users/new', [UsersController::class, 'new'])->name('users.new');
++Route::post('/users', [UsersController::class, 'create'])->name('users.create');
++
+ // Área do usuário (somente autenticados)
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+diff --git a/tests/Acceptance/users/SignUpCest.php b/tests/Acceptance/users/SignUpCest.php
+new file mode 100644
+index 0000000..67f4f44
+--- /dev/null
++++ b/tests/Acceptance/users/SignUpCest.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace Tests\Acceptance\users;
++
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class SignUpCest extends BaseAcceptanceCest
++{
++    public function signUpWithValidDataAndLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/login');
++        $page->click('Cadastre-se');
++        $page->seeCurrentUrlEquals('/users/new');
++        $page->see('Cadastro', '//h1');
++
++        $page->fillField('user[name]', 'Novo Usuário');
++        $page->fillField('user[email]', 'novo@example.com');
++        $page->fillField('user[password]', '123456');
++        $page->fillField('user[password_confirmation]', '123456');
++        $page->click('Cadastrar');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Cadastro realizado! Faça login.');
++
++        $page->login('novo@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Bem-vindo(a), Novo Usuário!');
++    }
++
++    public function signUpWithInvalidDataShowsErrors(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/users/new');
++
++        $page->fillField('user[email]', 'novo@example.com');
++        $page->fillField('user[password]', '123456');
++        $page->fillField('user[password_confirmation]', 'outra');
++        $page->click('Cadastrar');
++
++        $page->seeCurrentUrlEquals('/users');
++        $page->see('Existem dados incorretos!');
++        $page->see('não pode ser vazio!');
++        $page->see('as senhas devem ser idênticas!');
++        $page->seeInField('user[email]', 'novo@example.com');
++    }
++}
+diff --git a/tests/Integration/Access/SignUpAccessTest.php b/tests/Integration/Access/SignUpAccessTest.php
+new file mode 100644
+index 0000000..7f3cb40
+--- /dev/null
++++ b/tests/Integration/Access/SignUpAccessTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class SignUpAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_sign_up_form_should_be_accessible_without_session(): void
++    {
++        $response = $this->client->get('/users/new');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Cadastro', (string) $response->getBody());
++    }
++
++    public function test_login_page_should_link_to_sign_up(): void
++    {
++        $response = $this->client->get('/login');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('href="/users/new"', (string) $response->getBody());
++    }
++}
+diff --git a/tests/Integration/Controllers/UsersControllerTest.php b/tests/Integration/Controllers/UsersControllerTest.php
+new file mode 100644
+index 0000000..e8c098a
+--- /dev/null
++++ b/tests/Integration/Controllers/UsersControllerTest.php
+@@ -0,0 +1,76 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++
++class UsersControllerTest extends ControllerTestCase
++{
++    public function test_new_should_render_sign_up_form(): void
++    {
++        $response = $this->get(action: 'new', controllerName: 'App\Controllers\UsersController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Cadastro\s*<\/h1>/', $response);
++        $this->assertStringContainsString('name="user[name]"', $response);
++        $this->assertStringContainsString('Cadastrar', $response);
++    }
++
++    public function test_create_with_valid_data_should_save_and_redirect_to_login(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: 'App\Controllers\UsersController',
++            params: ['user' => [
++                'name' => 'Novo Usuário',
++                'email' => 'novo@example.com',
++                'password' => '123456',
++                'password_confirmation' => '123456',
++            ]]
++        );
++
++        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertNotNull(User::findByEmail('novo@example.com'));
++        $this->assertCount(1, User::all());
++    }
++
++    public function test_create_with_invalid_data_should_render_form_with_errors(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: 'App\Controllers\UsersController',
++            params: ['user' => [
++                'name' => '',
++                'email' => 'novo@example.com',
++                'password' => '123456',
++                'password_confirmation' => 'outra',
++            ]]
++        );
++
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++        $this->assertStringContainsString('as senhas devem ser idênticas!', $response);
++        $this->assertStringContainsString('value="novo@example.com"', $response);
++        $this->assertCount(0, User::all());
++    }
++
++    public function test_create_should_ignore_role_sent_in_the_request(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: 'App\Controllers\UsersController',
++            params: ['user' => [
++                'name' => 'Esperto',
++                'email' => 'esperto@example.com',
++                'password' => '123456',
++                'password_confirmation' => '123456',
++                'role' => 'admin',
++            ]]
++        );
++
++        $user = User::findByEmail('esperto@example.com');
++
++        $this->assertNotNull($user);
++        $this->assertEquals('participant', $user->role);
++        $this->assertFalse($user->isAdmin());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

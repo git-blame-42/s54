@@ -1,0 +1,168 @@
+From 39ddf490939166e8641bee8b763361bfc6f82755 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:50:36 -0300
+Subject: [PATCH] feat: Add phone column to users
+
+---
+ app/Models/User.php                           |  3 +-
+ app/views/dashboard/index.phtml               |  1 +
+ database/Populate/populate.php                |  2 +
+ database/schema.sql                           |  1 +
+ tests/Acceptance/dashboard/DashboardCest.php  |  4 +-
+ .../Controllers/DashboardControllerTest.php   | 43 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 13 ++++++
+ 7 files changed, 65 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..455e8ee 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -12,11 +12,12 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $encrypted_password
+  * @property string $role
+  * @property string|null $last_login_at
++ * @property string|null $phone
+  */
+ class User extends Model
+ {
+     protected static string $table = 'users';
+-    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
++    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at', 'phone'];
+ 
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index 0d90364..300b1fd 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1 +1,2 @@
+ <p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++<p>Telefone: <?= $this->currentUser()->phone ?? 'não informado' ?></p>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..29c7418 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -10,6 +10,7 @@ Database::migrate();
+ $admin = new User([
+     'name' => 'Administrador',
+     'email' => 'admin@example.com',
++    'phone' => '(46) 99999-0001',
+     'password' => '123456',
+     'password_confirmation' => '123456',
+     'role' => 'admin'
+@@ -19,6 +20,7 @@ $admin->save();
+ $user = new User([
+     'name' => 'Usuário',
+     'email' => 'user@example.com',
++    'phone' => '(46) 99999-0002',
+     'password' => '123456',
+     'password_confirmation' => '123456'
+ ]);
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..85f609c 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -8,6 +8,7 @@ CREATE TABLE users (
+     email VARCHAR(255) NOT NULL,
+     encrypted_password VARCHAR(255) NOT NULL,
+     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
++    phone VARCHAR(20) NULL,
+     last_login_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Acceptance/dashboard/DashboardCest.php b/tests/Acceptance/dashboard/DashboardCest.php
+index a82e911..baf9721 100644
+--- a/tests/Acceptance/dashboard/DashboardCest.php
++++ b/tests/Acceptance/dashboard/DashboardCest.php
+@@ -15,7 +15,8 @@ class DashboardCest extends BaseAcceptanceCest
+             'name' => 'Fulano',
+             'email' => 'fulano@example.com',
+             'password' => '123456',
+-            'password_confirmation' => '123456'
++            'password_confirmation' => '123456',
++            'phone' => '(46) 99999-0000'
+         ]);
+         $user->save();
+     }
+@@ -35,5 +36,6 @@ class DashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel do Usuário', '//h1');
+         $page->see('Bem-vindo(a), Fulano!');
++        $page->see('Telefone: (46) 99999-0000');
+     }
+ }
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..757a21d
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,43 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'phone' => '(46) 99999-0000'
++        ]);
++        $this->user->save();
++    }
++
++    public function test_index_should_show_user_phone(): void
++    {
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Telefone: (46) 99999-0000', $response);
++    }
++
++    public function test_index_should_show_placeholder_when_phone_is_empty(): void
++    {
++        $this->user->update(['phone' => null]);
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Telefone: não informado', $response);
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..c12bf03 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,17 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_phone_should_be_null_by_default(): void
++    {
++        $this->assertNull(User::findById($this->user->id)->phone);
++    }
++
++    public function test_phone_should_be_persisted(): void
++    {
++        $this->user->phone = '(46) 99999-0000';
++        $this->user->save();
++
++        $this->assertEquals('(46) 99999-0000', User::findById($this->user->id)->phone);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

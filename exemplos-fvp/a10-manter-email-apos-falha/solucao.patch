@@ -1,0 +1,323 @@
+From 1819996bf95231e2d0954f96d10b01554e5101d5 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:06:59 -0300
+Subject: [PATCH 1/2] fix: Handle empty login form without HTML5 validation
+
+---
+ app/Controllers/AuthenticationsController.php |  9 ++--
+ app/views/authentications/new.phtml           |  6 +--
+ .../Acceptance/authentications/LoginCest.php  |  8 ++++
+ tests/Integration/Access/LoginAccessTest.php  | 46 +++++++++++++++++++
+ .../AuthenticationsControllerTest.php         | 35 ++++++++++++++
+ 5 files changed, 98 insertions(+), 6 deletions(-)
+ create mode 100644 tests/Integration/Access/LoginAccessTest.php
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..f15d01c 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -18,10 +18,13 @@ class AuthenticationsController extends Controller
+ 
+     public function authenticate(Request $request): void
+     {
+-        $params = $request->getParam('user');
+-        $user = User::findByEmail($params['email']);
++        $params = $request->getParam('user', []);
++        $email = trim($params['email'] ?? '');
++        $password = $params['password'] ?? '';
+ 
+-        if ($user && $user->authenticate($params['password'])) {
++        $user = $email !== '' ? User::findByEmail($email) : null;
++
++        if ($user && $user->authenticate($password)) {
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+diff --git a/app/views/authentications/new.phtml b/app/views/authentications/new.phtml
+index 42c41a2..1091362 100644
+--- a/app/views/authentications/new.phtml
++++ b/app/views/authentications/new.phtml
+@@ -1,13 +1,13 @@
+ <div class="card login mx-auto">
+     <div class="card-body">
+-        <form action="<?= route('users.authenticate') ?>" method="post">
++        <form action="<?= route('users.authenticate') ?>" method="post" novalidate>
+             <div class="mb-3">
+                 <label for="user_email" class="form-label">E-mail</label>
+-                <input type="email" class="form-control" id="user_email" name="user[email]" required>
++                <input type="email" class="form-control" id="user_email" name="user[email]">
+             </div>
+             <div class="mb-3">
+                 <label for="user_password" class="form-label">Senha</label>
+-                <input type="password" class="form-control" id="user_password" name="user[password]" required>
++                <input type="password" class="form-control" id="user_password" name="user[password]">
+             </div>
+             <button type="submit" class="btn btn-primary">Entrar</button>
+         </form>
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..36f3359 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -28,6 +28,14 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('E-mail ou senha inválidos!');
+     }
+ 
++    public function loginWithEmptyFields(AcceptanceTester $page): void
++    {
++        $page->login('', '');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('E-mail ou senha inválidos!');
++    }
++
+     public function loginWithValidCredentials(AcceptanceTester $page): void
+     {
+         $page->login('fulano@example.com', '123456');
+diff --git a/tests/Integration/Access/LoginAccessTest.php b/tests/Integration/Access/LoginAccessTest.php
+new file mode 100644
+index 0000000..6f2acff
+--- /dev/null
++++ b/tests/Integration/Access/LoginAccessTest.php
+@@ -0,0 +1,46 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class LoginAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_login_form_should_disable_html5_validation(): void
++    {
++        $response = $this->client->get('/login');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('novalidate', (string) $response->getBody());
++    }
++
++    public function test_post_login_without_params_should_redirect_to_login(): void
++    {
++        $response = $this->client->post('/login');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_post_login_with_empty_fields_should_redirect_to_login(): void
++    {
++        $response = $this->client->post('/login', [
++            'form_params' => ['user' => ['email' => '', 'password' => '']]
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..3a4788b 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -53,6 +53,41 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /login', $response);
+     }
+ 
++    public function test_authenticate_without_params_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController'
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++    }
++
++    public function test_authenticate_with_empty_fields_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => '', 'password' => '']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++    }
++
++    public function test_authenticate_with_spaces_around_email_should_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => '  fulano@example.com  ', 'password' => '123456']]
++        );
++
++        $this->assertTrue(Auth::check());
++        $this->assertStringContainsString('Location: /dashboard', $response);
++    }
++
+     public function test_destroy_should_logout(): void
+     {
+         Auth::login($this->user);
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 0d13c9ed3e2e8a6ef629d855a2de68f4f38804b7 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:09:52 -0300
+Subject: [PATCH 2/2] feat: Keep typed email after failed login
+
+---
+ app/Controllers/AuthenticationsController.php |  3 ++-
+ app/views/authentications/new.phtml           |  3 ++-
+ .../Acceptance/authentications/LoginCest.php  |  2 ++
+ tests/Integration/Access/LoginAccessTest.php  | 12 ++++-----
+ .../AuthenticationsControllerTest.php         | 25 ++++++++++++++++---
+ 5 files changed, 34 insertions(+), 11 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index f15d01c..4b71fcc 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -30,7 +30,8 @@ class AuthenticationsController extends Controller
+             $this->redirectTo(route('dashboard.index'));
+         } else {
+             FlashMessage::danger('E-mail ou senha inválidos!');
+-            $this->redirectTo(route('users.login'));
++            $title = 'Login';
++            $this->render('authentications/new', compact('title', 'email'));
+         }
+     }
+ 
+diff --git a/app/views/authentications/new.phtml b/app/views/authentications/new.phtml
+index 1091362..40be26a 100644
+--- a/app/views/authentications/new.phtml
++++ b/app/views/authentications/new.phtml
+@@ -3,7 +3,8 @@
+         <form action="<?= route('users.authenticate') ?>" method="post" novalidate>
+             <div class="mb-3">
+                 <label for="user_email" class="form-label">E-mail</label>
+-                <input type="email" class="form-control" id="user_email" name="user[email]">
++                <input type="email" class="form-control" id="user_email" name="user[email]"
++                       value="<?= htmlspecialchars($email ?? '', ENT_QUOTES, 'UTF-8') ?>">
+             </div>
+             <div class="mb-3">
+                 <label for="user_password" class="form-label">Senha</label>
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 36f3359..dda4b71 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -26,6 +26,8 @@ class LoginCest extends BaseAcceptanceCest
+ 
+         $page->seeCurrentUrlEquals('/login');
+         $page->see('E-mail ou senha inválidos!');
++        $page->seeInField('user[email]', 'fulano@example.com');
++        $page->seeInField('user[password]', '');
+     }
+ 
+     public function loginWithEmptyFields(AcceptanceTester $page): void
+diff --git a/tests/Integration/Access/LoginAccessTest.php b/tests/Integration/Access/LoginAccessTest.php
+index 6f2acff..8196f20 100644
+--- a/tests/Integration/Access/LoginAccessTest.php
++++ b/tests/Integration/Access/LoginAccessTest.php
+@@ -26,21 +26,21 @@ class LoginAccessTest extends TestCase
+         $this->assertStringContainsString('novalidate', (string) $response->getBody());
+     }
+ 
+-    public function test_post_login_without_params_should_redirect_to_login(): void
++    public function test_post_login_without_params_should_render_login_with_error(): void
+     {
+         $response = $this->client->post('/login');
+ 
+-        $this->assertEquals(302, $response->getStatusCode());
+-        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('E-mail ou senha inválidos!', (string) $response->getBody());
+     }
+ 
+-    public function test_post_login_with_empty_fields_should_redirect_to_login(): void
++    public function test_post_login_with_empty_fields_should_render_login_with_error(): void
+     {
+         $response = $this->client->post('/login', [
+             'form_params' => ['user' => ['email' => '', 'password' => '']]
+         ]);
+ 
+-        $this->assertEquals(302, $response->getStatusCode());
+-        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('E-mail ou senha inválidos!', (string) $response->getBody());
+     }
+ }
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 3a4788b..52eb39d 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -50,7 +50,9 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         );
+ 
+         $this->assertFalse(Auth::check());
+-        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('E-mail ou senha inválidos!', $response);
++        $this->assertStringContainsString('value="fulano@example.com"', $response);
+     }
+ 
+     public function test_authenticate_without_params_should_not_login(): void
+@@ -61,7 +63,9 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         );
+ 
+         $this->assertFalse(Auth::check());
+-        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('E-mail ou senha inválidos!', $response);
++        $this->assertStringContainsString('value=""', $response);
+     }
+ 
+     public function test_authenticate_with_empty_fields_should_not_login(): void
+@@ -73,7 +77,9 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         );
+ 
+         $this->assertFalse(Auth::check());
+-        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('E-mail ou senha inválidos!', $response);
++        $this->assertStringContainsString('value=""', $response);
+     }
+ 
+     public function test_authenticate_with_spaces_around_email_should_login(): void
+@@ -88,6 +94,19 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /dashboard', $response);
+     }
+ 
++    public function test_authenticate_failure_should_escape_typed_email(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => '"><script>alert(1)</script>', 'password' => 'x']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertStringNotContainsString('<script>alert(1)</script>', $response);
++        $this->assertStringContainsString('value="&quot;&gt;&lt;script&gt;', $response);
++    }
++
+     public function test_destroy_should_logout(): void
+     {
+         Auth::login($this->user);
+-- 
+2.54.0 (Apple Git-157)
+

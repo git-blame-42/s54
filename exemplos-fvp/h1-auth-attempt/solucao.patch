@@ -1,0 +1,97 @@
+From 9c7882907114ba46d0e951c1f5d133be34f26564 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:10:43 -0300
+Subject: [PATCH] refactor: Encapsulate login attempt in Auth::attempt
+
+---
+ app/Controllers/AuthenticationsController.php |  5 +---
+ lib/Authentication/Auth.php                   | 12 +++++++++
+ tests/Unit/Lib/Authentication/AuthTest.php    | 27 +++++++++++++++++++
+ 3 files changed, 40 insertions(+), 4 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..2302264 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -2,7 +2,6 @@
+ 
+ namespace App\Controllers;
+ 
+-use App\Models\User;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+@@ -19,10 +18,8 @@ class AuthenticationsController extends Controller
+     public function authenticate(Request $request): void
+     {
+         $params = $request->getParam('user');
+-        $user = User::findByEmail($params['email']);
+ 
+-        if ($user && $user->authenticate($params['password'])) {
+-            Auth::login($user);
++        if (Auth::attempt($params['email'], $params['password'])) {
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+         } else {
+diff --git a/lib/Authentication/Auth.php b/lib/Authentication/Auth.php
+index 0970484..c4611d0 100644
+--- a/lib/Authentication/Auth.php
++++ b/lib/Authentication/Auth.php
+@@ -12,6 +12,18 @@ class Auth
+         $_SESSION['user']['id'] = $user->id;
+     }
+ 
++    public static function attempt(string $email, string $password): bool
++    {
++        $user = User::findByEmail($email);
++
++        if ($user === null || !$user->authenticate($password)) {
++            return false;
++        }
++
++        self::login($user);
++        return true;
++    }
++
+     public static function user(): ?User
+     {
+         if (isset($_SESSION['user']['id'])) {
+diff --git a/tests/Unit/Lib/Authentication/AuthTest.php b/tests/Unit/Lib/Authentication/AuthTest.php
+index 1394c4e..36fae8d 100644
+--- a/tests/Unit/Lib/Authentication/AuthTest.php
++++ b/tests/Unit/Lib/Authentication/AuthTest.php
+@@ -60,4 +60,31 @@ class AuthTest extends TestCase
+ 
+         $this->assertFalse(Auth::check());
+     }
++
++    public function test_attempt_with_valid_credentials_should_login(): void
++    {
++        $result = Auth::attempt('fulano@example.com', '123456');
++
++        $this->assertTrue($result);
++        $this->assertTrue(Auth::check());
++        $this->assertEquals($this->user->id, Auth::user()->id);
++    }
++
++    public function test_attempt_with_wrong_password_should_not_login(): void
++    {
++        $result = Auth::attempt('fulano@example.com', 'senha-errada');
++
++        $this->assertFalse($result);
++        $this->assertFalse(Auth::check());
++        $this->assertArrayNotHasKey('user', $_SESSION);
++    }
++
++    public function test_attempt_with_unknown_email_should_not_login(): void
++    {
++        $result = Auth::attempt('ninguem@example.com', '123456');
++
++        $this->assertFalse($result);
++        $this->assertFalse(Auth::check());
++        $this->assertArrayNotHasKey('user', $_SESSION);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

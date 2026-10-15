@@ -1,0 +1,119 @@
+From 3a1179285896c548e05c88e299407490d567877e Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:07:22 -0300
+Subject: [PATCH] fix: Regenerate session id on login and destroy it on logout
+
+---
+ lib/Authentication/Auth.php                   | 16 +++++++++++-
+ .../Acceptance/authentications/LoginCest.php  | 26 +++++++++++++++++++
+ tests/Unit/Lib/Authentication/AuthTest.php    | 21 +++++++++++++++
+ 3 files changed, 62 insertions(+), 1 deletion(-)
+
+diff --git a/lib/Authentication/Auth.php b/lib/Authentication/Auth.php
+index 0970484..db86707 100644
+--- a/lib/Authentication/Auth.php
++++ b/lib/Authentication/Auth.php
+@@ -8,6 +8,9 @@ class Auth
+ {
+     public static function login(User $user): void
+     {
++        // Novo id de sessão no login: um id obtido antes (session fixation) deixa de valer.
++        self::regenerateSessionId();
++
+         $user->registerLogin();
+         $_SESSION['user']['id'] = $user->id;
+     }
+@@ -29,6 +32,17 @@ class Auth
+ 
+     public static function logout(): void
+     {
+-        unset($_SESSION['user']['id']);
++        unset($_SESSION['user']);
++
++        // Sem session_destroy(): o flash "Logout realizado" ainda precisa da sessão.
++        self::regenerateSessionId();
++    }
++
++    private static function regenerateSessionId(): void
++    {
++        // Nos testes (CLI) não há sessão nativa ativa; sem este if, session_regenerate_id gera warning.
++        if (session_status() === PHP_SESSION_ACTIVE) {
++            session_regenerate_id(true);
++        }
+     }
+ }
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..7196dda 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Acceptance\authentications;
+ 
+ use App\Models\User;
++use PHPUnit\Framework\Assert;
+ use Tests\Acceptance\BaseAcceptanceCest;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -46,4 +47,29 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('Logout realizado com sucesso!');
+         $page->see('Login');
+     }
++
++    public function loginShouldRegenerateSessionId(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/login');
++        $sessionIdBeforeLogin = $page->grabCookie('PHPSESSID');
++
++        $page->login('fulano@example.com', '123456');
++        $page->seeCurrentUrlEquals('/dashboard');
++        $sessionIdAfterLogin = $page->grabCookie('PHPSESSID');
++
++        Assert::assertNotEmpty($sessionIdBeforeLogin);
++        Assert::assertNotEmpty($sessionIdAfterLogin);
++        Assert::assertNotEquals($sessionIdBeforeLogin, $sessionIdAfterLogin);
++    }
++
++    public function logoutShouldRegenerateSessionId(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $sessionIdBeforeLogout = $page->grabCookie('PHPSESSID');
++
++        $page->logout();
++        $page->see('Logout realizado com sucesso!');
++
++        Assert::assertNotEquals($sessionIdBeforeLogout, $page->grabCookie('PHPSESSID'));
++    }
+ }
+diff --git a/tests/Unit/Lib/Authentication/AuthTest.php b/tests/Unit/Lib/Authentication/AuthTest.php
+index 1394c4e..1ae7041 100644
+--- a/tests/Unit/Lib/Authentication/AuthTest.php
++++ b/tests/Unit/Lib/Authentication/AuthTest.php
+@@ -60,4 +60,25 @@ class AuthTest extends TestCase
+ 
+         $this->assertFalse(Auth::check());
+     }
++
++    public function test_login_without_active_session_should_store_user_id(): void
++    {
++        $this->assertNotSame(PHP_SESSION_ACTIVE, session_status());
++
++        Auth::login($this->user);
++
++        $this->assertSame($this->user->id, $_SESSION['user']['id']);
++    }
++
++    public function test_logout_should_clear_user_data_and_keep_other_session_keys(): void
++    {
++        Auth::login($this->user);
++        $_SESSION['flash'] = ['success' => 'Mensagem'];
++
++        Auth::logout();
++
++        $this->assertArrayNotHasKey('user', $_SESSION);
++        $this->assertNull(Auth::user());
++        $this->assertSame(['success' => 'Mensagem'], $_SESSION['flash']);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

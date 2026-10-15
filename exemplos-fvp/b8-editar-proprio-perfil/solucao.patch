@@ -1,0 +1,333 @@
+From 048eec971acee3d146ec7ffaec66879bc7f4e1ba Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:10:37 -0300
+Subject: [PATCH] feat: Allow users to edit their own profile
+
+---
+ app/Controllers/ProfileController.php         | 40 ++++++++
+ app/views/layouts/_navbar.phtml               |  1 +
+ app/views/profile/edit.phtml                  | 18 ++++
+ config/routes.php                             |  5 +
+ tests/Acceptance/profile/ProfileCest.php      | 55 +++++++++++
+ .../Integration/Access/ProfileAccessTest.php  | 38 ++++++++
+ .../Controllers/ProfileControllerTest.php     | 94 +++++++++++++++++++
+ 7 files changed, 251 insertions(+)
+ create mode 100644 app/Controllers/ProfileController.php
+ create mode 100644 app/views/profile/edit.phtml
+ create mode 100644 tests/Acceptance/profile/ProfileCest.php
+ create mode 100644 tests/Integration/Access/ProfileAccessTest.php
+ create mode 100644 tests/Integration/Controllers/ProfileControllerTest.php
+
+diff --git a/app/Controllers/ProfileController.php b/app/Controllers/ProfileController.php
+new file mode 100644
+index 0000000..cd1e934
+--- /dev/null
++++ b/app/Controllers/ProfileController.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++class ProfileController extends Controller
++{
++    public function edit(): void
++    {
++        $user = $this->current_user;
++        $title = 'Editar Perfil';
++        $this->render('profile/edit', compact('user', 'title'));
++    }
++
++    public function update(Request $request): void
++    {
++        $params = $request->getParam('user', []);
++        if (!is_array($params)) {
++            $params = [];
++        }
++
++        // Cópia separada: se a validação falhar, a navbar continua mostrando os dados salvos.
++        $user = User::findById($this->current_user->id);
++        $user->name = $params['name'] ?? '';
++        $user->email = $params['email'] ?? '';
++
++        if ($user->save()) {
++            FlashMessage::success('Perfil atualizado com sucesso!');
++            $this->redirectTo(route('dashboard.index'));
++        } else {
++            FlashMessage::danger('Existem dados incorretos!');
++            $title = 'Editar Perfil';
++            $this->render('profile/edit', compact('user', 'title'));
++        }
++    }
++}
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..736122e 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -20,6 +20,7 @@
+                         <?= $this->currentUser()->email ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
++                        <li><a class="dropdown-item" href="<?= route('profile.edit') ?>">Editar perfil</a></li>
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+                     </ul>
+                 </li>
+diff --git a/app/views/profile/edit.phtml b/app/views/profile/edit.phtml
+new file mode 100644
+index 0000000..58b2e1c
+--- /dev/null
++++ b/app/views/profile/edit.phtml
+@@ -0,0 +1,18 @@
++<form action="<?= route('profile.update') ?>" method="post"
++      class="<?= $user->hasErrors() ? 'was-validated' : '' ?>" novalidate>
++    <input type="hidden" name="_method" value="PUT">
++    <div class="mb-3">
++        <label for="user_name" class="form-label">Nome</label>
++        <input type="text" class="form-control" id="user_name" name="user[name]"
++               value="<?= htmlspecialchars((string) $user->name) ?>" required>
++        <div class="invalid-feedback"><?= $user->errors('name') ?></div>
++    </div>
++    <div class="mb-3">
++        <label for="user_email" class="form-label">E-mail</label>
++        <input type="email" class="form-control" id="user_email" name="user[email]"
++               value="<?= htmlspecialchars((string) $user->email) ?>" required>
++        <div class="invalid-feedback"><?= $user->errors('email') ?></div>
++    </div>
++    <button type="submit" class="btn btn-primary">Salvar</button>
++    <a href="<?= route('dashboard.index') ?>" class="btn btn-link">Cancelar</a>
++</form>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..5df973b 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\ProfileController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -17,6 +18,10 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Perfil do próprio usuário
++    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
++    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/tests/Acceptance/profile/ProfileCest.php b/tests/Acceptance/profile/ProfileCest.php
+new file mode 100644
+index 0000000..3c5e606
+--- /dev/null
++++ b/tests/Acceptance/profile/ProfileCest.php
+@@ -0,0 +1,55 @@
++<?php
++
++namespace Tests\Acceptance\profile;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class ProfileCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++
++    public function editOwnProfileFromNavbar(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->click('fulano@example.com');
++        $page->click('Editar perfil');
++
++        $page->seeCurrentUrlEquals('/profile/edit');
++        $page->see('Editar Perfil', '//h1');
++        $page->seeInField('user[name]', 'Fulano');
++
++        $page->fillField('user[name]', 'Beltrano');
++        $page->fillField('user[email]', 'beltrano@example.com');
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Perfil atualizado com sucesso!');
++        $page->see('Bem-vindo(a), Beltrano!');
++        $page->see('beltrano@example.com', '//nav');
++    }
++
++    public function editProfileWithEmptyNameShowsError(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/profile/edit');
++
++        $page->fillField('user[name]', '');
++        $page->click('Salvar');
++
++        $page->see('Existem dados incorretos!');
++        $page->see('não pode ser vazio!');
++        $page->seeInField('user[email]', 'fulano@example.com');
++    }
++}
+diff --git a/tests/Integration/Access/ProfileAccessTest.php b/tests/Integration/Access/ProfileAccessTest.php
+new file mode 100644
+index 0000000..6990e1d
+--- /dev/null
++++ b/tests/Integration/Access/ProfileAccessTest.php
+@@ -0,0 +1,38 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class ProfileAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_edit_profile_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/profile/edit');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_update_profile_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->put('/profile', [
++            'form_params' => ['user' => ['name' => 'Invasor', 'email' => 'invasor@example.com']]
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/ProfileControllerTest.php b/tests/Integration/Controllers/ProfileControllerTest.php
+new file mode 100644
+index 0000000..a4a826b
+--- /dev/null
++++ b/tests/Integration/Controllers/ProfileControllerTest.php
+@@ -0,0 +1,94 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class ProfileControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++
++        $other = new User([
++            'name' => 'Ciclano',
++            'email' => 'ciclano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $other->save();
++
++        Auth::login($this->user);
++    }
++
++    public function test_edit_should_render_form_with_current_values(): void
++    {
++        $response = $this->get(action: 'edit', controllerName: 'App\Controllers\ProfileController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Editar Perfil\s*<\/h1>/', $response);
++        $this->assertStringContainsString('value="Fulano"', $response);
++        $this->assertStringContainsString('value="fulano@example.com"', $response);
++        $this->assertStringContainsString('name="_method" value="PUT"', $response);
++        $this->assertStringContainsString('novalidate', $response);
++    }
++
++    public function test_update_with_valid_data_should_save_and_redirect_to_dashboard(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\ProfileController',
++            params: ['user' => ['name' => 'Novo Nome', 'email' => 'novo@example.com']]
++        );
++
++        $this->assertStringContainsString('Location: /dashboard', $response);
++
++        $saved = User::findById($this->user->id);
++        $this->assertNotNull($saved);
++        $this->assertEquals('Novo Nome', $saved->name);
++        $this->assertEquals('novo@example.com', $saved->email);
++    }
++
++    public function test_update_with_email_of_another_user_should_render_uniqueness_error(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\ProfileController',
++            params: ['user' => ['name' => 'Fulano', 'email' => 'ciclano@example.com']]
++        );
++
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('já existe um registro com esse dado', $response);
++        $this->assertStringContainsString('value="ciclano@example.com"', $response);
++
++        $saved = User::findById($this->user->id);
++        $this->assertNotNull($saved);
++        $this->assertEquals('fulano@example.com', $saved->email);
++    }
++
++    public function test_update_with_empty_name_should_render_errors_keeping_values(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: 'App\Controllers\ProfileController',
++            params: ['user' => ['name' => '', 'email' => 'outro@example.com']]
++        );
++
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++        $this->assertStringContainsString('value="outro@example.com"', $response);
++
++        $saved = User::findById($this->user->id);
++        $this->assertNotNull($saved);
++        $this->assertEquals('Fulano', $saved->name);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

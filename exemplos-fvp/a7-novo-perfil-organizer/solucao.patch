@@ -1,0 +1,366 @@
+From df21dc9145ac1f7002c932089c96ca46378191e1 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:47:37 -0300
+Subject: [PATCH] feat: Add organizer role with its own dashboard
+
+---
+ .../Organizer/DashboardController.php         | 14 ++++
+ app/Middleware/Organizer.php                  | 28 ++++++++
+ app/Models/User.php                           |  5 ++
+ app/views/layouts/_navbar.phtml               |  5 ++
+ app/views/organizer/dashboard/index.phtml     |  1 +
+ config/App.php                                |  1 +
+ config/routes.php                             |  7 ++
+ database/Populate/populate.php                | 12 +++-
+ database/schema.sql                           |  2 +-
+ .../organizer/OrganizerDashboardCest.php      | 67 +++++++++++++++++++
+ .../Access/OrganizerAccessTest.php            | 28 ++++++++
+ .../Organizer/DashboardControllerTest.php     | 36 ++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 16 +++++
+ 13 files changed, 220 insertions(+), 2 deletions(-)
+ create mode 100644 app/Controllers/Organizer/DashboardController.php
+ create mode 100644 app/Middleware/Organizer.php
+ create mode 100644 app/views/organizer/dashboard/index.phtml
+ create mode 100644 tests/Acceptance/organizer/OrganizerDashboardCest.php
+ create mode 100644 tests/Integration/Access/OrganizerAccessTest.php
+ create mode 100644 tests/Integration/Controllers/Organizer/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Organizer/DashboardController.php b/app/Controllers/Organizer/DashboardController.php
+new file mode 100644
+index 0000000..1864d10
+--- /dev/null
++++ b/app/Controllers/Organizer/DashboardController.php
+@@ -0,0 +1,14 @@
++<?php
++
++namespace App\Controllers\Organizer;
++
++use Core\Http\Controllers\Controller;
++
++class DashboardController extends Controller
++{
++    public function index(): void
++    {
++        $title = 'Painel do Organizador';
++        $this->render('organizer/dashboard/index', compact('title'));
++    }
++}
+diff --git a/app/Middleware/Organizer.php b/app/Middleware/Organizer.php
+new file mode 100644
+index 0000000..92b0a2e
+--- /dev/null
++++ b/app/Middleware/Organizer.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace App\Middleware;
++
++use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++class Organizer implements Middleware
++{
++    public function handle(Request $request): void
++    {
++        $user = Auth::user();
++
++        // Sem usuário logado, quem redireciona é o middleware Authenticate.
++        if ($user !== null && !$user->isOrganizer()) {
++            FlashMessage::danger('Acesso restrito a organizadores');
++            $this->redirectTo(route('dashboard.index'));
++        }
++    }
++
++    private function redirectTo(string $location): void
++    {
++        header('Location: ' . $location);
++        exit;
++    }
++}
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..abbdc4b 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -64,6 +64,11 @@ class User extends Model
+         return $this->role === 'admin';
+     }
+ 
++    public function isOrganizer(): bool
++    {
++        return $this->role === 'organizer';
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..11cfad6 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -15,6 +15,11 @@
+                         <a class="nav-link" href="<?= route('admin.dashboard.index') ?>">Administração</a>
+                     </li>
+                 <?php endif; ?>
++                <?php if ($this->currentUser()->isOrganizer()) : ?>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('organizer.dashboard.index') ?>">Organização</a>
++                    </li>
++                <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                         <?= $this->currentUser()->email ?>
+diff --git a/app/views/organizer/dashboard/index.phtml b/app/views/organizer/dashboard/index.phtml
+new file mode 100644
+index 0000000..e516470
+--- /dev/null
++++ b/app/views/organizer/dashboard/index.phtml
+@@ -0,0 +1 @@
++<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para organizadores.</p>
+diff --git a/config/App.php b/config/App.php
+index b58901e..95a9127 100644
+--- a/config/App.php
++++ b/config/App.php
+@@ -7,5 +7,6 @@ class App
+     public static array $middlewareAliases = [
+         'auth' => \App\Middleware\Authenticate::class,
+         'admin' => \App\Middleware\Admin::class,
++        'organizer' => \App\Middleware\Organizer::class,
+     ];
+ }
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..324898d 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\Organizer\DashboardController as OrganizerDashboardController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -21,4 +22,10 @@ Route::middleware('auth')->group(function () {
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+     });
++
++    // Área do organizador (somente autenticados com perfil organizer).
++    // Grupo irmão do admin: se ficasse dentro dele, o middleware Admin barraria o organizador.
++    Route::middleware('organizer')->group(function () {
++        Route::get('/organizer', [OrganizerDashboardController::class, 'index'])->name('organizer.dashboard.index');
++    });
+ });
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..c0fb618 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -24,4 +24,14 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++$organizer = new User([
++    'name' => 'Organizador',
++    'email' => 'organizer@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'role' => 'organizer'
++]);
++$organizer->save();
++
++echo "Usuários criados: {$admin->email} (admin), {$user->email} (participant) "
++    . "e {$organizer->email} (organizer), senha 123456\n";
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..44cfb3b 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -7,7 +7,7 @@ CREATE TABLE users (
+     name VARCHAR(255) NOT NULL,
+     email VARCHAR(255) NOT NULL,
+     encrypted_password VARCHAR(255) NOT NULL,
+-    role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
++    role ENUM('admin', 'participant', 'organizer') NOT NULL DEFAULT 'participant',
+     last_login_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Acceptance/organizer/OrganizerDashboardCest.php b/tests/Acceptance/organizer/OrganizerDashboardCest.php
+new file mode 100644
+index 0000000..5b41762
+--- /dev/null
++++ b/tests/Acceptance/organizer/OrganizerDashboardCest.php
+@@ -0,0 +1,67 @@
++<?php
++
++namespace Tests\Acceptance\organizer;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class OrganizerDashboardCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $organizer = new User([
++            'name' => 'Organizador',
++            'email' => 'organizer@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'organizer'
++        ]);
++        $organizer->save();
++
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++
++    public function accessOrganizerWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/organizer');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function accessOrganizerAsCommonUser(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/organizer');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a organizadores');
++    }
++
++    public function accessOrganizerAsOrganizer(AcceptanceTester $page): void
++    {
++        $page->login('organizer@example.com', '123456');
++        $page->amOnPage('/organizer');
++
++        $page->see('Painel do Organizador', '//h1');
++        $page->see('Olá, Organizador!');
++        $page->see('Organização');
++    }
++
++    public function organizerCannotAccessAdmin(AcceptanceTester $page): void
++    {
++        $page->login('organizer@example.com', '123456');
++        $page->amOnPage('/admin');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a administradores');
++    }
++}
+diff --git a/tests/Integration/Access/OrganizerAccessTest.php b/tests/Integration/Access/OrganizerAccessTest.php
+new file mode 100644
+index 0000000..a1de862
+--- /dev/null
++++ b/tests/Integration/Access/OrganizerAccessTest.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class OrganizerAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_organizer_route_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/organizer');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Organizer/DashboardControllerTest.php b/tests/Integration/Controllers/Organizer/DashboardControllerTest.php
+new file mode 100644
+index 0000000..0aa5e2f
+--- /dev/null
++++ b/tests/Integration/Controllers/Organizer/DashboardControllerTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Controllers\Organizer;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private User $organizer;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->organizer = new User([
++            'name' => 'Organizador',
++            'email' => 'organizer@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'organizer'
++        ]);
++        $this->organizer->save();
++    }
++
++    public function test_index_should_render_organizer_dashboard(): void
++    {
++        Auth::login($this->organizer);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Organizer\DashboardController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel do Organizador\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Olá, Organizador!', $response);
++        $this->assertStringContainsString('Organização', $response);
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..67c2725 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -145,6 +145,22 @@ class UserTest extends TestCase
+         $this->assertTrue(User::findById($this->user->id)->isAdmin());
+     }
+ 
++    public function test_is_organizer_should_return_false_by_default(): void
++    {
++        $this->assertFalse(User::findById($this->user->id)->isOrganizer());
++    }
++
++    public function test_is_organizer_should_return_true_for_organizer_role(): void
++    {
++        $this->user->role = 'organizer';
++        $this->user->save();
++
++        $organizer = User::findById($this->user->id);
++
++        $this->assertTrue($organizer->isOrganizer());
++        $this->assertFalse($organizer->isAdmin());
++    }
++
+     public function test_last_login_at_should_be_null_by_default(): void
+     {
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+-- 
+2.54.0 (Apple Git-157)
+

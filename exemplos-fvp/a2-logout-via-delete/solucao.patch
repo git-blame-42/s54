@@ -1,0 +1,159 @@
+From 508079e58c5bbc841fee978d53d15ff45ede7167 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:42:55 -0300
+Subject: [PATCH] feat: Logout via DELETE request
+
+Replace the GET /logout route with DELETE /logout. The navbar "Sair"
+link becomes a POST form carrying _method=DELETE, which the Request
+reads to override the HTTP verb. Logging out is a state change and
+must not be reachable by a plain link or address bar.
+
+Tests: _method override in RequestTest; GET /logout now 404 and
+DELETE /logout redirects to /login in LogoutAccessTest; destroy action
+exercised through a new delete() helper in ControllerTestCase.
+---
+ app/views/layouts/_navbar.phtml               |  7 ++-
+ config/routes.php                             |  2 +-
+ tests/Integration/Access/LogoutAccessTest.php | 44 +++++++++++++++++++
+ .../AuthenticationsControllerTest.php         |  2 +-
+ .../Controllers/ControllerTestCase.php        |  8 ++++
+ tests/Unit/Core/Http/RequestTest.php          |  9 ++++
+ 6 files changed, 69 insertions(+), 3 deletions(-)
+ create mode 100644 tests/Integration/Access/LogoutAccessTest.php
+
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..6e96bc4 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -20,7 +20,12 @@
+                         <?= $this->currentUser()->email ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
+-                        <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
++                        <li>
++                            <form action="<?= route('users.logout') ?>" method="post">
++                                <input type="hidden" name="_method" value="DELETE">
++                                <button type="submit" class="dropdown-item">Sair</button>
++                            </form>
++                        </li>
+                     </ul>
+                 </li>
+             <?php endif; ?>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..07ca295 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -11,7 +11,7 @@ Route::get('/', [HomeController::class, 'index'])->name('root');
+ // Authentication
+ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.login');
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
+-Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
++Route::delete('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
+ // Área do usuário (somente autenticados)
+ Route::middleware('auth')->group(function () {
+diff --git a/tests/Integration/Access/LogoutAccessTest.php b/tests/Integration/Access/LogoutAccessTest.php
+new file mode 100644
+index 0000000..c1c209e
+--- /dev/null
++++ b/tests/Integration/Access/LogoutAccessTest.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class LogoutAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080',
++            'http_errors' => false
++        ]);
++    }
++
++    public function test_logout_via_get_should_not_be_found(): void
++    {
++        $response = $this->client->get('/logout');
++
++        $this->assertEquals(404, $response->getStatusCode());
++    }
++
++    public function test_logout_via_delete_should_redirect_to_login(): void
++    {
++        $response = $this->client->delete('/logout');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_logout_via_post_with_method_param_should_redirect_to_login(): void
++    {
++        $response = $this->client->post('/logout', ['form_params' => ['_method' => 'DELETE']]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..8f68500 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -57,7 +57,7 @@ class AuthenticationsControllerTest extends ControllerTestCase
+     {
+         Auth::login($this->user);
+ 
+-        $response = $this->get(action: 'destroy', controllerName: 'App\Controllers\AuthenticationsController');
++        $response = $this->delete(action: 'destroy', controllerName: 'App\Controllers\AuthenticationsController');
+ 
+         $this->assertFalse(Auth::check());
+         $this->assertStringContainsString('Location: /login', $response);
+diff --git a/tests/Integration/Controllers/ControllerTestCase.php b/tests/Integration/Controllers/ControllerTestCase.php
+index 563baee..0f3ecee 100644
+--- a/tests/Integration/Controllers/ControllerTestCase.php
++++ b/tests/Integration/Controllers/ControllerTestCase.php
+@@ -56,6 +56,14 @@ abstract class ControllerTestCase extends TestCase
+         return $this->execController($action, $controllerName, $params);
+     }
+ 
++    /**
++     * @param array<string, mixed> $params
++     */
++    public function delete(string $action, string $controllerName, array $params = []): string
++    {
++        return $this->execController($action, $controllerName, $params);
++    }
++
+     /**
+      * @param array<string, mixed> $params
+      */
+diff --git a/tests/Unit/Core/Http/RequestTest.php b/tests/Unit/Core/Http/RequestTest.php
+index 2b82ddc..8eaad19 100644
+--- a/tests/Unit/Core/Http/RequestTest.php
++++ b/tests/Unit/Core/Http/RequestTest.php
+@@ -30,6 +30,15 @@ class RequestTest extends TestCase
+         $this->assertEquals('GET', $request->getMethod());
+     }
+ 
++    public function test_should_override_method_with_method_param(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'POST';
++        $_REQUEST['_method'] = 'DELETE';
++
++        $request = new Request();
++        $this->assertEquals('DELETE', $request->getMethod());
++    }
++
+     public function test_should_return_uri(): void
+     {
+         $request = new Request();
+-- 
+2.54.0 (Apple Git-157)
+

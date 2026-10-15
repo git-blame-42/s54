@@ -1,0 +1,37 @@
+From 7982012449f7e44a2517d2e3594604d4e5be2f65 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:56:49 -0300
+Subject: [PATCH] chore: Generate sample participants in populate script
+
+---
+ database/Populate/populate.php | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..a53dcfa 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -24,4 +24,20 @@ $user = new User([
+ ]);
+ $user->save();
+ 
++// Participantes extras só para demonstrar a paginação da listagem de usuários:
++// com 10 por página, os 17 usuários (2 acima + 15 aqui) ocupam 2 páginas.
++$participantsCount = 15;
++for ($i = 1; $i <= $participantsCount; $i++) {
++    (new User([
++        'name' => "Participante {$i}",
++        'email' => "participante{$i}@example.com",
++        'password' => '123456',
++        'password_confirmation' => '123456'
++    ]))->save();
++}
++
++$totalUsers = count(User::all());
++
+ echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo "Participantes extras: participante1@example.com a participante{$participantsCount}@example.com, senha 123456\n";
++echo "Total de usuários no banco: {$totalUsers}\n";
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,36 @@
+<div class="mb-3">
+    <a href="<?= route('events.new') ?>" class="btn btn-primary">Novo Evento</a>
+</div>
+
+<?php if (empty($events)) : ?>
+    <p>Nenhum evento cadastrado.</p>
+<?php else : ?>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Título</th>
+                <th>Início</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($events as $event) : ?>
+                <tr>
+                    <td><a href="<?= route('events.show', ['id' => $event->id]) ?>">#<?= $event->id ?></a></td>
+                    <td><?= htmlspecialchars((string) $event->title) ?></td>
+                    <td><?= $event->startsAtFormatted() ?></td>
+                    <td>
+                        <a href="<?= route('events.edit', ['id' => $event->id]) ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
+                        <form action="<?= route('events.destroy', ['id' => $event->id]) ?>" method="post" class="d-inline">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php $paginator->renderPagesNavigation(); ?>
+<?php endif; ?>

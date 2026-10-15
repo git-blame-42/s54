@@ -1,0 +1,1134 @@
+From 5293195c4350836bc50f1d8dfe234640f7f51d46 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:55:26 -0300
+Subject: [PATCH 1/3] feat: Add events table and Event model
+
+Create the events table (title, starts_at, user_id with a foreign key to
+users, ON DELETE CASCADE) and the Event model with notEmpty validations
+on title and starts_at, a BelongsTo user() relation and two formatting
+helpers for the start date. User gains the HasMany events() relation.
+
+Tests: EventTest covers create, find, validations, update, destroy,
+where, relation and cascade; UserTest covers events() and events()->new().
+---
+ app/Models/Event.php                   |  64 ++++++++++++
+ app/Models/User.php                    |   7 ++
+ database/schema.sql                    |  11 +++
+ tests/Unit/Models/Events/EventTest.php | 132 +++++++++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php   |  23 +++++
+ 5 files changed, 237 insertions(+)
+ create mode 100644 app/Models/Event.php
+ create mode 100644 tests/Unit/Models/Events/EventTest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+new file mode 100644
+index 0000000..bf428f8
+--- /dev/null
++++ b/app/Models/Event.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace App\Models;
++
++use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++
++/**
++ * Evento cadastrado por um usuário (relação 1xN com users).
++ *
++ * @property int $id
++ * @property string|null $title
++ * @property string|null $starts_at
++ * @property int $user_id
++ * @property User $user
++ */
++class Event extends Model
++{
++    protected static string $table = 'events';
++    protected static array $columns = ['title', 'starts_at', 'user_id'];
++
++    public function user(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'user_id');
++    }
++
++    public function validates(): void
++    {
++        Validations::notEmpty('title', $this);
++        Validations::notEmpty('starts_at', $this);
++    }
++
++    /**
++     * Data de início no formato pt-BR (dd/mm/aaaa hh:mm) para exibição.
++     */
++    public function startsAtFormatted(): string
++    {
++        $timestamp = $this->startsAtTimestamp();
++
++        return $timestamp === null ? '' : date('d/m/Y H:i', $timestamp);
++    }
++
++    /**
++     * Data de início no formato aceito pelo input datetime-local (aaaa-mm-ddThh:mm).
++     */
++    public function startsAtForInput(): string
++    {
++        $timestamp = $this->startsAtTimestamp();
++
++        return $timestamp === null ? '' : date('Y-m-d\TH:i', $timestamp);
++    }
++
++    private function startsAtTimestamp(): ?int
++    {
++        if ($this->starts_at === null || $this->starts_at === '') {
++            return null;
++        }
++
++        $timestamp = strtotime($this->starts_at);
++
++        return $timestamp === false ? null : $timestamp;
++    }
++}
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..686212d 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -3,6 +3,7 @@
+ namespace App\Models;
+ 
+ use Lib\Validations;
++use Core\Database\ActiveRecord\HasMany;
+ use Core\Database\ActiveRecord\Model;
+ 
+ /**
+@@ -12,6 +13,7 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $encrypted_password
+  * @property string $role
+  * @property string|null $last_login_at
++ * @property Event[] $events
+  */
+ class User extends Model
+ {
+@@ -64,6 +66,11 @@ class User extends Model
+         return $this->role === 'admin';
+     }
+ 
++    public function events(): HasMany
++    {
++        return $this->hasMany(Event::class, 'user_id');
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..237dec9 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -1,5 +1,6 @@
+ SET foreign_key_checks = 0;
+ 
++DROP TABLE IF EXISTS events;
+ DROP TABLE IF EXISTS users;
+ 
+ CREATE TABLE users (
+@@ -14,4 +15,14 @@ CREATE TABLE users (
+     UNIQUE KEY uq_users_email (email)
+ ) ENGINE=InnoDB;
+ 
++CREATE TABLE events (
++    id INT AUTO_INCREMENT PRIMARY KEY,
++    title VARCHAR(255) NOT NULL,
++    starts_at DATETIME NOT NULL,
++    user_id INT NOT NULL,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
++    CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
++) ENGINE=InnoDB;
++
+ SET foreign_key_checks = 1;
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+new file mode 100644
+index 0000000..0960e08
+--- /dev/null
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -0,0 +1,132 @@
++<?php
++
++namespace Tests\Unit\Models\Events;
++
++use App\Models\Event;
++use App\Models\User;
++use Tests\TestCase;
++
++class EventTest extends TestCase
++{
++    private User $user;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++
++        $this->event = new Event([
++            'title' => 'Semana Acadêmica',
++            'starts_at' => '2026-10-20 19:30:00',
++            'user_id' => $this->user->id
++        ]);
++        $this->event->save();
++    }
++
++    public function test_should_create_new_event(): void
++    {
++        $this->assertCount(1, Event::all());
++        $this->assertEquals('Semana Acadêmica', Event::all()[0]->title);
++    }
++
++    public function test_find_by_id_should_return_the_event(): void
++    {
++        $found = Event::findById($this->event->id);
++
++        $this->assertEquals('Semana Acadêmica', $found->title);
++        $this->assertEquals('2026-10-20 19:30:00', $found->starts_at);
++        $this->assertEquals($this->user->id, $found->user_id);
++    }
++
++    public function test_find_by_id_should_return_null(): void
++    {
++        $this->assertNull(Event::findById(999));
++    }
++
++    public function test_errors_should_return_empty_title_error(): void
++    {
++        $event = new Event(['starts_at' => '2026-10-20 19:30:00', 'user_id' => $this->user->id]);
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser vazio!', $event->errors('title'));
++        $this->assertNull($event->errors('starts_at'));
++    }
++
++    public function test_errors_should_return_empty_starts_at_error(): void
++    {
++        $event = new Event(['title' => 'Palestra', 'starts_at' => '', 'user_id' => $this->user->id]);
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode ser vazio!', $event->errors('starts_at'));
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_save_should_update_existing_event(): void
++    {
++        $this->event->title = 'Semana Acadêmica 2026';
++        $this->assertTrue($this->event->save());
++
++        $this->assertEquals('Semana Acadêmica 2026', Event::findById($this->event->id)->title);
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_destroy_should_remove_the_event(): void
++    {
++        $this->assertTrue($this->event->destroy());
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_user_should_return_the_owner(): void
++    {
++        $this->assertEquals($this->user->id, $this->event->user->id);
++        $this->assertEquals('fulano@example.com', $this->event->user->email);
++    }
++
++    public function test_where_should_filter_by_user(): void
++    {
++        $other = new User([
++            'name' => 'User 2',
++            'email' => 'fulano2@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $other->save();
++        (new Event(['title' => 'Outro', 'starts_at' => '2026-11-01 08:00:00', 'user_id' => $other->id]))->save();
++
++        $mine = Event::where(['user_id' => $this->user->id]);
++
++        $this->assertCount(2, Event::all());
++        $this->assertCount(1, $mine);
++        $this->assertEquals($this->event->id, $mine[0]->id);
++    }
++
++    public function test_starts_at_formatted_should_use_brazilian_format(): void
++    {
++        $this->assertEquals('20/10/2026 19:30', $this->event->startsAtFormatted());
++        $this->assertEquals('2026-10-20T19:30', $this->event->startsAtForInput());
++    }
++
++    public function test_starts_at_formatted_should_be_empty_without_date(): void
++    {
++        $event = new Event(['title' => 'Sem data']);
++
++        $this->assertEquals('', $event->startsAtFormatted());
++        $this->assertEquals('', $event->startsAtForInput());
++    }
++
++    public function test_destroying_user_should_cascade_events(): void
++    {
++        $this->user->destroy();
++
++        $this->assertCount(0, Event::all());
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..a59f738 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Tests\Unit\Models\Users;
+ 
++use App\Models\Event;
+ use App\Models\User;
+ use Tests\TestCase;
+ 
+@@ -165,4 +166,26 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_events_should_return_only_the_user_events(): void
++    {
++        (new Event(['title' => 'Evento 1', 'starts_at' => '2026-10-20 19:30:00', 'user_id' => $this->user->id]))->save();
++        (new Event(['title' => 'Evento 2', 'starts_at' => '2026-10-21 19:30:00', 'user_id' => $this->user->id]))->save();
++        (new Event(['title' => 'De outro', 'starts_at' => '2026-10-22 19:30:00', 'user_id' => $this->user2->id]))->save();
++
++        $titles = array_map(fn($event) => $event->title, $this->user->events);
++
++        $this->assertCount(2, $this->user->events()->get());
++        $this->assertEquals(['Evento 1', 'Evento 2'], $titles);
++    }
++
++    public function test_events_new_should_set_user_id(): void
++    {
++        /** @var Event $event */
++        $event = $this->user->events()->new(['title' => 'Novo', 'starts_at' => '2026-10-20 19:30:00']);
++
++        $this->assertEquals($this->user->id, $event->user_id);
++        $this->assertTrue($event->save());
++        $this->assertEquals($this->user->id, Event::findById($event->id)->user_id);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 34a4191ce4468480361e1a53cb5a9e884865e805 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:57:55 -0300
+Subject: [PATCH 2/3] feat: Add events CRUD for authenticated users
+
+RESTful routes inside the auth group (index, paginate, new, create,
+show, edit, update, destroy), a thin EventsController that only touches
+the logged user's events through User::events() (HasMany), views with
+a shared _form partial (novalidate, invalid-feedback, values kept on
+re-render), "Eventos" link in the navbar and three demo events in the
+populate script. Events of other users respond 404.
+---
+ app/Controllers/EventsController.php | 120 +++++++++++++++++++++++++++
+ app/views/events/_form.phtml         |  24 ++++++
+ app/views/events/edit.phtml          |   5 ++
+ app/views/events/index.phtml         |  36 ++++++++
+ app/views/events/new.phtml           |   4 +
+ app/views/events/show.phtml          |   8 ++
+ app/views/layouts/_navbar.phtml      |   3 +
+ config/routes.php                    |  11 +++
+ database/Populate/populate.php       |  12 +++
+ 9 files changed, 223 insertions(+)
+ create mode 100644 app/Controllers/EventsController.php
+ create mode 100644 app/views/events/_form.phtml
+ create mode 100644 app/views/events/edit.phtml
+ create mode 100644 app/views/events/index.phtml
+ create mode 100644 app/views/events/new.phtml
+ create mode 100644 app/views/events/show.phtml
+
+diff --git a/app/Controllers/EventsController.php b/app/Controllers/EventsController.php
+new file mode 100644
+index 0000000..5c87e02
+--- /dev/null
++++ b/app/Controllers/EventsController.php
+@@ -0,0 +1,120 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Event;
++use Core\Exceptions\HTTPException;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++class EventsController extends Controller
++{
++    public function index(Request $request): void
++    {
++        $paginator = $this->current_user->events()->paginate(
++            page: (int) $request->getParam('page', 1),
++            per_page: 10
++        );
++        $events = $paginator->registers();
++
++        $title = 'Meus Eventos';
++        $this->render('events/index', compact('events', 'paginator', 'title'));
++    }
++
++    public function show(Request $request): void
++    {
++        $event = $this->findEvent($request);
++
++        $title = "Evento #{$event->id}";
++        $this->render('events/show', compact('event', 'title'));
++    }
++
++    public function new(): void
++    {
++        $event = $this->current_user->events()->new();
++
++        $title = 'Novo Evento';
++        $this->render('events/new', compact('event', 'title'));
++    }
++
++    public function create(Request $request): void
++    {
++        $event = $this->current_user->events()->new($this->eventParams($request));
++
++        if ($event->save()) {
++            FlashMessage::success('Evento criado com sucesso!');
++            $this->redirectTo(route('events.index'));
++        } else {
++            FlashMessage::danger('Existem dados incorretos! Verifique o formulário.');
++            $title = 'Novo Evento';
++            $this->render('events/new', compact('event', 'title'));
++        }
++    }
++
++    public function edit(Request $request): void
++    {
++        $event = $this->findEvent($request);
++
++        $title = "Editar Evento #{$event->id}";
++        $this->render('events/edit', compact('event', 'title'));
++    }
++
++    public function update(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        $params = $this->eventParams($request);
++
++        $event->title = $params['title'];
++        $event->starts_at = $params['starts_at'];
++
++        if ($event->save()) {
++            FlashMessage::success('Evento atualizado com sucesso!');
++            $this->redirectTo(route('events.index'));
++        } else {
++            FlashMessage::danger('Existem dados incorretos! Verifique o formulário.');
++            $title = "Editar Evento #{$event->id}";
++            $this->render('events/edit', compact('event', 'title'));
++        }
++    }
++
++    public function destroy(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        $event->destroy();
++
++        FlashMessage::success('Evento removido com sucesso!');
++        $this->redirectTo(route('events.index'));
++    }
++
++    /**
++     * Busca o evento pelo id SÓ entre os eventos do usuário logado.
++     * Evento de outro usuário (ou inexistente) responde 404.
++     */
++    private function findEvent(Request $request): Event
++    {
++        /** @var Event|null $event */
++        $event = $this->current_user->events()->findById((int) $request->getParam('id'));
++
++        if ($event === null) {
++            throw new HTTPException('Evento não encontrado', 404);
++        }
++
++        return $event;
++    }
++
++    /**
++     * Lista explícita de campos aceitos do formulário (nunca repassar o POST inteiro ao model).
++     *
++     * @return array{title: string|null, starts_at: string|null}
++     */
++    private function eventParams(Request $request): array
++    {
++        $params = $request->getParam('event', []);
++
++        return [
++            'title' => $params['title'] ?? null,
++            'starts_at' => $params['starts_at'] ?? null,
++        ];
++    }
++}
+diff --git a/app/views/events/_form.phtml b/app/views/events/_form.phtml
+new file mode 100644
+index 0000000..c34815a
+--- /dev/null
++++ b/app/views/events/_form.phtml
+@@ -0,0 +1,24 @@
++<form action="<?= $action ?>" method="post" novalidate>
++    <?php if (isset($method)) : ?>
++        <input type="hidden" name="_method" value="<?= $method ?>">
++    <?php endif; ?>
++
++    <div class="mb-3">
++        <label for="event_title" class="form-label">Título</label>
++        <input type="text" name="event[title]" id="event_title"
++               class="form-control <?= $event->errors('title') ? 'is-invalid' : '' ?>"
++               value="<?= htmlspecialchars((string) $event->title) ?>">
++        <div class="invalid-feedback"><?= $event->errors('title') ?></div>
++    </div>
++
++    <div class="mb-3">
++        <label for="event_starts_at" class="form-label">Início</label>
++        <input type="datetime-local" name="event[starts_at]" id="event_starts_at"
++               class="form-control <?= $event->errors('starts_at') ? 'is-invalid' : '' ?>"
++               value="<?= $event->startsAtForInput() ?>">
++        <div class="invalid-feedback"><?= $event->errors('starts_at') ?></div>
++    </div>
++
++    <button type="submit" class="btn btn-primary"><?= $submitLabel ?></button>
++    <a href="<?= route('events.index') ?>" class="btn btn-link">Cancelar</a>
++</form>
+diff --git a/app/views/events/edit.phtml b/app/views/events/edit.phtml
+new file mode 100644
+index 0000000..25fb305
+--- /dev/null
++++ b/app/views/events/edit.phtml
+@@ -0,0 +1,5 @@
++<?php
++$action = route('events.update', ['id' => $event->id]);
++$method = 'PUT';
++$submitLabel = 'Salvar alterações';
++require __DIR__ . '/_form.phtml';
+diff --git a/app/views/events/index.phtml b/app/views/events/index.phtml
+new file mode 100644
+index 0000000..df45953
+--- /dev/null
++++ b/app/views/events/index.phtml
+@@ -0,0 +1,36 @@
++<div class="mb-3">
++    <a href="<?= route('events.new') ?>" class="btn btn-primary">Novo Evento</a>
++</div>
++
++<?php if (empty($events)) : ?>
++    <p>Nenhum evento cadastrado.</p>
++<?php else : ?>
++    <table class="table">
++        <thead>
++            <tr>
++                <th>#</th>
++                <th>Título</th>
++                <th>Início</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($events as $event) : ?>
++                <tr>
++                    <td><a href="<?= route('events.show', ['id' => $event->id]) ?>">#<?= $event->id ?></a></td>
++                    <td><?= htmlspecialchars((string) $event->title) ?></td>
++                    <td><?= $event->startsAtFormatted() ?></td>
++                    <td>
++                        <a href="<?= route('events.edit', ['id' => $event->id]) ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
++                        <form action="<?= route('events.destroy', ['id' => $event->id]) ?>" method="post" class="d-inline">
++                            <input type="hidden" name="_method" value="DELETE">
++                            <button type="submit" class="btn btn-sm btn-outline-danger">Excluir</button>
++                        </form>
++                    </td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++
++    <?php $paginator->renderPagesNavigation(); ?>
++<?php endif; ?>
+diff --git a/app/views/events/new.phtml b/app/views/events/new.phtml
+new file mode 100644
+index 0000000..617c8c6
+--- /dev/null
++++ b/app/views/events/new.phtml
+@@ -0,0 +1,4 @@
++<?php
++$action = route('events.create');
++$submitLabel = 'Criar evento';
++require __DIR__ . '/_form.phtml';
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+new file mode 100644
+index 0000000..1e7cad8
+--- /dev/null
++++ b/app/views/events/show.phtml
+@@ -0,0 +1,8 @@
++<div class="card mb-3">
++    <div class="card-body">
++        <h5 class="card-title"><?= htmlspecialchars((string) $event->title) ?></h5>
++        <p class="card-text">Início: <?= $event->startsAtFormatted() ?></p>
++        <a href="<?= route('events.edit', ['id' => $event->id]) ?>" class="btn btn-outline-primary">Editar</a>
++        <a href="<?= route('events.index') ?>" class="btn btn-link">Voltar</a>
++    </div>
++</div>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..a080588 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -10,6 +10,9 @@
+                 <li class="nav-item">
+                     <a class="nav-link" href="<?= route('dashboard.index') ?>">Painel</a>
+                 </li>
++                <li class="nav-item">
++                    <a class="nav-link" href="<?= route('events.index') ?>">Eventos</a>
++                </li>
+                 <?php if ($this->currentUser()->isAdmin()) : ?>
+                     <li class="nav-item">
+                         <a class="nav-link" href="<?= route('admin.dashboard.index') ?>">Administração</a>
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..4f42299 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -3,6 +3,7 @@
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
++use App\Controllers\EventsController;
+ use App\Controllers\HomeController;
+ use Core\Router\Route;
+ 
+@@ -17,6 +18,16 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Eventos do usuário logado (CRUD RESTful). A rota /events/new fica antes de /events/{id}.
++    Route::get('/events', [EventsController::class, 'index'])->name('events.index');
++    Route::get('/events/page/{page}', [EventsController::class, 'index'])->name('events.paginate');
++    Route::get('/events/new', [EventsController::class, 'new'])->name('events.new');
++    Route::post('/events', [EventsController::class, 'create'])->name('events.create');
++    Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
++    Route::get('/events/{id}/edit', [EventsController::class, 'edit'])->name('events.edit');
++    Route::put('/events/{id}', [EventsController::class, 'update'])->name('events.update');
++    Route::delete('/events/{id}', [EventsController::class, 'destroy'])->name('events.destroy');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..c01f3f1 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -2,6 +2,7 @@
+ 
+ require __DIR__ . '/../../config/bootstrap.php';
+ 
++use App\Models\Event;
+ use App\Models\User;
+ use Core\Database\Database;
+ 
+@@ -24,4 +25,15 @@ $user = new User([
+ ]);
+ $user->save();
+ 
++$events = [
++    ['title' => 'Semana Acadêmica', 'starts_at' => '2026-10-20 19:30:00'],
++    ['title' => 'Palestra de Abertura', 'starts_at' => '2026-10-21 19:00:00'],
++    ['title' => 'Workshop de PHP', 'starts_at' => '2026-10-22 14:00:00'],
++];
++
++foreach ($events as $params) {
++    $user->events()->new($params)->save();
++}
++
+ echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo count($events) . " eventos criados para {$user->email}\n";
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 8f658a5fcde0d552b0a48f530e855cafaf3b483b Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:59:15 -0300
+Subject: [PATCH 3/3] test: Cover events CRUD with controller, access and
+ acceptance tests
+
+EventsControllerTest exercises the seven actions (valid and invalid
+create/update, ownership check with 404, pagination), EventsAccessTest
+proves every events route redirects to /login without a session, and
+EventCest drives the browser through create, list, show, update and
+destroy. ControllerTestCase gains a delete() helper.
+---
+ tests/Acceptance/events/EventCest.php         | 156 ++++++++++++++
+ tests/Integration/Access/EventsAccessTest.php |  47 ++++
+ .../Controllers/ControllerTestCase.php        |   8 +
+ .../Controllers/EventsControllerTest.php      | 202 ++++++++++++++++++
+ 4 files changed, 413 insertions(+)
+ create mode 100644 tests/Acceptance/events/EventCest.php
+ create mode 100644 tests/Integration/Access/EventsAccessTest.php
+ create mode 100644 tests/Integration/Controllers/EventsControllerTest.php
+
+diff --git a/tests/Acceptance/events/EventCest.php b/tests/Acceptance/events/EventCest.php
+new file mode 100644
+index 0000000..b505573
+--- /dev/null
++++ b/tests/Acceptance/events/EventCest.php
+@@ -0,0 +1,156 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use App\Models\Event;
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class EventCest extends BaseAcceptanceCest
++{
++    private User $user;
++
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++    }
++
++    public function accessEventsWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/events');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function createEventWithInvalidData(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/events/new');
++        $page->see('Novo Evento', '//h1');
++
++        $page->click('Criar evento');
++
++        $page->see('Existem dados incorretos! Verifique o formulário.');
++        $page->see('não pode ser vazio!');
++    }
++
++    public function createEventWithValidData(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/events/new');
++
++        $page->fillField('event[title]', 'Semana Acadêmica');
++        $this->fillStartsAt($page, '2026-10-20T19:30');
++        $page->click('Criar evento');
++
++        $page->seeCurrentUrlEquals('/events');
++        $page->see('Evento criado com sucesso!');
++        $page->see('Semana Acadêmica', '//table');
++        $page->see('20/10/2026 19:30', '//table');
++    }
++
++    public function listOnlyMyEvents(AcceptanceTester $page): void
++    {
++        $this->createEvent($this->user, 'Palestra de Abertura', '2026-10-21 19:00:00');
++        $other = new User([
++            'name' => 'Beltrano',
++            'email' => 'beltrano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $other->save();
++        $this->createEvent($other, 'Evento de outro', '2026-10-22 19:00:00');
++
++        $page->login('fulano@example.com', '123456');
++        $page->click('Eventos');
++
++        $page->seeCurrentUrlEquals('/events');
++        $page->see('Meus Eventos', '//h1');
++        $page->see('Palestra de Abertura', '//table');
++        $page->dontSee('Evento de outro');
++    }
++
++    public function showEvent(AcceptanceTester $page): void
++    {
++        $event = $this->createEvent($this->user, 'Workshop de PHP', '2026-10-22 14:00:00');
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage("/events/{$event->id}");
++
++        $page->see("Evento #{$event->id}", '//h1');
++        $page->see('Workshop de PHP');
++        $page->see('Início: 22/10/2026 14:00');
++    }
++
++    public function updateEvent(AcceptanceTester $page): void
++    {
++        $event = $this->createEvent($this->user, 'Workshop de PHP', '2026-10-22 14:00:00');
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage("/events/{$event->id}/edit");
++        $page->seeInField('event[title]', 'Workshop de PHP');
++
++        $page->fillField('event[title]', 'Workshop de PHP 8');
++        $this->fillStartsAt($page, '2026-10-23T09:00');
++        $page->click('Salvar alterações');
++
++        $page->seeCurrentUrlEquals('/events');
++        $page->see('Evento atualizado com sucesso!');
++        $page->see('Workshop de PHP 8', '//table');
++        $page->see('23/10/2026 09:00', '//table');
++    }
++
++    public function updateEventWithInvalidData(AcceptanceTester $page): void
++    {
++        $event = $this->createEvent($this->user, 'Workshop de PHP', '2026-10-22 14:00:00');
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage("/events/{$event->id}/edit");
++
++        $page->fillField('event[title]', '');
++        $page->click('Salvar alterações');
++
++        $page->see('Existem dados incorretos! Verifique o formulário.');
++        $page->see('não pode ser vazio!');
++    }
++
++    public function destroyEvent(AcceptanceTester $page): void
++    {
++        $this->createEvent($this->user, 'Workshop de PHP', '2026-10-22 14:00:00');
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/events');
++        $page->click('Excluir');
++
++        $page->seeCurrentUrlEquals('/events');
++        $page->see('Evento removido com sucesso!');
++        $page->dontSee('Workshop de PHP');
++        $page->see('Nenhum evento cadastrado.');
++    }
++
++    private function createEvent(User $user, string $title, string $startsAt): Event
++    {
++        $event = new Event(['title' => $title, 'starts_at' => $startsAt, 'user_id' => $user->id]);
++        $event->save();
++
++        return $event;
++    }
++
++    /**
++     * O Chrome não aceita texto digitado num input datetime-local pelo fillField;
++     * o valor é atribuído direto no DOM, no formato que o navegador enviaria.
++     */
++    private function fillStartsAt(AcceptanceTester $page, string $value): void
++    {
++        $page->executeJS("document.getElementById('event_starts_at').value = '{$value}';");
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+new file mode 100644
+index 0000000..e1d8920
+--- /dev/null
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\Attributes\DataProvider;
++use PHPUnit\Framework\TestCase;
++
++class EventsAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    /**
++     * @return array<string, array{string, string}>
++     */
++    public static function protectedRoutes(): array
++    {
++        return [
++            'index' => ['GET', '/events'],
++            'paginate' => ['GET', '/events/page/2'],
++            'new' => ['GET', '/events/new'],
++            'create' => ['POST', '/events'],
++            'show' => ['GET', '/events/1'],
++            'edit' => ['GET', '/events/1/edit'],
++            'update' => ['PUT', '/events/1'],
++            'destroy' => ['DELETE', '/events/1'],
++        ];
++    }
++
++    #[DataProvider('protectedRoutes')]
++    public function test_events_routes_should_redirect_to_login_without_session(string $method, string $uri): void
++    {
++        $response = $this->client->request($method, $uri);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/ControllerTestCase.php b/tests/Integration/Controllers/ControllerTestCase.php
+index 563baee..0f3ecee 100644
+--- a/tests/Integration/Controllers/ControllerTestCase.php
++++ b/tests/Integration/Controllers/ControllerTestCase.php
+@@ -56,6 +56,14 @@ abstract class ControllerTestCase extends TestCase
+         return $this->execController($action, $controllerName, $params);
+     }
+ 
++    /**
++     * @param array<string, mixed> $params
++     */
++    public function delete(string $action, string $controllerName, array $params = []): string
++    {
++        return $this->execController($action, $controllerName, $params);
++    }
++
+     /**
+      * @param array<string, mixed> $params
+      */
+diff --git a/tests/Integration/Controllers/EventsControllerTest.php b/tests/Integration/Controllers/EventsControllerTest.php
+new file mode 100644
+index 0000000..df488f8
+--- /dev/null
++++ b/tests/Integration/Controllers/EventsControllerTest.php
+@@ -0,0 +1,202 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\Event;
++use App\Models\User;
++use Core\Exceptions\HTTPException;
++use Lib\Authentication\Auth;
++
++class EventsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\EventsController';
++
++    private User $user;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++
++        $this->event = new Event([
++            'title' => 'Semana Acadêmica',
++            'starts_at' => '2026-10-20 19:30:00',
++            'user_id' => $this->user->id
++        ]);
++        $this->event->save();
++
++        Auth::login($this->user);
++    }
++
++    public function test_index_should_list_only_the_user_events(): void
++    {
++        $other = new User([
++            'name' => 'User 2',
++            'email' => 'fulano2@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $other->save();
++        (new Event(['title' => 'Evento de outro', 'starts_at' => '2026-11-01 08:00:00', 'user_id' => $other->id]))->save();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Meus Eventos', $response);
++        $this->assertStringContainsString('Semana Acadêmica', $response);
++        $this->assertStringContainsString('20/10/2026 19:30', $response);
++        $this->assertStringNotContainsString('Evento de outro', $response);
++    }
++
++    public function test_index_should_paginate_ten_per_page(): void
++    {
++        for ($i = 1; $i <= 10; $i++) {
++            $this->user->events()->new(['title' => "Evento {$i}", 'starts_at' => '2026-11-01 08:00:00'])->save();
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('Evento 9', $page1);
++        $this->assertStringNotContainsString('Evento 10', $page1);
++        $this->assertStringContainsString('Evento 10', $page2);
++        $this->assertStringContainsString('Mostrando 11 - 11 de 11', $page2);
++    }
++
++    public function test_new_should_render_the_form(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString('name="event[title]"', $response);
++        $this->assertStringContainsString('name="event[starts_at]"', $response);
++    }
++
++    public function test_create_with_valid_params_should_save_and_redirect(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => ['title' => 'Palestra', 'starts_at' => '2026-10-21T19:00']]
++        );
++
++        $this->assertStringContainsString('Location: /events', $response);
++        $this->assertCount(2, Event::all());
++
++        $created = Event::findBy(['title' => 'Palestra']);
++        $this->assertEquals($this->user->id, $created->user_id);
++        $this->assertEquals('2026-10-21 19:00:00', $created->starts_at);
++    }
++
++    public function test_create_with_invalid_params_should_render_errors(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => ['title' => '', 'starts_at' => '']]
++        );
++
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++        $this->assertStringContainsString('is-invalid', $response);
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_create_should_ignore_user_id_from_params(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => ['title' => 'Palestra', 'starts_at' => '2026-10-21T19:00', 'user_id' => 999]]
++        );
++
++        $this->assertEquals($this->user->id, Event::findBy(['title' => 'Palestra'])->user_id);
++    }
++
++    public function test_show_should_render_the_event(): void
++    {
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertStringContainsString("Evento #{$this->event->id}", $response);
++        $this->assertStringContainsString('Semana Acadêmica', $response);
++        $this->assertStringContainsString('20/10/2026 19:30', $response);
++    }
++
++    public function test_show_should_respond_404_for_another_user_event(): void
++    {
++        $other = new User([
++            'name' => 'User 2',
++            'email' => 'fulano2@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $other->save();
++        $event = new Event(['title' => 'De outro', 'starts_at' => '2026-11-01 08:00:00', 'user_id' => $other->id]);
++        $event->save();
++
++        $this->expectException(HTTPException::class);
++        $this->expectExceptionMessage('Evento não encontrado');
++
++        $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++    }
++
++    public function test_edit_should_render_the_form_with_values(): void
++    {
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertStringContainsString("Editar Evento #{$this->event->id}", $response);
++        $this->assertStringContainsString('value="Semana Acadêmica"', $response);
++        $this->assertStringContainsString('value="2026-10-20T19:30"', $response);
++        $this->assertStringContainsString('name="_method" value="PUT"', $response);
++    }
++
++    public function test_update_with_valid_params_should_save_and_redirect(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $this->event->id, 'event' => ['title' => 'Semana 2026', 'starts_at' => '2026-10-25T08:00']]
++        );
++
++        $this->assertStringContainsString('Location: /events', $response);
++
++        $updated = Event::findById($this->event->id);
++        $this->assertEquals('Semana 2026', $updated->title);
++        $this->assertEquals('2026-10-25 08:00:00', $updated->starts_at);
++    }
++
++    public function test_update_with_invalid_params_should_render_errors(): void
++    {
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $this->event->id, 'event' => ['title' => '', 'starts_at' => '2026-10-25T08:00']]
++        );
++
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++        $this->assertEquals('Semana Acadêmica', Event::findById($this->event->id)->title);
++    }
++
++    public function test_destroy_should_remove_and_redirect(): void
++    {
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertStringContainsString('Location: /events', $response);
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_destroy_should_respond_404_for_unknown_event(): void
++    {
++        $this->expectException(HTTPException::class);
++
++        $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => 999]);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,246 @@
+From 7365dfd1b9330832c44e47a5326eabe5e30fc2ed Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:03 -0300
+Subject: [PATCH] fix: Escape user data in views
+
+---
+ app/views/admin/dashboard/index.phtml         |  2 +-
+ app/views/dashboard/index.phtml               |  2 +-
+ app/views/layouts/_flash_message.phtml        |  4 +-
+ app/views/layouts/_navbar.phtml               |  2 +-
+ app/views/layouts/application.phtml           |  2 +-
+ composer.json                                 |  3 +-
+ lib/helpers.php                               | 11 +++
+ tests/Acceptance/dashboard/DashboardCest.php  | 17 +++++
+ .../Controllers/DashboardControllerTest.php   | 68 +++++++++++++++++++
+ tests/Unit/Lib/HelpersTest.php                | 32 +++++++++
+ 10 files changed, 136 insertions(+), 7 deletions(-)
+ create mode 100644 lib/helpers.php
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+ create mode 100644 tests/Unit/Lib/HelpersTest.php
+
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index 05be497..cf32e02 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1 +1 @@
+-<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
++<p>Olá, <?= e($this->currentUser()->name) ?>! Esta área só aparece para administradores.</p>
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index 0d90364..c5a539e 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1 +1 @@
+-<p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++<p>Bem-vindo(a), <?= e($this->currentUser()->name) ?>! Esta área só aparece para usuários autenticados.</p>
+diff --git a/app/views/layouts/_flash_message.phtml b/app/views/layouts/_flash_message.phtml
+index 5e38c31..ccd6ea4 100644
+--- a/app/views/layouts/_flash_message.phtml
++++ b/app/views/layouts/_flash_message.phtml
+@@ -1,6 +1,6 @@
+ <?php foreach (\Lib\FlashMessage::get() as $type => $msg) : ?>
+-    <div class="alert alert-<?= $type ?> alert-dismissible" role="alert">
+-        <div><?= $msg ?></div>
++    <div class="alert alert-<?= e($type) ?> alert-dismissible" role="alert">
++        <div><?= e($msg) ?></div>
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+     </div>
+ <? endforeach; ?>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..cc54d23 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -17,7 +17,7 @@
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+-                        <?= $this->currentUser()->email ?>
++                        <?= e($this->currentUser()->email) ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+diff --git a/app/views/layouts/application.phtml b/app/views/layouts/application.phtml
+index 5e52801..7cc535d 100644
+--- a/app/views/layouts/application.phtml
++++ b/app/views/layouts/application.phtml
+@@ -23,7 +23,7 @@
+ 
+         <header class="mb-3">
+             <h1>
+-                <?= $title ?>
++                <?= e($title) ?>
+             </h1>
+         </header>
+ 
+diff --git a/composer.json b/composer.json
+index 83cdc12..82a0293 100644
+--- a/composer.json
++++ b/composer.json
+@@ -2,7 +2,8 @@
+   "name": "root/app",
+   "autoload": {
+     "files": [
+-      "core/helpers.php"
++      "core/helpers.php",
++      "lib/helpers.php"
+     ],
+     "psr-4": {
+       "App\\": "app/",
+diff --git a/lib/helpers.php b/lib/helpers.php
+new file mode 100644
+index 0000000..8f0bd43
+--- /dev/null
++++ b/lib/helpers.php
+@@ -0,0 +1,11 @@
++<?php
++
++if (!function_exists('e')) {
++    /**
++     * Escapa um valor para impressão segura em HTML (texto e atributos).
++     */
++    function e(?string $value): string
++    {
++        return htmlspecialchars($value ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
++    }
++}
+diff --git a/tests/Acceptance/dashboard/DashboardCest.php b/tests/Acceptance/dashboard/DashboardCest.php
+index a82e911..1ed3c3b 100644
+--- a/tests/Acceptance/dashboard/DashboardCest.php
++++ b/tests/Acceptance/dashboard/DashboardCest.php
+@@ -36,4 +36,21 @@ class DashboardCest extends BaseAcceptanceCest
+         $page->see('Painel do Usuário', '//h1');
+         $page->see('Bem-vindo(a), Fulano!');
+     }
++
++    public function userNameWithScriptIsShownAsText(AcceptanceTester $page): void
++    {
++        $user = new User([
++            'name' => "<script>alert('xss')</script>",
++            'email' => 'xss@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        $page->login('xss@example.com', '123456');
++        $page->amOnPage('/dashboard');
++
++        $page->see("Bem-vindo(a), <script>alert('xss')</script>!");
++        $page->seeInSource('&lt;script&gt;');
++    }
+ }
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..dc0edf5
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++    }
++
++    public function test_index_should_escape_user_name(): void
++    {
++        $this->user->update(['name' => '<b>x</b>']);
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Bem-vindo(a), &lt;b&gt;x&lt;/b&gt;!', $response);
++        $this->assertStringNotContainsString('<b>x</b>', $response);
++    }
++
++    public function test_index_should_escape_user_email_in_navbar(): void
++    {
++        $this->user->update(['email' => '<i>fulano</i>@example.com']);
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('&lt;i&gt;fulano&lt;/i&gt;@example.com', $response);
++        $this->assertStringNotContainsString('<i>fulano</i>', $response);
++    }
++
++    public function test_index_should_escape_flash_message(): void
++    {
++        Auth::login($this->user);
++        FlashMessage::danger('<script>alert(1)</script>');
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $response);
++        $this->assertStringNotContainsString('<script>alert(1)</script>', $response);
++    }
++
++    public function test_admin_index_should_escape_admin_name(): void
++    {
++        $this->user->update(['name' => '<b>x</b>', 'role' => 'admin']);
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\DashboardController');
++
++        $this->assertStringContainsString('Olá, &lt;b&gt;x&lt;/b&gt;!', $response);
++        $this->assertStringNotContainsString('<b>x</b>', $response);
++    }
++}
+diff --git a/tests/Unit/Lib/HelpersTest.php b/tests/Unit/Lib/HelpersTest.php
+new file mode 100644
+index 0000000..f5f137a
+--- /dev/null
++++ b/tests/Unit/Lib/HelpersTest.php
+@@ -0,0 +1,32 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use PHPUnit\Framework\TestCase;
++
++class HelpersTest extends TestCase
++{
++    public function test_e_should_escape_html_tags(): void
++    {
++        $this->assertSame('&lt;b&gt;x&lt;/b&gt;', e('<b>x</b>'));
++        $this->assertSame(
++            '&lt;script&gt;alert(1)&lt;/script&gt;',
++            e('<script>alert(1)</script>')
++        );
++    }
++
++    public function test_e_should_escape_quotes_and_ampersand(): void
++    {
++        $this->assertSame('&quot;a&quot; &#039;b&#039; &amp; c', e('"a" \'b\' & c'));
++    }
++
++    public function test_e_should_keep_plain_text_and_accents(): void
++    {
++        $this->assertSame('Fulano de Tal - Câmpus', e('Fulano de Tal - Câmpus'));
++    }
++
++    public function test_e_should_return_empty_string_for_null(): void
++    {
++        $this->assertSame('', e(null));
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,118 @@
+From 432adce34dea78ee6984a6d5b4743906b91b1dec Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:42:10 -0300
+Subject: [PATCH] refactor: Centralize redirect logic in BaseMiddleware
+
+---
+ app/Middleware/Admin.php          | 13 ++-----------
+ app/Middleware/Authenticate.php   | 13 ++-----------
+ app/Middleware/BaseMiddleware.php | 32 +++++++++++++++++++++++++++++++
+ 3 files changed, 36 insertions(+), 22 deletions(-)
+ create mode 100644 app/Middleware/BaseMiddleware.php
+
+diff --git a/app/Middleware/Admin.php b/app/Middleware/Admin.php
+index 782069b..aff8484 100644
+--- a/app/Middleware/Admin.php
++++ b/app/Middleware/Admin.php
+@@ -2,12 +2,10 @@
+ 
+ namespace App\Middleware;
+ 
+-use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+-use Lib\FlashMessage;
+ 
+-class Admin implements Middleware
++class Admin extends BaseMiddleware
+ {
+     public function handle(Request $request): void
+     {
+@@ -15,14 +13,7 @@ class Admin implements Middleware
+ 
+         // Sem usuário logado, quem redireciona é o middleware Authenticate.
+         if ($user !== null && !$user->isAdmin()) {
+-            FlashMessage::danger('Acesso restrito a administradores');
+-            $this->redirectTo(route('dashboard.index'));
++            $this->deny('Acesso restrito a administradores', 'dashboard.index');
+         }
+     }
+-
+-    private function redirectTo(string $location): void
+-    {
+-        header('Location: ' . $location);
+-        exit;
+-    }
+ }
+diff --git a/app/Middleware/Authenticate.php b/app/Middleware/Authenticate.php
+index 11872f6..77af4c5 100644
+--- a/app/Middleware/Authenticate.php
++++ b/app/Middleware/Authenticate.php
+@@ -2,24 +2,15 @@
+ 
+ namespace App\Middleware;
+ 
+-use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+ use Lib\Authentication\Auth;
+-use Lib\FlashMessage;
+ 
+-class Authenticate implements Middleware
++class Authenticate extends BaseMiddleware
+ {
+     public function handle(Request $request): void
+     {
+         if (!Auth::check()) {
+-            FlashMessage::danger('Você deve estar logado para acessar essa página');
+-            $this->redirectTo(route('users.login'));
++            $this->deny('Você deve estar logado para acessar essa página', 'users.login');
+         }
+     }
+-
+-    private function redirectTo(string $location): void
+-    {
+-        header('Location: ' . $location);
+-        exit;
+-    }
+ }
+diff --git a/app/Middleware/BaseMiddleware.php b/app/Middleware/BaseMiddleware.php
+new file mode 100644
+index 0000000..b9937b5
+--- /dev/null
++++ b/app/Middleware/BaseMiddleware.php
+@@ -0,0 +1,32 @@
++<?php
++
++namespace App\Middleware;
++
++use Core\Http\Middleware\Middleware;
++use Lib\FlashMessage;
++
++/**
++ * Classe base dos middlewares da aplicação.
++ *
++ * Centraliza o que `Authenticate` e `Admin` faziam em duplicidade:
++ * registrar uma mensagem flash de erro e redirecionar para uma rota
++ * nomeada. Cada middleware concreto só decide QUANDO negar o acesso;
++ * o COMO negar fica aqui.
++ */
++abstract class BaseMiddleware implements Middleware
++{
++    /**
++     * Nega o acesso: grava a mensagem de erro e redireciona para a rota.
++     */
++    protected function deny(string $message, string $routeName): void
++    {
++        FlashMessage::danger($message);
++        $this->redirectTo(route($routeName));
++    }
++
++    protected function redirectTo(string $location): void
++    {
++        header('Location: ' . $location);
++        exit;
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

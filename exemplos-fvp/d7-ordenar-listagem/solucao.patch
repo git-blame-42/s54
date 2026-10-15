@@ -1,0 +1,591 @@
+From 7c8d56cfe2fd39cea09f660ba461dda246880e59 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:45:12 -0300
+Subject: [PATCH 1/2] feat: List users with pagination in admin area
+
+---
+ app/Controllers/Admin/UsersController.php     | 23 +++++
+ app/views/admin/users/index.phtml             | 24 ++++++
+ app/views/layouts/_navbar.phtml               |  3 +
+ config/routes.php                             |  5 ++
+ tests/Acceptance/admin/AdminUsersCest.php     | 86 +++++++++++++++++++
+ .../Access/AdminUsersAccessTest.php           | 36 ++++++++
+ .../Controllers/Admin/UsersControllerTest.php | 70 +++++++++++++++
+ 7 files changed, 247 insertions(+)
+ create mode 100644 app/Controllers/Admin/UsersController.php
+ create mode 100644 app/views/admin/users/index.phtml
+ create mode 100644 tests/Acceptance/admin/AdminUsersCest.php
+ create mode 100644 tests/Integration/Access/AdminUsersAccessTest.php
+ create mode 100644 tests/Integration/Controllers/Admin/UsersControllerTest.php
+
+diff --git a/app/Controllers/Admin/UsersController.php b/app/Controllers/Admin/UsersController.php
+new file mode 100644
+index 0000000..d85914a
+--- /dev/null
++++ b/app/Controllers/Admin/UsersController.php
+@@ -0,0 +1,23 @@
++<?php
++
++namespace App\Controllers\Admin;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++
++class UsersController extends Controller
++{
++    public function index(Request $request): void
++    {
++        $paginator = User::paginate(
++            page: (int) $request->getParam('page', 1),
++            per_page: 10,
++            route: 'admin.users.paginate'
++        );
++        $users = $paginator->registers();
++
++        $title = 'Usuários';
++        $this->render('admin/users/index', compact('users', 'paginator', 'title'));
++    }
++}
+diff --git a/app/views/admin/users/index.phtml b/app/views/admin/users/index.phtml
+new file mode 100644
+index 0000000..eff8997
+--- /dev/null
++++ b/app/views/admin/users/index.phtml
+@@ -0,0 +1,24 @@
++<table class="table table-striped">
++    <thead>
++        <tr>
++            <th>#</th>
++            <th>Nome</th>
++            <th>E-mail</th>
++            <th>Perfil</th>
++            <th>Último acesso</th>
++        </tr>
++    </thead>
++    <tbody>
++        <?php foreach ($users as $user) : ?>
++            <tr>
++                <td><?= $user->id ?></td>
++                <td><?= $user->name ?></td>
++                <td><?= $user->email ?></td>
++                <td><?= $user->role ?></td>
++                <td><?= $user->last_login_at ?? 'nunca' ?></td>
++            </tr>
++        <?php endforeach; ?>
++    </tbody>
++</table>
++
++<?php $paginator->renderPagesNavigation(); ?>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index b3be112..bed1d8a 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -14,6 +14,9 @@
+                     <li class="nav-item">
+                         <a class="nav-link" href="<?= route('admin.dashboard.index') ?>">Administração</a>
+                     </li>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('admin.users.index') ?>">Usuários</a>
++                    </li>
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..674a5d5 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -1,6 +1,7 @@
+ <?php
+ 
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
++use App\Controllers\Admin\UsersController as AdminUsersController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
+@@ -20,5 +21,9 @@ Route::middleware('auth')->group(function () {
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
++
++        // Usuários cadastrados, com paginação
++        Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
++        Route::get('/admin/users/page/{page}', [AdminUsersController::class, 'index'])->name('admin.users.paginate');
+     });
+ });
+diff --git a/tests/Acceptance/admin/AdminUsersCest.php b/tests/Acceptance/admin/AdminUsersCest.php
+new file mode 100644
+index 0000000..da7a5b9
+--- /dev/null
++++ b/tests/Acceptance/admin/AdminUsersCest.php
+@@ -0,0 +1,86 @@
++<?php
++
++namespace Tests\Acceptance\admin;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class AdminUsersCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $admin->save();
++
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++
++        for ($i = 1; $i <= 10; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++    }
++
++    public function accessUsersListWithoutLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/login');
++        $page->see('Você deve estar logado para acessar essa página');
++    }
++
++    public function accessUsersListAsCommonUser(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a administradores');
++    }
++
++    public function listUsersAsAdmin(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->click('Usuários');
++
++        $page->seeCurrentUrlEquals('/admin/users');
++        $page->see('Usuários', '//h1');
++        $page->see('admin@example.com');
++        $page->see('fulano@example.com');
++        $page->see('Mostrando 1 - 10 de 12');
++    }
++
++    public function navigateToTheSecondPage(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin/users');
++
++        // O link fica na borda inferior da janela do Selenium; conferir o href e
++        // navegar evita o "element click intercepted" do Chrome headless.
++        $page->seeLink('Próxima', '/admin/users/page/2');
++        $page->amOnPage('/admin/users/page/2');
++
++        $page->seeCurrentUrlEquals('/admin/users/page/2');
++        $page->see('participante9@example.com');
++        $page->see('participante10@example.com');
++        $page->dontSee('fulano@example.com');
++        $page->see('Mostrando 11 - 12 de 12');
++    }
++}
+diff --git a/tests/Integration/Access/AdminUsersAccessTest.php b/tests/Integration/Access/AdminUsersAccessTest.php
+new file mode 100644
+index 0000000..d15fff6
+--- /dev/null
++++ b/tests/Integration/Access/AdminUsersAccessTest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++class AdminUsersAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_users_index_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_users_paginate_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->client->get('/admin/users/page/2');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/UsersControllerTest.php b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+new file mode 100644
+index 0000000..f6db95a
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+@@ -0,0 +1,70 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class UsersControllerTest extends ControllerTestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $this->admin->save();
++
++        for ($i = 1; $i <= 12; $i++) {
++            (new User([
++                'name' => "Participante {$i}",
++                'email' => "participante{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++
++        Auth::login($this->admin);
++    }
++
++    public function test_index_should_list_the_first_page_of_users(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Usuários\s*<\/h1>/', $response);
++        $this->assertStringContainsString('admin@example.com', $response);
++        $this->assertStringContainsString('participante9@example.com', $response);
++        $this->assertStringNotContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('Mostrando 1 - 10 de 13', $response);
++    }
++
++    public function test_index_should_list_the_requested_page(): void
++    {
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['page' => 2]
++        );
++
++        // O e-mail do admin logado aparece na navbar; conferimos um participante da página 1.
++        $this->assertStringNotContainsString('participante9@example.com', $response);
++        $this->assertStringContainsString('participante10@example.com', $response);
++        $this->assertStringContainsString('participante12@example.com', $response);
++        $this->assertStringContainsString('Mostrando 11 - 13 de 13', $response);
++    }
++
++    public function test_index_should_render_pagination_links_with_the_admin_route(): void
++    {
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++
++        $this->assertStringContainsString('href="/admin/users/page/2"', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 7584d775b40d7ae9e431641459c86377826f978a Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:51 -0300
+Subject: [PATCH 2/2] feat: Order users listing by name
+
+---
+ app/Controllers/Admin/UsersController.php     |  3 +-
+ core/Database/ActiveRecord/Model.php          | 11 +++-
+ lib/Paginator.php                             | 33 +++++++++-
+ tests/Acceptance/admin/AdminUsersCest.php     |  3 +-
+ .../Controllers/Admin/UsersControllerTest.php | 35 +++++++++-
+ tests/Unit/Lib/PaginatorTest.php              | 65 +++++++++++++++++++
+ 6 files changed, 143 insertions(+), 7 deletions(-)
+ create mode 100644 tests/Unit/Lib/PaginatorTest.php
+
+diff --git a/app/Controllers/Admin/UsersController.php b/app/Controllers/Admin/UsersController.php
+index d85914a..8626703 100644
+--- a/app/Controllers/Admin/UsersController.php
++++ b/app/Controllers/Admin/UsersController.php
+@@ -13,7 +13,8 @@ class UsersController extends Controller
+         $paginator = User::paginate(
+             page: (int) $request->getParam('page', 1),
+             per_page: 10,
+-            route: 'admin.users.paginate'
++            route: 'admin.users.paginate',
++            order_by: 'name'
+         );
+         $users = $paginator->registers();
+ 
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..498e333 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -281,15 +281,20 @@ abstract class Model
+         return $models;
+     }
+ 
+-    public static function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
+-    {
++    public static function paginate(
++        int $page = 1,
++        int $per_page = 10,
++        string $route = null,
++        ?string $order_by = null
++    ): Paginator {
+         return new Paginator(
+             class: static::class,
+             page: $page,
+             per_page: $per_page,
+             table: static::$table,
+             attributes: static::$columns,
+-            route: $route
++            route: $route,
++            order_by: $order_by
+         );
+     }
+ 
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..3068aa4 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -4,6 +4,7 @@ namespace Lib;
+ 
+ use Core\Constants\Constants;
+ use Core\Database\Database;
++use InvalidArgumentException;
+ use PDO;
+ use PDOStatement;
+ 
+@@ -22,8 +23,10 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private ?string $order_by = null
+     ) {
++        $this->validateOrderBy();
+         $this->loadTotals();
+         $this->loadRegisters();
+     }
+@@ -124,6 +127,7 @@ class Paginator
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$this->buildOrderBy()}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+@@ -157,6 +161,33 @@ class Paginator
+         return ' WHERE ' . implode(' AND ', $sqlConditions);
+     }
+ 
++    /**
++     * A coluna entra direto no SQL (não dá para usar bind em ORDER BY);
++     * por isso só aceitamos `id` e as colunas declaradas no model.
++     */
++    private function validateOrderBy(): void
++    {
++        if ($this->order_by === null) {
++            return;
++        }
++
++        if (!in_array($this->order_by, ['id', ...$this->attributes], true)) {
++            throw new InvalidArgumentException("Coluna de ordenação inválida: {$this->order_by}");
++        }
++    }
++
++    /**
++     * O `id` desempata nomes iguais, para que a mesma linha não apareça em duas páginas.
++     */
++    private function buildOrderBy(): string
++    {
++        if ($this->order_by === null) {
++            return '';
++        }
++
++        return "ORDER BY {$this->order_by}, id";
++    }
++
+     private function bindConditions(PDOStatement $stmt): void
+     {
+         if (empty($this->conditions)) {
+diff --git a/tests/Acceptance/admin/AdminUsersCest.php b/tests/Acceptance/admin/AdminUsersCest.php
+index da7a5b9..178fa41 100644
+--- a/tests/Acceptance/admin/AdminUsersCest.php
++++ b/tests/Acceptance/admin/AdminUsersCest.php
+@@ -30,7 +30,8 @@ class AdminUsersCest extends BaseAcceptanceCest
+ 
+         for ($i = 1; $i <= 10; $i++) {
+             (new User([
+-                'name' => "Participante {$i}",
++                // Zero à esquerda: com a listagem ordenada por nome, "10" não vem antes de "2".
++                'name' => sprintf('Participante %02d', $i),
+                 'email' => "participante{$i}@example.com",
+                 'password' => '123456',
+                 'password_confirmation' => '123456'
+diff --git a/tests/Integration/Controllers/Admin/UsersControllerTest.php b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+index f6db95a..d41bdab 100644
+--- a/tests/Integration/Controllers/Admin/UsersControllerTest.php
++++ b/tests/Integration/Controllers/Admin/UsersControllerTest.php
+@@ -25,7 +25,8 @@ class UsersControllerTest extends ControllerTestCase
+ 
+         for ($i = 1; $i <= 12; $i++) {
+             (new User([
+-                'name' => "Participante {$i}",
++                // Zero à esquerda: com a listagem ordenada por nome, "10" não vem antes de "2".
++                'name' => sprintf('Participante %02d', $i),
+                 'email' => "participante{$i}@example.com",
+                 'password' => '123456',
+                 'password_confirmation' => '123456'
+@@ -67,4 +68,36 @@ class UsersControllerTest extends ControllerTestCase
+ 
+         $this->assertStringContainsString('href="/admin/users/page/2"', $response);
+     }
++
++    public function test_index_should_order_users_by_name(): void
++    {
++        // Zé é criado antes de Ana: pelo id, Zé viria primeiro.
++        foreach (['Zé' => 'ze@example.com', 'Ana' => 'ana@example.com'] as $name => $email) {
++            (new User([
++                'name' => $name,
++                'email' => $email,
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++
++        $firstPage = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\UsersController');
++        $secondPage = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\UsersController',
++            params: ['page' => 2]
++        );
++
++        // Página 1: Admin, Ana, Participante 01 ... 08. Zé, por último, cai na página 2.
++        $this->assertStringContainsString('ana@example.com', $firstPage);
++        $this->assertStringNotContainsString('ze@example.com', $firstPage);
++        $this->assertLessThan(
++            strpos($firstPage, 'participante1@example.com'),
++            strpos($firstPage, 'ana@example.com')
++        );
++        $this->assertGreaterThan(
++            strpos($secondPage, 'participante12@example.com'),
++            strpos($secondPage, 'ze@example.com')
++        );
++    }
+ }
+diff --git a/tests/Unit/Lib/PaginatorTest.php b/tests/Unit/Lib/PaginatorTest.php
+new file mode 100644
+index 0000000..5468891
+--- /dev/null
++++ b/tests/Unit/Lib/PaginatorTest.php
+@@ -0,0 +1,65 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use App\Models\User;
++use InvalidArgumentException;
++use Tests\TestCase;
++
++class PaginatorTest extends TestCase
++{
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        // Ordem de criação (id) diferente da ordem alfabética; as duas "Ana" empatam no nome.
++        $users = [['Zé', 'ze'], ['Ana', 'ana'], ['Bruno', 'bruno'], ['Ana', 'ana2']];
++        foreach ($users as [$name, $login]) {
++            (new User([
++                'name' => $name,
++                'email' => "{$login}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456'
++            ]))->save();
++        }
++    }
++
++    /**
++     * @return array<string>
++     */
++    private function emails(int $page, int $per_page, ?string $order_by = null): array
++    {
++        $paginator = User::paginate(page: $page, per_page: $per_page, order_by: $order_by);
++
++        return array_map(fn (User $user) => $user->email, $paginator->registers());
++    }
++
++    public function test_paginate_without_order_by_should_keep_the_insertion_order(): void
++    {
++        $this->assertEquals(
++            ['ze@example.com', 'ana@example.com', 'bruno@example.com', 'ana2@example.com'],
++            $this->emails(page: 1, per_page: 10)
++        );
++    }
++
++    public function test_paginate_with_order_by_name_should_sort_alphabetically_and_untie_by_id(): void
++    {
++        $this->assertEquals(
++            ['ana@example.com', 'ana2@example.com', 'bruno@example.com', 'ze@example.com'],
++            $this->emails(page: 1, per_page: 10, order_by: 'name')
++        );
++    }
++
++    public function test_paginate_with_order_by_name_should_sort_before_splitting_pages(): void
++    {
++        $this->assertEquals(['ana@example.com', 'ana2@example.com'], $this->emails(page: 1, per_page: 2, order_by: 'name'));
++        $this->assertEquals(['bruno@example.com', 'ze@example.com'], $this->emails(page: 2, per_page: 2, order_by: 'name'));
++    }
++
++    public function test_paginate_with_unknown_order_by_column_should_throw_exception(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        User::paginate(order_by: 'name; DROP TABLE users');
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

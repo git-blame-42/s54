@@ -1,0 +1,128 @@
+From b5587474da4573c40af6e7e5e51fe7eb50ed90f9 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:50:04 -0300
+Subject: [PATCH] feat: Validate email format
+
+---
+ app/Models/User.php                           |  1 +
+ lib/Validations.php                           | 20 +++++++++++
+ .../Unit/Lib/Validations/ValidationsTest.php  | 33 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 15 +++++++++
+ 4 files changed, 69 insertions(+)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..3106767 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -37,6 +37,7 @@ class User extends Model
+     {
+         Validations::notEmpty('name', $this);
+         Validations::notEmpty('email', $this);
++        Validations::email('email', $this);
+ 
+         Validations::uniqueness('email', $this);
+ 
+diff --git a/lib/Validations.php b/lib/Validations.php
+index 6f392ce..c02d7b5 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -16,6 +16,26 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * Valida o formato do e-mail. Vazio ou nulo passa: quem acusa campo
++     * vazio é a regra notEmpty, para a mensagem dela não ser sobrescrita.
++     */
++    public static function email(string $attribute, $obj): bool
++    {
++        $value = $obj->$attribute;
++
++        if ($value === null || $value === '') {
++            return true;
++        }
++
++        if (filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
++            $obj->addError($attribute, 'deve ser um e-mail válido!');
++            return false;
++        }
++
++        return true;
++    }
++
+     public static function passwordConfirmation($obj)
+     {
+         if ($obj->password !== $obj->password_confirmation) {
+diff --git a/tests/Unit/Lib/Validations/ValidationsTest.php b/tests/Unit/Lib/Validations/ValidationsTest.php
+index dd52e90..6c34d64 100644
+--- a/tests/Unit/Lib/Validations/ValidationsTest.php
++++ b/tests/Unit/Lib/Validations/ValidationsTest.php
+@@ -20,6 +20,39 @@ class ValidationsTest extends TestCase
+         $this->assertTrue(Validations::notEmpty('name', $model));
+     }
+ 
++    public function test_email_should_accept_valid_address(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['email'];
++        };
++
++        $model->email = 'fulano@example.com'; // @phpstan-ignore-line
++        $this->assertTrue(Validations::email('email', $model));
++    }
++
++    public function test_email_should_reject_invalid_address(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['email'];
++        };
++
++        $model->email = 'nao-e-email'; // @phpstan-ignore-line
++        $this->assertFalse(Validations::email('email', $model));
++        $this->assertEquals('deve ser um e-mail válido!', $model->errors('email'));
++    }
++
++    public function test_email_should_ignore_empty_value(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['email'];
++        };
++
++        $this->assertTrue(Validations::email('email', $model));
++
++        $model->email = ''; // @phpstan-ignore-line
++        $this->assertTrue(Validations::email('email', $model));
++    }
++
+     public function test_password_confirmation(): void
+     {
+         $model = new class () extends Model {
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..98412c2 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -100,6 +100,21 @@ class UserTest extends TestCase
+         $this->assertEquals('as senhas devem ser idênticas!', $user->errors('password'));
+     }
+ 
++    public function test_errors_should_return_invalid_email_error(): void
++    {
++        $user = new User([
++            'name' => 'User 4',
++            'email' => 'nao-e-email',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++
++        $this->assertFalse($user->isValid());
++        $this->assertFalse($user->save());
++
++        $this->assertEquals('deve ser um e-mail válido!', $user->errors('email'));
++    }
++
+     public function test_find_by_id_should_return_the_user(): void
+     {
+         $this->assertEquals($this->user->id, User::findById($this->user->id)->id);
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,106 @@
+From 137b6c05f9fb7fd778094458436178048bf46a76 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:53:55 -0300
+Subject: [PATCH] feat: Use dedicated layout for login page
+
+---
+ app/Controllers/AuthenticationsController.php |  3 ++
+ app/views/layouts/login.phtml                 | 38 +++++++++++++++++++
+ .../Acceptance/authentications/LoginCest.php  |  3 +-
+ .../AuthenticationsControllerTest.php         |  8 ++++
+ 4 files changed, 51 insertions(+), 1 deletion(-)
+ create mode 100644 app/views/layouts/login.phtml
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..f27058f 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -10,6 +10,9 @@ use Lib\FlashMessage;
+ 
+ class AuthenticationsController extends Controller
+ {
++    // Tela de login usa layout próprio, sem navbar (app/views/layouts/login.phtml).
++    protected string $layout = 'login';
++
+     public function new(): void
+     {
+         $title = 'Login';
+diff --git a/app/views/layouts/login.phtml b/app/views/layouts/login.phtml
+new file mode 100644
+index 0000000..84457e3
+--- /dev/null
++++ b/app/views/layouts/login.phtml
+@@ -0,0 +1,38 @@
++<html lang="pt-br">
++
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title>Eventos do Câmpus</title>
++
++    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
++    <script src="/assets/js/application.js"></script>
++
++    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
++    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
++    <link rel="stylesheet" href="/assets/css/application.css">
++    <link rel="stylesheet" href="/assets/css/login.css">
++</head>
++
++<body>
++    <!-- Layout da tela de login: sem a barra de navegação, só o cartão centralizado. -->
++    <main class="container-fluid mt-5">
++
++        <?php require '_flash_message.phtml'; ?>
++
++        <header class="mb-3 text-center">
++            <h1>
++                <?= $title ?>
++            </h1>
++        </header>
++
++        <?php require $view ?>
++
++        <p class="text-center mt-3">
++            <a href="<?= route('root') ?>">Voltar ao início</a>
++        </p>
++
++    </main>
++</body>
++
++</html>
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..0796884 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -44,6 +44,7 @@ class LoginCest extends BaseAcceptanceCest
+ 
+         $page->seeCurrentUrlEquals('/login');
+         $page->see('Logout realizado com sucesso!');
+-        $page->see('Login');
++        $page->see('Login', '//h1');
++        $page->dontSeeElement('nav.navbar');
+     }
+ }
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..c698f71 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -29,6 +29,14 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertMatchesRegularExpression('/Entrar/', $response);
+     }
+ 
++    public function test_login_page_should_not_render_navbar(): void
++    {
++        $response = $this->get(action: 'new', controllerName: 'App\Controllers\AuthenticationsController');
++
++        $this->assertStringNotContainsString('class="navbar', $response);
++        $this->assertStringContainsString('Voltar ao início', $response);
++    }
++
+     public function test_authenticate_with_valid_credentials_should_login(): void
+     {
+         $response = $this->post(
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,125 @@
+From 783330d29fdaffc5ae327fa8670b58302594623f Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:55:12 -0300
+Subject: [PATCH] feat: Search users by name or email
+
+---
+ app/Models/User.php                        | 30 ++++++++++++
+ tests/Unit/Models/Users/UserSearchTest.php | 57 ++++++++++++++++++++++
+ 2 files changed, 87 insertions(+)
+ create mode 100644 tests/Unit/Models/Users/UserSearchTest.php
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..8d416ed 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -4,6 +4,8 @@ namespace App\Models;
+ 
+ use Lib\Validations;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use PDO;
+ 
+ /**
+  * @property int $id
+@@ -59,6 +61,34 @@ class User extends Model
+         return User::findBy(['email' => $email]);
+     }
+ 
++    /**
++     * Busca usuários cujo nome ou e-mail contém o termo, ordenados por nome.
++     *
++     * O termo vai sempre por bind; nunca é interpolado no SQL.
++     *
++     * @return array<User>
++     */
++    public static function search(string $term): array
++    {
++        $columns = implode(', ', static::$columns);
++        $table = static::$table;
++
++        $sql = <<<SQL
++            SELECT id, {$columns} FROM {$table}
++            WHERE name LIKE :term OR email LIKE :term
++            ORDER BY name;
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':term', "%{$term}%");
++        $stmt->execute();
++
++        return array_map(
++            fn ($row) => new static($row),
++            $stmt->fetchAll(PDO::FETCH_ASSOC)
++        );
++    }
++
+     public function isAdmin(): bool
+     {
+         return $this->role === 'admin';
+diff --git a/tests/Unit/Models/Users/UserSearchTest.php b/tests/Unit/Models/Users/UserSearchTest.php
+new file mode 100644
+index 0000000..310b073
+--- /dev/null
++++ b/tests/Unit/Models/Users/UserSearchTest.php
+@@ -0,0 +1,57 @@
++<?php
++
++namespace Tests\Unit\Models\Users;
++
++use App\Models\User;
++use Tests\TestCase;
++
++class UserSearchTest extends TestCase
++{
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->createUser('Maria Souza', 'maria@example.com');
++        $this->createUser('Ana Lima', 'contato@empresa.com');
++    }
++
++    public function test_search_should_match_only_by_name(): void
++    {
++        $users = User::search('Souza');
++
++        $this->assertCount(1, $users);
++        $this->assertEquals('Maria Souza', $users[0]->name);
++    }
++
++    public function test_search_should_match_only_by_email(): void
++    {
++        $users = User::search('empresa');
++
++        $this->assertCount(1, $users);
++        $this->assertEquals('contato@empresa.com', $users[0]->email);
++    }
++
++    public function test_search_should_return_empty_array_when_nothing_matches(): void
++    {
++        $this->assertSame([], User::search('inexistente'));
++    }
++
++    public function test_search_should_return_results_ordered_by_name(): void
++    {
++        // "a" casa com os dois; Ana vem antes de Maria, embora tenha sido criada depois.
++        $names = array_map(fn ($user) => $user->name, User::search('a'));
++
++        $this->assertEquals(['Ana Lima', 'Maria Souza'], $names);
++    }
++
++    private function createUser(string $name, string $email): void
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

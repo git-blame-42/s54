@@ -1,0 +1,80 @@
+From bca2f64967626d8753b7c6c876812dcc848f8eeb Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:04:46 -0300
+Subject: [PATCH] test: Cover User validations and password hashing
+
+---
+ tests/Unit/Models/Users/UserTest.php | 57 ++++++++++++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..50ab8e8 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -100,6 +100,63 @@ class UserTest extends TestCase
+         $this->assertEquals('as senhas devem ser idênticas!', $user->errors('password'));
+     }
+ 
++    public function test_errors_should_return_password_confirmation_error_when_confirmation_is_missing(): void
++    {
++        $user = new User([
++            'name' => 'User 3',
++            'email' => 'fulano3@example.com',
++            'password' => '123456',
++        ]);
++
++        $this->assertFalse($user->save());
++        $this->assertEquals('as senhas devem ser idênticas!', $user->errors('password'));
++        $this->assertCount(2, User::all());
++    }
++
++    public function test_save_should_fail_with_duplicated_email(): void
++    {
++        $user = new User([
++            'name' => 'User 3',
++            'email' => 'fulano@example.com', // já existe, criado no setUp
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]);
++
++        $this->assertFalse($user->save());
++        $this->assertEquals('já existe um registro com esse dado', $user->errors('email'));
++        $this->assertCount(2, User::all());
++    }
++
++    public function test_update_should_accept_the_user_own_email(): void
++    {
++        $this->user->name = 'Novo nome';
++
++        $this->assertTrue($this->user->save());
++        $this->assertEquals('Novo nome', User::findById($this->user->id)->name);
++    }
++
++    public function test_update_should_fail_with_email_of_another_user(): void
++    {
++        $this->user2->email = $this->user->email;
++
++        $this->assertFalse($this->user2->save());
++        $this->assertEquals('já existe um registro com esse dado', $this->user2->errors('email'));
++        $this->assertEquals('fulano1@example.com', User::findById($this->user2->id)->email);
++    }
++
++    public function test_password_should_be_stored_as_hash(): void
++    {
++        $stored = User::findById($this->user->id)->encrypted_password;
++
++        $this->assertNotEquals('123456', $stored);
++        $this->assertTrue(password_verify('123456', $stored));
++    }
++
++    public function test_same_password_should_generate_different_hashes(): void
++    {
++        $this->assertNotEquals($this->user->encrypted_password, $this->user2->encrypted_password);
++    }
++
+     public function test_find_by_id_should_return_the_user(): void
+     {
+         $this->assertEquals($this->user->id, User::findById($this->user->id)->id);
+-- 
+2.54.0 (Apple Git-157)
+

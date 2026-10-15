@@ -1,0 +1,189 @@
+From ad66fa0cf33ef7860d6d9434086dc7bc1c49e46f Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 19:51:05 -0300
+Subject: [PATCH] feat: Show previous login on user dashboard
+
+---
+ app/Controllers/DashboardController.php       |  4 +-
+ app/views/dashboard/index.phtml               |  5 +++
+ lib/Authentication/Auth.php                   | 13 ++++++
+ tests/Acceptance/dashboard/DashboardCest.php  | 11 +++++
+ .../Controllers/DashboardControllerTest.php   | 44 +++++++++++++++++++
+ tests/Unit/Lib/Authentication/AuthTest.php    | 27 ++++++++++++
+ 6 files changed, 103 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+
+diff --git a/app/Controllers/DashboardController.php b/app/Controllers/DashboardController.php
+index efd4f16..6df915f 100644
+--- a/app/Controllers/DashboardController.php
++++ b/app/Controllers/DashboardController.php
+@@ -3,12 +3,14 @@
+ namespace App\Controllers;
+ 
+ use Core\Http\Controllers\Controller;
++use Lib\Authentication\Auth;
+ 
+ class DashboardController extends Controller
+ {
+     public function index(): void
+     {
+         $title = 'Painel do Usuário';
+-        $this->render('dashboard/index', compact('title'));
++        $previousLoginAt = Auth::previousLoginAt();
++        $this->render('dashboard/index', compact('title', 'previousLoginAt'));
+     }
+ }
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index 0d90364..1e2aeac 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1 +1,6 @@
+ <p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++<?php if ($previousLoginAt === null) : ?>
++    <p>Este é o seu primeiro acesso.</p>
++<?php else : ?>
++    <p>Último acesso: <?= date('d/m/Y H:i', strtotime($previousLoginAt)) ?></p>
++<?php endif; ?>
+diff --git a/lib/Authentication/Auth.php b/lib/Authentication/Auth.php
+index 0970484..2e295ea 100644
+--- a/lib/Authentication/Auth.php
++++ b/lib/Authentication/Auth.php
+@@ -8,6 +8,10 @@ class Auth
+ {
+     public static function login(User $user): void
+     {
++        // Guarda o acesso anterior antes de registrar o atual: depois do
++        // registerLogin(), last_login_at passa a ser o login de agora.
++        $_SESSION['user']['previous_login_at'] = $user->last_login_at;
++
+         $user->registerLogin();
+         $_SESSION['user']['id'] = $user->id;
+     }
+@@ -27,8 +31,17 @@ class Auth
+         return isset($_SESSION['user']['id']) && self::user() !== null;
+     }
+ 
++    /**
++     * Data/hora do acesso anterior ao login atual, ou null no primeiro acesso.
++     */
++    public static function previousLoginAt(): ?string
++    {
++        return $_SESSION['user']['previous_login_at'] ?? null;
++    }
++
+     public static function logout(): void
+     {
+         unset($_SESSION['user']['id']);
++        unset($_SESSION['user']['previous_login_at']);
+     }
+ }
+diff --git a/tests/Acceptance/dashboard/DashboardCest.php b/tests/Acceptance/dashboard/DashboardCest.php
+index a82e911..3494a01 100644
+--- a/tests/Acceptance/dashboard/DashboardCest.php
++++ b/tests/Acceptance/dashboard/DashboardCest.php
+@@ -35,5 +35,16 @@ class DashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel do Usuário', '//h1');
+         $page->see('Bem-vindo(a), Fulano!');
++        $page->see('Este é o seu primeiro acesso.');
++    }
++
++    public function accessDashboardShowsPreviousLogin(AcceptanceTester $page): void
++    {
++        User::findByEmail('fulano@example.com')->update(['last_login_at' => '2026-10-01 08:30:00']);
++
++        $page->login('fulano@example.com', '123456');
++        $page->amOnPage('/dashboard');
++
++        $page->see('Último acesso: 01/10/2026 08:30');
+     }
+ }
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..a71e04d
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++    }
++
++    public function test_index_should_show_first_access_message_on_first_login(): void
++    {
++        Auth::login($this->user);
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Painel do Usuário', $response);
++        $this->assertStringContainsString('Este é o seu primeiro acesso.', $response);
++        $this->assertStringNotContainsString('Último acesso:', $response);
++    }
++
++    public function test_index_should_show_previous_login_date_and_time(): void
++    {
++        $this->user->update(['last_login_at' => '2026-10-01 08:30:00']);
++        Auth::login(User::findById($this->user->id));
++
++        $response = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Último acesso: 01/10/2026 08:30', $response);
++    }
++}
+diff --git a/tests/Unit/Lib/Authentication/AuthTest.php b/tests/Unit/Lib/Authentication/AuthTest.php
+index 1394c4e..ac19d6e 100644
+--- a/tests/Unit/Lib/Authentication/AuthTest.php
++++ b/tests/Unit/Lib/Authentication/AuthTest.php
+@@ -60,4 +60,31 @@ class AuthTest extends TestCase
+ 
+         $this->assertFalse(Auth::check());
+     }
++
++    public function test_previous_login_at_should_be_null_on_first_login(): void
++    {
++        Auth::login($this->user);
++
++        $this->assertNull(Auth::previousLoginAt());
++    }
++
++    public function test_previous_login_at_should_return_the_last_login_before_this_one(): void
++    {
++        $this->user->update(['last_login_at' => '2026-10-01 08:30:00']);
++
++        Auth::login(User::findById($this->user->id));
++
++        $this->assertEquals('2026-10-01 08:30:00', Auth::previousLoginAt());
++        $this->assertNotEquals('2026-10-01 08:30:00', User::findById($this->user->id)->last_login_at);
++    }
++
++    public function test_logout_should_clear_previous_login_at(): void
++    {
++        $this->user->update(['last_login_at' => '2026-10-01 08:30:00']);
++        Auth::login(User::findById($this->user->id));
++
++        Auth::logout();
++
++        $this->assertNull(Auth::previousLoginAt());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
