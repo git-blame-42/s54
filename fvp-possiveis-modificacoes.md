@@ -981,3 +981,1093 @@ função pelo primeiro argumento.
 4. Abra o teste existente mais parecido e copie.
 5. Implemente, rode o teste, confira no navegador, `./run phpcs`.
 6. Commit. Mostre funcionando antes de explicar.
+
+## 6. Complemento: cenários adicionais
+
+Avaliação aditiva feita em 15/10, cruzando o catálogo acima com: o
+código entregue (`86c81ca`), a issue #9 do repositório público
+("Avaliação da Entrega 4.1", aberta pelo professor em 14/10), os
+comentários 2025-2, as rubricas 4.1 e 4.2, a página "Segurança" do
+Moodle e o problem-track (controllers, views e testes). Nada acima foi
+alterado; os itens abaixo continuam a numeração de cada letra.
+
+O que a issue #9 diz, na íntegra:
+
+- Vídeo: "A explicação dos testes do usuário foi feita mostrando a
+  classe User ao invés da classe que testa o User. Essa parte da
+  explicação ficou toda errada." e "Faltou a explicação dos
+  conceitos."
+- OO, reutilização: "os middlewares `Admin` e `Authenticate` possuem
+  lógica duplicada de redirecionamento. Avaliem como centralizar esse
+  comportamento."
+
+Leitura para o FVP: A1 continua o item mais provável. O professor leu
+`UserTest` e achou a explicação errada; espere algo em cima dele (F4).
+O título "OO" indica que ele avalia reutilização e encapsulamento, não
+só funcionalidade (seção H).
+
+Lacunas reais do código entregue que um pedido "pontual" pode mirar:
+
+- O formulário de login tem `required` e `type="email"` e não tem
+  `novalidate`. Feedback 2025-2: "Não usar validações do HTML5.
+  Adicionar novalidate no form". (A9)
+- `authenticate` responde 500 se o POST vier sem `user[...]`. (A9)
+- Nenhuma view escapa saída; um nome com `<b>` vira HTML. (C5)
+- `UserTest` não cobre e-mail duplicado nem o hash da senha. (F4)
+- `LoginHelper::logout()` depende do texto `fulano@example.com`. (F3)
+- `Model::where` não é chamado em nenhum código da equipe; a rubrica
+  4.2 cobra explicá-lo. (D5)
+
+Se só houver 30 minutos para revisar: A9, D5, B8, F4, C5, nessa ordem.
+
+### A9. Login com campos vazios: novalidate e controller robusto
+
+Chance: alta (feedback 2025-2 literal). Tempo: 15 min.
+
+Problema: o navegador bloqueia o envio com campo vazio
+(`required`/`type="email"`), então a demonstração "dados incorretos"
+nem chega ao servidor. E, se chegar um POST sem `user[email]`,
+`$params['email']` em `null` gera warning; o `ErrorsHandler` trata
+qualquer warning como erro fatal e responde 500. `findByEmail(null)`
+lançaria `TypeError` (parâmetro `string`).
+
+Arquivos: `app/views/authentications/new.phtml`,
+`app/Controllers/AuthenticationsController.php`, testes.
+
+```php
+<!-- new.phtml: novalidate no form; tire o required dos inputs -->
+<form action="<?= route('users.authenticate') ?>" method="post" novalidate>
+```
+
+```php
+public function authenticate(Request $request): void
+{
+    $params = $request->getParam('user', []);
+    $email = trim($params['email'] ?? '');
+    $password = $params['password'] ?? '';
+
+    $user = $email !== '' ? User::findByEmail($email) : null;
+
+    if ($user && $user->authenticate($password)) {
+        // igual ao que já existe
+```
+
+Testes. Controller:
+
+```php
+public function test_authenticate_without_params_should_not_login(): void
+{
+    $response = $this->post(
+        action: 'authenticate',
+        controllerName: 'App\Controllers\AuthenticationsController'
+    );
+
+    $this->assertFalse(Auth::check());
+    $this->assertStringContainsString('Location: /login', $response);
+}
+```
+
+Aceitação, em `LoginCest`:
+
+```php
+public function loginWithEmptyFields(AcceptanceTester $page): void
+{
+    $page->login('', '');
+
+    $page->seeCurrentUrlEquals('/login');
+    $page->see('E-mail ou senha inválidos!');
+}
+```
+
+Armadilha: `findByEmail('')` não quebra (consulta sem resultado); o
+que quebra é `null`. `trim` resolve e-mail com espaço no fim; letras
+maiúsculas já funcionam porque o MySQL 8 compara strings sem
+diferenciar caixa (collation `utf8mb4_0900_ai_ci`). Com `novalidate`
+o `required` vira só estilo do Bootstrap; o problem-track mantém os
+dois juntos.
+
+### A10. Manter o e-mail digitado depois de uma falha
+
+Chance: média (rubrica 4.2 cobra "re-render mantendo valores").
+Tempo: 15 min. Pressupõe A9 (variável `$email`).
+
+Em vez de redirecionar para `/login`, renderize o formulário de novo:
+
+```php
+} else {
+    FlashMessage::danger('E-mail ou senha inválidos!');
+    $title = 'Login';
+    $this->render('authentications/new', compact('title', 'email'));
+}
+```
+
+```php
+<!-- new.phtml -->
+<input type="email" class="form-control" id="user_email" name="user[email]"
+       value="<?= htmlspecialchars($email ?? '', ENT_QUOTES, 'UTF-8') ?>">
+```
+
+O flash aparece na mesma resposta: `_flash_message.phtml` chama
+`FlashMessage::get()` durante o `render`.
+
+Testes: em `AuthenticationsControllerTest`,
+`test_authenticate_with_invalid_credentials_should_not_login` deixa de
+ver `Location: /login`; troque por
+`assertStringContainsString('E-mail ou senha inválidos!', $response)`
+e `assertStringContainsString('value="fulano@example.com"', $response)`.
+`LoginCest::loginWithInvalidCredentials` continua válido (a URL depois
+do POST é `/login`); acrescente
+`$page->seeInField('user[email]', 'fulano@example.com')`.
+
+Armadilha: isso abandona o Post/Redirect/Get que o problem-track usa
+no login (ele redireciona). Faça só se o professor pedir para manter
+o valor; se ele perguntar, diga a troca que está fazendo.
+
+### A11. Voltar para a página pedida depois do login
+
+Chance: média. Tempo: 20 min.
+
+Arquivos: `app/Middleware/Authenticate.php`,
+`app/Controllers/AuthenticationsController.php`, testes.
+
+```php
+// Authenticate::handle, antes de negar
+if (!Auth::check()) {
+    if ($request->getMethod() === 'GET') {
+        $_SESSION['redirect_to'] = $request->getUri();
+    }
+    $this->deny('Você deve estar logado para acessar essa página',
+        'users.login');
+}
+```
+
+```php
+// authenticate(), no caminho de sucesso
+Auth::login($user);
+FlashMessage::success('Login realizado com sucesso!');
+
+$target = $_SESSION['redirect_to'] ?? route('dashboard.index');
+unset($_SESSION['redirect_to']);
+$this->redirectTo($target);
+```
+
+Teste de controller:
+
+```php
+public function test_authenticate_should_redirect_to_requested_page(): void
+{
+    $_SESSION['redirect_to'] = '/admin';
+
+    $response = $this->post(
+        action: 'authenticate',
+        controllerName: 'App\Controllers\AuthenticationsController',
+        params: ['user' => ['email' => 'fulano@example.com',
+                            'password' => '123456']]
+    );
+
+    $this->assertStringContainsString('Location: /admin', $response);
+    $this->assertArrayNotHasKey('redirect_to', $_SESSION);
+}
+```
+
+Aceitação: `amOnPage('/admin')` (cai no login), `login(admin)`,
+`seeCurrentUrlEquals('/admin')`.
+
+Armadilhas: guarde só em GET; um POST reproduzido como GET dá 404.
+Participante que tentou `/admin` volta para `/admin` e o `Admin` o
+manda para `/dashboard` com o aviso; comportamento aceitável, explique.
+`ControllerTestCase::tearDown` só limpa `$_SESSION['user']`; limpe
+`redirect_to` no `tearDown` do seu teste para não vazar entre casos.
+Combinando com A4: `redirect_to` tem prioridade; sem ele, decide pelo
+perfil.
+
+### A12. Middleware Admin autossuficiente (ordem dos middlewares)
+
+Chance: média-baixa (pergunta de quem leu o comentário no `Admin`).
+Tempo: 10 min. Pressupõe A1 (`deny`).
+
+Fato verificado no `core/`: `RouteWrapperMiddleware::group` adiciona
+o middleware às rotas depois de rodar o callback; o grupo interno
+adiciona primeiro. Para `/admin`, a lista é `[Admin, Authenticate]`,
+e `Admin` roda antes. Por isso ele tolera usuário nulo. Se o professor
+pedir "proteja /admin só com o middleware admin" ou "garanta que o
+Authenticate rode antes", faça o `Admin` bastar sozinho:
+
+```php
+public function handle(Request $request): void
+{
+    $user = Auth::user();
+
+    if ($user === null) {
+        $this->deny('Você deve estar logado para acessar essa página',
+            'users.login');
+        return;
+    }
+
+    if (!$user->isAdmin()) {
+        $this->deny('Acesso restrito a administradores',
+            'dashboard.index');
+    }
+}
+```
+
+O `return` depois do primeiro `deny` é o que permite o teste de
+middleware (F2) sem `exit`. O grupo `admin` pode continuar aninhado em
+`auth` (redundante, inofensivo) ou virar irmão dele. Testes: nenhum
+muda; `accessAdminWithoutLogin` espera `/login` e a mesma mensagem.
+
+Alternativa que o professor pode citar: inverter o aninhamento
+(`admin` por fora, `auth` por dentro) faz `Authenticate` rodar
+primeiro; fica estranho de ler. Mudar `group` no `core/` para
+`array_unshift` é alteração de framework; combine antes.
+
+### A13. Regenerar o id da sessão no login (session hijacking)
+
+Chance: baixa-média (tema da página "Segurança" do Moodle).
+Tempo: 10 min.
+
+```php
+// lib/Authentication/Auth.php
+public static function login(User $user): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+
+    $user->registerLogin();
+    $_SESSION['user']['id'] = $user->id;
+}
+```
+
+Explicação de uma frase: o id do cookie muda no login, então um id
+obtido antes (fixation) não vale depois. Não use `session_destroy()`
+no logout: o flash "Logout realizado" precisa da sessão.
+
+Testes: `AuthTest` passa sem mudar (no CLI não há sessão ativa, o
+`if` pula). `LoginCest` cobre o caminho real.
+
+Armadilha: sem o `session_status()`, `session_regenerate_id` fora de
+sessão ativa gera warning nos testes.
+
+### A14. Expirar a sessão por inatividade
+
+Chance: baixa. Tempo: 15 min.
+
+```php
+// Auth.php
+public const TIMEOUT = 1800; // segundos
+
+public static function user(): ?User
+{
+    if (!isset($_SESSION['user']['id'])) {
+        return null;
+    }
+
+    $lastActivity = $_SESSION['user']['last_activity'] ?? time();
+
+    if (time() - $lastActivity > self::TIMEOUT) {
+        self::logout();
+        return null;
+    }
+
+    $_SESSION['user']['last_activity'] = time();
+
+    return User::findById($_SESSION['user']['id']);
+}
+
+public static function logout(): void
+{
+    unset($_SESSION['user']);
+}
+```
+
+Teste em `AuthTest`:
+
+```php
+public function test_check_should_be_false_after_timeout(): void
+{
+    Auth::login($this->user);
+    $_SESSION['user']['last_activity'] = time() - Auth::TIMEOUT - 1;
+
+    $this->assertFalse(Auth::check());
+}
+```
+
+Armadilha: `Auth::check()` chama `user()`; o `logout()` precisa
+apagar `$_SESSION['user']` inteiro, não só `['id']`.
+
+### A15. Token CSRF no formulário de login
+
+Chance: baixa (página "Segurança"; é bônus de framework). Tempo:
+15 min na versão mínima, 40 min com middleware.
+
+Versão mínima, sem middleware:
+
+```php
+<?php
+// lib/Csrf.php
+
+namespace Lib;
+
+class Csrf
+{
+    public static function token(): string
+    {
+        $_SESSION['_token'] ??= bin2hex(random_bytes(32));
+        return $_SESSION['_token'];
+    }
+
+    public static function check(?string $token): bool
+    {
+        return $token !== null && isset($_SESSION['_token'])
+            && hash_equals($_SESSION['_token'], $token);
+    }
+}
+```
+
+```php
+<!-- new.phtml, dentro do form -->
+<input type="hidden" name="_token" value="<?= \Lib\Csrf::token() ?>">
+```
+
+```php
+// authenticate(), primeira linha
+if (!Csrf::check($request->getParam('_token'))) {
+    FlashMessage::danger('Sessão expirada, tente de novo.');
+    $this->redirectTo(route('users.login'));
+}
+```
+
+Testes de controller: defina `$_SESSION['_token'] = 'abc'` no `setUp`
+e mande `'_token' => 'abc'` nos params dos testes de `authenticate`.
+`LoginHelper` não muda (o campo oculto vai no form). Versão geral:
+middleware `VerifyCsrf` (alias `csrf`) que checa só POST/PUT/DELETE e
+lança `HTTPException(..., 403)`; aí todo form (inclusive o logout de
+A2) precisa do campo, e testes de acesso com POST passam a receber
+403 em vez de 302. Só com escopo combinado.
+
+### B8. Editar o próprio perfil (nome e e-mail) com save()
+
+Chance: média-alta (ponte natural para a 4.2: formulário, validação,
+re-render com erros). Tempo: 25 min. Pressupõe A6 (`/profile`).
+
+Arquivos: `config/routes.php` (dentro de `auth`),
+`app/Controllers/ProfileController.php`,
+`app/views/profile/edit.phtml`, link em `profile/show.phtml`, testes.
+
+```php
+Route::get('/profile/edit', [ProfileController::class, 'edit'])
+    ->name('profile.edit');
+Route::put('/profile', [ProfileController::class, 'update'])
+    ->name('profile.update');
+```
+
+```php
+public function edit(): void
+{
+    $user = $this->current_user;
+    $title = 'Editar Perfil';
+    $this->render('profile/edit', compact('user', 'title'));
+}
+
+public function update(Request $request): void
+{
+    $params = $request->getParam('user', []);
+    $user = $this->current_user;
+    $user->name = $params['name'] ?? null;
+    $user->email = $params['email'] ?? null;
+
+    if ($user->save()) {
+        FlashMessage::success('Perfil atualizado com sucesso!');
+        $this->redirectTo(route('profile.show'));
+    } else {
+        FlashMessage::danger('Existem dados incorretos!');
+        $title = 'Editar Perfil';
+        $this->render('profile/edit', compact('user', 'title'));
+    }
+}
+```
+
+```php
+<!-- app/views/profile/edit.phtml -->
+<form action="<?= route('profile.update') ?>" method="post"
+      class="<?= $user->hasErrors() ? 'was-validated' : '' ?>" novalidate>
+    <input type="hidden" name="_method" value="PUT">
+    <div class="mb-3">
+        <label for="user_name" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="user_name"
+               name="user[name]" value="<?= $user->name ?>" required>
+        <div class="invalid-feedback"><?= $user->errors('name') ?></div>
+    </div>
+    <div class="mb-3">
+        <label for="user_email" class="form-label">E-mail</label>
+        <input type="email" class="form-control" id="user_email"
+               name="user[email]" value="<?= $user->email ?>" required>
+        <div class="invalid-feedback"><?= $user->errors('email') ?></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+```
+
+Testes de controller (`ProfileControllerTest`, `Auth::login($this->user)`
+no `setUp`):
+
+```php
+public function test_update_with_valid_data_should_redirect_to_profile(): void
+{
+    $response = $this->put(
+        action: 'update',
+        controllerName: 'App\Controllers\ProfileController',
+        params: ['user' => ['name' => 'Novo Nome',
+                            'email' => 'fulano@example.com']]
+    );
+
+    $this->assertStringContainsString('Location: /profile', $response);
+    $this->assertEquals('Novo Nome', User::findById($this->user->id)->name);
+}
+
+public function test_update_with_empty_name_should_render_errors(): void
+{
+    $response = $this->put(
+        action: 'update',
+        controllerName: 'App\Controllers\ProfileController',
+        params: ['user' => ['name' => '', 'email' => 'fulano@example.com']]
+    );
+
+    $this->assertStringContainsString('não pode ser vazio!', $response);
+}
+```
+
+Terceiro caso: outro usuário salvo no `setUp`; mandar o e-mail dele;
+esperar `'já existe um registro com esse dado'`. Acesso: `GET
+/profile/edit` e `PUT /profile` sem sessão dão 302 para `/login`
+(Guzzle tem `put`). Aceitação: logar, `amOnPage('/profile/edit')`,
+`fillField('user[name]', 'Outro')`, `click('Salvar')`,
+`see('Perfil atualizado com sucesso!')`.
+
+Armadilhas: `save()` valida; `update()` não. Em registro existente,
+`save()` grava todas as colunas de `$columns` com os valores do
+objeto; funciona porque `$this->current_user` veio do banco inteiro.
+`passwordConfirmation` não roda (só em `newRecord()`); senha é B6.
+`uniqueness('email')` ignora o próprio registro se o e-mail não mudou
+e acusa se mudou para um que existe. Escape os `value=""` (C5) se o
+nome puder ter `"`.
+
+### B9. Bloquear a conta depois de N tentativas erradas
+
+Chance: baixa. Tempo: 30 min. Variante de B5 com contador.
+
+Passos: `schema.sql` ganha `failed_logins INT NOT NULL DEFAULT 0`;
+`'failed_logins'` em `$columns` e `@property int $failed_logins`;
+`db:reset`.
+
+```php
+// User.php
+public const MAX_FAILED_LOGINS = 3;
+
+public function isLocked(): bool
+{
+    return (int) $this->failed_logins >= self::MAX_FAILED_LOGINS;
+}
+
+public function registerFailedLogin(): bool
+{
+    return $this->update(['failed_logins' => (int) $this->failed_logins + 1]);
+}
+
+public function registerLogin(): bool
+{
+    return $this->update([
+        'last_login_at' => date('Y-m-d H:i:s'),
+        'failed_logins' => 0,
+    ]);
+}
+```
+
+```php
+// authenticate()
+if ($user && $user->isLocked()) {
+    FlashMessage::danger('Conta bloqueada por excesso de tentativas.');
+    $this->redirectTo(route('users.login'));
+}
+
+if ($user && $user->authenticate($password)) {
+    // ...
+} else {
+    $user?->registerFailedLogin();
+    FlashMessage::danger('E-mail ou senha inválidos!');
+    $this->redirectTo(route('users.login'));
+}
+```
+
+Testes: unit (`isLocked` falso por padrão; três `registerFailedLogin`
+e recarregar com `findById`: verdadeiro; `registerLogin` zera);
+controller (três POSTs errados e um certo: `Auth::check()` falso e
+`Location: /login`).
+
+Armadilha: o PDO devolve números como string (prepared statements
+emulados); por isso o `(int)`. Nos testes de controller o `redirectTo`
+sobrescrito não interrompe a execução: o `if` do bloqueio precisa
+vir antes e o resto ficar no `else`, senão o teste vê dois
+`Location:`.
+
+### C5. Escapar saída nas views (XSS)
+
+Chance: média (página "Segurança" lista Cross-Site Scripting).
+Tempo: 15 min.
+
+Demonstração que o professor pode fazer: usuário com nome
+`<b>Fulano</b>` (ou `<script>`) aparece renderizado na navbar e no
+painel. Onde: `_navbar.phtml` (nome ou e-mail), `dashboard/index.phtml`,
+`admin/dashboard/index.phtml`, e todo `value="..."` de formulário
+(A10, B8).
+
+```php
+<?= htmlspecialchars($this->currentUser()->name, ENT_QUOTES, 'UTF-8') ?>
+```
+
+Se pedir um helper: `lib/helpers.php` com `function e(?string $value):
+string` fazendo o mesmo; registrar em `composer.json`, em
+`autoload.files`, ao lado de `core/helpers.php`, e rodar
+`./run composer dump-autoload`. Não edite `core/helpers.php`.
+
+Teste de controller (`DashboardControllerTest`):
+
+```php
+public function test_index_should_escape_user_name(): void
+{
+    $this->user->update(['name' => '<b>Fulano</b>']);
+    Auth::login($this->user);
+
+    $response = $this->get(action: 'index',
+        controllerName: 'App\Controllers\DashboardController');
+
+    $this->assertStringContainsString('&lt;b&gt;Fulano&lt;/b&gt;', $response);
+    $this->assertStringNotContainsString('<b>Fulano</b>', $response);
+}
+```
+
+Armadilha: PHPCS só olha `.php` e o PHPStan exclui `app/views`; erro
+em `.phtml` só aparece no teste ou no navegador. Não escape duas
+vezes (helper dentro de `htmlspecialchars`).
+
+### C6. Miudezas que o professor pede como "alteração pontual"
+
+Chance: alta (cada uma é trivial). Tempo: 5 a 10 min cada.
+
+- Logout volta para a home: em `destroy`, `route('root')`. Ajuste
+  `test_destroy_should_logout` (`Location: /`) e `LoginCest::logout`
+  (`seeCurrentUrlEquals('/')`; o `see('Login')` continua valendo pela
+  navbar).
+- Mensagens distintas para e-mail inexistente e senha errada: separe
+  o `if` em dois. `LoginCest::loginWithInvalidCredentials` confere
+  "E-mail ou senha inválidos!"; ajuste. Se perguntarem, a mensagem
+  única é a prática recomendada (não revela quais e-mails existem).
+- `<title>` dinâmico: em `application.phtml`,
+  `<title><?= $title ?> - Eventos do Câmpus</title>`. `$title` existe
+  em todo `render` do projeto.
+- Conteúdo por perfil na view: `<?php if
+  ($this->currentUser()->isAdmin()) : ?>` em `dashboard/index.phtml`.
+  Teste de controller com admin logado procurando o texto.
+- Raiz manda logado para o painel: em `HomeController::index`,
+  `if (Auth::check()) { $this->redirectTo(route('dashboard.index'));
+  return; }`. Novo caso em `HomeControllerTest` com `Auth::login`
+  esperando `Location: /dashboard`; `HomeAccessTest` e `HomeIndexCest`
+  (sem sessão) não mudam.
+- Renomear o perfil (`participant` para `user`): ENUM e `DEFAULT` no
+  `schema.sql`, padrão no construtor de `User`,
+  `test_is_admin_should_return_false_by_default`, mensagem do
+  populate; `db:reset`.
+- "Membro desde": `created_at` NÃO está em `$columns` de propósito.
+  Se entrar, `save()` manda `NULL` explícito para uma coluna `NOT
+  NULL` e o MySQL recusa. Para exibir, método no model com SELECT
+  próprio (modelo em D4) ou `Database::getDatabaseConn()` direto.
+
+### D5. Contadores com all() e where() no painel administrativo
+
+Chance: alta (trivial, e `where` é item da rubrica 4.2 que o código
+da equipe ainda não usa). Tempo: 15 min.
+
+Arquivos: `app/Controllers/Admin/DashboardController.php`,
+`app/views/admin/dashboard/index.phtml`, testes.
+
+```php
+public function index(): void
+{
+    $totalUsers = count(User::all());
+    $totalAdmins = count(User::where(['role' => 'admin']));
+
+    $title = 'Painel Administrativo';
+    $this->render('admin/dashboard/index',
+        compact('title', 'totalUsers', 'totalAdmins'));
+}
+```
+
+```php
+<!-- index.phtml: mantenha o "Olá, ...!" (AdminDashboardCest confere) -->
+<ul>
+    <li>Usuários cadastrados: <?= $totalUsers ?></li>
+    <li>Administradores: <?= $totalAdmins ?></li>
+</ul>
+```
+
+Se o professor quiser controller magro: `User::countByRole(string
+$role): int` com `count(static::where(['role' => $role]))`, ou um
+`SELECT COUNT(*)` próprio.
+
+Teste de controller, arquivo novo
+`tests/Integration/Controllers/Admin/DashboardControllerTest.php`
+(namespace `Tests\Integration\Controllers\Admin`, `use
+Tests\Integration\Controllers\ControllerTestCase`):
+
+```php
+public function test_index_should_show_totals(): void
+{
+    $admin = new User([
+        'name' => 'Admin',
+        'email' => 'admin@example.com',
+        'password' => '123456',
+        'password_confirmation' => '123456',
+        'role' => 'admin',
+    ]);
+    $admin->save();
+    (new User([
+        'name' => 'Fulano',
+        'email' => 'fulano@example.com',
+        'password' => '123456',
+        'password_confirmation' => '123456',
+    ]))->save();
+    Auth::login($admin);
+
+    $response = $this->get(action: 'index',
+        controllerName: 'App\Controllers\Admin\DashboardController');
+
+    $this->assertStringContainsString('Usuários cadastrados: 2', $response);
+    $this->assertStringContainsString('Administradores: 1', $response);
+}
+```
+
+Unit em `UserTest`: `test_where_should_filter_by_role` (um admin, um
+participante, `count(User::where(['role' => 'admin']))` igual a 1).
+
+Armadilha: `where([])` monta `WHERE ` vazio e quebra (guia 9). `where`
+só faz igualdade com `AND`; intervalo ou `LIKE` é SQL próprio (D4).
+
+### D6. Admin altera o perfil de um usuário (promover/rebaixar)
+
+Chance: média. Tempo: 25 min. Pressupõe D1 (listagem).
+
+```php
+// routes.php, grupo admin
+Route::put('/admin/users/{id}', [AdminUsersController::class, 'update'])
+    ->name('admin.users.update');
+```
+
+```php
+public function update(Request $request): void
+{
+    $user = User::findById((int) $request->getParam('id'));
+    $role = $request->getParam('user')['role'] ?? null;
+
+    if ($user === null || !in_array($role, ['admin', 'participant'], true)) {
+        FlashMessage::danger('Não foi possível alterar o perfil.');
+    } elseif ($user->id === $this->current_user->id) {
+        FlashMessage::danger('Você não pode alterar o próprio perfil.');
+    } else {
+        $user->update(['role' => $role]);
+        FlashMessage::success('Perfil alterado com sucesso!');
+    }
+
+    $this->redirectTo(route('admin.users.index'));
+}
+```
+
+View (linha da tabela de D1): form `POST` com `_method=PUT`, um
+`<select name="user[role]">` com as duas opções e botão "Salvar".
+
+Testes: controller (admin logado; `put('update', ..., ['id' =>
+$outro->id, 'user' => ['role' => 'admin']])`; `Location:
+/admin/users`; `User::findById($outro->id)->isAdmin()` verdadeiro);
+acesso (`PUT /admin/users/1` sem sessão: 302 `/login`); unit
+(`update(['role' => 'admin'])` e recarregar).
+
+Armadilhas: `update()` não valida; valor fora do ENUM vira
+`PDOException` (500), daí o `in_array`. Admin que rebaixa a si mesmo
+perde o acesso na hora (o `Admin` o manda para `/dashboard`); por isso
+o bloqueio. Use as constantes de H2 se já existirem.
+
+### D7. Ordenar a listagem
+
+Chance: baixa. Tempo: 10 min.
+
+`Model::all()` não tem `ORDER BY`. Rápido: `usort($users, fn ($a, $b)
+=> strcmp($a->name, $b->name))` no controller. Certo: método no model
+com SQL próprio e `ORDER BY name` (modelo em D4), e teste unitário
+com dois nomes fora de ordem.
+
+### D8. Só o dono vê e edita (prévia 4.2)
+
+Chance: baixa hoje, alta na 4.2. Tempo: 10 min por ação.
+
+Padrão do problem-track: `$this->current_user->events()->findById($id)`
+só acha registros do usuário logado; para os outros devolve `null`.
+No controller:
+
+```php
+$event = $this->current_user->events()->findById((int) $request->getParam('id'));
+
+if ($event === null) {
+    throw new HTTPException('Evento não encontrado', 404);
+}
+```
+
+Teste de controller: logar outro usuário, pedir o `id` alheio,
+`$this->expectException(HTTPException::class)` (o `ControllerTestCase`
+relança exceções). No nosso domínio quem gerencia eventos é o
+Administrador; o dono importa para Inscrição (4.4).
+
+### F2. Teste unitário de middleware
+
+Chance: média (depois de A1, "teste o middleware" é a continuação
+natural; a rubrica 4.2 chama o teste de acesso de "teste de
+controller"). Tempo: 20 min. Pressupõe A1 (`redirectTo` protegido).
+
+O `redirectTo` original é privado e dá `exit`; não há como testar
+`handle` sem subclasse. Com A1, uma classe anônima sobrescreve o
+redirecionamento. Arquivo `tests/Unit/Middleware/AuthenticateTest.php`:
+
+```php
+<?php
+
+namespace Tests\Unit\Middleware;
+
+use App\Middleware\Authenticate;
+use App\Models\User;
+use Core\Constants\Constants;
+use Core\Http\Request;
+use Core\Router\Router;
+use Lib\Authentication\Auth;
+use Lib\FlashMessage;
+use Tests\TestCase;
+
+class AuthenticateTest extends TestCase
+{
+    public function setUp(): void
+    {
+        parent::setUp();
+        Router::reset();
+        require Constants::rootPath()->join('config/routes.php');
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/dashboard';
+        $_SESSION = [];
+    }
+
+    public function tearDown(): void
+    {
+        Router::reset();
+        unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+        $_SESSION = [];
+        parent::tearDown();
+    }
+
+    public function test_handle_should_redirect_to_login_without_session(): void
+    {
+        $middleware = new class extends Authenticate {
+            public ?string $location = null;
+
+            protected function redirectTo(string $location): void
+            {
+                $this->location = $location;
+            }
+        };
+
+        $middleware->handle(new Request());
+
+        $this->assertEquals('/login', $middleware->location);
+        $this->assertEquals(
+            'Você deve estar logado para acessar essa página',
+            FlashMessage::get()['danger']
+        );
+    }
+
+    public function test_handle_should_not_redirect_with_session(): void
+    {
+        $user = new User([
+            'name' => 'User 1',
+            'email' => 'fulano@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456',
+        ]);
+        $user->save();
+        Auth::login($user);
+
+        $middleware = new class extends Authenticate {
+            public ?string $location = null;
+
+            protected function redirectTo(string $location): void
+            {
+                $this->location = $location;
+            }
+        };
+
+        $middleware->handle(new Request());
+
+        $this->assertNull($middleware->location);
+    }
+}
+```
+
+Para `Admin`: mesmo molde, logando um participante e esperando
+`/dashboard`; com A12, sem sessão espera `/login`.
+
+Armadilhas: `Tests\TestCase` (cria o banco) porque `Auth::check()`
+consulta `users`. `Router::reset()` + `require` das rotas é o que
+faz `route('users.login')` funcionar fora do nginx. Mantenha a classe
+anônima dentro do método: numa variável tipada como `Authenticate`, o
+PHPStan acusa `$location` como propriedade inexistente. Depois de A12,
+o `return` após o primeiro `deny` evita que o segundo `if` rode com
+usuário nulo no teste.
+
+### F3. LoginHelper::logout() sem e-mail fixo
+
+Chance: média-baixa (infra de teste; pré-requisito de C2). Tempo:
+10 min.
+
+```php
+<!-- _navbar.phtml: id no toggle do menu -->
+<a class="nav-link dropdown-toggle" id="user_menu" href="#" role="button"
+   data-bs-toggle="dropdown">
+```
+
+```php
+// tests/Support/Helper/LoginHelper.php
+public function logout(): void
+{
+    /** @var \Tests\Support\AcceptanceTester $page */
+    $page = $this->getModule('WebDriver');
+    $page->click('#user_menu');
+    $page->click('Sair');
+}
+```
+
+`click()` aceita seletor CSS. A assinatura não mudou, então não
+precisa de `./run codecept build`. Rode `./run test:browser
+tests/Acceptance/authentications/LoginCest.php`.
+
+### F4. Testes que faltam no UserTest
+
+Chance: alta (a issue #9 aponta o `UserTest` como o ponto fraco do
+vídeo). Tempo: 10 min. Dois casos que o model já suporta e ninguém
+testa:
+
+```php
+public function test_save_should_fail_with_duplicated_email(): void
+{
+    $user = new User([
+        'name' => 'User 3',
+        'email' => 'fulano@example.com', // já existe, criado no setUp
+        'password' => '123456',
+        'password_confirmation' => '123456',
+    ]);
+
+    $this->assertFalse($user->save());
+    $this->assertEquals('já existe um registro com esse dado',
+        $user->errors('email'));
+    $this->assertCount(2, User::all());
+}
+
+public function test_password_should_be_stored_as_hash(): void
+{
+    $this->assertNotEquals('123456', $this->user->encrypted_password);
+    $this->assertTrue(
+        password_verify('123456', $this->user->encrypted_password)
+    );
+}
+```
+
+Se o professor pedir "um teste para o método X": cada método público
+de `User` tem um `test_x_should_...` em `UserTest`; copie o mais
+parecido. Fale sempre do arquivo de teste na tela, não do model.
+
+### G4. Populate em classes, como no problem-track
+
+Chance: média-baixa. Tempo: 10 min.
+
+O problem-track tem `database/Populate/UsersPopulate.php` e
+`ProblemsPopulate.php`, chamados pelo `populate.php`. O `composer.json`
+já mapeia `Database\` para `database/`.
+
+```php
+<?php
+// database/Populate/UsersPopulate.php
+
+namespace Database\Populate;
+
+use App\Models\User;
+
+class UsersPopulate
+{
+    public static function populate(): void
+    {
+        $admin = new User([
+            'name' => 'Administrador',
+            'email' => 'admin@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456',
+            'role' => 'admin',
+        ]);
+        $admin->save();
+
+        $user = new User([
+            'name' => 'Usuário',
+            'email' => 'user@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456',
+        ]);
+        $user->save();
+
+        echo "Usuários criados: {$admin->email} (admin) e {$user->email}"
+            . " (participant), senha 123456\n";
+    }
+}
+```
+
+```php
+<?php
+// database/Populate/populate.php
+
+require __DIR__ . '/../../config/bootstrap.php';
+
+use Core\Database\Database;
+use Database\Populate\UsersPopulate;
+
+Database::migrate();
+UsersPopulate::populate();
+```
+
+Depois: `./run db:populate`. Armadilha: PHPCS e PHPStan ignoram
+`database/`, mas o checador PSR-4 do CI não: `Database\Populate\X` tem
+que estar em `database/Populate/X.php`, com a mesma caixa. Para
+eventos na 4.2, `EventsPopulate` ao lado.
+
+## H. Orientação a objetos (a issue #9 avalia "OO")
+
+### H1. Auth::attempt(): autenticação encapsulada em Auth
+
+Chance: média (feedback 2025-2: "A criação da sessão, remoção e
+checagem deve estar encapsulada na classe auth"). Tempo: 15 min.
+
+```php
+// lib/Authentication/Auth.php
+public static function attempt(string $email, string $password): bool
+{
+    $user = User::findByEmail($email);
+
+    if ($user === null || !$user->authenticate($password)) {
+        return false;
+    }
+
+    self::login($user);
+    return true;
+}
+```
+
+```php
+// authenticate(), com as variáveis de A9
+if (Auth::attempt($email, $password)) {
+    FlashMessage::success('Login realizado com sucesso!');
+    $this->redirectTo(route('dashboard.index'));
+} else {
+    FlashMessage::danger('E-mail ou senha inválidos!');
+    $this->redirectTo(route('users.login'));
+}
+```
+
+Testes em `AuthTest`: `test_attempt_with_valid_credentials_should_login`
+(`assertTrue`, `Auth::check()`) e
+`test_attempt_with_invalid_credentials_should_not_login`. Os testes de
+controller não mudam. Com A4, use `Auth::user()->isAdmin()` depois do
+`attempt` para escolher o destino.
+
+### H2. Constantes para o perfil (sem strings mágicas)
+
+Chance: média-baixa. Tempo: 10 min.
+
+```php
+// User.php
+public const ROLE_ADMIN = 'admin';
+public const ROLE_PARTICIPANT = 'participant';
+
+// construtor: $this->role = self::ROLE_PARTICIPANT;
+// isAdmin(): return $this->role === self::ROLE_ADMIN;
+
+public function isParticipant(): bool
+{
+    return $this->role === self::ROLE_PARTICIPANT;
+}
+```
+
+Use nas views que comparam `role`, no populate (`User::ROLE_ADMIN`) e
+no `in_array` de D6. Os testes podem continuar com as strings; o ENUM
+do banco não muda. Teste unitário: `isParticipant` verdadeiro por
+padrão.
+
+### H3. Como justificar a escolha em A1
+
+Se o professor perguntar "por que classe abstrata e não trait":
+classe abstrata diz que `Authenticate` e `Admin` SÃO middlewares que
+negam acesso (hierarquia, um lugar para `handle` abstrato no futuro);
+trait só empresta código, sem relação entre as classes. As duas
+atendem "centralizar". Mover para `core/Http/Middleware/` é a terceira
+opção e conta como mudança no framework (bônus da rubrica), mas o
+`core/` é do professor; combine antes.
+
+## 7. Armadilhas adicionais (do complemento)
+
+- POST sem `user[...]`: warning em `$params['email']`; o
+  `ErrorsHandler` responde 500 para qualquer warning (não só erros).
+- `created_at` e `updated_at` ficam fora de `$columns` de propósito;
+  dentro, `save()` manda `NULL` explícito e o MySQL recusa.
+- `ControllerTestCase::tearDown` limpa só `$_SESSION['user']`.
+  Chaves novas (`redirect_to`, `_token`, `last_activity`) vazam entre
+  testes do mesmo processo; limpe no seu `tearDown`.
+- PDO devolve números como string (prepared statements emulados):
+  `(int)` antes de somar ou comparar.
+- MySQL 8 compara strings sem diferenciar caixa (`utf8mb4_0900_ai_ci`):
+  `findByEmail('ADMIN@EXAMPLE.COM')` acha o usuário; só espaços
+  atrapalham (`trim`).
+- `session_regenerate_id()` sem sessão ativa (CLI do PHPUnit) gera
+  warning; guarde com `session_status()`.
+- PHPStan nível 6 não reclama de método chamado em valor possivelmente
+  nulo (isso é nível 8), mas reclama de propriedade que não existe na
+  classe declarada da variável (classe anônima atribuída a variável
+  tipada com a classe pai).
+- `htmlspecialchars` também nos `value=""` de formulários; nunca
+  escape duas vezes.
+- `novalidate` desliga `required` e `type="email"` no navegador; sem
+  ele a demonstração "dados incorretos" com campo vazio nem chega ao
+  servidor.
+- Nos testes de controller o `redirectTo` sobrescrito não interrompe
+  a ação: dois caminhos que redirecionam na mesma chamada deixam dois
+  `Location:` na resposta. Use `return` ou `else`.
+- Codeception: `click('#id')` aceita CSS; `seeInField('user[email]',
+  'x')` confere o valor de um campo.
+
+## 8. Fontes do complemento
+
+- Issue #9 do repositório público (professor, 14/10): citada na
+  íntegra na abertura da seção 6.
+- Comentários 2025-2: `novalidate`; "Testes de acesso deve ser teste
+  de controller"; sessão encapsulada em `Auth`; `getParams` em vez de
+  `$_POST`.
+- Rubrica 4.2: `where`; re-render mantendo valores válidos; "rotas no
+  padrão RESTful, não só os verbos".
+- Moodle, página 15 "Segurança": session hijacking, XSS, CSRF.
+- Problem-track `8130d35`: `ProfileController`, `tests/Unit/Access/
+  ProblemsAccessTest.php` (Guzzle), `PaginatorTest`,
+  `database/Populate/*Populate.php`.
+- Código da equipe em `86c81ca`: tudo que a seção 6 afirma sobre o
+  estado atual foi conferido linha a linha (`required` sem
+  `novalidate`, `redirectTo` privado duplicado, `where` sem uso,
+  `UserTest` sem caso de e-mail duplicado, helper de logout com e-mail
+  fixo).
