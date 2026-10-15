@@ -39,6 +39,13 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   erros comuns) e como achar documentação e exemplos sem internet:
   `php --rf`, `vendor/`, arquivos-modelo do projeto, grep e git.
 
+- `exemplos-fvp/`
+  Uma solução pronta e testada para cada cenário do catálogo: cópia
+  do projeto já modificada (sem `vendor/`), `solucao.patch`,
+  `solucao.bundle` para `fetch` + `cherry-pick` com o mesmo SHA, e
+  `recriar.sh` para recriar o clone completo. Ver
+  `exemplos-fvp/README.md`.
+
 Ordem sugerida: resumo, completo, catálogo do FVP com o projeto
 aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
 quando estiver sem rede.
