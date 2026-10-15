@@ -94,13 +94,17 @@ class Filha extends Base
 ## 1.3 Variáveis, operadores, strings, arrays
 
 ```php
-$a = 5;  $b = '5';
+$a = 5;
+$b = '5';
 $a == $b;    // true  (compara valor, converte tipo)
 $a === $b;   // false (compara valor E tipo)  <- use este
 $x = $param ?? 'padrao';          // se null/indefinido, usa padrao
 $nome = $user?->name;             // null se $user for null
 $v = $flag ?: 'vazio';            // se falso, usa 'vazio'
-(int) '12'; (bool) '0'; (string) 3; (float) '1.5';
+$n = (int) '12';
+$ok = (bool) '0';                 // false
+$s = (string) 3;
+$f = (float) '1.5';
 ```
 
 Strings:
@@ -130,13 +134,17 @@ $lista[] = 4;                       // acrescenta no fim
 $mapa['name'] = 'Ana';              // cria ou altera chave
 isset($mapa['x']);                  // false; nao da aviso
 array_key_exists('x', $mapa);       // idem, mas true se valor for null
-count($lista); in_array(2, $lista); array_keys($mapa);
+count($lista);
+in_array(2, $lista);
+array_keys($mapa);
 array_map(fn ($u) => $u->id, $users);          // transforma
 array_filter($users, fn ($u) => $u->isAdmin()); // filtra (mantem chaves)
 array_values($arr);                            // reindexa 0..n
 array_merge($a, $b);                           // junta
 [$primeiro, $segundo] = $lista;                // desestrutura
-foreach ($mapa as $chave => $valor) { }
+foreach ($mapa as $chave => $valor) {
+    echo "{$chave}: {$valor}";
+}
 compact('user', 'title');   // ['user' => $user, 'title' => $title]
 extract($data);             // cria $user e $title a partir do array
 ```
@@ -146,7 +154,8 @@ Funções anônimas:
 ```php
 $dobro = fn ($n) => $n * 2;                 // arrow: 1 expressao,
                                             // enxerga variaveis de fora
-$soma = function ($n) use ($base) {         // closure: precisa de use
+// closure: precisa de use para enxergar $base
+$soma = function ($n) use ($base) {
     return $n + $base;
 };
 ```
@@ -167,9 +176,19 @@ $label = match ($role) {                    // estrito (===), sem break
     default => 'Outro',
 };
 
-foreach ($users as $i => $user) { if ($i > 10) { break; } }
-for ($i = 0; $i < 10; $i++) { }
-while ($cond) { }
+foreach ($users as $i => $user) {
+    if ($i > 10) {
+        break;
+    }
+}
+
+for ($i = 0; $i < 10; $i++) {
+    echo $i;
+}
+
+while ($cond) {
+    $cond = proximo();
+}
 
 try {
     $x = fazAlgo();
@@ -179,7 +198,9 @@ try {
     limpa();
 }
 
-if ($obj instanceof User) { }
+if ($obj instanceof User) {
+    echo $obj->name;
+}
 
 // prefira retornar cedo a aninhar ifs
 if ($user === null) {
@@ -201,7 +222,8 @@ password_verify($senha, $hash);             // conferir
 
 filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 filter_var($n, FILTER_VALIDATE_INT) !== false;
-ctype_digit($s);  preg_match('/^\d{11}$/', $cpf) === 1;
+ctype_digit($s);
+preg_match('/^\d{11}$/', $cpf) === 1;
 mb_strlen($senha) >= 6;
 ```
 
@@ -214,7 +236,8 @@ $stmt->bindValue(':t', "%{$termo}%");
 $stmt->execute();
 $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);   // array de arrays
 $row  = $stmt->fetch(\PDO::FETCH_ASSOC);      // uma linha ou false
-$stmt->rowCount();  $pdo->lastInsertId();
+$stmt->rowCount();
+$pdo->lastInsertId();
 ```
 
 Nunca concatene valor do usuário no SQL; use placeholder. Nome de

@@ -448,7 +448,10 @@ public function problems(): HasMany
 public function reinforcedProblems(): BelongsToMany
 {
     return $this->belongsToMany(
-        Problem::class, 'problem_user_reinforce', 'user_id', 'problem_id'
+        Problem::class,
+        'problem_user_reinforce',
+        'user_id',
+        'problem_id'
     );
 }
 // Problem

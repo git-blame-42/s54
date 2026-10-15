@@ -140,8 +140,10 @@ class Admin extends BaseMiddleware
         $user = Auth::user();
 
         if ($user !== null && !$user->isAdmin()) {
-            $this->deny('Acesso restrito a administradores',
-                'dashboard.index');
+            $this->deny(
+                'Acesso restrito a administradores',
+                'dashboard.index'
+            );
         }
     }
 }
@@ -287,8 +289,10 @@ class Guest extends BaseMiddleware   // ou implements Middleware
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticationsController::class, 'new'])
         ->name('users.login');
-    Route::post('/login', [AuthenticationsController::class,
-        'authenticate'])->name('users.authenticate');
+    Route::post(
+        '/login',
+        [AuthenticationsController::class, 'authenticate']
+    )->name('users.authenticate');
 });
 ```
 
@@ -702,8 +706,10 @@ Arquivos: `config/routes.php` (grupo `admin`),
 // routes.php, dentro do grupo admin
 Route::get('/admin/users', [AdminUsersController::class, 'index'])
     ->name('admin.users.index');
-Route::get('/admin/users/page/{page}', [AdminUsersController::class,
-    'index'])->name('admin.users.paginate');
+Route::get(
+    '/admin/users/page/{page}',
+    [AdminUsersController::class, 'index']
+)->name('admin.users.paginate');
 ```
 
 ```php
@@ -727,8 +733,10 @@ class UsersController extends Controller
         $users = $paginator->registers();
 
         $title = 'Usuários';
-        $this->render('admin/users/index',
-            compact('users', 'paginator', 'title'));
+        $this->render(
+            'admin/users/index',
+            compact('users', 'paginator', 'title')
+        );
     }
 }
 ```
@@ -763,8 +771,10 @@ Chance: média. Tempo: 25 min.
 
 ```php
 // routes.php, grupo admin
-Route::delete('/admin/users/{id}', [AdminUsersController::class,
-    'destroy'])->name('admin.users.destroy');
+Route::delete(
+    '/admin/users/{id}',
+    [AdminUsersController::class, 'destroy']
+)->name('admin.users.destroy');
 ```
 
 ```php
@@ -848,8 +858,10 @@ Chance: baixa agora, alta na 4.4. Tempo: 20 min.
 if ($request->acceptJson()) {
     $this->renderJson('admin/users/index', compact('users', 'paginator'));
 } else {
-    $this->render('admin/users/index',
-        compact('users', 'paginator', 'title'));
+    $this->render(
+        'admin/users/index',
+        compact('users', 'paginator', 'title')
+    );
 }
 ```
 
@@ -897,8 +909,10 @@ public function test_index_should_render(): void
 {
     Auth::login($this->user);   // criado no setUp
 
-    $response = $this->get(action: 'index',
-        controllerName: 'App\Controllers\XController');
+    $response = $this->get(
+        action: 'index',
+        controllerName: 'App\Controllers\XController'
+    );
 
     $this->assertStringContainsString('Texto esperado', $response);
 }
@@ -1136,8 +1150,10 @@ if (!Auth::check()) {
     if ($request->getMethod() === 'GET') {
         $_SESSION['redirect_to'] = $request->getUri();
     }
-    $this->deny('Você deve estar logado para acessar essa página',
-        'users.login');
+    $this->deny(
+        'Você deve estar logado para acessar essa página',
+        'users.login'
+    );
 }
 ```
 
@@ -1199,14 +1215,18 @@ public function handle(Request $request): void
     $user = Auth::user();
 
     if ($user === null) {
-        $this->deny('Você deve estar logado para acessar essa página',
-            'users.login');
+        $this->deny(
+            'Você deve estar logado para acessar essa página',
+            'users.login'
+        );
         return;
     }
 
     if (!$user->isAdmin()) {
-        $this->deny('Acesso restrito a administradores',
-            'dashboard.index');
+        $this->deny(
+            'Acesso restrito a administradores',
+            'dashboard.index'
+        );
     }
 }
 ```
@@ -1539,8 +1559,10 @@ public function test_index_should_escape_user_name(): void
     $this->user->update(['name' => '<b>Fulano</b>']);
     Auth::login($this->user);
 
-    $response = $this->get(action: 'index',
-        controllerName: 'App\Controllers\DashboardController');
+    $response = $this->get(
+        action: 'index',
+        controllerName: 'App\Controllers\DashboardController'
+    );
 
     $this->assertStringContainsString('&lt;b&gt;Fulano&lt;/b&gt;', $response);
     $this->assertStringNotContainsString('<b>Fulano</b>', $response);
@@ -1598,8 +1620,10 @@ public function index(): void
     $totalAdmins = count(User::where(['role' => 'admin']));
 
     $title = 'Painel Administrativo';
-    $this->render('admin/dashboard/index',
-        compact('title', 'totalUsers', 'totalAdmins'));
+    $this->render(
+        'admin/dashboard/index',
+        compact('title', 'totalUsers', 'totalAdmins')
+    );
 }
 ```
 
@@ -1639,8 +1663,10 @@ public function test_index_should_show_totals(): void
     ]))->save();
     Auth::login($admin);
 
-    $response = $this->get(action: 'index',
-        controllerName: 'App\Controllers\Admin\DashboardController');
+    $response = $this->get(
+        action: 'index',
+        controllerName: 'App\Controllers\Admin\DashboardController'
+    );
 
     $this->assertStringContainsString('Usuários cadastrados: 2', $response);
     $this->assertStringContainsString('Administradores: 1', $response);
@@ -1872,8 +1898,10 @@ public function test_save_should_fail_with_duplicated_email(): void
     ]);
 
     $this->assertFalse($user->save());
-    $this->assertEquals('já existe um registro com esse dado',
-        $user->errors('email'));
+    $this->assertEquals(
+        'já existe um registro com esse dado',
+        $user->errors('email')
+    );
     $this->assertCount(2, User::all());
 }
 
