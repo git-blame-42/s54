@@ -29,6 +29,11 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   Catálogo das alterações que o professor pode pedir na validação
   prática (FVP): arquivos, passos, código e testes de cada uma.
 
+- `diretorios-do-framework.md`
+  Para que serve cada diretório e arquivo da raiz: dono (framework,
+  equipe, infra, gerado), o que entra, o que não entra, e um índice
+  reverso "onde vai um X novo".
+
 - `php-sintaxe-e-sobrevivencia-offline.md`
   Sintaxe PHP 8 que o projeto usa (classes, arrays, views, PSR-12,
   erros comuns) e como achar documentação e exemplos sem internet:
