@@ -29,7 +29,14 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   Catálogo das alterações que o professor pode pedir na validação
   prática (FVP): arquivos, passos, código e testes de cada uma.
 
-Ordem sugerida: resumo, completo, catálogo do FVP com o projeto aberto.
+- `php-sintaxe-e-sobrevivencia-offline.md`
+  Sintaxe PHP 8 que o projeto usa (classes, arrays, views, PSR-12,
+  erros comuns) e como achar documentação e exemplos sem internet:
+  `php --rf`, `vendor/`, arquivos-modelo do projeto, grep e git.
+
+Ordem sugerida: resumo, completo, catálogo do FVP com o projeto
+aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
+quando estiver sem rede.
 
 ## Convenções
 
