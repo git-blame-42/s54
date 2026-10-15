@@ -43,6 +43,17 @@ Ordem sugerida: resumo, completo, catálogo do FVP com o projeto
 aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
 quando estiver sem rede.
 
+## Scripts
+
+`scripts/` prepara uma máquina Ubuntu 24.04 do laboratório: git,
+curl, tmux, zsh, micro, ncdu, `.tmux.conf`, oh-my-zsh com plugin
+tmux, zsh como shell padrão, verificação do que o framework precisa
+(Docker, Compose v2, rootless viável ou não), instalação do Docker,
+teste do framework sem modificações num diretório temporário e
+instalação do projeto Eventos do Câmpus. Um script por tarefa; só
+`-h` e `-z` (desfaz o que aquele script fez, sem tocar no que já
+existia). Ordem e detalhes em `scripts/README.md`.
+
 ## Convenções
 
 - Texto em português. Identificadores de código, tabelas e mensagens
