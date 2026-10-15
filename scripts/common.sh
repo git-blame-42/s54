@@ -192,7 +192,10 @@ apt_purge_simulate() { # pacotes...
 # e avisa. Pacotes já ausentes são ignorados.
 apt_purge_safe() { # pacotes (string separada por espaço)
   local p keep=() wanted extra ok_list=()
-  for p in $1; do apt_installed "$p" && keep+=("$p"); done
+  for p in $1; do
+    p="${p%%:*}"   # tolera sufixo :amd64 de estados antigos
+    apt_installed "$p" && keep+=("$p")
+  done
   (( ${#keep[@]} )) || return 0
   wanted="$(printf '%s\n' "${keep[@]}" | sort -u)"
   extra="$(comm -23 <(apt_purge_simulate "${keep[@]}") <(echo "$wanted"))"
@@ -224,14 +227,27 @@ apt_missing() { # pacotes... -> lista separada por espaço
 
 # --- blocos em arquivos rc ---------------------------------------------
 
+# Remove o bloco e também a linha em branco que rc_block_add põe antes
+# dele, para o arquivo voltar byte a byte ao que era.
 rc_block_remove() { # arquivo id
   local file="$1" id="$2" tmp
   [[ -f "$file" ]] || return 0
   tmp="$(mktemp)"
   awk -v s="# >>> s50-setup:$id >>>" -v e="# <<< s50-setup:$id <<<" '
-    $0 == s { skip = 1; next }
-    $0 == e { skip = 0; next }
-    !skip   { print }
+    { lines[NR] = $0 }
+    END {
+      n = 0
+      for (i = 1; i <= NR; i++) {
+        if (lines[i] == s) {
+          skip = 1
+          if (n > 0 && out[n] == "") n--
+          continue
+        }
+        if (lines[i] == e) { skip = 0; continue }
+        if (!skip) out[++n] = lines[i]
+      }
+      for (i = 1; i <= n; i++) print out[i]
+    }
   ' "$file" > "$tmp"
   cat "$tmp" > "$file"
   rm -f "$tmp"
