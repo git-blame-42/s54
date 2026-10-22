@@ -16,6 +16,9 @@ HOME="${HOME:-$(getent passwd "$USER" | cut -d: -f6)}"
 S50_STATE_DIR="${S50_STATE_DIR:-$HOME/.local/state/s50-setup}"
 SCRIPT_PATH="${BASH_SOURCE[1]}"
 SCRIPT_NAME="$(basename "$SCRIPT_PATH" .sh)"
+# O estado não leva o número de ordem: 01-install-tools grava em
+# install-tools.state, como antes da numeração.
+SCRIPT_NAME="${SCRIPT_NAME#[0-9][0-9]-}"
 STATE_FILE="$S50_STATE_DIR/$SCRIPT_NAME.state"
 
 # --- saída -------------------------------------------------------------
@@ -384,13 +387,14 @@ framework_bootstrap() {
 }
 
 require_docker_ready() {
-  need_cmd git "Rode scripts/install-tools.sh antes (ou: sudo apt install git)."
-  need_cmd curl "Rode scripts/install-tools.sh antes."
-  need_cmd docker "Rode scripts/install-docker.sh antes."
+  need_cmd git \
+    "Rode scripts/01-install-tools.sh antes (ou: sudo apt install git)."
+  need_cmd curl "Rode scripts/01-install-tools.sh antes."
+  need_cmd docker "Rode scripts/06-install-docker.sh antes."
   docker_usable || die "o docker não responde sem sudo." \
-    "Rode scripts/check-requirements.sh para ver o motivo."
+    "Rode scripts/05-check-requirements.sh para ver o motivo."
   docker_compose_v2 || die "'docker compose' v2 ausente." \
-    "Rode scripts/install-docker.sh."
+    "Rode scripts/06-install-docker.sh."
 }
 
 require_free_ports() { # portas...

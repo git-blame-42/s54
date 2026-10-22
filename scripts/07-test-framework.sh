@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-framework.sh: baixa o template do framework da disciplina, sem
+# 07-test-framework.sh: baixa o template do framework da disciplina, sem
 # modificações, num diretório temporário, sobe tudo com docker compose,
 # roda os testes unitários e apaga tudo no fim.
 # shellcheck source=common.sh
@@ -84,7 +84,7 @@ run() {
     return 1
   fi
   ok "a máquina roda o framework da disciplina."
-  info "Próximo passo: scripts/install-eventos-do-campus.sh"
+  info "Próximo passo: scripts/08-install-eventos-do-campus.sh"
 }
 
 undo() {

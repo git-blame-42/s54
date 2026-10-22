@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-tools.sh: instala git, curl, tmux, zsh, micro e ncdu (apt).
+# 01-install-tools.sh: instala git, curl, tmux, zsh, micro e ncdu (apt).
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -55,8 +55,8 @@ run() {
   state_mark_done
   info
   info "Pronto. Próximos passos sugeridos:"
-  info "  scripts/install-ohmyzsh.sh     # oh-my-zsh + plugin tmux"
-  info "  scripts/set-zsh-default.sh     # zsh como shell padrão"
+  info "  scripts/03-install-ohmyzsh.sh     # oh-my-zsh + plugin tmux"
+  info "  scripts/04-set-zsh-default.sh     # zsh como shell padrão"
 }
 
 undo() {
@@ -74,10 +74,11 @@ undo() {
     local shell_now
     shell_now="$(getent passwd "$USER" | cut -d: -f7)"
     if [[ "$shell_now" == */zsh ]]; then
-      die "zsh ainda é seu shell padrão. Rode set-zsh-default.sh -z antes."
+      die "zsh ainda é seu shell padrão. Rode 04-set-zsh-default.sh -z antes."
     fi
     if [[ -d "$HOME/.oh-my-zsh" ]]; then
-      warn "pasta ~/.oh-my-zsh existe; considere install-ohmyzsh.sh -z antes."
+      warn "pasta ~/.oh-my-zsh existe;" \
+        "considere 03-install-ohmyzsh.sh -z antes."
     fi
   fi
 

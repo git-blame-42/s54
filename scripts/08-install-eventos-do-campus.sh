@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-eventos-do-campus.sh: clona o projeto Eventos do Câmpus do
+# 08-install-eventos-do-campus.sh: clona o projeto Eventos do Câmpus do
 # repositório público e deixa rodando em http://localhost.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"

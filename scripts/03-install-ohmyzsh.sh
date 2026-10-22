@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-ohmyzsh.sh: instala o oh-my-zsh e ativa o plugin tmux.
+# 03-install-ohmyzsh.sh: instala o oh-my-zsh e ativa o plugin tmux.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -15,7 +15,7 @@ Instala o oh-my-zsh em ~/.oh-my-zsh (modo não interativo, sem trocar
 o shell padrão) e adiciona o plugin tmux ao ~/.zshrc. Não precisa de
 sudo. Se o oh-my-zsh já existir, só o plugin é adicionado.
 
-Precisa de zsh, git e curl (scripts/install-tools.sh instala o zsh).
+Precisa de zsh, git e curl (scripts/01-install-tools.sh instala o zsh).
 
   -h  mostra esta ajuda
   -z  desfaz: remove o oh-my-zsh (se foi este script que instalou),
@@ -47,9 +47,10 @@ add_tmux_plugin() {
 
 run() {
   refuse_if_done
-  need_cmd zsh "Rode scripts/install-tools.sh antes."
-  need_cmd git "Rode scripts/install-tools.sh antes (ou: sudo apt install git)."
-  need_cmd curl "Rode scripts/install-tools.sh antes."
+  need_cmd zsh "Rode scripts/01-install-tools.sh antes."
+  need_cmd git \
+    "Rode scripts/01-install-tools.sh antes (ou: sudo apt install git)."
+  need_cmd curl "Rode scripts/01-install-tools.sh antes."
 
   if [[ -d "$OMZ_DIR" ]]; then
     step "oh-my-zsh já existe em $OMZ_DIR (fica fora do -z)"
@@ -86,7 +87,7 @@ run() {
   info
   info "Pronto. Para usar agora: exec zsh"
   info "Para o zsh abrir sozinho em todo terminal:"
-  info "  scripts/set-zsh-default.sh"
+  info "  scripts/04-set-zsh-default.sh"
 }
 
 undo() {

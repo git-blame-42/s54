@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-tmux-conf.sh: baixa o ~/.tmux.conf do repositório de dotfiles.
+# 02-install-tmux-conf.sh: baixa o ~/.tmux.conf do repositório de dotfiles.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -22,8 +22,8 @@ EOF
 
 run() {
   refuse_if_done
-  need_cmd tmux "Rode scripts/install-tools.sh antes."
-  need_cmd curl "Rode scripts/install-tools.sh antes."
+  need_cmd tmux "Rode scripts/01-install-tools.sh antes."
+  need_cmd curl "Rode scripts/01-install-tools.sh antes."
 
   step "Baixando o .tmux.conf"
   local tmp

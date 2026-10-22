@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-docker.sh: instala o Docker Engine (CE) com Compose v2 pelo
+# 06-install-docker.sh: instala o Docker Engine (CE) com Compose v2 pelo
 # repositório oficial da Docker e coloca o usuário no grupo docker.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -152,12 +152,12 @@ run() {
     warn "faça logout/login (ou rode: newgrp docker) antes de continuar"
   else
     warn "docker ainda não responde para $USER; faça logout/login e rode" \
-      "scripts/check-requirements.sh"
+      "scripts/05-check-requirements.sh"
   fi
 
   state_mark_done
   info
-  info "Depois de relogar: scripts/check-requirements.sh"
+  info "Depois de relogar: scripts/05-check-requirements.sh"
 }
 
 confirm_default_yes() { # pergunta

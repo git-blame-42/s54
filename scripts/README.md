@@ -29,39 +29,39 @@ repositório pelo GitHub e descompacte em `~/s50`).
 
 ```
 git clone <este repositório> ~/s50 && cd ~/s50
-scripts/install-tools.sh          # git, curl, tmux, zsh, micro, ncdu
-scripts/install-tmux-conf.sh      # ~/.tmux.conf dos dotfiles
-scripts/install-ohmyzsh.sh        # oh-my-zsh + plugin tmux
-scripts/set-zsh-default.sh        # zsh em todo terminal
-scripts/check-requirements.sh     # o que falta para o framework
-scripts/install-docker.sh         # Docker CE + compose v2 (se faltar)
+scripts/01-install-tools.sh              # git, curl, tmux, zsh, micro, ncdu
+scripts/02-install-tmux-conf.sh          # ~/.tmux.conf dos dotfiles
+scripts/03-install-ohmyzsh.sh            # oh-my-zsh + plugin tmux
+scripts/04-set-zsh-default.sh            # zsh em todo terminal
+scripts/05-check-requirements.sh         # o que falta para o framework
+scripts/06-install-docker.sh             # Docker CE + compose v2 (se faltar)
 #   -> logout/login (grupo docker)
-scripts/check-requirements.sh     # deve ficar sem FALHA
-scripts/test-framework.sh         # prova que o framework roda aqui
-scripts/install-eventos-do-campus.sh   # nosso projeto em localhost
+scripts/05-check-requirements.sh         # deve ficar sem FALHA
+scripts/07-test-framework.sh             # prova que o framework roda aqui
+scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
 ```
 
-Para desfazer, a ordem inversa (`set-zsh-default.sh -z` antes de
-`install-tools.sh -z`, por exemplo; os scripts avisam se a ordem
+Para desfazer, a ordem inversa (`04-set-zsh-default.sh -z` antes de
+`01-install-tools.sh -z`, por exemplo; os scripts avisam se a ordem
 estiver errada).
 
 ## Scripts
 
-| Script                        | Faz                                 | sudo |
-|-------------------------------|-------------------------------------|------|
-| `install-tools.sh`            | apt: git, curl, tmux, zsh, micro... | sim  |
-| `install-tmux-conf.sh`        | baixa `~/.tmux.conf` dos dotfiles   | não  |
-| `install-ohmyzsh.sh`          | oh-my-zsh + plugin tmux no `.zshrc` | não  |
-| `set-zsh-default.sh`          | chsh p/ zsh, ou bloco no `.bashrc`  | não  |
-| `check-requirements.sh`       | só verifica; sem `-z`               | não  |
-| `install-docker.sh`           | Docker CE, compose v2, grupo docker | sim  |
-| `setup-docker-rootless.sh`    | daemon rootless para o usuário      | sim  |
-| `test-framework.sh`           | clona template em /tmp, sobe, testa | não  |
-| `install-eventos-do-campus.sh`| clona e sobe o projeto da equipe    | não* |
+| Script                            | Faz                               | sudo |
+|-----------------------------------|-----------------------------------|------|
+| `01-install-tools.sh`             | apt: git, curl, tmux, zsh, micro  | sim  |
+| `02-install-tmux-conf.sh`         | baixa `~/.tmux.conf` dos dotfiles | não  |
+| `03-install-ohmyzsh.sh`           | oh-my-zsh + plugin tmux, `.zshrc` | não  |
+| `04-set-zsh-default.sh`           | chsh p/ zsh ou bloco no `.bashrc` | não  |
+| `05-check-requirements.sh`        | só verifica; sem `-z`             | não  |
+| `06-install-docker.sh`            | Docker CE + compose v2 + grupo    | sim  |
+| `07-test-framework.sh`            | template em /tmp: sobe e testa    | não  |
+| `08-install-eventos-do-campus.sh` | clona e sobe o projeto da equipe  | não* |
+| `09-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
 
 `*` usa sudo, se houver, só para o dono de `public/assets/uploads`.
 
-### install-tools.sh
+### 01-install-tools.sh
 
 Instala com apt o que falta entre git, curl, tmux, zsh, micro e
 ncdu (git e curl porque os outros scripts dependem deles). O `-z`
@@ -69,13 +69,13 @@ remove só os pacotes que o script instalou (e as dependências que
 vieram junto) e se recusa a remover o zsh enquanto ele for o shell
 padrão.
 
-### install-tmux-conf.sh
+### 02-install-tmux-conf.sh
 
 Baixa o `.tmux.conf` de
 `github.com/VitorThorvi/zsh-dot-files` (branch main). Um `.tmux.conf`
 que já existia é guardado e volta no `-z`. Não usa plugins externos.
 
-### install-ohmyzsh.sh
+### 03-install-ohmyzsh.sh
 
 Instalador oficial em modo `--unattended` (não troca o shell, não
 abre o zsh). O `.zshrc` anterior, se havia, é guardado e volta no
@@ -84,7 +84,7 @@ abre o zsh). O `.zshrc` anterior, se havia, é guardado e volta no
 em várias linhas. Se o oh-my-zsh já existia, só o bloco é adicionado
 (e só ele é removido no `-z`).
 
-### set-zsh-default.sh
+### 04-set-zsh-default.sh
 
 Tenta `chsh -s $(command -v zsh)`; o chsh pede a senha do usuário no
 terminal. Em conta de rede (ou usuário sem senha) o chsh falha; aí
@@ -92,7 +92,7 @@ entra um bloco no `~/.bashrc` que faz `exec zsh -l` em terminal
 interativo (não dispara em `bash -c`, nem sem tty). O `-z` volta o
 shell anterior (pede a senha de novo) ou remove o bloco.
 
-### check-requirements.sh
+### 05-check-requirements.sh
 
 Confere, sem alterar nada: Ubuntu 24.04, memória, disco, sudo; git,
 curl, bash; docker (cliente, daemon sem sudo, compose v2, modo
@@ -102,7 +102,7 @@ cgroup v2); portas 80, 8080, 4444 e 5900 livres; acesso a GitHub,
 Docker Hub e ao repositório apt da Docker. Sai com 0 se não houver
 FALHA.
 
-### install-docker.sh
+### 06-install-docker.sh
 
 Sem docker na máquina: adiciona o repositório apt da Docker e instala
 docker-ce, cli, containerd.io, buildx, compose plugin e
@@ -115,7 +115,28 @@ que o script criou e, se o docker não existia antes, pergunta se
 apaga `/var/lib/docker` e `/var/lib/containerd`. Um docker que já
 estava instalado nunca é removido.
 
-### setup-docker-rootless.sh
+### 07-test-framework.sh
+
+Clona `SI-DABE/tsi34d-framework-template` sem alterações em
+`/tmp/tsi34d-framework.XXXXXX`, roda `cp .env.example .env`,
+`./run composer install`, `./run up -d`, espera o MySQL, `./run
+db:reset`, `./run db:populate`, faz GET em `http://localhost` e roda
+`./run test tests/Unit`. No fim derruba containers, volumes, as
+imagens que não existiam antes e o diretório. Imprime um resumo por
+etapa com tempo. O `-z` limpa os restos de uma execução interrompida.
+
+### 08-install-eventos-do-campus.sh
+
+Clona `github.com/VitorThorvi/tsi34d-backend` em
+`~/eventos-do-campus` (ou `EVENTOS_DIR=/outro/lugar`), sobe tudo como
+o 07-test-framework.sh, roda `./run codecept build` e ajusta o dono de
+`public/assets/uploads` se houver sudo. Para se o diretório já
+existir. Mostra URL e credenciais do populate
+(`admin@example.com` / `user@example.com`, senha `123456`). O `-z`
+derruba os containers, apaga volumes, imagens que não existiam antes
+e o diretório.
+
+### 09-setup-docker-rootless.sh
 
 Opcional. Instala uidmap, dbus-user-session e rootless-extras se
 faltarem, cria faixa de subuid/subgid se o usuário não tiver, cria o
@@ -131,29 +152,8 @@ install` do framework falha (`/app/vendor could not be created`),
 porque o `./run` usa `docker run -u $(id -u)` e em rootless esse uid
 não é o dono do bind mount. O framework, sem modificação, só roda no
 Docker rootful (usuário no grupo docker). Este script existe para
-quem precisar do rootless por outro motivo; `check-requirements.sh`
+quem precisar do rootless por outro motivo; `05-check-requirements.sh`
 avisa quando o rootless está ativo.
-
-### test-framework.sh
-
-Clona `SI-DABE/tsi34d-framework-template` sem alterações em
-`/tmp/tsi34d-framework.XXXXXX`, roda `cp .env.example .env`,
-`./run composer install`, `./run up -d`, espera o MySQL, `./run
-db:reset`, `./run db:populate`, faz GET em `http://localhost` e roda
-`./run test tests/Unit`. No fim derruba containers, volumes, as
-imagens que não existiam antes e o diretório. Imprime um resumo por
-etapa com tempo. O `-z` limpa os restos de uma execução interrompida.
-
-### install-eventos-do-campus.sh
-
-Clona `github.com/VitorThorvi/tsi34d-backend` em
-`~/eventos-do-campus` (ou `EVENTOS_DIR=/outro/lugar`), sobe tudo como
-o test-framework.sh, roda `./run codecept build` e ajusta o dono de
-`public/assets/uploads` se houver sudo. Para se o diretório já
-existir. Mostra URL e credenciais do populate
-(`admin@example.com` / `user@example.com`, senha `123456`). O `-z`
-derruba os containers, apaga volumes, imagens que não existiam antes
-e o diretório.
 
 ## Como foram testados
 
@@ -164,7 +164,7 @@ Depois do `-z` de todos, a lista de pacotes (`dpkg -l`) e o `$HOME`
 voltaram iguais ao snapshot inicial. Também em container Ubuntu
 24.04: pacote já instalado, `.tmux.conf` e oh-my-zsh já existentes
 ficam intactos no `-z`. O `chsh` foi testado com senha (pty) e sem
-senha (fallback no `.bashrc`). `test-framework.sh` passou 9/9 na VM
+senha (fallback no `.bashrc`). `07-test-framework.sh` passou 9/9 na VM
 (rootful) e no macOS; em rootless falha no `composer install`, como
-documentado. `install-eventos-do-campus.sh` passou 10/10 e o `-z`
+documentado. `08-install-eventos-do-campus.sh` passou 10/10 e o `-z`
 não deixou containers, imagens nem pasta.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-requirements.sh: confere se a máquina roda o framework da
+# 05-check-requirements.sh: confere se a máquina roda o framework da
 # disciplina (Docker + Compose v2) e se o Docker rootless é viável.
 # Só lê; não altera nada.
 # shellcheck source=common.sh
@@ -66,7 +66,7 @@ check_system() {
   fi
 
   if ! command -v sudo >/dev/null 2>&1; then
-    c_warn "sudo não instalado: install-tools.sh e install-docker.sh" \
+    c_warn "sudo não instalado: 01-install-tools.sh e 06-install-docker.sh" \
       "não vão rodar"
   elif sudo -n true 2>/dev/null; then
     c_ok "sudo: disponível sem senha"
@@ -98,7 +98,7 @@ DOCKER_MODE=none   # none | rootful | rootless
 check_docker() {
   step "Docker"
   if ! command -v docker >/dev/null 2>&1; then
-    c_fail "docker não instalado. Rode: scripts/install-docker.sh"
+    c_fail "docker não instalado. Rode: scripts/06-install-docker.sh"
     return 0
   fi
   c_ok "cliente: $(docker --version 2>/dev/null)"
@@ -107,7 +107,7 @@ check_docker() {
     c_ok "compose v2: $(docker compose version --short 2>/dev/null)"
   else
     c_fail "'docker compose' (v2) ausente; o ./run do framework exige." \
-      "Rode: scripts/install-docker.sh"
+      "Rode: scripts/06-install-docker.sh"
   fi
 
   if docker_usable; then
@@ -133,10 +133,10 @@ check_docker() {
         "recarregou os grupos. Faça logout/login ou: newgrp docker"
     elif getent group docker >/dev/null; then
       c_fail "daemon ativo, mas você não está no grupo docker." \
-        "Rode: scripts/install-docker.sh (adiciona ao grupo)"
+        "Rode: scripts/06-install-docker.sh (adiciona ao grupo)"
     else
       c_fail "daemon ativo, mas não há grupo docker." \
-        "Rode: scripts/install-docker.sh"
+        "Rode: scripts/06-install-docker.sh"
     fi
   elif [[ -n "${DOCKER_HOST:-}" ]]; then
     c_fail "DOCKER_HOST=$DOCKER_HOST não responde." \
@@ -163,7 +163,7 @@ check_rootless() {
   if command -v dockerd-rootless-setuptool.sh >/dev/null 2>&1; then
     c_ok "dockerd-rootless-setuptool.sh presente (docker-ce-rootless-extras)"
   else
-    c_warn "docker-ce-rootless-extras ausente (install-docker.sh instala)"
+    c_warn "docker-ce-rootless-extras ausente (06-install-docker.sh instala)"
     needs_sudo=1
   fi
 
@@ -171,7 +171,7 @@ check_rootless() {
       && command -v newgidmap >/dev/null 2>&1; then
     c_ok "newuidmap/newgidmap presentes (pacote uidmap)"
   else
-    c_warn "pacote uidmap ausente (setup-docker-rootless.sh instala)"
+    c_warn "pacote uidmap ausente (09-setup-docker-rootless.sh instala)"
     needs_sudo=1
   fi
 
@@ -179,7 +179,7 @@ check_rootless() {
     c_ok "/etc/subuid e /etc/subgid têm >= 65536 ids para $USER"
   else
     c_warn "sem faixa de subuid/subgid para $USER" \
-      "(setup-docker-rootless.sh cria, com sudo)"
+      "(09-setup-docker-rootless.sh cria, com sudo)"
     needs_sudo=1
   fi
 
@@ -226,7 +226,7 @@ check_rootless() {
   else
     c_warn "net.ipv4.ip_unprivileged_port_start=$port_start: em rootless" \
       "o compose não consegue publicar a porta 80" \
-      "(setup-docker-rootless.sh ajusta, com sudo)"
+      "(09-setup-docker-rootless.sh ajusta, com sudo)"
     needs_sudo=1
   fi
 
@@ -240,13 +240,13 @@ check_rootless() {
   if [[ "$DOCKER_MODE" == rootless ]]; then
     c_warn "o Docker está em modo ROOTLESS para este usuário: o" \
       "'./run composer install' do framework vai falhar (uid do bind" \
-      "mount). Use o rootful: setup-docker-rootless.sh -z e grupo docker."
+      "mount). Use o rootful: 09-setup-docker-rootless.sh -z e grupo docker."
   elif (( blockers )); then
     info "Veredito: rootless NÃO é viável aqui (veja as FALHAs acima)."
   elif (( needs_sudo )); then
     info "Veredito: rootless seria viável (faltam passos com sudo)."
   else
-    info "Veredito: rootless é viável (scripts/setup-docker-rootless.sh)."
+    info "Veredito: rootless é viável (scripts/09-setup-docker-rootless.sh)."
   fi
   info "Mas atenção (testado): o framework, sem modificação, NÃO roda em" \
     "rootless: './run composer install' falha porque o ./run usa" \
@@ -285,7 +285,7 @@ summary() {
   info "OK: $PASS   AVISO: $WARNS   FALHA: $FAILS"
   if (( FAILS == 0 )); then
     info "Pronto para o framework. Teste de verdade:"
-    info "  scripts/test-framework.sh"
+    info "  scripts/07-test-framework.sh"
     return 0
   fi
   info "Corrija as FALHAs e rode de novo."

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# set-zsh-default.sh: faz o zsh ser o shell dos seus terminais.
+# 04-set-zsh-default.sh: faz o zsh ser o shell dos seus terminais.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -23,7 +23,7 @@ current_shell() { getent passwd "$USER" | cut -d: -f7; }
 
 run() {
   refuse_if_done
-  need_cmd zsh "Rode scripts/install-tools.sh antes."
+  need_cmd zsh "Rode scripts/01-install-tools.sh antes."
   local zsh_path previous
   zsh_path="$(command -v zsh)"
   previous="$(current_shell)"

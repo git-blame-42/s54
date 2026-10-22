@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-docker-rootless.sh: ativa o Docker em modo rootless para o seu
+# 09-setup-docker-rootless.sh: ativa o Docker em modo rootless para o seu
 # usuário (daemon roda sem root, como serviço systemd de usuário).
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -21,8 +21,8 @@ Configura o Docker rootless para $USER:
   - mantém o daemon ligado sem sessão aberta (loginctl enable-linger)
   - exporta DOCKER_HOST no ~/.bashrc e ~/.zshrc
 
-Precisa do docker instalado (scripts/install-docker.sh) e de sudo
-para os passos de sistema. Rode scripts/check-requirements.sh antes
+Precisa do docker instalado (scripts/06-install-docker.sh) e de sudo
+para os passos de sistema. Rode scripts/05-check-requirements.sh antes
 para ver se o rootless é viável aqui.
 
 ATENÇÃO (testado): com o Docker rootless, './run composer install'
@@ -125,7 +125,7 @@ run() {
   refuse_if_done
   warn_if_not_ubuntu_2404
   [[ "$(id -u)" != 0 ]] || die "rode como seu usuário, não como root."
-  need_cmd docker "Rode scripts/install-docker.sh antes."
+  need_cmd docker "Rode scripts/06-install-docker.sh antes."
   systemctl --user show-environment >/dev/null 2>&1 \
     || die "sem sessão systemd de usuário (XDG_RUNTIME_DIR)." \
       "Entre por login normal, não por su."
@@ -215,7 +215,7 @@ run() {
   state_mark_done
   info
   info "Abra um terminal novo (para o DOCKER_HOST valer) e rode:"
-  info "  scripts/check-requirements.sh"
+  info "  scripts/05-check-requirements.sh"
 }
 
 undo() {
