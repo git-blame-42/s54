@@ -41,6 +41,12 @@ scripts/07-test-framework.sh             # prova que o framework roda aqui
 scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
 ```
 
+Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 08 nessa
+ordem (sem o 09). Depois do 06 ele roda o 05, o 07 e o 08 dentro de
+`sg docker`, então não precisa relogar no meio; faça logout/login no
+fim. Se um script falhar, ele para; rodar de novo continua de onde
+parou. O `-z` dele desfaz, na ordem inversa, só o que ele rodou.
+
 Para desfazer, a ordem inversa (`04-set-zsh-default.sh -z` antes de
 `01-install-tools.sh -z`, por exemplo; os scripts avisam se a ordem
 estiver errada).
@@ -49,6 +55,7 @@ estiver errada).
 
 | Script                            | Faz                               | sudo |
 |-----------------------------------|-----------------------------------|------|
+| `00-run-all.sh`                   | roda 01 a 08 em ordem (sem o 09)  | sim  |
 | `01-install-tools.sh`             | apt: git, curl, tmux, zsh, micro  | sim  |
 | `02-install-tmux-conf.sh`         | baixa `~/.tmux.conf` dos dotfiles | não  |
 | `03-install-ohmyzsh.sh`           | oh-my-zsh + plugin tmux, `.zshrc` | não  |
@@ -60,6 +67,18 @@ estiver errada).
 | `09-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
 
 `*` usa sudo, se houver, só para o dono de `public/assets/uploads`.
+
+### 00-run-all.sh
+
+Roda 01, 02, 03, 04, 05, 06, 05 de novo, 07 e 08, nessa ordem, cada
+um com as próprias regras (sudo, senha do chsh, recusa se já
+concluiu). Não roda o 09. Um script que já estava concluído antes é
+pulado e fica fora do `-z` deste. O primeiro 05 só informa (acusa
+FALHA se o docker ainda não existe); o segundo tem de ficar sem
+FALHA, senão ele para. Depois do 06 a sessão ainda não está no grupo
+docker: o 05, o 07 e o 08 rodam via `sg docker`, e o logout/login
+fica para o fim. O `-z` chama o `-z` de cada script que ele rodou, na
+ordem inversa, e lista os que já estavam feitos antes (esses ficam).
 
 ### 01-install-tools.sh
 

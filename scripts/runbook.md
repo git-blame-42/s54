@@ -9,7 +9,17 @@ Detalhes de cada script: `scripts/README.md` ou `<script> -h`.
 sudo apt install -y git               # só se `git --version` falhar
 git clone <este repositório> ~/s50
 cd ~/s50
+```
 
+Tudo de uma vez (01 a 08, sem o 09; logout e login no fim):
+
+```
+scripts/00-run-all.sh
+```
+
+Um por um:
+
+```
 scripts/01-install-tools.sh
 scripts/02-install-tmux-conf.sh
 scripts/03-install-ohmyzsh.sh
@@ -31,6 +41,9 @@ Opcional, só se precisar de Docker rootless por outro motivo (o
 framework não roda nele): `scripts/09-setup-docker-rootless.sh`.
 
 ## Desfazer (ordem inversa)
+
+Se instalou com o 00: `scripts/00-run-all.sh -z` (desfaz, na ordem
+inversa, só o que ele rodou). Senão, um por um:
 
 ```
 cd ~/s50

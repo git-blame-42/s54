@@ -61,7 +61,8 @@ tmux, zsh como shell padrão, verificação do que o framework precisa
 teste do framework sem modificações num diretório temporário e
 instalação do projeto Eventos do Câmpus. Um script por tarefa; só
 `-h` e `-z` (desfaz o que aquele script fez, sem tocar no que já
-existia). Ordem e detalhes em `scripts/README.md`.
+existia). `scripts/00-run-all.sh` roda tudo em ordem, menos o
+rootless. Ordem e detalhes em `scripts/README.md`.
 
 ## Convenções
 
