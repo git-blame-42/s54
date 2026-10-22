@@ -35,7 +35,8 @@ run() {
   done
 
   if [[ -z "$missing" ]]; then
-    state_set installed ""
+    # Numa retomada, "installed" guarda o que a execução anterior pediu.
+    [[ -n "$(state_get installed)" ]] || state_set installed ""
     state_mark_done
     info "Nada a instalar."
     return 0
@@ -44,7 +45,9 @@ run() {
   step "Instalando: $missing"
   require_sudo
   apt_update_once
-  state_set installed "$missing"
+  local prev
+  prev="$(state_get installed)"
+  state_set installed "${prev:+$prev }$missing"
   # shellcheck disable=SC2086
   apt_install_tracked installed_packages $missing
   for t in $missing; do
