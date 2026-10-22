@@ -65,8 +65,10 @@ quando estiver sem rede.
 curl, tmux, zsh, micro, ncdu, `.tmux.conf`, oh-my-zsh com plugin
 tmux, zsh como shell padrão, verificação do que o framework precisa
 (Docker, Compose v2, rootless viável ou não), instalação do Docker,
-teste do framework sem modificações num diretório temporário e
-instalação do projeto Eventos do Câmpus. Um script por tarefa; só
+teste do framework sem modificações num diretório temporário,
+instalação do projeto Eventos do Câmpus, PHP nativo com phpcs e
+phpstan, Neovim com LazyVim e, opcionais, VS Code e IntelliJ. Um
+script por tarefa; só
 `-h` e `-z` (desfaz o que aquele script fez, sem tocar no que já
 existia). `scripts/00-run-all.sh` roda tudo em ordem, menos o
 rootless. Ordem e detalhes em `scripts/README.md`.

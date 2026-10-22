@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 00-run-all.sh: roda os scripts 01 a 08 em ordem, de uma vez só.
-# O 09 (docker rootless) fica de fora: é opcional e o framework não
-# roda nele.
+# 00-run-all.sh: roda os scripts 01 a 10 em ordem, de uma vez só.
+# Ficam de fora os opcionais: 11 e 12 (IDEs gráficas) e 13 (docker
+# rootless, onde o framework não roda).
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -18,6 +18,8 @@ STATEFUL=(
   06-install-docker
   07-test-framework
   08-install-eventos-do-campus
+  09-install-php
+  10-install-neovim
 )
 
 usage() {
@@ -27,8 +29,9 @@ uso: $(basename "$0") [-h] [-z]
 Roda, nesta ordem: 01-install-tools, 02-install-tmux-conf,
 03-install-ohmyzsh, 04-set-zsh-default, 05-check-requirements,
 06-install-docker, 05-check-requirements (tem de ficar sem FALHA),
-07-test-framework e 08-install-eventos-do-campus. Não roda o 09
-(docker rootless).
+07-test-framework, 08-install-eventos-do-campus, 09-install-php e
+10-install-neovim. Não roda os opcionais 11 e 12 (IDEs gráficas) nem
+o 13 (docker rootless).
 
 Cada script segue as próprias regras (sudo, senha do chsh, recusa se
 já concluiu). Um script que já estava concluído antes é pulado e fica
@@ -135,12 +138,15 @@ run() {
   check_requirements obrigatorio
   run_child 07-test-framework with_docker_group
   run_child 08-install-eventos-do-campus with_docker_group
+  run_child 09-install-php
+  run_child 10-install-neovim
 
   state_mark_done
   info
   ok "Tudo pronto. Faça logout/login: a sessão passa a ver o grupo docker"
   info "e o zsh como shell padrão."
-  info "Rootless (opcional, fora daqui): scripts/09-setup-docker-rootless.sh"
+  info "Opcionais, fora daqui: 11-install-vscode.sh, 12-install-intellij.sh"
+  info "e 13-setup-docker-rootless.sh (rootless; o framework não roda nele)."
 }
 
 undo() {

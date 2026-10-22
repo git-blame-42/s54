@@ -39,13 +39,16 @@ scripts/06-install-docker.sh             # Docker CE + compose v2 (se faltar)
 scripts/05-check-requirements.sh         # deve ficar sem FALHA
 scripts/07-test-framework.sh             # prova que o framework roda aqui
 scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
+scripts/09-install-php.sh                # PHP nativo + phpcs/phpstan
+scripts/10-install-neovim.sh             # Neovim + LazyVim + PHP
 ```
 
-Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 08 nessa
-ordem (sem o 09). Depois do 06 ele roda o 05, o 07 e o 08 dentro de
-`sg docker`, então não precisa relogar no meio; faça logout/login no
-fim. Se um script falhar, ele para; rodar de novo continua de onde
-parou. O `-z` dele desfaz, na ordem inversa, só o que ele rodou.
+Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 10 nessa
+ordem (sem os opcionais 11 a 13). Depois do 06 ele roda o 05, o 07
+e o 08 dentro de `sg docker`, então não precisa relogar no meio;
+faça logout/login no fim. Se um script falhar, ele para; rodar de
+novo continua de onde parou. O `-z` dele desfaz, na ordem inversa,
+só o que ele rodou.
 
 Para desfazer, a ordem inversa (`04-set-zsh-default.sh -z` antes de
 `01-install-tools.sh -z`, por exemplo; os scripts avisam se a ordem
@@ -55,7 +58,7 @@ estiver errada).
 
 | Script                            | Faz                               | sudo |
 |-----------------------------------|-----------------------------------|------|
-| `00-run-all.sh`                   | roda 01 a 08 em ordem (sem o 09)  | sim  |
+| `00-run-all.sh`                   | roda 01 a 10 em ordem             | sim  |
 | `01-install-tools.sh`             | apt: git, curl, tmux, zsh, micro  | sim  |
 | `02-install-tmux-conf.sh`         | baixa `~/.tmux.conf` dos dotfiles | não  |
 | `03-install-ohmyzsh.sh`           | oh-my-zsh + plugin tmux, `.zshrc` | não  |
@@ -64,21 +67,26 @@ estiver errada).
 | `06-install-docker.sh`            | Docker CE + compose v2 + grupo    | sim  |
 | `07-test-framework.sh`            | template em /tmp: sobe e testa    | não  |
 | `08-install-eventos-do-campus.sh` | clona e sobe o projeto da equipe  | não* |
-| `09-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
+| `09-install-php.sh`               | PHP nativo, composer, phpcs/stan  | sim  |
+| `10-install-neovim.sh`            | Neovim + LazyVim + PHP (LSP)      | sim  |
+| `11-install-vscode.sh`            | opcional: VS Code + Intelephense  | sim  |
+| `12-install-intellij.sh`          | opcional: IntelliJ Community snap | sim  |
+| `13-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
 
 `*` usa sudo, se houver, só para o dono de `public/assets/uploads`.
 
 ### 00-run-all.sh
 
-Roda 01, 02, 03, 04, 05, 06, 05 de novo, 07 e 08, nessa ordem, cada
-um com as próprias regras (sudo, senha do chsh, recusa se já
-concluiu). Não roda o 09. Um script que já estava concluído antes é
-pulado e fica fora do `-z` deste. O primeiro 05 só informa (acusa
-FALHA se o docker ainda não existe); o segundo tem de ficar sem
-FALHA, senão ele para. Depois do 06 a sessão ainda não está no grupo
-docker: o 05, o 07 e o 08 rodam via `sg docker`, e o logout/login
-fica para o fim. O `-z` chama o `-z` de cada script que ele rodou, na
-ordem inversa, e lista os que já estavam feitos antes (esses ficam).
+Roda 01, 02, 03, 04, 05, 06, 05 de novo, 07, 08, 09 e 10, nessa
+ordem, cada um com as próprias regras (sudo, senha do chsh, recusa se
+já concluiu). Não roda os opcionais 11, 12 e 13. Um script que já
+estava concluído antes é pulado e fica fora do `-z` deste. O primeiro
+05 só informa (acusa FALHA se o docker ainda não existe); o segundo
+tem de ficar sem FALHA, senão ele para. Depois do 06 a sessão ainda
+não está no grupo docker: o 05, o 07 e o 08 rodam via `sg docker`, e
+o logout/login fica para o fim. O `-z` chama o `-z` de cada script
+que ele rodou, na ordem inversa, e lista os que já estavam feitos
+antes (esses ficam).
 
 ### 01-install-tools.sh
 
@@ -157,7 +165,68 @@ existir. Mostra URL e credenciais do populate
 derruba os containers, apaga volumes, imagens que não existiam antes
 e o diretório.
 
-### 09-setup-docker-rootless.sh
+### 09-install-php.sh
+
+PHP fora do Docker, para lint, LSP e linha de comando. Instala com
+apt o que falta entre php-cli, php-mysql, php-zip, php-xml,
+php-mbstring, php-curl (as extensões que o projeto usa), unzip e
+composer. Com o composer, instala em `~/.config/composer` o phpcs e
+phpcbf (squizlabs/php_codesniffer) e o phpstan, os dois do
+require-dev do projeto, e põe `~/.config/composer/vendor/bin` no
+PATH com um bloco em `~/.bashrc` e `~/.zshrc`. Testa `php -l`,
+`phpcs --version` e `phpstan --version`. O `-z` remove só as
+ferramentas que adicionou (ou a pasta toda, se não existia), o
+cache, o bloco e os pacotes que instalou.
+
+### 10-install-neovim.sh
+
+Neovim para o terminal, com LazyVim. Precisa de php no PATH (o 09).
+Instala com apt o que falta entre git, curl, build-essential, unzip,
+ripgrep, fd-find, nodejs e npm. O apt do 24.04 traz o Neovim
+0.9, velho demais para o LazyVim; o script baixa o AppImage mais
+recente, extrai em `~/.local/share/nvim-appimage` (sem depender de
+FUSE) e linka em `~/.local/bin/nvim`, com um bloco de PATH em
+`~/.bashrc` e `~/.zshrc`. Um nvim >= 0.10 já presente é usado no
+lugar. Clona o LazyVim starter em `~/.config/nvim` (um `~/.config/nvim`
+que já existia é guardado e volta no `-z`) e adiciona
+`lua/plugins/php.lua` com o extra de PHP usando intelephense (o
+phpactor padrão falhou em definição e autocompletar). Em headless,
+sincroniza os plugins, instala o intelephense pelo mason e compila
+os parsers treesitter de php e lua, para a primeira abertura não
+esperar. O `-z` remove nvim, configuração, `~/.local/share/nvim`,
+`~/.local/state/nvim`, `~/.cache/nvim` e `~/.npm` (só os que não
+existiam antes) e os pacotes que instalou.
+
+### 11-install-vscode.sh
+
+Opcional, interface gráfica, fora do 00. Se não houver `code`,
+instala o VS Code pelo repositório apt da Microsoft (keyring em
+`/etc/apt/keyrings/packages.microsoft.gpg`, source em
+`/etc/apt/sources.list.d/vscode.list`, pacote `code`), tudo
+rastreado. Instala a extensão `bmewburn.vscode-intelephense-client`
+pela linha de comando (não abre janela) e, em
+`~/.config/Code/User/settings.json`, desliga o PHP embutido do VS
+Code (`php.suggest.basic` e `php.validate.enable` = false) só se as
+chaves não existirem. Precisa de php no PATH (o 09). Um VS Code que
+já existia não é tocado: só a extensão entra, e o `-z` remove só ela
+(se não existia antes, apagando a pasta e o VSIX em cache, que o
+`code --uninstall-extension` deixa), as chaves que inseriu, as pastas
+de usuário que a CLI do code criou por causa dele e, quando o script
+instalou o `code`, o pacote, o repositório e o keyring. Num VS Code
+que já existia, ficam só logs e caches do próprio code.
+
+### 12-install-intellij.sh
+
+Opcional, interface gráfica, fora do 00. Instala o IntelliJ IDEA
+Community com `snap install intellij-idea-community --classic` (e o
+snapd, se faltar, rastreado). Se já houver `idea`, o snap, ou o
+JetBrains Toolbox em `~/.local/share/JetBrains/Toolbox`, não instala
+nada e o `-z` não faz nada. A edição Community não tem o plugin de
+PHP (só PhpStorm ou Ultimate): serve para Java/Kotlin; para PHP use
+o 11 ou o 10. O `-z` remove o snap e o snapd só se o script os
+instalou.
+
+### 13-setup-docker-rootless.sh
 
 Opcional. Instala uidmap, dbus-user-session e rootless-extras se
 faltarem, cria faixa de subuid/subgid se o usuário não tiver, cria o
@@ -195,3 +264,13 @@ relogar (o segundo 05 ficou sem FALHA via `sg docker`), 5 containers
 de pé, HTTP 200 em `/` e `/login`; rodar de novo recusa; o `-z`
 desfez tudo em 24 s e dpkg, `$HOME`, shell e grupo docker voltaram
 iguais ao snapshot inicial.
+
+Os scripts 09 a 12, e o 00 com 01 a 10, passaram em outra VM limpa
+(x86_64): 00 em 9m41s (PHP 8.3 com phpcs 4.0.4 e phpstan 2.3.1;
+Neovim 0.12.6 com 32 plugins, intelephense e parser de PHP); 11 em
+48 s e 12 em 1m49s, cada um desfeito com `-z` sem resto; `00 -z` em
+1m39s devolveu dpkg, `$HOME`, shell e grupo docker ao snapshot. Em
+container Ubuntu 24.04 (arm64): 09, 10 e 11 com retomada simulada e
+com nvim 0.9, `~/.config/nvim`, dados do nvim, `~/.npm`,
+`~/.config/composer` e VS Code já existentes; o `-z` devolve o que
+era do usuário e mantém, avisando, as pastas que já existiam.

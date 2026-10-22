@@ -183,7 +183,7 @@ check_rootless() {
       && command -v newgidmap >/dev/null 2>&1; then
     c_ok "newuidmap/newgidmap presentes (pacote uidmap)"
   else
-    c_warn "pacote uidmap ausente (09-setup-docker-rootless.sh instala)"
+    c_warn "pacote uidmap ausente (13-setup-docker-rootless.sh instala)"
     needs_sudo=1
   fi
 
@@ -191,7 +191,7 @@ check_rootless() {
     c_ok "/etc/subuid e /etc/subgid têm >= 65536 ids para $USER"
   else
     c_warn "sem faixa de subuid/subgid para $USER" \
-      "(09-setup-docker-rootless.sh cria, com sudo)"
+      "(13-setup-docker-rootless.sh cria, com sudo)"
     needs_sudo=1
   fi
 
@@ -235,7 +235,7 @@ check_rootless() {
   else
     c_warn "net.ipv4.ip_unprivileged_port_start=$port_start: em rootless" \
       "o compose não consegue publicar a porta 80" \
-      "(09-setup-docker-rootless.sh ajusta, com sudo)"
+      "(13-setup-docker-rootless.sh ajusta, com sudo)"
     needs_sudo=1
   fi
 
@@ -249,13 +249,13 @@ check_rootless() {
   if [[ "$DOCKER_MODE" == rootless ]]; then
     c_warn "o Docker está em modo ROOTLESS para este usuário: o" \
       "'./run composer install' do framework vai falhar (uid do bind" \
-      "mount). Use o rootful: 09-setup-docker-rootless.sh -z e grupo docker."
+      "mount). Use o rootful: 13-setup-docker-rootless.sh -z e grupo docker."
   elif (( blockers )); then
     info "Veredito: rootless NÃO é viável aqui (veja os itens acima)."
   elif (( needs_sudo )); then
     info "Veredito: rootless seria viável (faltam passos com sudo)."
   else
-    info "Veredito: rootless é viável (scripts/09-setup-docker-rootless.sh)."
+    info "Veredito: rootless é viável (scripts/13-setup-docker-rootless.sh)."
   fi
   info "Mas atenção (testado): o framework, sem modificação, NÃO roda em" \
     "rootless: './run composer install' falha porque o ./run usa" \

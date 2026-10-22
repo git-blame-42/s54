@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 09-setup-docker-rootless.sh: ativa o Docker em modo rootless para o seu
+# 13-setup-docker-rootless.sh: ativa o Docker em modo rootless para o seu
 # usuário (daemon roda sem root, como serviço systemd de usuário).
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
