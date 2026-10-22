@@ -31,6 +31,13 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   Catálogo das alterações que o professor pode pedir na validação
   prática (FVP): arquivos, passos, código e testes de cada uma.
 
+- `fvp.sh`
+  Busca no catálogo: `./fvp.sh senha` lista os cenários que citam o
+  termo (título vale mais) e o exemplo pronto em `exemplos-fvp/`;
+  `./fvp.sh -s B10` mostra o cenário inteiro; `./fvp.sh -l` lista os
+  títulos; `./fvp.sh -c` ordena por chance (alta primeiro) com o tempo.
+  Só bash, awk, grep e sort; roda no Ubuntu do laboratório.
+
 - `diretorios-do-framework.md`
   Para que serve cada diretório e arquivo da raiz: dono (framework,
   equipe, infra, gerado), o que entra, o que não entra, e um índice
