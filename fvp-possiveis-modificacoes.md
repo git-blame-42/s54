@@ -2100,3 +2100,814 @@ opção e conta como mudança no framework (bônus da rubrica), mas o
   `novalidate`, `redirectTo` privado duplicado, `where` sem uso,
   `UserTest` sem caso de e-mail duplicado, helper de logout com e-mail
   fixo).
+
+## 9. Complemento 2: issues da Entrega 4.1 de todos os grupos
+
+Fonte: planilha "TSI34D - Notas 2026-2" (aba dos 9 grupos) e as issues
+"Avaliação da Entrega 4.1" abertas pelo professor (`MarczalTSIGP`) em
+cada repositório, lidas em 2026-10-22. Seis grupos já tinham a issue;
+três (projeto-backend, MGZ, mylinkplus) só tinham até a Entrega 3.
+O que o professor cobrou de cada um, e onde este catálogo cobre:
+
+- ice-cream-manager #6: namespaces `Admin`/`Client` (A7); método
+  `redirect()` pós-login com nome ruim, condicionais confusas e sem
+  tratar perfil desconhecido (A18); `$_POST` direto e `?? ''` em campo
+  obrigatório (A16); flash fora do layout, sem escape e sem tipos
+  visuais (C7); nenhum teste de login, logout, redirect e autorização
+  (F1, F2); middlewares duplicados e "não-admin = cliente" (A1, A12,
+  A18); `notEmpty('role')` não valida perfil, método sem uso (B10);
+  logout via DELETE (A2); código comentado, imports, phpcs, phpstan,
+  CI quebrado (seção 2).
+- reservas-academicas #15: rótulos de perfil duplicados entre
+  `User::LABELS` e a view (C8); `?? ''` no login e `?? null` no
+  cadastro (A16). O professor elogiou o teste
+  `test_unsuccessfully_authenticate_without_params`: tenha o seu.
+- ind-management #7: `Admin` instancia e executa `Authenticate` por
+  causa da ordem; "corrigir a ordem no mecanismo de middleware" (A17).
+- tsi34d-backend #9 (nós): redirect duplicado nos middlewares (A1, H).
+- Campaign #11: PR epic fora do padrão, descrições rasas, commits fora
+  do padrão (seção 2); flash sem formatação (C7); faltou explicar
+  Flash Messages e grupos de rotas (`framework-completo.md`).
+- utfprarena #6: SQL no controller (D9); `?? ''` (A16); PR e link na
+  wiki (seção 2).
+
+Três grupos levaram a mesma crítica ao `?? ''`. É o item mais provável
+de aparecer como "corrija isso" no laboratório.
+
+Correções ao que já estava no catálogo:
+
+- A9 usa `?? ''`; B7, B8 e D6 usam `?? null` em campo obrigatório.
+  Prefira o padrão de A16 nos quatro.
+- A12 continua certo; A17 corrige a causa no core. Entregue os dois.
+- D7 "usort no controller" só como atalho; a resposta é D9.
+- A4 com ternário vira A18 quando perguntarem "e um perfil novo?".
+
+Prioridade com 30 min: A16, B10, A17, C7.
+
+### A16. Validar os parâmetros do login sem `?? ''`
+
+Chance: alta. Tempo: 15 min. Pedido em três issues (ice-cream #6,
+reservas #15, utfprarena #6): "a ausência do parâmetro deve ser
+identificada e tratada, não substituída por string vazia".
+
+Arquivos: `app/Controllers/AuthenticationsController.php`,
+`tests/Integration/Controllers/AuthenticationsControllerTest.php`.
+
+Hoje `authenticate()` chama `User::findByEmail($params['email'])` com
+`$params` possivelmente `null` (warning vira 500). A9 resolvia com
+`?? ''`, que o professor lê como esconder o problema. Troque por uma
+checagem explícita da forma do payload:
+
+```php
+public function authenticate(Request $request): void
+{
+    $credentials = $this->credentials($request->getParam('user'));
+
+    if ($credentials === null) {
+        FlashMessage::danger('E-mail ou senha inválidos!');
+        $this->redirectTo(route('users.login'));
+        return;
+    }
+
+    $user = User::findByEmail($credentials['email']);
+
+    if ($user && $user->authenticate($credentials['password'])) {
+        Auth::login($user);
+        FlashMessage::success('Login realizado com sucesso!');
+        $this->redirectTo(route('dashboard.index'));
+    } else {
+        FlashMessage::danger('E-mail ou senha inválidos!');
+        $this->redirectTo(route('users.login'));
+    }
+}
+
+/**
+ * O formulário precisa enviar user[email] e user[password] como
+ * strings não vazias. Sem isso, findByEmail(null) lança TypeError.
+ *
+ * @return array{email: string, password: string}|null
+ */
+private function credentials(mixed $params): ?array
+{
+    if (!is_array($params)) {
+        return null;
+    }
+
+    foreach (['email', 'password'] as $field) {
+        if (!isset($params[$field]) || !is_string($params[$field])) {
+            return null;
+        }
+
+        if (trim($params[$field]) === '') {
+            return null;
+        }
+    }
+
+    return [
+        'email' => $params['email'],
+        'password' => $params['password'],
+    ];
+}
+```
+
+Mesma mensagem nos dois erros: reservas #15 pede "manter a mesma
+mensagem externa para não revelar contas existentes". Um texto próprio
+para "preencha e-mail e senha" é aceitável; um texto próprio para
+"e-mail não cadastrado" não é.
+
+Testes (controller):
+
+```php
+public function test_authenticate_without_user_param_should_not_login(): void
+{
+    $response = $this->post(
+        action: 'authenticate',
+        controllerName: 'App\Controllers\AuthenticationsController',
+        params: []
+    );
+
+    $this->assertFalse(Auth::check());
+    $this->assertStringContainsString('Location: /login', $response);
+}
+
+public function test_authenticate_with_blank_password_should_not_login(): void
+{
+    $response = $this->post(
+        action: 'authenticate',
+        controllerName: 'App\Controllers\AuthenticationsController',
+        params: [
+            'user' => ['email' => 'fulano@example.com', 'password' => ' '],
+        ]
+    );
+
+    $this->assertFalse(Auth::check());
+    $this->assertStringContainsString('Location: /login', $response);
+}
+```
+
+Mesmo padrão onde o professor criticou `?? null` (B7, B8, D6): filtre
+o payload no limite HTTP e entregue ao model só campos conhecidos e
+escalares.
+
+```php
+/**
+ * @param array<int, string> $allowed
+ * @return array<string, string>
+ */
+private function scalarParams(mixed $params, array $allowed): array
+{
+    $clean = [];
+
+    if (!is_array($params)) {
+        return $clean;
+    }
+
+    foreach ($allowed as $field) {
+        if (isset($params[$field]) && is_scalar($params[$field])) {
+            $clean[$field] = (string) $params[$field];
+        }
+    }
+
+    return $clean;
+}
+
+// B7: $user = new User($this->scalarParams(
+//     $request->getParam('user'),
+//     ['name', 'email', 'password', 'password_confirmation']
+// ));
+```
+
+Campo ausente não entra no array; o model marca "não pode ser vazio!"
+e a view mostra qual faltou. Nenhum valor inventado, e `role` nunca
+vem do formulário.
+
+Armadilha: o `return` depois de `redirectTo()` no caminho de erro. Em
+produção `redirectTo` dá `exit`; no teste de controller ele só imprime
+`Location:` e, sem o `return`, o método seguiria para `findByEmail`.
+
+### A17. Corrigir a ordem dos middlewares no core
+
+Chance: média. Tempo: 15 min. Fonte: ind-management #7, onde o `Admin`
+chamava `(new Authenticate())->handle($request)` por causa da ordem;
+o professor respondeu "corrigir a ordem de execução no mecanismo de
+middleware", não contornar na camada de aplicação.
+
+Arquivos: `core/Router/Route.php`,
+`core/Router/RouteWrapperMiddleware.php`,
+`tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php`.
+
+Causa (verificada em A12): `group()` executa o callback antes de
+anexar o middleware. No aninhamento `auth > admin`, o grupo interno
+termina primeiro e `/admin` fica com `[Admin, Authenticate]`. A
+correção é anexar o middleware do grupo externo no início da lista:
+
+```php
+// core/Router/Route.php
+public function prependMiddleware(Middleware $middleware): void
+{
+    array_unshift($this->middlewares, $middleware);
+}
+```
+
+```php
+// core/Router/RouteWrapperMiddleware.php, no for de group()
+$route->prependMiddleware($this->middlewareInstance());
+```
+
+`/admin` passa a `[Authenticate, Admin]`, e o `Admin` pode confiar que
+há usuário logado. Mantenha mesmo assim a versão autossuficiente de
+A12: a issue cobrou os dois pontos (independência e ordem).
+
+Teste (adicione `use App\Middleware\Admin;` e
+`use App\Middleware\Authenticate;`):
+
+```php
+public function test_nested_groups_should_run_outer_middleware_first(): void
+{
+    Router::reset();
+
+    (new RouteWrapperMiddleware('auth'))->group(function () {
+        (new RouteWrapperMiddleware('admin'))->group(function () {
+            Route::get('/admin', [MockController::class, 'action'])
+                ->name('admin.index');
+        });
+    });
+
+    $route = Router::getInstance()->getRoute(0);
+    $property = (new \ReflectionObject($route))->getProperty('middlewares');
+    $middlewares = $property->getValue($route);
+
+    $this->assertInstanceOf(Authenticate::class, $middlewares[0]);
+    $this->assertInstanceOf(Admin::class, $middlewares[1]);
+}
+```
+
+Armadilhas: `Router::reset()` no início, senão `getRoute(0)` pega a
+rota de outro teste. O `MockController` da pasta só tem `action()`.
+O teste antigo (`$middlewares[0]` é `Middleware`) continua passando.
+
+### A18. Destino pós-login por perfil, com perfil desconhecido explícito
+
+Chance: média. Tempo: 15 min. Fonte: ice-cream #6 (itens 2 e 6):
+"nome mais representativo, condicionais simples, tratar explicitamente
+não autenticado e perfil desconhecido" e "não assumir que quem não é
+admin é cliente".
+
+Arquivos: `app/Models/User.php`,
+`app/Controllers/AuthenticationsController.php`, `UserTest`,
+`AuthenticationsControllerTest`.
+
+A4 resolve com o ternário `isAdmin() ? admin : dashboard`. É o
+"não-admin = participante" que o professor criticou. Versão com
+`match` e as constantes de H2:
+
+```php
+// User.php
+public function homeRoute(): string
+{
+    return match ($this->role) {
+        self::ROLE_ADMIN => 'admin.dashboard.index',
+        self::ROLE_PARTICIPANT => 'dashboard.index',
+        default => throw new \DomainException(
+            "Perfil desconhecido: {$this->role}"
+        ),
+    };
+}
+```
+
+```php
+// AuthenticationsController::authenticate, ramo de sucesso
+Auth::login($user);
+FlashMessage::success('Login realizado com sucesso!');
+$this->redirectTo(route($user->homeRoute()));
+```
+
+Por que exceção: `role` é `ENUM('admin', 'participant')` no banco; um
+valor fora disso é erro de programação (perfil novo de A7 sem rota),
+não erro do usuário. O `ErrorsHandler` mostra a página 500 e o teste
+captura o `DomainException`. Alternativa defensiva, se pedirem:
+`Auth::logout()`, flash de perigo e redirect para o login.
+
+Testes:
+
+```php
+// UserTest
+public function test_home_route_should_depend_on_role(): void
+{
+    $this->assertEquals('dashboard.index', $this->user->homeRoute());
+
+    $this->user->role = 'admin';
+    $this->assertEquals('admin.dashboard.index', $this->user->homeRoute());
+}
+
+public function test_home_route_should_fail_with_unknown_role(): void
+{
+    $this->expectException(\DomainException::class);
+
+    $this->user->role = 'ghost';
+    $this->user->homeRoute();
+}
+```
+
+Teste de controller: o `test_authenticate_admin_should_redirect_to_admin`
+de A4, sem mudança.
+
+Armadilha: o unitário do perfil inválido não pode chamar `save()`; o
+ENUM rejeita antes e `role` nem chega ao `match`. Atribua e teste em
+memória.
+
+### B10. Perfil validado por lista fechada no model
+
+Chance: alta. Tempo: 15 min. Fonte: ice-cream #6 (item 7):
+"`notEmpty('role')` não garante que o perfil seja válido; revise a
+regra e o perfil padrão". reservas #15 cita `isValidForSignup()`, que
+restringe o perfil aceito no cadastro público.
+
+Arquivos: `lib/Validations.php`, `app/Models/User.php`,
+`tests/Unit/Lib/Validations/ValidationsTest.php`,
+`tests/Unit/Models/Users/UserTest.php`.
+
+Hoje `User::validates()` não olha `role`; quem segura é o ENUM do
+banco, com erro de PDO em vez de mensagem no formulário. Nova regra em
+`Validations`, no estilo das existentes (adicione
+`use Core\Database\ActiveRecord\Model;`):
+
+```php
+/**
+ * @param array<int, string> $allowed
+ */
+public static function inclusion(
+    string $attribute,
+    array $allowed,
+    Model $obj
+): bool {
+    if (!in_array($obj->$attribute, $allowed, true)) {
+        $obj->addError($attribute, 'não é um valor válido!');
+        return false;
+    }
+
+    return true;
+}
+```
+
+No model (constantes de H2):
+
+```php
+public const ROLES = [self::ROLE_ADMIN, self::ROLE_PARTICIPANT];
+
+public function validates(): void
+{
+    Validations::notEmpty('name', $this);
+    Validations::notEmpty('email', $this);
+    Validations::inclusion('role', self::ROLES, $this);
+    Validations::uniqueness('email', $this);
+
+    if ($this->newRecord()) {
+        Validations::passwordConfirmation($this);
+    }
+}
+```
+
+`inclusion` com `in_array` estrito já rejeita `null` e `''`; não
+precisa de `notEmpty('role')`. O padrão fica no construtor
+(`self::ROLE_PARTICIPANT`), em um lugar só.
+
+Testes:
+
+```php
+// ValidationsTest
+public function test_inclusion(): void
+{
+    $model = new class () extends Model {
+        protected static array $columns = ['role'];
+    };
+
+    $model->role = 'ghost'; // @phpstan-ignore-line
+    $this->assertFalse(Validations::inclusion('role', ['admin'], $model));
+    $this->assertEquals('não é um valor válido!', $model->errors('role'));
+
+    $model->role = 'admin'; // @phpstan-ignore-line
+    $this->assertTrue(Validations::inclusion('role', ['admin'], $model));
+}
+
+// UserTest
+public function test_save_should_fail_with_invalid_role(): void
+{
+    $user = new User([
+        'name' => 'Ghost',
+        'email' => 'ghost@example.com',
+        'password' => '123456',
+        'password_confirmation' => '123456',
+        'role' => 'ghost',
+    ]);
+
+    $this->assertFalse($user->save());
+    $this->assertEquals('não é um valor válido!', $user->errors('role'));
+}
+```
+
+Cadastro público (B7): não aceite `role` do formulário; o construtor
+põe o padrão. Se pedirem um `select` de perfil no cadastro, aceite só
+`ROLE_PARTICIPANT` ali, com a mesma regra em um método próprio
+(`inclusion('role', [self::ROLE_PARTICIPANT], $this)`).
+
+Armadilhas: o terceiro argumento `true` do `in_array`, senão a
+comparação é frouxa. Não troque o ENUM por VARCHAR "para facilitar":
+o banco continua sendo a última barreira, e o teste de ENUM de
+`UserTest` (se existir) quebraria.
+
+### C7. Flash: escapar a mensagem e diferenciar os tipos
+
+Chance: média-alta (duas issues da 4.1 cobram isso: ice-cream #6,
+item 4, e Campaign #11, item 4). Tempo: 15 min.
+
+Arquivos: `app/views/layouts/_flash_message.phtml`,
+`tests/Integration/Controllers/HomeControllerTest.php`. Se pedir
+tipos novos (`warning`, `info`), `lib/FlashMessage.php` como em C1.
+
+O professor olha três coisas: (1) a parcial é incluída uma vez, no
+layout, e não em cada view; (2) a mensagem sai escapada; (3) cada
+tipo tem aparência própria. No nosso projeto o item 1 já está certo:
+`application.phtml` faz `require '_flash_message.phtml'` antes do
+`<h1>`. Mostre isso se perguntarem.
+
+Parcial nova (substitui o arquivo inteiro):
+
+```php
+<?php
+$icons = [
+    'success' => 'bi-check-circle-fill',
+    'danger' => 'bi-exclamation-triangle-fill',
+    'warning' => 'bi-exclamation-circle-fill',
+    'info' => 'bi-info-circle-fill',
+];
+?>
+<?php foreach (\Lib\FlashMessage::get() as $type => $msg) : ?>
+    <div class="alert alert-<?= $type ?> alert-dismissible" role="alert">
+        <div>
+            <i class="bi <?= $icons[$type] ?? 'bi-bell' ?>"></i>
+            <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+            aria-label="Close"></button>
+    </div>
+<?php endforeach; ?>
+```
+
+O que mudou e por quê:
+
+- `htmlspecialchars($msg, ENT_QUOTES, 'UTF-8')`: converte `< > & " '`
+  e deixa acentos em paz. Hoje as mensagens são textos fixos dos
+  controllers, mas basta uma com dado do usuário ("Bem-vindo,
+  {$user->name}", "Usuário X removido" em D2) para um nome
+  `<b>Fulano</b>` ou `<script>` sair renderizado. `$type` não precisa
+  de escape: só `FlashMessage` escreve essa chave.
+- Aparência por tipo: `alert-<?= $type ?>` já diferencia a cor
+  (Bootstrap tem `alert-success`, `-danger`, `-warning`, `-info`). O
+  ícone deixa a diferença visível sem depender da cor. A fonte de
+  ícones (`bootstrap-icons`) já é carregada no `<head>` do layout; sem
+  internet o ícone só não aparece, nada quebra.
+- `<?php endforeach; ?>` no lugar de `<? endforeach; ?>` (ver
+  armadilha abaixo).
+
+O escape fica na view, não em `FlashMessage::message()`: escapar é
+apresentação, e a lib não sabe se a saída é HTML ou JSON. Se o
+professor preferir na lib, faça num lugar só e tire da view, senão
+`&amp;lt;` aparece na tela.
+
+Teste de controller. `HomeController` renderiza o layout, logo a
+parcial, sem exigir login. Acrescente `use Lib\FlashMessage;` no
+topo do arquivo:
+
+```php
+public function test_index_should_escape_flash_message(): void
+{
+    FlashMessage::danger('<b>Oi</b>');
+
+    $response = $this->get(
+        action: 'index',
+        controllerName: 'App\Controllers\HomeController'
+    );
+
+    $this->assertStringContainsString('alert-danger', $response);
+    $this->assertStringContainsString('&lt;b&gt;Oi&lt;/b&gt;', $response);
+    $this->assertStringNotContainsString('<b>Oi</b>', $response);
+}
+```
+
+Para tipos novos, teste unitário em `FlashMessageTest` copiando
+`test_danger` (C1).
+
+Armadilhas:
+
+- A parcial herdada do problem-track fecha o laço com
+  `<? endforeach; ?>`, tag curta. Funciona só porque a imagem
+  `php:8.3.4-fpm` vem sem `php.ini` e o padrão compilado de
+  `short_open_tag` é ligado. `php.ini-production` e
+  `php.ini-development` desligam; quem copiar um deles para a imagem
+  vê a view inteira quebrar ("unexpected end of file"). Troque pela
+  tag completa e confira o resto: `grep -rn '<? ' app/views/`.
+- PHPCS só lê `.php` e o PHPStan exclui `app/views`. Erro em
+  `.phtml` só aparece no teste ou no navegador. Rode o teste acima.
+- Teste de controller compara HTML cru: uma mensagem com apóstrofo
+  vira `&#039;` na resposta. Os `see()` dos Cests comparam o texto
+  renderizado e não mudam (`LoginCest`, `AdminDashboardCest`).
+- Não escape duas vezes nem deixe exceção "esta mensagem tem link".
+  Regra única: flash é texto.
+- `FlashMessage` guarda uma mensagem por tipo
+  (`$_SESSION['flash'][$type] = $value`): dois `danger` seguidos,
+  só o último aparece. Se pedir várias, troque por `[] = $value`,
+  faça um laço interno na parcial e ajuste `FlashMessageTest`
+  (`$flash['success']` vira array).
+
+### C8. Rótulos de perfil num só lugar
+
+Chance: média (reservas #15; surge assim que existe uma coluna
+"Perfil" na listagem ou um `<select>` de perfil). Tempo: 15 min.
+Combina com D1 (coluna), D6 (select do admin), B7 (se o cadastro
+oferecer escolha de perfil) e H2 (constantes).
+
+O que o professor apontou: o texto "Administrador" escrito no model
+e de novo num array dentro da view. Dois lugares, uma hora divergem.
+A regra: o model conhece os valores e seus rótulos; o controller
+entrega as opções à view; a view só percorre.
+
+```php
+// app/Models/User.php (junto com as constantes de H2)
+public const ROLE_ADMIN = 'admin';
+public const ROLE_PARTICIPANT = 'participant';
+
+/** @var array<string, string> valor do ENUM => rótulo exibido */
+public const ROLE_LABELS = [
+    self::ROLE_ADMIN => 'Administrador',
+    self::ROLE_PARTICIPANT => 'Participante',
+];
+
+public function roleLabel(): string
+{
+    return self::ROLE_LABELS[$this->role] ?? $this->role;
+}
+
+/**
+ * Perfis que um visitante pode escolher no cadastro (B7).
+ * @return array<string, string>
+ */
+public static function signupRoleOptions(): array
+{
+    $options = self::ROLE_LABELS;
+    unset($options[self::ROLE_ADMIN]);
+
+    return $options;
+}
+```
+
+Controller (listagem de D1 com o select de D6):
+
+```php
+public function index(): void
+{
+    $users = User::all();
+    $roles = User::ROLE_LABELS;
+    $title = 'Usuários';
+    $this->render('admin/users/index', compact('users', 'roles', 'title'));
+}
+```
+
+View: nenhum array local; a coluna usa o método e o select usa `$roles`.
+
+```php
+<td><?= $user->roleLabel() ?></td>
+<td>
+    <select name="user[role]" class="form-select form-select-sm">
+        <?php foreach ($roles as $value => $label) : ?>
+            <option value="<?= $value ?>"
+                <?= $user->role === $value ? 'selected' : '' ?>>
+                <?= $label ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</td>
+```
+
+Onde mais o mapa substitui strings soltas:
+
+- D6, `update()`: `array_key_exists($role, User::ROLE_LABELS)` no
+  lugar de `in_array($role, ['admin', 'participant'], true)`.
+- B7 com escolha de perfil: o controller passa
+  `$roles = User::signupRoleOptions()` à view e valida o POST com
+  `array_key_exists($role, User::signupRoleOptions())`. Assim `admin`
+  nunca entra pelo cadastro, mesmo forjando o formulário.
+- Painel e navbar: `$this->currentUser()->roleLabel()` em vez de
+  `$user->role === 'admin' ? 'Administrador' : 'Participante'`.
+- Se pedir para validar o perfil no model (ice-cream #6, item 7:
+  `notEmpty('role')` não garante valor válido), em `validates()`:
+  `array_key_exists($this->role, self::ROLE_LABELS)`, senão
+  `$this->addError('role', 'perfil inválido')`.
+
+Testes unitários em `tests/Unit/Models/Users/UserTest.php`
+(`setUp` já cria `$this->user` como participante):
+
+```php
+public function test_role_label_should_follow_role(): void
+{
+    $this->assertSame('Participante', $this->user->roleLabel());
+
+    $this->user->update(['role' => User::ROLE_ADMIN]);
+
+    $this->assertSame('Administrador', $this->user->roleLabel());
+}
+
+public function test_signup_role_options_should_not_offer_admin(): void
+{
+    $options = User::signupRoleOptions();
+
+    $this->assertArrayNotHasKey('admin', $options);
+    $this->assertArrayHasKey('participant', $options);
+}
+```
+
+Teste de controller (admin logado, `get('index', ...)` do
+controller de D1): a resposta contém `Participante` e
+`<option value="admin"`. Confirmação final:
+`grep -rn "Administrador" app/` devolve só `User.php`.
+
+Armadilhas:
+
+- Rótulo é apresentação, valor é domínio. As chaves do mapa têm de
+  ser exatamente os valores do `ENUM('admin', 'participant')` em
+  `database/schema.sql`. Um perfil novo (A7, `organizer`) entra no
+  ENUM, nas constantes e no mapa; nada mais.
+- `update()` não valida: valor fora do ENUM vira `PDOException`
+  (500). Por isso o `array_key_exists` antes de gravar.
+- O `?? $this->role` em `roleLabel()` evita "Undefined array key" se
+  o banco tiver um valor fora do mapa; a página continua de pé e o
+  valor cru denuncia o problema.
+- Não transforme em "getter" de view: `roleLabel()` devolve texto;
+  classe CSS, badge e ícone ficam na view.
+
+### D9. SQL só no model, nunca no controller
+
+Chance: alta como pergunta, média como alteração (utfprarena #6: o
+professor achou `SELECT * FROM courts` num controller e mandou para o
+model). Tempo: 15 min. Complementa D4 (`LIKE`), D5 (contadores) e D7
+(ordenação).
+
+A regra, nas palavras da issue: o controller recebe a requisição,
+coordena e responde; consulta é camada de Model. No FVP isso aparece
+de dois jeitos: ele pede uma listagem nova e observa onde a consulta
+vai parar, ou mostra um controller com SQL e pede para mover.
+
+Decida nesta ordem:
+
+1. Dá com o que `Model` já tem? `all()`, `where([...])` (só
+   igualdade, ligada por AND), `findBy`, `findById`, `exists`,
+   `paginate`. Use e pronto.
+2. Não dá (`ORDER BY`, `LIKE`, `COUNT`, `JOIN`)? Método estático no
+   model, com nome que diz o que filtra, `prepare` + `bindValue`,
+   devolvendo objetos (`new static($row)`), não arrays.
+3. O controller fica com uma linha por consulta.
+
+Imports em `User.php`: `Core\Database\Database`, `PDO`.
+
+```php
+// app/Models/User.php
+/** @return array<User> */
+public static function orderedByName(): array
+{
+    $columns = implode(', ', static::$columns);
+    $table = static::$table;
+    $sql = "SELECT id, {$columns} FROM {$table} ORDER BY name";
+
+    $stmt = Database::getDatabaseConn()->prepare($sql);
+    $stmt->execute();
+
+    return array_map(
+        fn ($row) => new static($row),
+        $stmt->fetchAll(PDO::FETCH_ASSOC)
+    );
+}
+
+public static function countByRole(string $role): int
+{
+    $table = static::$table;
+    $sql = "SELECT COUNT(*) FROM {$table} WHERE role = :role";
+
+    $stmt = Database::getDatabaseConn()->prepare($sql);
+    $stmt->bindValue(':role', $role);
+    $stmt->execute();
+
+    return (int) $stmt->fetchColumn();
+}
+```
+
+```php
+// app/Controllers/Admin/DashboardController.php
+public function index(): void
+{
+    $users = User::orderedByName();
+    $totalAdmins = User::countByRole('admin');
+    $title = 'Painel Administrativo';
+    $this->render(
+        'admin/dashboard/index',
+        compact('users', 'totalAdmins', 'title')
+    );
+}
+```
+
+O que o professor reprovou, adaptado ao nosso projeto. Não escreva:
+
+```php
+// ERRADO: SQL no controller, e a view recebe arrays
+$pdo = Database::getDatabaseConn();
+$rows = $pdo->query('SELECT * FROM users')->fetchAll(PDO::FETCH_ASSOC);
+```
+
+Vale para regra de negócio também: "é admin?", "registrar login",
+"pode ser removido?" são métodos do model (`isAdmin()`,
+`registerLogin()` já existem). O controller pergunta, não decide.
+
+Testes unitários em `tests/Unit/Models/Users/UserTest.php`
+(`setUp` já cria "User 1" e "User 2"):
+
+```php
+public function test_ordered_by_name_should_sort_ascending(): void
+{
+    $ana = new User([
+        'name' => 'Ana',
+        'email' => 'ana@example.com',
+        'password' => '123456',
+        'password_confirmation' => '123456'
+    ]);
+    $ana->save();
+
+    $names = array_map(fn ($user) => $user->name, User::orderedByName());
+
+    $this->assertSame(['Ana', 'User 1', 'User 2'], $names);
+}
+
+public function test_count_by_role(): void
+{
+    $this->assertSame(0, User::countByRole('admin'));
+
+    $this->user->update(['role' => 'admin']);
+
+    $this->assertSame(1, User::countByRole('admin'));
+    $this->assertSame(1, User::countByRole('participant'));
+}
+```
+
+Confirmação final: `grep -rn "SELECT\|Database::\|PDO" app/Controllers/`
+não devolve nada.
+
+Armadilhas:
+
+- `SELECT *` com `new static($row)` quebra aqui: `users` tem
+  `created_at` e `updated_at`, que não estão em `$columns`, e
+  `Model::__set` lança "Property created_at not found". Sempre
+  `SELECT id, {$columns}`, como `all()` faz.
+- Interpolar `{$table}` e `{$columns}` é seguro (vêm da classe).
+  Tudo que vem da requisição entra por `bindValue`; nunca
+  `"WHERE role = '{$role}'"`.
+- PHPStan nível 6 cobre `app/`: método que devolve array precisa de
+  `@return array<User>`, senão "no value type specified in iterable
+  type array".
+- `paginate()` não aceita `ORDER BY` (o `Paginator` monta o próprio
+  SQL). Listagem ordenada e paginada ao mesmo tempo exige mexer em
+  `lib/Paginator.php` (a linha do `SELECT`); diga isso antes de
+  prometer.
+- `Database::getDatabaseConn()` abre uma conexão por chamada. Para o
+  FVP está bom; não "otimize" o `core/`.
+- Use `User::ROLE_ADMIN` (H2) no lugar de `'admin'` se as constantes
+  já existirem.
+
+## 10. Armadilhas do complemento 2
+
+- `?? ''` e `?? null` em campo obrigatório foram penalizados em três
+  grupos. Se o professor vir um no seu diff, espere a pergunta.
+- Depois de A17, `Admin` sem a checagem de `null` passa a funcionar
+  por causa da ordem; sem A17, só funciona com A12. Saiba dizer qual
+  dos dois está no seu código.
+- `match` sem `default` lança `UnhandledMatchError`, que também vira
+  500. O `default` explícito de A18 é o que o professor chamou de
+  "tratar explicitamente".
+- `Validations::inclusion` com `in_array` frouxo aceita `0` como
+  qualquer string não numérica em PHP 7; em PHP 8 não, mas o terceiro
+  argumento deixa a intenção clara para quem lê.
+- O teste de perfil inválido em `UserTest` não pode usar `save()` para
+  provar o `match` de A18; a validação de B10 barra antes. Teste cada
+  coisa no seu nível.
+- Issue #15 (reservas) elogia defaults de apresentação nas views
+  (`$user->name ?? ''` para um model novo). O `??` só é problema em
+  parâmetro obrigatório de requisição.
+
+## 11. Fontes do complemento 2
+
+- Planilha "TSI34D - Notas 2026-2", aba dos grupos (9 repositórios).
+- Issues "Avaliação da Entrega 4.1": ederzin13/ice-cream-manager #6,
+  edu-almeidaf/reservas-academicas #15, william-wv/ind-management #7,
+  VitorThorvi/tsi34d-backend #9, olivertchai/Campaign #11,
+  LucasXRosas/utfprarena #6 (todas de `MarczalTSIGP`, 14 a 19 de
+  outubro de 2026). mfnzr/projeto-backend, marcosolenka/MGZ e
+  estudantegomes/mylinkplus ainda sem issue da 4.1.
+- Código do projeto em `86c81ca`, `core/Router/Route.php` e
+  `RouteWrapperMiddleware.php`, `database/schema.sql` (ENUM de `role`).
