@@ -189,3 +189,9 @@ senha (fallback no `.bashrc`). `07-test-framework.sh` passou 9/9 na VM
 (rootful) e no macOS; em rootless falha no `composer install`, como
 documentado. `08-install-eventos-do-campus.sh` passou 10/10 e o `-z`
 não deixou containers, imagens nem pasta.
+
+`00-run-all.sh` passou em outra VM limpa: 01 a 08 em 3m45s sem
+relogar (o segundo 05 ficou sem FALHA via `sg docker`), 5 containers
+de pé, HTTP 200 em `/` e `/login`; rodar de novo recusa; o `-z`
+desfez tudo em 24 s e dpkg, `$HOME`, shell e grupo docker voltaram
+iguais ao snapshot inicial.
