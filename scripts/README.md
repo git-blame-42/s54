@@ -112,8 +112,9 @@ dois casos põe o usuário no grupo docker; é preciso logout/login.
 
 O `-z` tira do grupo, remove só os pacotes e arquivos de repositório
 que o script criou e, se o docker não existia antes, pergunta se
-apaga `/var/lib/docker` e `/var/lib/containerd`. Um docker que já
-estava instalado nunca é removido.
+apaga `/var/lib/docker` e `/var/lib/containerd`. O grupo docker sai
+junto se não existia antes e ficou vazio. Um docker que já estava
+instalado nunca é removido.
 
 ### 07-test-framework.sh
 

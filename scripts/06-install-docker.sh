@@ -28,6 +28,7 @@ que já estava na máquina nunca é removido.
   -h  mostra esta ajuda
   -z  desfaz: tira do grupo, remove pacotes/repositório que o script
       instalou e, se o docker não existia antes, apaga /var/lib/docker
+      e o grupo docker (se ficou vazio)
 EOF
 }
 
@@ -130,6 +131,15 @@ run() {
   [[ "$(id -u)" != 0 ]] || die "rode como seu usuário, não como root."
 
   step "Situação atual"
+  # O pacote docker-ce cria o grupo docker; anota antes de instalar se
+  # ele já existia (e não sobrescreve ao retomar uma execução parada).
+  if [[ -z "$(state_get group_preexisting)" ]]; then
+    if getent group docker >/dev/null; then
+      state_set group_preexisting 1
+    else
+      state_set group_preexisting 0
+    fi
+  fi
   if command -v docker >/dev/null 2>&1; then
     state_set docker_preexisting 1
     ok "docker já instalado: $(docker --version). Não será tocado."
@@ -189,9 +199,17 @@ undo() {
     apt_purge_safe "$pkgs"
   fi
 
-  if [[ "$(state_get group_created)" == 1 ]] \
-      && getent group docker >/dev/null; then
-    sudo groupdel docker || warn "não consegui remover o grupo docker"
+  # O purge do docker-ce não remove o grupo que o pacote criou. Se o
+  # grupo não existia antes deste script e ficou sem membros, sai junto.
+  if getent group docker >/dev/null \
+      && { [[ "$(state_get group_created)" == 1 ]] \
+        || [[ "$(state_get group_preexisting)" == 0 ]]; }; then
+    if [[ -z "$(getent group docker | cut -d: -f4)" ]]; then
+      sudo groupdel docker || warn "não consegui remover o grupo docker"
+      ok "grupo docker removido"
+    else
+      warn "grupo docker ainda tem membros; mantendo"
+    fi
   fi
 
   if [[ "$(state_get docker_preexisting)" == 0 ]]; then
