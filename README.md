@@ -3,6 +3,8 @@
 Informações e tutoriais sobre o mini-framework MVC em PHP usado na
 disciplina TSI34D (Tecnologia em Sistemas para Internet, UTFPR, 2026-2).
 
+Repositório: https://github.com/git-blame-42/s54
+
 Origem do framework: https://github.com/SI-DABE/problem-track
 (aplicação de referência do professor; o diretório `core/` dela é o
 framework). Os projetos da turma partem do template
