@@ -156,6 +156,18 @@ subid_ok() { # arquivo
   (( count >= 65536 ))
 }
 
+# Impedimento do rootless. Ele é opcional (o framework não roda nele),
+# então só conta como FALHA quando não há docker rootful funcionando.
+# Mexe em "blockers" da check_rootless (escopo dinâmico do bash).
+r_block() {
+  blockers=1
+  if [[ "$DOCKER_MODE" == rootful ]]; then
+    c_warn "$@" "(impede só o rootless)"
+  else
+    c_fail "$@"
+  fi
+}
+
 check_rootless() {
   step "Docker rootless: é viável aqui?"
   local blockers=0 needs_sudo=0
@@ -187,22 +199,19 @@ check_rootless() {
       && systemctl --user show-environment >/dev/null 2>&1; then
     c_ok "systemd de usuário ativo (XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR)"
   else
-    c_fail "sem sessão systemd de usuário; rootless precisa dela." \
+    r_block "sem sessão systemd de usuário; rootless precisa dela." \
       "Entre por login normal (ssh/terminal), não por su."
-    blockers=1
   fi
 
   local f=/proc/sys/kernel/unprivileged_userns_clone
   if [[ -r $f ]] && [[ "$(cat $f)" != 1 ]]; then
-    c_fail "kernel.unprivileged_userns_clone=0: user namespaces bloqueados"
-    blockers=1
+    r_block "kernel.unprivileged_userns_clone=0: user namespaces bloqueados"
   else
     c_ok "user namespaces sem privilégio: permitidos pelo kernel"
   fi
   f=/proc/sys/user/max_user_namespaces
   if [[ -r $f ]] && (( $(cat $f) == 0 )); then
-    c_fail "user.max_user_namespaces=0: user namespaces desligados"
-    blockers=1
+    r_block "user.max_user_namespaces=0: user namespaces desligados"
   fi
 
   f=/proc/sys/kernel/apparmor_restrict_unprivileged_userns
@@ -242,7 +251,7 @@ check_rootless() {
       "'./run composer install' do framework vai falhar (uid do bind" \
       "mount). Use o rootful: 09-setup-docker-rootless.sh -z e grupo docker."
   elif (( blockers )); then
-    info "Veredito: rootless NÃO é viável aqui (veja as FALHAs acima)."
+    info "Veredito: rootless NÃO é viável aqui (veja os itens acima)."
   elif (( needs_sudo )); then
     info "Veredito: rootless seria viável (faltam passos com sudo)."
   else
