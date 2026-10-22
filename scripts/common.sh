@@ -303,33 +303,32 @@ port_in_use() { # porta
 
 # --- framework da disciplina ------------------------------------------
 
-# Imagens que o compose do framework puxa (fora a que ele constrói).
-FRAMEWORK_IMAGES=(nginx:latest mysql:8.4.0
-  selenium/standalone-chrome-debug:latest composer:2.7.2)
+# IDs de todas as imagens presentes (inclui intermediárias e sem tag).
+docker_image_ids() {
+  docker image ls -a -q --no-trunc 2>/dev/null | sort -u
+}
 
-# Registra quais dessas imagens já existiam, para o -z não removê-las.
+# Registra as imagens que já existiam, para o -z não removê-las.
+# Por ID, e não por nome: cobre também a base do Dockerfile
+# (php:8.3.4-fpm) e o que mais o build ou o compose puxarem.
 record_preexisting_images() {
-  local img have=()
-  for img in "${FRAMEWORK_IMAGES[@]}"; do
-    docker_image_exists "$img" && have+=("$img")
-  done
-  state_set preexisting_images "${have[*]:-}"
+  state_set preexisting_image_ids "$(docker_image_ids | tr '\n' ' ')"
 }
 
 # Derruba o compose do diretório (containers, rede, volumes), apaga as
-# imagens construídas e as puxadas que não existiam antes.
+# imagens construídas e toda imagem que não existia antes.
 compose_teardown() { # dir
-  local dir="$1" img pre
+  local dir="$1" id before
   [[ -f "$dir/docker-compose.yml" ]] || return 0
   (
     cd "$dir"
     [[ -f .env ]] || cp .env.example .env
     docker compose down -v --rmi local --remove-orphans
   ) || true
-  pre=" $(state_get preexisting_images) "
-  for img in "${FRAMEWORK_IMAGES[@]}"; do
-    [[ "$pre" == *" $img "* ]] && continue
-    docker image rm -f "$img" >/dev/null 2>&1 || true
+  before=" $(state_get preexisting_image_ids) "
+  for id in $(docker_image_ids); do
+    [[ "$before" == *" $id "* ]] && continue
+    docker image rm -f "$id" >/dev/null 2>&1 || true
   done
 }
 
