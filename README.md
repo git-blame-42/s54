@@ -48,6 +48,12 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   erros comuns) e como achar documentação e exemplos sem internet:
   `php --rf`, `vendor/`, arquivos-modelo do projeto, grep e git.
 
+- `neovim-dicas.md`
+  Neovim com LazyVim para quem vem do IntelliJ: modos, atalhos de
+  IDE (buscar, ir à definição, erros, terminal embutido) e o passo
+  a passo de um cenário do FVP no editor. Pressupõe o
+  `scripts/10-install-neovim.sh`.
+
 - `exemplos-fvp/`
   Uma solução pronta e testada para cada cenário do catálogo: cópia
   do projeto já modificada (sem `vendor/`), `solucao.patch`,
