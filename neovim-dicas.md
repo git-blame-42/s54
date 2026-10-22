@@ -4,6 +4,10 @@ Para quem vem do IntelliJ e vai editar o projeto no terminal do
 laboratório. Pressupõe o `scripts/10-install-neovim.sh` rodado (Neovim,
 LazyVim, intelephense, parsers de PHP). Testado em Ubuntu 24.04.
 
+Depois do script, abra um terminal novo (ou saia e entre de novo): o
+`nvim` fica em `~/.local/bin`, que só entra no PATH na próxima sessão
+do shell.
+
 Regra única: se travar, `Esc` duas vezes e `:q!`. Nada se perde fora
 do que não foi salvo.
 
