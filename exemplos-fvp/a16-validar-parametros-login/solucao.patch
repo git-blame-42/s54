@@ -1,0 +1,148 @@
+From 906f688c75c7ea71d94221bf1c3b8be434bfb786 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 22 Oct 2026 18:40:55 -0300
+Subject: [PATCH] fix: Validate login params before querying the user
+
+---
+ app/Controllers/AuthenticationsController.php | 35 ++++++++++--
+ .../AuthenticationsControllerTest.php         | 53 +++++++++++++++++++
+ 2 files changed, 85 insertions(+), 3 deletions(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..365cdf5 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -18,10 +18,17 @@ class AuthenticationsController extends Controller
+ 
+     public function authenticate(Request $request): void
+     {
+-        $params = $request->getParam('user');
+-        $user = User::findByEmail($params['email']);
++        $credentials = $this->credentials($request->getParam('user'));
+ 
+-        if ($user && $user->authenticate($params['password'])) {
++        if ($credentials === null) {
++            FlashMessage::danger('E-mail ou senha inválidos!');
++            $this->redirectTo(route('users.login'));
++            return;
++        }
++
++        $user = User::findByEmail($credentials['email']);
++
++        if ($user && $user->authenticate($credentials['password'])) {
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+@@ -37,4 +44,26 @@ class AuthenticationsController extends Controller
+         FlashMessage::success('Logout realizado com sucesso!');
+         $this->redirectTo(route('users.login'));
+     }
++
++    /**
++     * O formulário precisa enviar user[email] e user[password] como strings
++     * não vazias. Qualquer outra forma (chave ausente, null, array, só espaços)
++     * é recusada aqui, antes de consultar o model.
++     *
++     * @return array{email: string, password: string}|null
++     */
++    private function credentials(mixed $params): ?array
++    {
++        if (!is_array($params)) {
++            return null;
++        }
++
++        foreach (['email', 'password'] as $field) {
++            if (!isset($params[$field]) || !is_string($params[$field]) || trim($params[$field]) === '') {
++                return null;
++            }
++        }
++
++        return ['email' => $params['email'], 'password' => $params['password']];
++    }
+ }
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..e8f7d03 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Integration\Controllers;
+ 
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use Lib\FlashMessage;
+ 
+ class AuthenticationsControllerTest extends ControllerTestCase
+ {
+@@ -19,6 +20,7 @@ class AuthenticationsControllerTest extends ControllerTestCase
+             'password_confirmation' => '123456'
+         ]);
+         $this->user->save();
++        unset($_SESSION['flash']);
+     }
+ 
+     public function test_render_login_page(): void
+@@ -53,6 +55,50 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /login', $response);
+     }
+ 
++    public function test_authenticate_without_user_param_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: []
++        );
++
++        $this->assertLoginRejected($response);
++    }
++
++    public function test_authenticate_without_email_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['password' => '123456']]
++        );
++
++        $this->assertLoginRejected($response);
++    }
++
++    public function test_authenticate_with_blank_password_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'fulano@example.com', 'password' => ' ']]
++        );
++
++        $this->assertLoginRejected($response);
++    }
++
++    public function test_authenticate_with_non_string_email_should_not_login(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => ['fulano@example.com'], 'password' => '123456']]
++        );
++
++        $this->assertLoginRejected($response);
++    }
++
+     public function test_destroy_should_logout(): void
+     {
+         Auth::login($this->user);
+@@ -62,4 +108,11 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertFalse(Auth::check());
+         $this->assertStringContainsString('Location: /login', $response);
+     }
++
++    private function assertLoginRejected(string $response): void
++    {
++        $this->assertFalse(Auth::check());
++        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertSame(['danger' => 'E-mail ou senha inválidos!'], FlashMessage::get());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

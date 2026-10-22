@@ -1,0 +1,85 @@
+From 94e69f5efd43bff4a83112c3811dd8c48bf0f4bd Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 22 Oct 2026 18:42:04 -0300
+Subject: [PATCH] fix: Escape flash messages and style them by type
+
+---
+ app/views/layouts/_flash_message.phtml        | 18 +++++++++--
+ .../Controllers/HomeControllerTest.php        | 30 +++++++++++++++++++
+ 2 files changed, 45 insertions(+), 3 deletions(-)
+
+diff --git a/app/views/layouts/_flash_message.phtml b/app/views/layouts/_flash_message.phtml
+index 5e38c31..831cb3f 100644
+--- a/app/views/layouts/_flash_message.phtml
++++ b/app/views/layouts/_flash_message.phtml
+@@ -1,6 +1,18 @@
++<?php
++$icons = [
++    'success' => 'bi-check-circle-fill',
++    'danger' => 'bi-exclamation-triangle-fill',
++    'warning' => 'bi-exclamation-circle-fill',
++    'info' => 'bi-info-circle-fill',
++];
++?>
+ <?php foreach (\Lib\FlashMessage::get() as $type => $msg) : ?>
+     <div class="alert alert-<?= $type ?> alert-dismissible" role="alert">
+-        <div><?= $msg ?></div>
+-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
++        <div>
++            <i class="bi <?= $icons[$type] ?? 'bi-bell' ?>"></i>
++            <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
++        </div>
++        <button type="button" class="btn-close" data-bs-dismiss="alert"
++            aria-label="Close"></button>
+     </div>
+-<? endforeach; ?>
++<?php endforeach; ?>
+diff --git a/tests/Integration/Controllers/HomeControllerTest.php b/tests/Integration/Controllers/HomeControllerTest.php
+index b258185..4073675 100644
+--- a/tests/Integration/Controllers/HomeControllerTest.php
++++ b/tests/Integration/Controllers/HomeControllerTest.php
+@@ -2,6 +2,8 @@
+ 
+ namespace Tests\Integration\Controllers;
+ 
++use Lib\FlashMessage;
++
+ class HomeControllerTest extends ControllerTestCase
+ {
+     public function test_render_home_page(): void
+@@ -14,4 +16,32 @@ class HomeControllerTest extends ControllerTestCase
+         $this->assertMatchesRegularExpression('/<h1>\s*Home Page\s*<\/h1>/', $response);
+         $this->assertMatchesRegularExpression('/TSI3D Framework Template/', $response);
+     }
++
++    public function test_index_should_escape_flash_message(): void
++    {
++        FlashMessage::danger('<b>Oi</b>');
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\HomeController'
++        );
++
++        $this->assertStringContainsString('alert-danger', $response);
++        $this->assertStringContainsString('&lt;b&gt;Oi&lt;/b&gt;', $response);
++        $this->assertStringNotContainsString('<b>Oi</b>', $response);
++    }
++
++    public function test_index_should_show_success_flash_message_with_icon(): void
++    {
++        FlashMessage::success('Tudo certo');
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\HomeController'
++        );
++
++        $this->assertStringContainsString('alert-success', $response);
++        $this->assertStringContainsString('bi-check-circle-fill', $response);
++        $this->assertStringContainsString('Tudo certo', $response);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

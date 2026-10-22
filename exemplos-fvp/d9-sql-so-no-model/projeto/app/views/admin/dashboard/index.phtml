@@ -1,0 +1,25 @@
+<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
+
+<ul>
+    <li>Administradores: <?= $totalAdmins ?></li>
+    <li>Participantes: <?= $totalParticipants ?></li>
+</ul>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Perfil</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($users as $user) : ?>
+            <tr>
+                <td><?= htmlspecialchars($user->name) ?></td>
+                <td><?= htmlspecialchars($user->email) ?></td>
+                <td><?= htmlspecialchars($user->role) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>

@@ -1,0 +1,360 @@
+From 9a4778e63a575c3093139f41058a8722ecabd33b Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 22 Oct 2026 18:41:50 -0300
+Subject: [PATCH] fix: Run outer middleware group before inner groups
+
+---
+ app/Middleware/Admin.php                      |  5 +-
+ core/Router/Route.php                         |  5 +
+ core/Router/RouteWrapperMiddleware.php        |  7 +-
+ tests/Integration/Access/AdminAccessTest.php  | 86 +++++++++++++++++
+ .../Core/Router/InnerRecordingMiddleware.php  |  7 ++
+ .../Core/Router/OuterRecordingMiddleware.php  |  7 ++
+ .../Unit/Core/Router/RecordingMiddleware.php  | 21 +++++
+ tests/Unit/Core/Router/RouteTest.php          | 14 +++
+ .../Router/RouteWrapperMiddlewareTest.php     | 92 +++++++++++++++++++
+ 9 files changed, 242 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Integration/Access/AdminAccessTest.php
+ create mode 100644 tests/Unit/Core/Router/InnerRecordingMiddleware.php
+ create mode 100644 tests/Unit/Core/Router/OuterRecordingMiddleware.php
+ create mode 100644 tests/Unit/Core/Router/RecordingMiddleware.php
+
+diff --git a/app/Middleware/Admin.php b/app/Middleware/Admin.php
+index 782069b..bd37b97 100644
+--- a/app/Middleware/Admin.php
++++ b/app/Middleware/Admin.php
+@@ -13,7 +13,10 @@ class Admin implements Middleware
+     {
+         $user = Auth::user();
+ 
+-        // Sem usuário logado, quem redireciona é o middleware Authenticate.
++        // O core garante que, no grupo 'admin' aninhado em 'auth', o
++        // Authenticate roda antes. Mesmo assim o Admin não depende dessa
++        // ordem: sem usuário logado ele não decide nada e deixa o
++        // Authenticate redirecionar para o login.
+         if ($user !== null && !$user->isAdmin()) {
+             FlashMessage::danger('Acesso restrito a administradores');
+             $this->redirectTo(route('dashboard.index'));
+diff --git a/core/Router/Route.php b/core/Router/Route.php
+index 2f068a0..85a9011 100644
+--- a/core/Router/Route.php
++++ b/core/Router/Route.php
+@@ -57,6 +57,11 @@ class Route
+         $this->middlewares[] = $middleware;
+     }
+ 
++    public function prependMiddleware(Middleware $middleware): void
++    {
++        array_unshift($this->middlewares, $middleware);
++    }
++
+     public function runMiddlewares(Request $request): void
+     {
+         foreach ($this->middlewares as $middleware) {
+diff --git a/core/Router/RouteWrapperMiddleware.php b/core/Router/RouteWrapperMiddleware.php
+index 87ff7ea..6f40964 100644
+--- a/core/Router/RouteWrapperMiddleware.php
++++ b/core/Router/RouteWrapperMiddleware.php
+@@ -18,9 +18,14 @@ class RouteWrapperMiddleware
+         $callback();
+         $routeSizeAfter = Router::getInstance()->getRouteSize();
+ 
++        // O callback roda antes do laço: num grupo aninhado, o grupo interno
++        // já anexou o middleware dele quando chegamos aqui. Por isso o
++        // middleware deste grupo (o externo) entra no início da lista, e a
++        // execução segue a ordem de escrita: externo antes do interno
++        // (ex.: em /admin, Authenticate roda antes de Admin).
+         for ($i = $routeSizeBefore; $i < $routeSizeAfter; $i++) {
+             $route = Router::getInstance()->getRoute($i);
+-            $route->addMiddleware($this->middlewareInstance());
++            $route->prependMiddleware($this->middlewareInstance());
+         }
+     }
+ 
+diff --git a/tests/Integration/Access/AdminAccessTest.php b/tests/Integration/Access/AdminAccessTest.php
+new file mode 100644
+index 0000000..56843eb
+--- /dev/null
++++ b/tests/Integration/Access/AdminAccessTest.php
+@@ -0,0 +1,86 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use App\Models\User;
++use GuzzleHttp\Client;
++use GuzzleHttp\Cookie\CookieJar;
++use Tests\TestCase;
++
++/**
++ * Acesso HTTP real a /admin. A rota está no grupo 'admin' aninhado em
++ * 'auth': o Authenticate tem de rodar antes do Admin.
++ */
++class AdminAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080',
++            'cookies' => new CookieJar(),
++        ]);
++
++        $this->createUser('Admin', 'admin@example.com', 'admin');
++        $this->createUser('Fulano', 'fulano@example.com', 'participant');
++    }
++
++    public function test_visitor_should_be_redirected_to_login_with_login_message(): void
++    {
++        $response = $this->client->get('/admin');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++
++        $body = (string) $this->client->get('/login')->getBody();
++        $this->assertStringContainsString('Você deve estar logado para acessar essa página', $body);
++        $this->assertStringNotContainsString('Acesso restrito a administradores', $body);
++    }
++
++    public function test_participant_should_be_redirected_to_dashboard_with_restricted_message(): void
++    {
++        $this->login('fulano@example.com');
++
++        $response = $this->client->get('/admin');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));
++
++        $body = (string) $this->client->get('/dashboard')->getBody();
++        $this->assertStringContainsString('Acesso restrito a administradores', $body);
++    }
++
++    public function test_admin_should_access_admin_area(): void
++    {
++        $this->login('admin@example.com');
++
++        $response = $this->client->get('/admin');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Olá, Admin!', (string) $response->getBody());
++    }
++
++    private function createUser(string $name, string $email, string $role): void
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++    }
++
++    private function login(string $email): void
++    {
++        $response = $this->client->post('/login', [
++            'form_params' => ['user' => ['email' => $email, 'password' => '123456']],
++        ]);
++
++        $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Unit/Core/Router/InnerRecordingMiddleware.php b/tests/Unit/Core/Router/InnerRecordingMiddleware.php
+new file mode 100644
+index 0000000..5bf89ce
+--- /dev/null
++++ b/tests/Unit/Core/Router/InnerRecordingMiddleware.php
+@@ -0,0 +1,7 @@
++<?php
++
++namespace Tests\Unit\Core\Router;
++
++class InnerRecordingMiddleware extends RecordingMiddleware
++{
++}
+diff --git a/tests/Unit/Core/Router/OuterRecordingMiddleware.php b/tests/Unit/Core/Router/OuterRecordingMiddleware.php
+new file mode 100644
+index 0000000..f6fffd3
+--- /dev/null
++++ b/tests/Unit/Core/Router/OuterRecordingMiddleware.php
+@@ -0,0 +1,7 @@
++<?php
++
++namespace Tests\Unit\Core\Router;
++
++class OuterRecordingMiddleware extends RecordingMiddleware
++{
++}
+diff --git a/tests/Unit/Core/Router/RecordingMiddleware.php b/tests/Unit/Core/Router/RecordingMiddleware.php
+new file mode 100644
+index 0000000..a966945
+--- /dev/null
++++ b/tests/Unit/Core/Router/RecordingMiddleware.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace Tests\Unit\Core\Router;
++
++use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
++
++/**
++ * Middleware de teste: grava o nome da classe em `$calls` quando roda,
++ * para os testes conferirem a ordem real de execução.
++ */
++abstract class RecordingMiddleware implements Middleware
++{
++    /** @var string[] */
++    public static array $calls = [];
++
++    public function handle(Request $request): void
++    {
++        self::$calls[] = static::class;
++    }
++}
+diff --git a/tests/Unit/Core/Router/RouteTest.php b/tests/Unit/Core/Router/RouteTest.php
+index 7946a53..4fdc009 100644
+--- a/tests/Unit/Core/Router/RouteTest.php
++++ b/tests/Unit/Core/Router/RouteTest.php
+@@ -206,4 +206,18 @@ class RouteTest extends TestCase
+ 
+         $this->assertContains($middleware, $middlewares);
+     }
++
++    public function test_prepend_middleware_should_put_it_before_existing_ones(): void
++    {
++        $route = new Route(method: 'GET', uri: '/test', controllerName: 'MockController', actionName: 'show');
++        $added = $this->createMock(Middleware::class);
++        $prepended = $this->createMock(Middleware::class);
++
++        $route->addMiddleware($added);
++        $route->prependMiddleware($prepended);
++
++        $middlewares = (new \ReflectionObject($route))->getProperty('middlewares')->getValue($route);
++
++        $this->assertSame([$prepended, $added], $middlewares);
++    }
+ }
+diff --git a/tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php b/tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php
+index 4a271ef..56155a0 100644
+--- a/tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php
++++ b/tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php
+@@ -2,7 +2,11 @@
+ 
+ namespace Tests\Unit\Core\Router;
+ 
++use App\Middleware\Admin;
++use App\Middleware\Authenticate;
++use Config\App;
+ use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
+ use Core\Router\Route;
+ use Core\Router\Router;
+ use Core\Router\RouteWrapperMiddleware;
+@@ -11,6 +15,26 @@ use Tests\Unit\Core\Router\MockController;
+ 
+ class RouteWrapperMiddlewareTest extends FrameworkTestCase
+ {
++    /** @var array<string, string> */
++    private array $originalAliases;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->originalAliases = App::$middlewareAliases;
++        App::$middlewareAliases['outer'] = OuterRecordingMiddleware::class;
++        App::$middlewareAliases['inner'] = InnerRecordingMiddleware::class;
++        RecordingMiddleware::$calls = [];
++    }
++
++    public function tearDown(): void
++    {
++        App::$middlewareAliases = $this->originalAliases;
++        RecordingMiddleware::$calls = [];
++        Router::reset();
++        parent::tearDown();
++    }
++
+     public function test_group_should_add_middleware_to_routes(): void
+     {
+         $middlewareName = 'auth';
+@@ -34,4 +58,72 @@ class RouteWrapperMiddlewareTest extends FrameworkTestCase
+             $this->assertInstanceOf(Middleware::class, $middlewares[0]);
+         }
+     }
++
++    public function test_nested_groups_should_run_outer_middleware_first(): void
++    {
++        Router::reset();
++
++        (new RouteWrapperMiddleware('auth'))->group(function () {
++            (new RouteWrapperMiddleware('admin'))->group(function () {
++                Route::get('/admin', [MockController::class, 'action'])->name('admin.index');
++            });
++        });
++
++        $middlewares = $this->middlewaresOf(Router::getInstance()->getRoute(0));
++
++        $this->assertCount(2, $middlewares);
++        $this->assertInstanceOf(Authenticate::class, $middlewares[0]);
++        $this->assertInstanceOf(Admin::class, $middlewares[1]);
++    }
++
++    public function test_nested_groups_should_only_add_outer_middleware_to_outer_routes(): void
++    {
++        Router::reset();
++
++        (new RouteWrapperMiddleware('outer'))->group(function () {
++            Route::get('/dashboard', [MockController::class, 'action'])->name('dashboard');
++
++            (new RouteWrapperMiddleware('inner'))->group(function () {
++                Route::get('/admin', [MockController::class, 'action'])->name('admin');
++            });
++        });
++
++        $dashboard = $this->middlewaresOf(Router::getInstance()->getRoute(0));
++        $admin = $this->middlewaresOf(Router::getInstance()->getRoute(1));
++
++        $this->assertCount(1, $dashboard);
++        $this->assertInstanceOf(OuterRecordingMiddleware::class, $dashboard[0]);
++
++        $this->assertCount(2, $admin);
++        $this->assertInstanceOf(OuterRecordingMiddleware::class, $admin[0]);
++        $this->assertInstanceOf(InnerRecordingMiddleware::class, $admin[1]);
++    }
++
++    public function test_run_middlewares_should_execute_outer_group_before_inner_group(): void
++    {
++        Router::reset();
++
++        (new RouteWrapperMiddleware('outer'))->group(function () {
++            (new RouteWrapperMiddleware('inner'))->group(function () {
++                Route::get('/admin', [MockController::class, 'action'])->name('admin');
++            });
++        });
++
++        Router::getInstance()->getRoute(0)->runMiddlewares($this->createMock(Request::class));
++
++        $this->assertSame(
++            [OuterRecordingMiddleware::class, InnerRecordingMiddleware::class],
++            RecordingMiddleware::$calls
++        );
++    }
++
++    /**
++     * @return Middleware[]
++     */
++    private function middlewaresOf(Route $route): array
++    {
++        $property = (new \ReflectionObject($route))->getProperty('middlewares');
++
++        return $property->getValue($route);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,324 @@
+From cb172dda401fcdff241ce6dcbd668eb91a161dd0 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 15 Oct 2026 20:05:16 -0300
+Subject: [PATCH 1/2] refactor: Replace role magic strings with constants
+
+---
+ app/Models/User.php                           | 12 +++++-
+ database/Populate/populate.php                |  4 +-
+ tests/Acceptance/admin/AdminDashboardCest.php |  2 +-
+ tests/Unit/Models/Users/UserTest.php          | 41 ++++++++++++++++++-
+ 4 files changed, 52 insertions(+), 7 deletions(-)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..ea25224 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -15,6 +15,9 @@ use Core\Database\ActiveRecord\Model;
+  */
+ class User extends Model
+ {
++    public const ROLE_ADMIN = 'admin';
++    public const ROLE_PARTICIPANT = 'participant';
++
+     protected static string $table = 'users';
+     protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
+ 
+@@ -29,7 +32,7 @@ class User extends Model
+         parent::__construct($params);
+ 
+         if ($this->role === null) {
+-            $this->role = 'participant';
++            $this->role = self::ROLE_PARTICIPANT;
+         }
+     }
+ 
+@@ -61,7 +64,12 @@ class User extends Model
+ 
+     public function isAdmin(): bool
+     {
+-        return $this->role === 'admin';
++        return $this->role === self::ROLE_ADMIN;
++    }
++
++    public function isParticipant(): bool
++    {
++        return $this->role === self::ROLE_PARTICIPANT;
+     }
+ 
+     public function registerLogin(): bool
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index 14e3b7d..bdd5e95 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -12,7 +12,7 @@ $admin = new User([
+     'email' => 'admin@example.com',
+     'password' => '123456',
+     'password_confirmation' => '123456',
+-    'role' => 'admin'
++    'role' => User::ROLE_ADMIN
+ ]);
+ $admin->save();
+ 
+@@ -24,4 +24,4 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo "Usuários criados: {$admin->email} ({$admin->role}) e {$user->email} ({$user->role}), senha 123456\n";
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..4bce636 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -16,7 +16,7 @@ class AdminDashboardCest extends BaseAcceptanceCest
+             'email' => 'admin@example.com',
+             'password' => '123456',
+             'password_confirmation' => '123456',
+-            'role' => 'admin'
++            'role' => User::ROLE_ADMIN
+         ]);
+         $admin->save();
+ 
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..bb2597c 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -133,18 +133,55 @@ class UserTest extends TestCase
+ 
+     public function test_is_admin_should_return_false_by_default(): void
+     {
+-        $this->assertEquals('participant', User::findById($this->user->id)->role);
++        $this->assertEquals(User::ROLE_PARTICIPANT, User::findById($this->user->id)->role);
+         $this->assertFalse($this->user->isAdmin());
+     }
+ 
+     public function test_is_admin_should_return_true_for_admin_role(): void
+     {
+-        $this->user->role = 'admin';
++        $this->user->role = User::ROLE_ADMIN;
+         $this->user->save();
+ 
+         $this->assertTrue(User::findById($this->user->id)->isAdmin());
+     }
+ 
++    public function test_role_constants_should_match_database_enum_values(): void
++    {
++        $this->assertSame('admin', User::ROLE_ADMIN);
++        $this->assertSame('participant', User::ROLE_PARTICIPANT);
++    }
++
++    public function test_new_user_should_have_participant_role_by_default(): void
++    {
++        $user = new User(['name' => 'Novo', 'email' => 'novo@example.com']);
++
++        $this->assertSame(User::ROLE_PARTICIPANT, $user->role);
++    }
++
++    public function test_is_participant_should_return_true_by_default(): void
++    {
++        $this->assertTrue($this->user->isParticipant());
++        $this->assertTrue(User::findById($this->user->id)->isParticipant());
++    }
++
++    public function test_is_participant_should_return_false_for_admin_role(): void
++    {
++        $this->user->role = User::ROLE_ADMIN;
++        $this->user->save();
++
++        $admin = User::findById($this->user->id);
++        $this->assertFalse($admin->isParticipant());
++        $this->assertTrue($admin->isAdmin());
++    }
++
++    public function test_role_given_in_constructor_should_be_kept(): void
++    {
++        $admin = new User(['name' => 'Admin', 'email' => 'admin@example.com', 'role' => User::ROLE_ADMIN]);
++
++        $this->assertSame(User::ROLE_ADMIN, $admin->role);
++        $this->assertTrue($admin->isAdmin());
++    }
++
+     public function test_last_login_at_should_be_null_by_default(): void
+     {
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 2af0b9f7f39ff528327480c533199a174017b3b7 Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 22 Oct 2026 18:42:15 -0300
+Subject: [PATCH 2/2] feat: Redirect each role to its home route after login
+
+---
+ app/Controllers/AuthenticationsController.php |  6 ++-
+ app/Models/User.php                           | 13 ++++++
+ tests/Acceptance/admin/AdminDashboardCest.php | 17 ++++++++
+ .../AuthenticationsControllerTest.php         | 43 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 18 ++++++++
+ 5 files changed, 96 insertions(+), 1 deletion(-)
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..ab82575 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -22,9 +22,13 @@ class AuthenticationsController extends Controller
+         $user = User::findByEmail($params['email']);
+ 
+         if ($user && $user->authenticate($params['password'])) {
++            // Destino calculado antes do login: perfil desconhecido lança
++            // exceção sem deixar sessão aberta.
++            $home = route($user->homeRoute());
++
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+-            $this->redirectTo(route('dashboard.index'));
++            $this->redirectTo($home);
+         } else {
+             FlashMessage::danger('E-mail ou senha inválidos!');
+             $this->redirectTo(route('users.login'));
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ea25224..8b68f03 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -72,6 +72,19 @@ class User extends Model
+         return $this->role === self::ROLE_PARTICIPANT;
+     }
+ 
++    /**
++     * Nome da rota inicial do perfil. Perfil fora da lista é erro de
++     * programação (ex.: perfil novo sem rota), não erro do usuário.
++     */
++    public function homeRoute(): string
++    {
++        return match ($this->role) {
++            self::ROLE_ADMIN => 'admin.dashboard.index',
++            self::ROLE_PARTICIPANT => 'dashboard.index',
++            default => throw new \DomainException("Perfil desconhecido: {$this->role}"),
++        };
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index 4bce636..c5f982a 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -46,6 +46,23 @@ class AdminDashboardCest extends BaseAcceptanceCest
+         $page->see('Acesso restrito a administradores');
+     }
+ 
++    public function loginAsAdminShouldLandOnAdminDashboard(AcceptanceTester $page): void
++    {
++        $page->login('admin@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/admin');
++        $page->see('Login realizado com sucesso!');
++        $page->see('Painel Administrativo', '//h1');
++    }
++
++    public function loginAsParticipantShouldLandOnUserDashboard(AcceptanceTester $page): void
++    {
++        $page->login('fulano@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Painel do Usuário', '//h1');
++    }
++
+     public function accessAdminAsAdmin(AcceptanceTester $page): void
+     {
+         $page->login('admin@example.com', '123456');
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..76258a3 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Integration\Controllers;
+ 
+ use App\Models\User;
++use Core\Database\Database;
+ use Lib\Authentication\Auth;
+ 
+ class AuthenticationsControllerTest extends ControllerTestCase
+@@ -41,6 +42,48 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /dashboard', $response);
+     }
+ 
++    public function test_authenticate_admin_should_redirect_to_admin(): void
++    {
++        $admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => User::ROLE_ADMIN
++        ]);
++        $admin->save();
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'admin@example.com', 'password' => '123456']]
++        );
++
++        $this->assertTrue(Auth::check());
++        $this->assertStringContainsString('Location: /admin', $response);
++        $this->assertStringNotContainsString('Location: /dashboard', $response);
++    }
++
++    public function test_authenticate_with_unknown_role_should_fail_without_login(): void
++    {
++        // Simula um perfil novo no banco ainda sem rota inicial (o ENUM não aceitaria 'ghost').
++        Database::exec("ALTER TABLE users MODIFY role VARCHAR(20) NOT NULL DEFAULT 'participant'");
++        Database::exec("UPDATE users SET role = 'ghost' WHERE email = 'fulano@example.com'");
++
++        try {
++            $this->post(
++                action: 'authenticate',
++                controllerName: 'App\Controllers\AuthenticationsController',
++                params: ['user' => ['email' => 'fulano@example.com', 'password' => '123456']]
++            );
++            $this->fail('Era esperada DomainException para perfil desconhecido.');
++        } catch (\DomainException $e) {
++            $this->assertSame('Perfil desconhecido: ghost', $e->getMessage());
++        }
++
++        $this->assertFalse(Auth::check());
++    }
++
+     public function test_authenticate_with_invalid_credentials_should_not_login(): void
+     {
+         $response = $this->post(
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index bb2597c..eb4bc25 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -182,6 +182,24 @@ class UserTest extends TestCase
+         $this->assertTrue($admin->isAdmin());
+     }
+ 
++    public function test_home_route_should_depend_on_role(): void
++    {
++        $this->assertEquals('dashboard.index', $this->user->homeRoute());
++
++        $this->user->role = User::ROLE_ADMIN;
++        $this->assertEquals('admin.dashboard.index', $this->user->homeRoute());
++    }
++
++    public function test_home_route_should_fail_with_unknown_role(): void
++    {
++        $this->expectException(\DomainException::class);
++        $this->expectExceptionMessage('Perfil desconhecido: ghost');
++
++        // Só em memória: o ENUM do banco rejeitaria o save().
++        $this->user->role = 'ghost';
++        $this->user->homeRoute();
++    }
++
+     public function test_last_login_at_should_be_null_by_default(): void
+     {
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+-- 
+2.54.0 (Apple Git-157)
+

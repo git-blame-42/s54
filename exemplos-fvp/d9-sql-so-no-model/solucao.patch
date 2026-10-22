@@ -1,0 +1,243 @@
+From 630c5a6c028a2afbd1d6ba4f103f0a988493336d Mon Sep 17 00:00:00 2001
+From: thorvi <thorvi@mbp>
+Date: Thu, 22 Oct 2026 18:42:48 -0300
+Subject: [PATCH] refactor: Move user queries into named model methods
+
+---
+ app/Controllers/Admin/DashboardController.php |  9 +++-
+ app/Models/User.php                           | 39 ++++++++++++++++-
+ app/views/admin/dashboard/index.phtml         | 24 +++++++++++
+ tests/Acceptance/admin/AdminDashboardCest.php | 20 +++++++++
+ .../Admin/DashboardControllerTest.php         | 42 +++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          | 25 +++++++++++
+ 6 files changed, 157 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Admin/DashboardController.php b/app/Controllers/Admin/DashboardController.php
+index 0a3e62f..3f42540 100644
+--- a/app/Controllers/Admin/DashboardController.php
++++ b/app/Controllers/Admin/DashboardController.php
+@@ -2,13 +2,20 @@
+ 
+ namespace App\Controllers\Admin;
+ 
++use App\Models\User;
+ use Core\Http\Controllers\Controller;
+ 
+ class DashboardController extends Controller
+ {
+     public function index(): void
+     {
++        $users = User::orderedByName();
++        $totalAdmins = User::countByRole('admin');
++        $totalParticipants = User::countByRole('participant');
+         $title = 'Painel Administrativo';
+-        $this->render('admin/dashboard/index', compact('title'));
++        $this->render(
++            'admin/dashboard/index',
++            compact('users', 'totalAdmins', 'totalParticipants', 'title')
++        );
+     }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..5e5b64a 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -2,8 +2,10 @@
+ 
+ namespace App\Models;
+ 
+-use Lib\Validations;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use Lib\Validations;
++use PDO;
+ 
+ /**
+  * @property int $id
+@@ -59,6 +61,41 @@ class User extends Model
+         return User::findBy(['email' => $email]);
+     }
+ 
++    /**
++     * Todos os usuários em ordem alfabética de nome.
++     *
++     * @return array<User>
++     */
++    public static function orderedByName(): array
++    {
++        $columns = implode(', ', static::$columns);
++        $table = static::$table;
++        $sql = "SELECT id, {$columns} FROM {$table} ORDER BY name";
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->execute();
++
++        return array_map(
++            fn ($row) => new static($row),
++            $stmt->fetchAll(PDO::FETCH_ASSOC)
++        );
++    }
++
++    /**
++     * Quantos usuários têm o perfil informado; a contagem é feita pelo banco.
++     */
++    public static function countByRole(string $role): int
++    {
++        $table = static::$table;
++        $sql = "SELECT COUNT(*) FROM {$table} WHERE role = :role";
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':role', $role);
++        $stmt->execute();
++
++        return (int) $stmt->fetchColumn();
++    }
++
+     public function isAdmin(): bool
+     {
+         return $this->role === 'admin';
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index 05be497..c9025ee 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1 +1,25 @@
+ <p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
++
++<ul>
++    <li>Administradores: <?= $totalAdmins ?></li>
++    <li>Participantes: <?= $totalParticipants ?></li>
++</ul>
++
++<table class="table table-striped">
++    <thead>
++        <tr>
++            <th>Nome</th>
++            <th>E-mail</th>
++            <th>Perfil</th>
++        </tr>
++    </thead>
++    <tbody>
++        <?php foreach ($users as $user) : ?>
++            <tr>
++                <td><?= htmlspecialchars($user->name) ?></td>
++                <td><?= htmlspecialchars($user->email) ?></td>
++                <td><?= htmlspecialchars($user->role) ?></td>
++            </tr>
++        <?php endforeach; ?>
++    </tbody>
++</table>
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..e8599da 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -54,4 +54,24 @@ class AdminDashboardCest extends BaseAcceptanceCest
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
+     }
++
++    public function seeCountersAndUsersOrderedByName(AcceptanceTester $page): void
++    {
++        $beatriz = new User([
++            'name' => 'Beatriz',
++            'email' => 'beatriz@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $beatriz->save();
++
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin');
++
++        $page->see('Administradores: 1');
++        $page->see('Participantes: 2');
++        $page->see('Admin', '//table/tbody/tr[1]/td[1]');
++        $page->see('Beatriz', '//table/tbody/tr[2]/td[1]');
++        $page->see('Fulano', '//table/tbody/tr[3]/td[1]');
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..972ad97
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function test_index_should_show_counters_and_users_ordered_by_name(): void
++    {
++        $admin = $this->createUser('Zuleica', 'zuleica@example.com', 'admin');
++        $this->createUser('Mário', 'mario@example.com', 'participant');
++        $this->createUser('Beatriz', 'beatriz@example.com', 'participant');
++
++        Auth::login($admin);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: 'App\Controllers\Admin\DashboardController'
++        );
++
++        $this->assertStringContainsString('Administradores: 1', $response);
++        $this->assertStringContainsString('Participantes: 2', $response);
++        $this->assertMatchesRegularExpression('/Beatriz.*Mário.*Zuleica/s', $response);
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role
++        ]);
++        $user->save();
++
++        return $user;
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..ff40ac5 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,29 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_ordered_by_name_should_sort_ascending(): void
++    {
++        $ana = new User([
++            'name' => 'Ana',
++            'email' => 'ana@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $ana->save();
++
++        $names = array_map(fn ($user) => $user->name, User::orderedByName());
++
++        $this->assertSame(['Ana', 'User 1', 'User 2'], $names);
++    }
++
++    public function test_count_by_role(): void
++    {
++        $this->assertSame(0, User::countByRole('admin'));
++
++        $this->user->update(['role' => 'admin']);
++
++        $this->assertSame(1, User::countByRole('admin'));
++        $this->assertSame(1, User::countByRole('participant'));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
