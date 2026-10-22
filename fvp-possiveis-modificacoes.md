@@ -2382,6 +2382,10 @@ FlashMessage::success('Login realizado com sucesso!');
 $this->redirectTo(route($user->homeRoute()));
 ```
 
+Melhor ainda, como no exemplo `exemplos-fvp/a18-...`: calcule
+`$home = route($user->homeRoute())` ANTES de `Auth::login($user)`. Um
+perfil desconhecido lança a exceção sem criar sessão.
+
 Por que exceção: `role` é `ENUM('admin', 'participant')` no banco; um
 valor fora disso é erro de programação (perfil novo de A7 sem rota),
 não erro do usuário. O `ErrorsHandler` mostra a página 500 e o teste
@@ -2911,3 +2915,8 @@ Armadilhas:
   estudantegomes/mylinkplus ainda sem issue da 4.1.
 - Código do projeto em `86c81ca`, `core/Router/Route.php` e
   `RouteWrapperMiddleware.php`, `database/schema.sql` (ENUM de `role`).
+- Os sete exemplos (`exemplos-fvp/a16`, `a17`, `a18`, `b10`, `c7`,
+  `c8`, `d9`, commit `f8ba37e`) passaram em VM limpa (Ubuntu 24.04,
+  projeto em `86c81ca`): phpcs, phpstan, `test tests/Unit`,
+  `test tests/Integration` e `test:browser`, todos com código 0.
+
