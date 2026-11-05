@@ -38,15 +38,13 @@ scripts/06-install-docker.sh             # Docker CE + compose v2 (se faltar)
 #   -> logout/login (grupo docker)
 scripts/05-check-requirements.sh         # deve ficar sem FALHA
 scripts/07-test-framework.sh             # prova que o framework roda aqui
-REPO_URL=https://github.com/ORG/REPO \
-  scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
+scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
 scripts/09-install-php.sh                # PHP nativo + phpcs/phpstan
 scripts/10-install-neovim.sh             # Neovim + LazyVim + PHP
 ```
 
 Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 10 nessa
-ordem (sem os opcionais 11 a 13); precisa de `REPO_URL` no ambiente,
-como o 08. Depois do 06 ele roda o 05, o 07
+ordem (sem os opcionais 11 a 13). Depois do 06 ele roda o 05, o 07
 e o 08 dentro de `sg docker`, então não precisa relogar no meio;
 faça logout/login no fim. Se um script falhar, ele para; rodar de
 novo continua de onde parou. O `-z` dele desfaz, na ordem inversa,
@@ -159,8 +157,8 @@ etapa com tempo. O `-z` limpa os restos de uma execução interrompida.
 
 ### 08-install-eventos-do-campus.sh
 
-Clona o repositório indicado em `REPO_URL` (obrigatório; a URL git
-do projeto da equipe) em
+Clona `https://github.com/VitorThorvi/tsi34d-backend` (outro repositório:
+`REPO_URL=<url>`) em
 `~/eventos-do-campus` (ou `EVENTOS_DIR=/outro/lugar`), sobe tudo como
 o 07-test-framework.sh, roda `./run codecept build` e `./run test
 tests/Unit` (tem de passar) e ajusta o dono de

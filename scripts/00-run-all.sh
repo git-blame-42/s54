@@ -33,10 +33,8 @@ Roda, nesta ordem: 01-install-tools, 02-install-tmux-conf,
 10-install-neovim. Não roda os opcionais 11 e 12 (IDEs gráficas) nem
 o 13 (docker rootless).
 
-O 08 precisa de REPO_URL (URL git do projeto Eventos do Câmpus):
-  REPO_URL=https://github.com/ORG/REPO $(basename "$0")
-Sem REPO_URL este script para antes de começar (a não ser que o 08
-já esteja concluído).
+O 08 clona https://github.com/VitorThorvi/tsi34d-backend; para
+outro repositório: REPO_URL=https://github.com/ORG/REPO $(basename "$0")
 
 Cada script segue as próprias regras (sudo, senha do chsh, recusa se
 já concluiu). Um script que já estava concluído antes é pulado e fica
@@ -132,11 +130,6 @@ check_requirements() { # informativo|obrigatorio
 run() {
   refuse_if_done
   [[ "$(id -u)" != 0 ]] || die "rode como seu usuário, não como root."
-  if ! child_completed 08-install-eventos-do-campus; then
-    [[ -n "${REPO_URL:-}" ]] || die "REPO_URL não definido (o 08 precisa)." \
-      "Rode assim: REPO_URL=https://github.com/ORG/REPO $(basename "$0")"
-    export REPO_URL
-  fi
   record_pre_done
 
   run_child 01-install-tools

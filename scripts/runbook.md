@@ -11,11 +11,12 @@ git clone <este repositório> ~/s50
 cd ~/s50
 ```
 
-Tudo de uma vez (01 a 10; logout e login no fim). `REPO_URL` é a URL
-git do projeto Eventos do Câmpus, usada pelo 08:
+Tudo de uma vez (01 a 10; logout e login no fim). O 08 clona
+`https://github.com/VitorThorvi/tsi34d-backend`; outro repositório:
+`REPO_URL=<url>` na frente.
 
 ```
-REPO_URL=https://github.com/ORG/REPO scripts/00-run-all.sh
+scripts/00-run-all.sh
 ```
 
 Um por um:
@@ -35,7 +36,7 @@ Logout e login (grupo docker e shell novo). Depois:
 cd ~/s50
 scripts/05-check-requirements.sh    # de novo: deve terminar com FALHA: 0
 scripts/07-test-framework.sh
-REPO_URL=https://github.com/ORG/REPO scripts/08-install-eventos-do-campus.sh
+scripts/08-install-eventos-do-campus.sh
 scripts/09-install-php.sh
 scripts/10-install-neovim.sh
 ```

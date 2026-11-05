@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# 08-install-eventos-do-campus.sh: clona o projeto Eventos do Câmpus do
-# repositório em REPO_URL e deixa rodando em http://localhost.
+# 08-install-eventos-do-campus.sh: clona o projeto Eventos do Câmpus
+# (REPO_URL, padrão o repositório público) e deixa rodando em
+# http://localhost.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-REPO_URL="${REPO_URL:-}"
+REPO_URL="${REPO_URL:-https://github.com/VitorThorvi/tsi34d-backend}"
 PROJECT_DIR="${EVENTOS_DIR:-$HOME/eventos-do-campus}"
 PORTS=(80 8080 4444 5900)
 
@@ -20,8 +21,8 @@ Baixa e sobe o projeto Eventos do Câmpus:
   4. ./run test tests/Unit (tem de passar)
   5. ajusta o dono de public/assets/uploads (se existir e houver sudo)
 
-REPO_URL é obrigatório: a URL do repositório git do projeto, como o
-git clone aceita. Exemplo:
+Repositório padrão: https://github.com/VitorThorvi/tsi34d-backend
+Outro (fork da equipe, URL ssh...):
   REPO_URL=https://github.com/ORG/REPO $(basename "$0")
 
 Precisa de docker funcionando sem sudo e das portas ${PORTS[*]} livres.
@@ -53,8 +54,6 @@ fix_uploads_owner() {
 
 run() {
   refuse_if_done
-  [[ -n "$REPO_URL" ]] || die "REPO_URL não definido. Rode assim:" \
-    "REPO_URL=https://github.com/ORG/REPO $(basename "$0")"
   if [[ -e "$PROJECT_DIR" ]]; then
     die "$PROJECT_DIR já existe. Remova-o ou aponte EVENTOS_DIR para" \
       "outro lugar."
