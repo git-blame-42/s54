@@ -1,4 +1,4 @@
-From ca2e157e87c0568f8f0c7f51851b0c833ad6e7cc Mon Sep 17 00:00:00 2001
+From e2c556882899b2f751a2b3847364c04b5c0dd3f2 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:01:20 -0300
 Subject: [PATCH] feat: Generate a random check-in code for each Event
@@ -153,14 +153,14 @@ index fe7f1d6..7b34c96 100644
          ON DELETE RESTRICT ON UPDATE CASCADE,
      INDEX index_events_on_starts_on (starts_on)
 diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
-index f051af8..f8bf995 100644
+index f051af8..1464e8f 100644
 --- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
 +++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
 @@ -28,6 +28,9 @@ class CreateSuccessfullyCest extends BaseEventsCest
          $page->see('Evento cadastrado com sucesso!');
          $page->see($data['title'], 'h1');
          $page->see($data['location']);
-+        // P1: o código de check-in foi gerado pelo sistema e aparece no show.
++        // O código de check-in foi gerado pelo sistema e aparece no show.
 +        $page->see('Código de check-in');
 +        $page->see((string) $event->checkin_code, '#event_checkin_code');
  

@@ -15,7 +15,7 @@ Branch no clone: `fvp/p1-codigo-checkin-aleatorio`, a partir de `main`
 
 | Commit    | Mensagem                                                |
 |-----------|---------------------------------------------------------|
-| `ca2e157` | `feat: Generate a random check-in code for each Event`  |
+| `e2c5568` | `feat: Generate a random check-in code for each Event`  |
 
 ## O que mudou
 
@@ -145,7 +145,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p1 \
     s50/fvp/4.2/exemplos/p1-codigo-checkin-aleatorio/projeto
 git fetch fvp-p1 fvp/p1-codigo-checkin-aleatorio
-git cherry-pick ca2e157
+git cherry-pick e2c5568
 git remote remove fvp-p1
 ```
 
@@ -155,7 +155,7 @@ git remote remove fvp-p1
 git fetch \
     s50/fvp/4.2/exemplos/p1-codigo-checkin-aleatorio/solucao.bundle \
     fvp/p1-codigo-checkin-aleatorio:fvp-p1
-git cherry-pick ca2e157
+git cherry-pick e2c5568
 # opcional, limpa a ref
 git branch -D fvp-p1
 ```
