@@ -60,4 +60,20 @@ class AuthTest extends TestCase
 
         $this->assertFalse(Auth::check());
     }
+
+    // Login por código (FVP B11): o pedido vive na sessão até ser encerrado e não loga
+    // ninguém sozinho. Próximo passo: config/routes.php.
+    public function test_login_code_request_should_live_in_the_session_until_cleared(): void
+    {
+        $this->assertNull(Auth::loginCodeUser());
+
+        Auth::startLoginCode($this->user);
+
+        $this->assertEquals($this->user->id, Auth::loginCodeUser()?->id);
+        $this->assertFalse(Auth::check());
+
+        Auth::clearLoginCode();
+
+        $this->assertNull(Auth::loginCodeUser());
+    }
 }
