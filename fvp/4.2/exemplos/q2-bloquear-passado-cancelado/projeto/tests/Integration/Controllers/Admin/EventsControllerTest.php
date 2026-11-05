@@ -265,7 +265,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- P5: status ------------------- */
+    /* ------------------- status ------------------- */
 
     public function test_index_and_show_display_the_status_badge(): void
     {
@@ -389,7 +389,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertEquals('scheduled', Event::findById($event->id)->status);
     }
 
-    /* ------------------- Q2: passado ou cancelado não altera ------------------- */
+    /* ------------------- passado ou cancelado não altera ------------------- */
 
     public function test_edit_of_a_past_event_redirects_to_show(): void
     {

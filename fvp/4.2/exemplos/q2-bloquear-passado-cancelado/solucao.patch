@@ -1,4 +1,4 @@
-From 56398d195aa3a78b7ed294867bc60da7ff4bda0d Mon Sep 17 00:00:00 2001
+From 8c64e03dcbcb3cb3b87155e5c3682e38c9741d77 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:12:19 -0300
 Subject: [PATCH 1/2] feat: Add Event status with cancel and finish actions
@@ -292,7 +292,7 @@ index fe7f1d6..85050f7 100644
      CONSTRAINT check_events_capacity CHECK (capacity >= 1),
 diff --git a/tests/Acceptance/admin/events/CancelEventCest.php b/tests/Acceptance/admin/events/CancelEventCest.php
 new file mode 100644
-index 0000000..a5bb8c7
+index 0000000..d1a0f48
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/CancelEventCest.php
 @@ -0,0 +1,78 @@
@@ -305,7 +305,7 @@ index 0000000..a5bb8c7
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P5: situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
++ * Situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
 + */
 +class CancelEventCest extends BaseEventsCest
 +{
@@ -433,14 +433,14 @@ index 4396d14..39264fe 100644
      {
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..d1cedf9 100644
+index bc62d1d..60e1a1d 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -265,6 +265,130 @@ class EventsControllerTest extends ControllerTestCase
          );
      }
  
-+    /* ------------------- P5: status ------------------- */
++    /* ------------------- status ------------------- */
 +
 +    public function test_index_and_show_display_the_status_badge(): void
 +    {
@@ -568,14 +568,14 @@ index bc62d1d..d1cedf9 100644
       * @param array<string, mixed> $overrides
       * @return array<string, mixed>
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..c4ff9fc 100644
+index f961b4c..542db84 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -297,6 +297,91 @@ class EventTest extends TestCase
          $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
      }
  
-+    /* ------------------- P5: status (cancelar / encerrar) ------------------- */
++    /* ------------------- status (cancelar / encerrar) ------------------- */
 +
 +    public function test_new_event_should_be_scheduled(): void
 +    {
@@ -667,7 +667,7 @@ index f961b4c..c4ff9fc 100644
 2.54.0 (Apple Git-157)
 
 
-From e00537561a3aa8d45701aa5f855d8d38c3ce2378 Mon Sep 17 00:00:00 2001
+From 30e755b8b84c319026c32ae14f3f92e211a76b0f Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:15:33 -0300
 Subject: [PATCH 2/2] feat: Block editing and removing past or canceled Events
@@ -736,7 +736,7 @@ index eeb888f..08a00c2 100644
      }
  
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index c940be7..0c77d49 100644
+index c940be7..e6e7230 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -113,6 +113,16 @@ class Event extends Model
@@ -744,7 +744,7 @@ index c940be7..0c77d49 100644
      }
  
 +    /**
-+     * Q2: só um Evento não cancelado e que ainda não aconteceu (starts_on hoje ou depois)
++     * Só um Evento não cancelado e que ainda não aconteceu (starts_on hoje ou depois)
 +     * pode ser editado ou removido. starts_on vem do banco como Y-m-d, então a comparação
 +     * de strings equivale à de datas.
 +     */
@@ -797,7 +797,7 @@ index 26025e2..5967f13 100644
      <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
          <input type="hidden" name="_method" value="PUT">
 diff --git a/tests/Acceptance/admin/events/CancelEventCest.php b/tests/Acceptance/admin/events/CancelEventCest.php
-index a5bb8c7..d98412b 100644
+index d1a0f48..9feeb0b 100644
 --- a/tests/Acceptance/admin/events/CancelEventCest.php
 +++ b/tests/Acceptance/admin/events/CancelEventCest.php
 @@ -57,7 +57,7 @@ class CancelEventCest extends BaseEventsCest
@@ -811,7 +811,7 @@ index a5bb8c7..d98412b 100644
  
 diff --git a/tests/Acceptance/admin/events/PastEventCest.php b/tests/Acceptance/admin/events/PastEventCest.php
 new file mode 100644
-index 0000000..69249c7
+index 0000000..cce2352
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/PastEventCest.php
 @@ -0,0 +1,57 @@
@@ -824,7 +824,7 @@ index 0000000..69249c7
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * Q2: Evento passado ou cancelado não pode ser editado nem removido.
++ * Evento passado ou cancelado não pode ser editado nem removido.
 + */
 +class PastEventCest extends BaseEventsCest
 +{
@@ -873,7 +873,7 @@ index 0000000..69249c7
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index d1cedf9..f146030 100644
+index 60e1a1d..250c3c9 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -358,7 +358,7 @@ class EventsControllerTest extends ControllerTestCase
@@ -898,7 +898,7 @@ index d1cedf9..f146030 100644
          $this->assertEquals('scheduled', Event::findById($event->id)->status);
      }
  
-+    /* ------------------- Q2: passado ou cancelado não altera ------------------- */
++    /* ------------------- passado ou cancelado não altera ------------------- */
 +
 +    public function test_edit_of_a_past_event_redirects_to_show(): void
 +    {
@@ -979,14 +979,14 @@ index d1cedf9..f146030 100644
       * @param array<string, mixed> $overrides
       * @return array<string, mixed>
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index c4ff9fc..6bd2df4 100644
+index 542db84..c866143 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -660,6 +660,41 @@ class EventTest extends TestCase
          $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
      }
  
-+    /* ------------------- Q2: isEditable (passado ou cancelado) ------------------- */
++    /* ------------------- isEditable (passado ou cancelado) ------------------- */
 +
 +    public function test_future_scheduled_event_should_be_editable(): void
 +    {

@@ -114,7 +114,7 @@ class Event extends Model
     }
 
     /**
-     * Q2: só um Evento não cancelado e que ainda não aconteceu (starts_on hoje ou depois)
+     * Só um Evento não cancelado e que ainda não aconteceu (starts_on hoje ou depois)
      * pode ser editado ou removido. starts_on vem do banco como Y-m-d, então a comparação
      * de strings equivale à de datas.
      */

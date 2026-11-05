@@ -297,7 +297,7 @@ class EventTest extends TestCase
         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
     }
 
-    /* ------------------- P5: status (cancelar / encerrar) ------------------- */
+    /* ------------------- status (cancelar / encerrar) ------------------- */
 
     public function test_new_event_should_be_scheduled(): void
     {
@@ -660,7 +660,7 @@ class EventTest extends TestCase
         $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
     }
 
-    /* ------------------- Q2: isEditable (passado ou cancelado) ------------------- */
+    /* ------------------- isEditable (passado ou cancelado) ------------------- */
 
     public function test_future_scheduled_event_should_be_editable(): void
     {

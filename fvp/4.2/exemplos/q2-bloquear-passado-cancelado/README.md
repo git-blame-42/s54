@@ -13,8 +13,8 @@ no bundle `5dedab5`, ver README raiz). Q2 usa `isCanceled()` de P5.
 
 | Commit    | Mensagem                                                   |
 |-----------|------------------------------------------------------------|
-| `56398d1` | (base, P5) `feat: Add Event status with cancel and ...`    |
-| `e005375` | `feat: Block editing and removing past or canceled Events` |
+| `8c64e03` | (base, P5) `feat: Add Event status with cancel and ...`    |
+| `30e755b` | `feat: Block editing and removing past or canceled Events` |
 
 A mensagem completa do commit de P5 é `feat: Add Event status with
 cancel and finish actions`.
@@ -127,8 +127,8 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P5 no seu repositório: aplique o range inteiro
-  `5dedab5..e005375` (P5 + Q2, dois commits, nessa ordem).
-- Com P5 já aplicado: aplique só o topo, `e005375`.
+  `5dedab5..30e755b` (P5 + Q2, dois commits, nessa ordem).
+- Com P5 já aplicado: aplique só o topo, `30e755b`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -138,9 +138,9 @@ git remote add fvp-q2 \
     s50/fvp/4.2/exemplos/q2-bloquear-passado-cancelado/projeto
 git fetch fvp-q2 fvp/q2-bloquear-passado-cancelado
 # range (P5 + Q2):
-git cherry-pick 5dedab5..e005375
+git cherry-pick 5dedab5..30e755b
 # ou só o topo, se já tem P5:
-# git cherry-pick e005375
+# git cherry-pick 30e755b
 git remote remove fvp-q2
 ```
 
@@ -150,8 +150,8 @@ git remote remove fvp-q2
 git fetch \
     s50/fvp/4.2/exemplos/q2-bloquear-passado-cancelado/solucao.bundle \
     fvp/q2-bloquear-passado-cancelado:fvp-q2
-git cherry-pick 5dedab5..e005375
-# ou só o topo: git cherry-pick e005375
+git cherry-pick 5dedab5..30e755b
+# ou só o topo: git cherry-pick 30e755b
 # opcional, limpa a ref
 git branch -D fvp-q2
 ```

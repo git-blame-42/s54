@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * Q2: Evento passado ou cancelado não pode ser editado nem removido.
+ * Evento passado ou cancelado não pode ser editado nem removido.
  */
 class PastEventCest extends BaseEventsCest
 {
