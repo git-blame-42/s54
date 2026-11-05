@@ -1,0 +1,371 @@
+From 9c950be01992b7eb6841b29ead7fdc5c9c610afe Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:41:09 -0300
+Subject: [PATCH] feat: Add Model::count() and use it for enrollments and
+ dashboard
+
+Model::count(array $conditions = []) runs SELECT COUNT(*) with bound equality conditions and HasMany::count() delegates to it. Event::enrollmentsCount() no longer loads every enrollment, and the admin dashboard shows the total of events with Event::count().
+---
+ app/Controllers/Admin/DashboardController.php |   5 +-
+ app/Models/Event.php                          |   2 +-
+ app/views/admin/dashboard/index.phtml         |   6 +-
+ core/Database/ActiveRecord/HasMany.php        |   8 ++
+ core/Database/ActiveRecord/Model.php          |  32 +++++
+ tests/Acceptance/admin/AdminDashboardCest.php |   2 +
+ .../Admin/DashboardControllerTest.php         |  59 ++++++++
+ .../Admin/EventsControllerTest.php            |  13 ++
+ .../Database/ActiveRecord/ModelCountTest.php  | 128 ++++++++++++++++++
+ 9 files changed, 252 insertions(+), 3 deletions(-)
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+ create mode 100644 tests/Unit/Core/Database/ActiveRecord/ModelCountTest.php
+
+diff --git a/app/Controllers/Admin/DashboardController.php b/app/Controllers/Admin/DashboardController.php
+index 0a3e62f..5fa0daa 100644
+--- a/app/Controllers/Admin/DashboardController.php
++++ b/app/Controllers/Admin/DashboardController.php
+@@ -2,13 +2,16 @@
+ 
+ namespace App\Controllers\Admin;
+ 
++use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ 
+ class DashboardController extends Controller
+ {
+     public function index(): void
+     {
++        $eventsCount = Event::count();
++
+         $title = 'Painel Administrativo';
+-        $this->render('admin/dashboard/index', compact('title'));
++        $this->render('admin/dashboard/index', compact('eventsCount', 'title'));
+     }
+ }
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e5d1c40 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -128,7 +128,7 @@ class Event extends Model
+             return 0;
+         }
+ 
+-        return count(Enrollment::where(['event_id' => $this->id]));
++        return Enrollment::count(['event_id' => $this->id]);
+     }
+ 
+     /**
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index b1f8075..3e2ccee 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1,5 +1,9 @@
+ <p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
+ 
+ <div class="list-group">
+-    <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
++    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
++       href="<?= route('admin.events.index') ?>">
++        Eventos
++        <span class="badge text-bg-primary rounded-pill" id="events_count"><?= (int) $eventsCount ?></span>
++    </a>
+ </div>
+diff --git a/core/Database/ActiveRecord/HasMany.php b/core/Database/ActiveRecord/HasMany.php
+index 6f94760..6fe0bec 100644
+--- a/core/Database/ActiveRecord/HasMany.php
++++ b/core/Database/ActiveRecord/HasMany.php
+@@ -21,6 +21,14 @@ class HasMany
+         return $this->related::where([$this->foreignKey => $this->model->id]);
+     }
+ 
++    /**
++     * Total de registros relacionados, com SELECT COUNT(*) (não carrega os objetos como get()).
++     */
++    public function count(): int
++    {
++        return $this->related::count([$this->foreignKey => $this->model->id]);
++    }
++
+     /**
+      * @param array<string, mixed> $params
+      */
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..7a11ab9 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -329,6 +329,38 @@ abstract class Model
+         return $models;
+     }
+ 
++    /**
++     * Conta os registros da tabela com SELECT COUNT(*), sem carregar os objetos.
++     * Condições só por igualdade, unidas por AND (como em where()); sem condições conta todos.
++     * As chaves viram nomes de coluna no SQL: use só colunas definidas no código, nunca dados do usuário.
++     *
++     * @param array<string, mixed> $conditions
++     */
++    public static function count(array $conditions = []): int
++    {
++        $table = static::$table;
++        $sql = "SELECT COUNT(*) FROM {$table}";
++
++        if (!empty($conditions)) {
++            $sqlConditions = array_map(function ($column) {
++                return "{$column} = :{$column}";
++            }, array_keys($conditions));
++
++            $sql .= ' WHERE ' . implode(' AND ', $sqlConditions);
++        }
++
++        $pdo = Database::getDatabaseConn();
++        $stmt = $pdo->prepare($sql);
++
++        foreach ($conditions as $column => $value) {
++            $stmt->bindValue($column, $value);
++        }
++
++        $stmt->execute();
++
++        return (int) $stmt->fetchColumn();
++    }
++
+     /**
+      * @param array<string, mixed> $conditions
+      */
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..b71ec94 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -53,5 +53,7 @@ class AdminDashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
++        // Total de Eventos pelo Event::count(); este Cest não cria Eventos.
++        $page->see('0', '#events_count');
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..e98112f
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,59 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\Admin\DashboardController';
++
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $this->admin->save();
++        Auth::login($this->admin);
++    }
++
++    public function test_index_shows_the_total_of_events(): void
++    {
++        for ($i = 1; $i <= 3; $i++) {
++            (new Event([
++                'user_id' => $this->admin->id,
++                'title' => "Evento {$i}",
++                'description' => 'Descrição.',
++                'kind' => 'lecture',
++                'modality' => 'online',
++                'audience' => 'students',
++                'starts_on' => date('Y-m-d', strtotime('+10 days')),
++                'location' => 'Online',
++                'capacity' => 10,
++            ]))->save();
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel Administrativo\s*<\/h1>/', $response);
++        $this->assertStringContainsString('id="events_count">3</span>', $response);
++    }
++
++    public function test_index_without_events_shows_zero(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('id="events_count">0</span>', $response);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..ca3e4aa 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,19 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_shows_enrollments_over_capacity_for_each_event(): void
++    {
++        $full = $this->createEvent(['title' => 'Evento Cheio', 'capacity' => 2]);
++        $this->createEvent(['title' => 'Evento Vazio', 'capacity' => 7]);
++        $this->enroll($full, 'ana@example.com');
++        $this->enroll($full, 'bruno@example.com');
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/Evento Cheio.*?<td>2\/2<\/td>/s', $response);
++        $this->assertMatchesRegularExpression('/Evento Vazio.*?<td>0\/7<\/td>/s', $response);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+diff --git a/tests/Unit/Core/Database/ActiveRecord/ModelCountTest.php b/tests/Unit/Core/Database/ActiveRecord/ModelCountTest.php
+new file mode 100644
+index 0000000..663801b
+--- /dev/null
++++ b/tests/Unit/Core/Database/ActiveRecord/ModelCountTest.php
+@@ -0,0 +1,128 @@
++<?php
++
++namespace Tests\Unit\Core\Database\ActiveRecord;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Tests\TestCase;
++
++/**
++ * Model::count() (SELECT COUNT(*) com condições de igualdade) e HasMany::count().
++ */
++class ModelCountTest extends TestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++    }
++
++    private function createUser(string $name, string $email, string $role = 'participant'): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createEvent(array $overrides = [], ?User $creator = null): Event
++    {
++        $event = new Event(array_merge([
++            'user_id' => ($creator ?? $this->admin)->id,
++            'title' => 'Evento',
++            'description' => 'Descrição.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => 10,
++        ], $overrides));
++        $this->assertTrue($event->save());
++
++        return $event;
++    }
++
++    public function test_count_should_be_zero_for_an_empty_table(): void
++    {
++        $this->assertSame(0, Event::count());
++        $this->assertSame(0, Enrollment::count());
++    }
++
++    public function test_count_without_conditions_should_count_every_record(): void
++    {
++        $this->createEvent(['title' => 'Primeiro']);
++        $this->createEvent(['title' => 'Segundo']);
++        $this->createEvent(['title' => 'Terceiro']);
++
++        $this->assertSame(3, Event::count());
++        $this->assertSame(count(Event::all()), Event::count());
++    }
++
++    public function test_count_with_conditions_should_count_only_matching_records(): void
++    {
++        $this->createEvent(['title' => 'Palestra 1', 'kind' => 'lecture', 'modality' => 'online']);
++        $this->createEvent(['title' => 'Palestra 2', 'kind' => 'lecture', 'modality' => 'in_person']);
++        $this->createEvent(['title' => 'Oficina', 'kind' => 'workshop', 'modality' => 'online']);
++
++        $this->assertSame(2, Event::count(['kind' => 'lecture']));
++        $this->assertSame(1, Event::count(['kind' => 'lecture', 'modality' => 'online']));
++        $this->assertSame(count(Event::where(['kind' => 'lecture'])), Event::count(['kind' => 'lecture']));
++    }
++
++    public function test_count_without_matches_should_be_zero(): void
++    {
++        $this->createEvent();
++
++        $this->assertSame(0, Event::count(['kind' => 'academic_week']));
++        $this->assertSame(0, User::count(['email' => 'ninguem@example.com']));
++    }
++
++    public function test_count_should_bind_values_instead_of_concatenating_them(): void
++    {
++        $this->createEvent(['title' => "Evento d'Água"]);
++
++        $this->assertSame(1, Event::count(['title' => "Evento d'Água"]));
++        $this->assertSame(0, Event::count(['title' => "x' OR '1'='1"]));
++    }
++
++    public function test_has_many_count_should_count_only_the_related_records(): void
++    {
++        $other = $this->createUser('Outro Admin', 'outro@example.com', 'admin');
++        $this->createEvent(['title' => 'Do admin 1']);
++        $this->createEvent(['title' => 'Do admin 2']);
++        $this->createEvent(['title' => 'Do outro'], $other);
++
++        $this->assertSame(2, $this->admin->events()->count());
++        $this->assertSame(1, $other->events()->count());
++        $this->assertSame(count($this->admin->events()->get()), $this->admin->events()->count());
++    }
++
++    public function test_enrollments_count_should_use_the_count_of_the_events_enrollments(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createEvent(['title' => 'Outro']);
++        for ($i = 1; $i <= 2; $i++) {
++            $participant = $this->createUser("Participante {$i}", "p{$i}@example.com");
++            (new Enrollment(['event_id' => $event->id, 'user_id' => $participant->id]))->save();
++        }
++
++        $this->assertSame(2, $event->enrollmentsCount());
++        $this->assertSame(0, $other->enrollmentsCount());
++        $this->assertSame(2, Enrollment::count(['event_id' => $event->id]));
++        $this->assertSame(2, Enrollment::count());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

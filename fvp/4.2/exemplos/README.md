@@ -72,6 +72,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N10. Página e id inválidos sem `(int)` silencioso
   `n10-pagina-id-invalido/`
   - fix: Validate page and id params without silent int casts
+- N11. `Model::count()` no framework
+  `n11-model-count/`
+  - feat: Add Model::count() and use it for enrollments and
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title

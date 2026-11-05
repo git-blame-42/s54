@@ -1,0 +1,9 @@
+<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
+
+<div class="list-group">
+    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+       href="<?= route('admin.events.index') ?>">
+        Eventos
+        <span class="badge text-bg-primary rounded-pill" id="events_count"><?= (int) $eventsCount ?></span>
+    </a>
+</div>
