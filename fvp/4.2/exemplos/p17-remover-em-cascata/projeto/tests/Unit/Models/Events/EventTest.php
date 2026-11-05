@@ -5,6 +5,7 @@ namespace Tests\Unit\Models\Events;
 use App\Models\Enrollment;
 use App\Models\Event;
 use App\Models\User;
+use Core\Database\Database;
 use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -672,7 +673,7 @@ class EventTest extends TestCase
         $this->assertNotNull($event->errors('base'));
     }
 
-    /* ------------------- P17: remoção em cascata (force) ------------------- */
+    /* ------------------- remoção em cascata (force) ------------------- */
 
     public function test_safe_destroy_with_force_should_remove_the_event_and_its_enrollments(): void
     {
@@ -712,6 +713,26 @@ class EventTest extends TestCase
 
         $this->assertSame(0, $event->removedEnrollments());
         $this->assertNull(Event::findById($event->id));
+    }
+
+    public function test_safe_destroy_with_force_should_roll_back_on_failure(): void
+    {
+        $event = $this->createEvent();
+        $this->enroll($event, 2);
+
+        // Força a falha no meio da transação: as Inscrições já foram apagadas quando o DELETE do
+        // Evento é recusado por este gatilho.
+        Database::exec(
+            "CREATE TRIGGER block_event_delete BEFORE DELETE ON events FOR EACH ROW
+             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'remoção bloqueada no teste'"
+        );
+
+        $this->assertFalse($event->safeDestroy(force: true));
+
+        $this->assertEquals('não foi possível remover o evento e suas inscrições!', $event->errors('base'));
+        $this->assertSame(0, $event->removedEnrollments());
+        $this->assertNotNull(Event::findById($event->id));
+        $this->assertSame(2, $event->enrollmentsCount());
     }
 
     public function test_safe_destroy_with_force_should_fail_for_a_new_record(): void

@@ -45,7 +45,7 @@ class Event extends Model
         'community' => 'Comunidade externa',
     ];
 
-    /** P17: quantas Inscrições o último safeDestroy(force: true) apagou. */
+    /** Quantas Inscrições o último safeDestroy(force: true) apagou. */
     private int $removedEnrollments = 0;
 
     protected static string $table = 'events';
@@ -152,7 +152,7 @@ class Event extends Model
      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
      * retorna false e registra o motivo em errors('base').
      *
-     * P17: com $force = true, remove também as Inscrições, numa transação
+     * Com $force = true, remove também as Inscrições, numa transação
      * (destroyWithEnrollments); removedEnrollments() informa quantas foram apagadas.
      */
     public function safeDestroy(bool $force = false): bool

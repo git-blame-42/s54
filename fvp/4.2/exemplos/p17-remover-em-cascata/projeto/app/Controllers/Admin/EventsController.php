@@ -120,15 +120,19 @@ class EventsController extends Controller
             return;
         }
 
+        // O código vale para uma única tentativa, certa ou errada: sem isso, DELETEs repetidos
+        // poderiam testar os 9000 valores. Depois de um erro, a página de confirmação gera outro.
         $key = $this->confirmationKey($event);
-        if (!ConfirmationCode::check($key, $request->getParam('confirmation_code'))) {
+        $valid = ConfirmationCode::check($key, $request->getParam('confirmation_code'));
+        ConfirmationCode::clear($key);
+
+        if (!$valid) {
             FlashMessage::danger('Código de confirmação inválido! O evento não foi removido.');
             $this->redirectTo(route('admin.events.delete', ['id' => $event->id]));
             return;
         }
-        ConfirmationCode::clear($key);
 
-        // P17: checkbox "Remover também as N inscrições" da página de confirmação.
+        // Checkbox "Remover também as N inscrições" da página de confirmação.
         $force = $request->getParam('force') === '1';
 
         if ($event->safeDestroy(force: $force)) {

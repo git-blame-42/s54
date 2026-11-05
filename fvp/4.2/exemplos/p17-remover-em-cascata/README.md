@@ -17,8 +17,8 @@ página de confirmação e o código de P16.
 
 | Commit    | Mensagem                                                   |
 |-----------|------------------------------------------------------------|
-| `0c88e5c` | (base, P16) `feat: Require a confirmation code to ...`     |
-| `47030c1` | `feat: Remove an Event with its enrollments when forced`   |
+| `e72d5f5` | (base, P16) `feat: Require a confirmation code to ...`     |
+| `7174bd3` | `feat: Remove an Event with its enrollments when forced`   |
 
 A mensagem completa do commit de P16 é `feat: Require a confirmation
 code to remove an Event`.
@@ -49,12 +49,13 @@ code to remove an Event`.
 
 ## Por que assim
 
-- Transação no model, e não `ON DELETE CASCADE` no schema: com cascata
-  na FK, **qualquer** `DELETE` do Evento (inclusive o `destroy()` puro
-  e um engano no console) levaria as inscrições junto, e a regra P03
-  ("Evento com inscrições não é removido") só ficaria de pé no código.
-  Com `RESTRICT` + transação, apagar inscrições é sempre um ato
-  explícito (`force`), e o banco continua barrando o resto.
+- Transação no model, e não `ON DELETE CASCADE` no schema. Com
+  cascata na FK, **qualquer** `DELETE` do Evento (o `destroy()` puro,
+  um engano no console) levaria as inscrições junto; a regra P03 do
+  projeto ("Evento com inscrições não é removido") passaria a depender
+  só do `safeDestroy()`, e o banco deixaria de barrar. Com `RESTRICT`
+  + transação, apagar inscrições é sempre um ato explícito (`force`), e
+  o banco continua recusando qualquer outro caminho.
 - Alternativa, se o professor pedir: no `schema.sql`,
   `fk_event_user_event ... ON DELETE CASCADE`; aí `safeDestroy(force:
   true)` vira só `$this->destroy()` e o teste
@@ -86,7 +87,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 173, Integration 63, Acceptance 25 (com P16:
+Resultado obtido: Unit 174, Integration 63, Acceptance 25 (com P16:
 169 / 58 / 24; base `main`: 159 / 45 / 23). PHPCS e PHPStan sem
 erros. Schema não mudou.
 
@@ -97,7 +98,17 @@ Testes novos:
   (só as do Evento; as de outro ficam),
   `test_safe_destroy_without_force_should_keep_the_event_and_its_enrollments`,
   `test_safe_destroy_with_force_and_no_enrollments_should_remove_the_event`,
-  `test_safe_destroy_with_force_should_fail_for_a_new_record`.
+  `test_safe_destroy_with_force_should_fail_for_a_new_record` e o de
+  rollback (abaixo).
+- Rollback (falha no meio):
+  `test_safe_destroy_with_force_should_roll_back_on_failure`.
+  O teste cria um gatilho `BEFORE DELETE ON events` que dá `SIGNAL`;
+  as inscrições já foram apagadas quando o `DELETE` do Evento falha, e
+  o teste confere que elas voltaram (2), o Evento ficou e o erro está
+  em `errors('base')`. Ele prova a **transação**: sem
+  `beginTransaction`, as inscrições sumiriam. Não distingue `rollBack()`
+  explícito de rollback implícito (o MySQL desfaz quando a conexão
+  fecha com a transação aberta); o `rollBack()` fica por clareza.
 - `EventsControllerTest`: checkbox só com inscrições; `destroy` com
   `force` (remove tudo, flash com 2 e com 1 no singular); `force` com
   código errado não remove nada; `force` em formato errado (array)
@@ -111,8 +122,9 @@ Testes novos:
 
 - P16 (`p16-remover-com-codigo-confirmacao`): base obrigatória (página
   de confirmação, código, `confirmationKey`).
-- P3 (`safeDestroy`, Evento com inscrições não é removido): continua
-  sendo o padrão; P17 só abre uma exceção explícita.
+- Regra P03 do projeto (`safeDestroy`: Evento com inscrições não é
+  removido): continua sendo o padrão; P17 só abre uma exceção
+  explícita.
 - Q2 (passado ou cancelado não remove): com os dois, o `isEditable()`
   vem antes do código e do `force`.
 - P2/P4 (inscrição e presença): com P4, `event_user` ganha
@@ -131,8 +143,8 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P16 no seu repositório: aplique o range inteiro
-  `5dedab5..47030c1` (P16 + P17, dois commits, nessa ordem).
-- Com P16 já aplicado: aplique só o topo, `47030c1`.
+  `5dedab5..7174bd3` (P16 + P17, dois commits, nessa ordem).
+- Com P16 já aplicado: aplique só o topo, `7174bd3`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -142,9 +154,9 @@ git remote add fvp-p17 \
     s50/fvp/4.2/exemplos/p17-remover-em-cascata/projeto
 git fetch fvp-p17 fvp/p17-remover-em-cascata
 # range (P16 + P17):
-git cherry-pick 5dedab5..47030c1
+git cherry-pick 5dedab5..7174bd3
 # ou só o topo, se já tem P16:
-# git cherry-pick 47030c1
+# git cherry-pick 7174bd3
 git remote remove fvp-p17
 ```
 
@@ -154,8 +166,8 @@ git remote remove fvp-p17
 git fetch \
     s50/fvp/4.2/exemplos/p17-remover-em-cascata/solucao.bundle \
     fvp/p17-remover-em-cascata:fvp-p17
-git cherry-pick 5dedab5..47030c1
-# ou só o topo: git cherry-pick 47030c1
+git cherry-pick 5dedab5..7174bd3
+# ou só o topo: git cherry-pick 7174bd3
 # opcional, limpa a ref
 git branch -D fvp-p17
 ```

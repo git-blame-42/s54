@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
             ->name('admin.events.paginate');
         Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
-        // Confirmação de remoção (P16): antes de '{id}', como 'new'.
+        // Confirmação de remoção: antes de '{id}', como 'new'.
         Route::get('/admin/events/{id}/delete', [AdminEventsController::class, 'confirmDestroy'])
             ->name('admin.events.delete');
         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
