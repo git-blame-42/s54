@@ -1,4 +1,4 @@
-From be206ca4541c73899edc63375844aa082edf033f Mon Sep 17 00:00:00 2001
+From d72e3eb7b2ea145cea5dcc93c6a41f99f8b92d51 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:00:58 -0300
 Subject: [PATCH] feat: Restrict event edit and removal to its owner
@@ -7,13 +7,13 @@ Edit, update and destroy look the event up through the logged admin's events, so
 ---
  app/Controllers/Admin/EventsController.php    | 11 ++-
  app/Models/Event.php                          |  8 ++
- app/views/admin/events/index.phtml            | 12 +--
+ app/views/admin/events/index.phtml            | 14 ++--
  app/views/admin/events/show.phtml             |  4 +-
  database/Populate/populate.php                | 20 ++++-
  .../Acceptance/admin/events/OwnerOnlyCest.php | 68 +++++++++++++++
  .../Admin/EventsControllerTest.php            | 82 +++++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        | 18 ++++
- 8 files changed, 212 insertions(+), 11 deletions(-)
+ 8 files changed, 214 insertions(+), 11 deletions(-)
  create mode 100644 tests/Acceptance/admin/events/OwnerOnlyCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
@@ -67,10 +67,10 @@ index ba66870..9ec9a37 100644
       * Total de Inscrições (linhas em event_user) deste Evento.
       */
 diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
-index 6835d74..11c8a78 100644
+index 6835d74..42f6454 100644
 --- a/app/views/admin/events/index.phtml
 +++ b/app/views/admin/events/index.phtml
-@@ -26,11 +26,13 @@
+@@ -26,11 +26,15 @@
                      <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
                      <td>
                          <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
@@ -80,8 +80,10 @@ index 6835d74..11c8a78 100644
 -                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
 -                        </form>
 +                        <?php if ($event->isOwnedBy($this->currentUser())) : ?>
-+                            <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
-+                            <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                            <a class="btn btn-sm btn-outline-primary"
++                                href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++                            <form class="d-inline"
++                                action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
 +                                <input type="hidden" name="_method" value="DELETE">
 +                                <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
 +                            </form>

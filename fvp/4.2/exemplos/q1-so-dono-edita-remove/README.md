@@ -12,7 +12,7 @@ Branch no clone: `fvp/q1-so-dono-edita-remove`, a partir de `main`
 
 | Commit    | Mensagem                                           |
 |-----------|----------------------------------------------------|
-| `be206ca` | `feat: Restrict event edit and removal to its owner` |
+| `d72e3eb` | `feat: Restrict event edit and removal to its owner` |
 
 ## O que mudou
 
@@ -33,9 +33,9 @@ Branch no clone: `fvp/q1-so-dono-edita-remove`, a partir de `main`
 - `app/views/admin/events/show.phtml`: botão "Editar" com a mesma
   condição.
 - `database/Populate/populate.php`: segunda Administradora
-  `admin2@example.com` (senha `123456`), dona dos dois últimos Eventos
-  (página 4 da listagem). As 14 Inscrições e o Evento 1 lotado não
-  mudam.
+  `admin2@example.com` (senha `123456`), dona dos dois últimos Eventos:
+  o 15 (último da página 3 da listagem, 5 por página) e o 16 (único da
+  página 4). As 14 Inscrições e o Evento 1 lotado não mudam.
 - Testes:
   - `EventTest` (Unit): `isOwnedBy` com dono, outro e `null`; e com
     o Evento relido do banco.
@@ -116,8 +116,9 @@ Os testes de acesso que já existiam (`EventsAccessTest`: sem sessão e
 Participante) seguem passando sem mudança.
 
 No navegador, depois do `./run db:populate`: entre como
-`admin@example.com` e abra a página 4 de `/admin/events`: os dois
-Eventos da Administradora 2 só têm "Ver". Abra
+`admin@example.com` e abra `/admin/events/page/3` e
+`/admin/events/page/4`: o Evento 15 (fim da página 3) e o 16 (página
+4), da Administradora 2, só têm "Ver". Abra
 `/admin/events/16/edit` direto: volta para a listagem com "Evento não
 encontrado!". Entre como `admin2@example.com`: só esses dois têm
 "Editar" e "Remover". Pelo terminal (clone sem porta):
@@ -168,7 +169,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-q1 \
     s50/fvp/4.2/exemplos/q1-so-dono-edita-remove/projeto
 git fetch fvp-q1 fvp/q1-so-dono-edita-remove
-git cherry-pick be206ca
+git cherry-pick d72e3eb
 git remote remove fvp-q1
 ```
 
@@ -179,7 +180,7 @@ git fetch \
     s50/fvp/4.2/exemplos/q1-so-dono-edita-remove/solucao.bundle \
     fvp/q1-so-dono-edita-remove:fvp-q1
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick be206ca
+git cherry-pick d72e3eb
 # opcional, limpa a ref
 git branch -D fvp-q1
 ```
