@@ -100,6 +100,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P8. Exportar a listagem em CSV
   `p8-exportar-csv/`
   - feat: Export events listing as CSV
+- P9. Lista de espera quando lotado
+  `p9-lista-de-espera/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Add waiting list for full events
 - Q1. Só o dono edita e remove
   `q1-so-dono-edita-remove/`
   - feat: Restrict event edit and removal to its owner
