@@ -100,9 +100,13 @@ Abrir `/admin/events/1` como `admin2` volta para a listagem com
   mesmo: fique com uma cópia. Se o Q1 tiver mensagem própria ("Você
   não pode alterar este Evento!"), ela deixa de aparecer, porque o
   Evento alheio já não é encontrado.
-- T1 (`t1-populate-campo-eventos-admin`): também cria um 2º admin
-  (`gestor@example.com`). Se aplicar os dois, mantenha um só 2º admin
-  ou os dois, e lembre que cada admin só vê os Eventos dos quais é
+- T1 (`t1-populate-campo-eventos-admin`): também cria um 2º admin,
+  com o **mesmo** e-mail (`admin2@example.com`). Aplicando os dois sem
+  cuidado, o populate cria o mesmo usuário duas vezes: o segundo
+  `save()` falha no `uniqueness` do e-mail (e, se fosse gravado, no
+  `UNIQUE` do banco). Fique com um só bloco de `admin2` (o deste
+  cenário, que já tem os 3 Eventos dele) ou troque o e-mail de um dos
+  dois. Lembre também que cada admin só vê os Eventos dos quais é
   dono: Eventos novos do T1 criados com `$admin` aparecem para o
   `admin@example.com`.
 - N1 a N4 (filtro, busca, ordenação, `per_page`) também trocam o
@@ -175,7 +179,8 @@ Arquivos que costumam conflitar neste cenário e por quê:
   `Paginator` à mão com `conditions: ['user_id' => $owner->id, ...]`.
 - `EventsController::findEvent`: Q1 faz a mesma troca; fique com uma.
 - `populate.php`: T1 e Q1 também criam um 2º admin e mexem no laço
-  de Eventos; aqui o laço virou a closure `$createEvent`.
+  de Eventos; aqui o laço virou a closure `$createEvent`. Com o T1, o
+  e-mail `admin2@example.com` é o mesmo: mantenha um só usuário.
 
 ## Armadilhas
 
