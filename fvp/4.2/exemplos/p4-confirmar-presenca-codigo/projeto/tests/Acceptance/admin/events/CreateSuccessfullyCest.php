@@ -28,7 +28,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
         $page->see('Evento cadastrado com sucesso!');
         $page->see($data['title'], 'h1');
         $page->see($data['location']);
-        // P1: o código de check-in foi gerado pelo sistema e aparece no show.
+        // O código de check-in foi gerado pelo sistema e aparece no show.
         $page->see('Código de check-in');
         $page->see((string) $event->checkin_code, '#event_checkin_code');
 

@@ -13,8 +13,8 @@ precisa da inscrição (P2, que depende de O2) e do código (P1).
 - base: `fvp/p2-inscricao-participante` (O2 → P2), sobre `main`
   (`f31006b`);
 - P1 trazido por cherry-pick (`ca2e157` na branch
-  `fvp/p1-codigo-checkin-aleatorio` virou `26e3f8a` aqui; aplicou
-  sem conflito);
+  `fvp/p1-codigo-checkin-aleatorio` virou `07d5c0c` aqui; aplicou
+  sem conflito; só um comentário do `CreateSuccessfullyCest` difere);
 - P4 por cima.
 
 Commits (`main..fvp/p4-confirmar-presenca-codigo`):
@@ -23,14 +23,14 @@ Commits (`main..fvp/p4-confirmar-presenca-codigo`):
   (base, O2)
 - `458a05b` `feat: Allow participants to enroll in events`
   (base, P2)
-- `26e3f8a` `feat: Generate a random check-in code for each Event`
+- `07d5c0c` `feat: Generate a random check-in code for each Event`
   (base, P1 cherry-picked de `ca2e157`)
-- `3e53118` `feat: Confirm event presence with the check-in code`
+- `16e602f` `feat: Confirm event presence with the check-in code`
   (este cenário)
 
 ## O que mudou
 
-Só o último commit (`3e53118`):
+Só o último commit (`16e602f`):
 
 - `database/schema.sql`: `confirmed_at TIMESTAMP NULL DEFAULT NULL`
   em `event_user` (NULL = presença não confirmada).
@@ -156,9 +156,9 @@ Primeiro decida o que o alvo já tem:
 
 - nada (só `main`): a pilha toda, por intervalo
   (`main..fvp/p4-confirmar-presenca-codigo`, 4 commits);
-- O2 e P2, sem P1: `26e3f8a 3e53118`;
-- O2, P2 e P1: só o topo, `3e53118`;
-- P1 sem O2/P2: `0669a19 458a05b 3e53118`.
+- O2 e P2, sem P1: `07d5c0c 16e602f`;
+- O2, P2 e P1: só o topo, `16e602f`;
+- P1 sem O2/P2: `0669a19 458a05b 16e602f`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -170,7 +170,7 @@ git fetch fvp-p4 main fvp/p4-confirmar-presenca-codigo
 git cherry-pick \
     fvp-p4/main..fvp-p4/fvp/p4-confirmar-presenca-codigo
 # alvo que já tem O2, P2 e P1: só o topo
-git cherry-pick 3e53118
+git cherry-pick 16e602f
 git remote remove fvp-p4
 ```
 
@@ -180,9 +180,9 @@ git remote remove fvp-p4
 git fetch <caminho>/solucao.bundle \
     fvp/p4-confirmar-presenca-codigo:fvp-p4
 # alvo só com main
-git cherry-pick 0669a19 458a05b 26e3f8a 3e53118
+git cherry-pick 0669a19 458a05b 07d5c0c 16e602f
 # alvo que já tem O2, P2 e P1
-git cherry-pick 3e53118
+git cherry-pick 16e602f
 # opcional, limpa a ref
 git branch -D fvp-p4
 ```
