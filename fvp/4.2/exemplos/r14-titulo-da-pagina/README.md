@@ -4,7 +4,7 @@ Pedido, como o professor faria na hora: "A aba do navegador mostra
 sempre 'Eventos do Câmpus'. Quero o nome da página na aba, e no
 detalhe o nome do Evento."
 
-Chance: baixa-média. Tempo estimado: 10 min. Catálogo:
+Chance: baixa-média. Tempo estimado: 10-15 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, R14.
 
 Branch no clone: `fvp/r14-titulo-da-pagina`, a partir de `main`
