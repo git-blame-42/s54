@@ -10,6 +10,8 @@
                 <input type="password" class="form-control" id="user_password" name="user[password]" required>
             </div>
             <button type="submit" class="btn btn-primary">Entrar</button>
+            <?php // Login por código (FVP B11): entrada sem senha. Próximo passo: os testes de controller. ?>
+            <a class="btn btn-link" href="<?= route('login_codes.new') ?>">Entrar com código</a>
         </form>
     </div>
 </div>
