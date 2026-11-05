@@ -57,6 +57,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M14. Contador de visualizações com `Model::update()`
   `m14-contador-visualizacoes/`
   - feat: Count event views on the admin show page
+- M15. Escolher o responsável entre os administradores
+  `m15-responsavel-admin/`
+  - feat: Choose the responsible admin for an event
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100
@@ -75,6 +78,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M7. Horário do Evento
   `m7-horario-do-evento/`
   - feat: Replace event date with starts_at datetime
+- M8. Enum PHP `EventKind` no lugar de `Event::KINDS`
+  `m8-enum-event-kind/`
+  - refactor: Replace Event::KINDS with EventKind enum
 - M9. Slug único gerado no backend
   `m9-slug-unico-gerado/`
   - feat: Generate a unique slug for each event
@@ -132,10 +138,16 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O5. Admin vê e lista só os próprios Eventos
   `o5-admin-lista-so-proprios/`
   - feat: List and manage only the logged admin events
+- O6. Inscritos em página própria, paginada
+  `o6-inscritos-pagina-propria/`
+  - feat: List event enrollments on a paginated page
 - O7. `Route::patch` no core, usado numa ação parcial (status)
   `o7-route-patch/`
   - feat: Add Event status with cancel and finish actions
   - feat: Add Route::patch and use it for event cancel and
+- O8. Status HTTP corretos (404, 422)
+  `o8-status-http/`
+  - feat: Respond 404 for unknown events and 422 for invalid
 - O9. `_method` só via POST (GET não pode remover Evento)
   `o9-method-so-via-post/`
   - fix: Accept _method override only from POST body
@@ -167,10 +179,21 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `p17-remover-em-cascata/`
   - feat: Require a confirmation code to remove an Event
   - feat: Remove an Event with its enrollments when forced
+- P18. Evento privado com código de convite
+  `p18-evento-privado-convite/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Add private events with invite code
+- P19. Remoção em lote (checkbox por linha + "Remover selecionados")
+  `p19-remocao-em-lote/`
+  - feat: Add bulk removal of events
 - P2. Inscrição do Participante (`POST /events/{id}/enrollments`)
   `p2-inscricao-participante/`
   - feat: Add events listing and details for participants
   - feat: Allow participants to enroll in events
+- P20. Exportar Evento em iCal (.ics), botão "Adicionar ao calendário"
+  `p20-exportar-ical/`
+  - feat: Export an Event as an iCalendar file
 - P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
   `p3-cancelar-inscricao/`
   - feat: Add events listing and details for participants
@@ -241,6 +264,12 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R5. Mostrar `created_at`/`updated_at` no show e na listagem
   `r5-created-updated-at/`
   - feat: Show event created_at and updated_at
+- R6. Partials reutilizados e botão Remover no `show`
+  `r6-partials-remover-show/`
+  - feat: Reuse events table partials and add Remover to show
+- R7. Voltar à mesma página da listagem depois de remover ou editar
+  `r7-voltar-mesma-pagina/`
+  - feat: Return to the same listing page after removing an event
 - R8. Lista de todos os erros no topo do form
   `r8-erros-no-topo-do-form/`
   - feat: List all validation errors on top of the event form

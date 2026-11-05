@@ -1,0 +1,226 @@
+From b54d2be547f33503c909f36b86213a3c78d33d9b Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:08:44 -0300
+Subject: [PATCH] feat: Respond 404 for unknown events and 422 for invalid
+ forms
+
+Unknown event ids in show, edit, update and destroy now render an errors/404 page with status 404 instead of a flash and redirect. Invalid create and update set status 422 before rendering the form. Statuses are checked over HTTP in EventsAccessTest.
+---
+ app/Controllers/Admin/EventsController.php    | 14 +++-
+ app/views/errors/404.phtml                    |  3 +
+ .../admin/events/NotFoundEventCest.php        | 25 +++++++
+ tests/Integration/Access/EventsAccessTest.php | 69 ++++++++++++++++++-
+ .../Admin/EventsControllerTest.php            | 28 +++++++-
+ 5 files changed, 131 insertions(+), 8 deletions(-)
+ create mode 100644 app/views/errors/404.phtml
+ create mode 100644 tests/Acceptance/admin/events/NotFoundEventCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..7135179 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -57,6 +57,8 @@ class EventsController extends Controller
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
++            // 422: o pedido chegou, mas os dados não passaram na validação.
++            http_response_code(422);
+             $title = 'Novo Evento';
+             $this->render('admin/events/new', compact('event', 'title'));
+         }
+@@ -88,6 +90,8 @@ class EventsController extends Controller
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
++            // 422: o pedido chegou, mas os dados não passaram na validação.
++            http_response_code(422);
+             $title = 'Editar Evento';
+             $this->render('admin/events/edit', compact('event', 'title'));
+         }
+@@ -134,9 +138,15 @@ class EventsController extends Controller
+         return Event::findById((int) $request->getParam('id'));
+     }
+ 
++    /**
++     * Evento inexistente: responde 404 com uma página própria (sem flash nem redirect).
++     * http_response_code() vem antes do render, que já imprime a página.
++     */
+     private function eventNotFound(): void
+     {
+-        FlashMessage::danger('Evento não encontrado!');
+-        $this->redirectTo(route('admin.events.index'));
++        http_response_code(404);
++
++        $title = 'Evento não encontrado';
++        $this->render('errors/404', compact('title'));
+     }
+ }
+diff --git a/app/views/errors/404.phtml b/app/views/errors/404.phtml
+new file mode 100644
+index 0000000..f99a924
+--- /dev/null
++++ b/app/views/errors/404.phtml
+@@ -0,0 +1,3 @@
++<p>O evento procurado não existe ou foi removido.</p>
++
++<a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar para a lista de eventos</a>
+diff --git a/tests/Acceptance/admin/events/NotFoundEventCest.php b/tests/Acceptance/admin/events/NotFoundEventCest.php
+new file mode 100644
+index 0000000..4bc0c49
+--- /dev/null
++++ b/tests/Acceptance/admin/events/NotFoundEventCest.php
+@@ -0,0 +1,25 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * O8: Evento inexistente mostra a página "Evento não encontrado" no próprio endereço (404, sem
++ * redirect). O status é conferido por HTTP em EventsAccessTest; o Selenium não lê status.
++ */
++class NotFoundEventCest extends BaseEventsCest
++{
++    public function unknownEventShowsNotFoundPage(AcceptanceTester $page): void
++    {
++        $page->wantTo('Abrir um Evento inexistente e ver a página de não encontrado');
++        $page->amOnPage('/admin/events/999999');
++
++        $page->seeCurrentUrlEquals('/admin/events/999999');
++        $page->see('Evento não encontrado', 'h1');
++        $page->see('O evento procurado não existe ou foi removido.');
++
++        $page->click('Voltar para a lista de eventos');
++        $page->seeCurrentUrlEquals('/admin/events');
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..6dbd501 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,13 +172,76 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
+-    public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
++    /**
++     * O8: Evento inexistente responde 404 (página própria, sem redirect) em todas as rotas com {id}.
++     *
++     * @return array<string, array{string, string}>
++     */
++    public static function unknownEventRoutes(): array
++    {
++        return [
++            'show' => ['GET', '/admin/events/999999'],
++            'edit' => ['GET', '/admin/events/999999/edit'],
++            'update' => ['PUT', '/admin/events/999999'],
++            'destroy' => ['DELETE', '/admin/events/999999'],
++        ];
++    }
++
++    #[DataProvider('unknownEventRoutes')]
++    public function test_admin_should_get_404_when_event_does_not_exist(string $method, string $uri): void
+     {
+         $client = $this->loggedClient($this->admin);
+ 
+-        $response = $client->get('/admin/events/999999');
++        $response = $client->request($method, $uri, ['http_errors' => false]);
++
++        $this->assertEquals(404, $response->getStatusCode());
++        $this->assertSame('', $response->getHeaderLine('Location'));
++        $this->assertStringContainsString('Evento não encontrado', (string) $response->getBody());
++    }
++
++    public function test_invalid_create_should_respond_422_with_the_form(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post('/admin/events', [
++            'http_errors' => false,
++            'form_params' => ['event' => ['title' => '']],
++        ]);
++
++        $this->assertEquals(422, $response->getStatusCode());
++        $this->assertStringContainsString('Existem dados incorretos!', (string) $response->getBody());
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_invalid_update_should_respond_422_and_keep_the_event(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post("/admin/events/{$this->event->id}", [
++            'http_errors' => false,
++            'form_params' => ['_method' => 'PUT', 'event' => ['title' => '']],
++        ]);
++
++        $this->assertEquals(422, $response->getStatusCode());
++        $this->assertEquals('Palestra de Acesso', Event::findById($this->event->id)?->title);
++    }
++
++    public function test_valid_create_should_still_redirect_with_302(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post('/admin/events', ['form_params' => ['event' => [
++            'title' => 'Evento Válido',
++            'description' => 'Descrição.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => ['students'],
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => '5',
++        ]]]);
+ 
+         $this->assertEquals(302, $response->getStatusCode());
+-        $this->assertEquals('/admin/events', $response->getHeaderLine('Location'));
++        $this->assertMatchesRegularExpression('#^/admin/events/\d+$#', $response->getHeaderLine('Location'));
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..1576033 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,12 +160,34 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
+-    public function test_show_with_unknown_id_redirects_to_index(): void
++    /**
++     * O status 404 só é visível por HTTP (EventsAccessTest); aqui, em CLI, confere-se a página renderizada.
++     */
++    public function test_show_with_unknown_id_renders_not_found_page(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+ 
+-        $this->assertSame('Location: /admin/events', $response);
+-        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++        $this->assertMatchesRegularExpression('/<h1>\s*Evento não encontrado\s*<\/h1>/', $response);
++        $this->assertStringContainsString('O evento procurado não existe ou foi removido.', $response);
++        $this->assertStringNotContainsString('Location:', $response);
++        $this->assertStringNotContainsString('alert-danger', $response);
++    }
++
++    public function test_edit_update_and_destroy_with_unknown_id_render_not_found_page(): void
++    {
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++        $update = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => 9999, 'event' => $this->validParams()]
++        );
++        $destroy = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        foreach ([$edit, $update, $destroy] as $response) {
++            $this->assertStringContainsString('O evento procurado não existe ou foi removido.', $response);
++            $this->assertStringNotContainsString('Location:', $response);
++        }
++        $this->assertCount(0, Event::all());
+     }
+ 
+     public function test_edit_renders_form_filled(): void
+-- 
+2.54.0 (Apple Git-157)
+
