@@ -38,6 +38,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 
 ## Índice
 
+- M1. Campo novo em `events` com validação (`workload_hours`)
+  `m1-campo-novo-workload-hours/`
+  - feat: Add workload hours to events
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100

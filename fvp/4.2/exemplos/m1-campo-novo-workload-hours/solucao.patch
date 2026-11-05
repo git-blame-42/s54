@@ -1,0 +1,407 @@
+From 5f8742bcd9dae289f5a78fbcf26dd65bde40d94a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:15:05 -0300
+Subject: [PATCH] feat: Add workload hours to events
+
+---
+ app/Controllers/Admin/EventsController.php    |  2 +-
+ app/Models/Event.php                          |  5 +++
+ app/views/admin/events/_form.phtml            |  7 +++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 ++
+ database/Populate/populate.php                |  1 +
+ database/schema.sql                           |  1 +
+ .../admin/events/BaseEventsCest.php           |  7 ++-
+ .../admin/events/CreateSuccessfullyCest.php   |  2 +
+ .../events/CreateWithInvalidDataCest.php      |  5 ++-
+ tests/Integration/Access/EventsAccessTest.php |  2 +
+ .../Admin/EventsControllerTest.php            | 44 +++++++++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   |  1 +
+ tests/Unit/Models/Events/EventTest.php        | 43 +++++++++++++++++-
+ 14 files changed, 119 insertions(+), 6 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8246695 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,7 +11,7 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity', 'workload_hours'];
+ 
+     public function index(Request $request): void
+     {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..7c0a870 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string $workload_hours carga horária, em horas
+  */
+ class Event extends Model
+ {
+@@ -55,6 +56,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'workload_hours',
+     ];
+ 
+     public function validates(): void
+@@ -79,6 +81,9 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        Validations::notEmpty('workload_hours', $this) &&
++            Validations::integerMin('workload_hours', $this, 1);
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..249a7ef 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -88,6 +88,13 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <?= $feedback('capacity') ?>
+     </div>
+ 
++    <div class="mb-3">
++        <label for="event_workload_hours" class="form-label">Carga horária (horas)</label>
++        <input type="number" class="form-control<?= $invalid('workload_hours') ?>" id="event_workload_hours"
++            name="event[workload_hours]" min="1" value="<?= htmlspecialchars((string) $event->workload_hours) ?>">
++        <?= $feedback('workload_hours') ?>
++    </div>
++
+     <button type="submit" class="btn btn-primary">Salvar</button>
+     <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..92b26ec 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Carga horária</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= (int) $event->workload_hours ?> h</td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..51dc20b 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Carga horária</dt>
++    <dd class="col-sm-9"><?= (int) $event->workload_hours ?> h</dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..967c11b 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -140,6 +140,7 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
+         'location' => $location,
+         'capacity' => $capacity,
++        'workload_hours' => 4,
+     ]);
+     $event->setAudienceList(explode(',', $audience));
+     if (!$event->save()) {
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..af420ae 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,7 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    workload_hours INT NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..b0c7552 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -89,6 +89,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+                 'starts_on' => $this->startsOn($number),
+                 'location' => "Sala {$number}",
+                 'capacity' => $number === 1 ? 3 : 20 + $number,
++                'workload_hours' => 4,
+             ]);
+             $event->setAudienceList($number % 2 === 1 ? ['students', 'professors'] : ['students']);
+             $event->save();
+@@ -115,13 +116,14 @@ class BaseEventsCest extends BaseAcceptanceCest
+      * Preenche apenas os campos informados. `audience` define exatamente quais checkboxes ficam marcados.
+      *
+      * Chaves aceitas: title, description, kind (rótulo exibido no select), modality (valor do radio: in_person,
+-     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity.
++     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity,
++     * workload_hours.
+      *
+      * @param array<string, mixed> $data
+      */
+     protected function fillEventForm(AcceptanceTester $page, array $data): void
+     {
+-        foreach (['title', 'description', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'location', 'capacity', 'workload_hours'] as $field) {
+             if (array_key_exists($field, $data)) {
+                 $page->fillField("#event_{$field}", (string) $data[$field]);
+             }
+@@ -171,6 +173,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+             'starts_on' => date('Y-m-d', strtotime('+1 day')),
+             'location' => 'Laboratório B203',
+             'capacity' => '40',
++            'workload_hours' => '8',
+         ], $overrides);
+     }
+ 
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..5b60af7 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -28,6 +28,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see('Evento cadastrado com sucesso!');
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
++        $page->see('8 h');
+ 
+         // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+         $page->amOnPage('/admin/events/page/4');
+@@ -43,6 +44,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertSame($data['starts_on'], $event->starts_on);
+         Assert::assertSame($data['location'], $event->location);
+         Assert::assertEquals(40, $event->capacity);
++        Assert::assertEquals(8, $event->workload_hours);
+         Assert::assertSame(0, $event->enrollmentsCount());
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..bd82560 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -20,7 +20,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         $page->see(self::FLASH);
+         $page->see('Novo Evento', 'h1');
+-        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity', 'workload_hours'] as $field) {
+             $page->seeElement("#event_{$field}.is-invalid");
+             $page->see('não pode ser vazio!', "#event_{$field} ~ .invalid-feedback");
+         }
+@@ -43,6 +43,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->checkOption('#event_audience_staff');
+         $page->fillField('#event_location', 'Laboratório B203');
+         $page->fillField('#event_capacity', '0');
++        $page->fillField('#event_workload_hours', '0');
+         $this->fillEventForm($page, ['starts_on' => date('Y-m-d', strtotime('-1 day'))]);
+         $page->click('Salvar');
+ 
+@@ -54,6 +55,8 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->see('não pode estar no passado!', '#event_starts_on ~ .invalid-feedback');
+         $page->seeElement('#event_capacity.is-invalid');
+         $page->see('deve ser maior ou igual a 1!', '#event_capacity ~ .invalid-feedback');
++        $page->seeElement('#event_workload_hours.is-invalid');
++        $page->see('deve ser maior ou igual a 1!', '#event_workload_hours ~ .invalid-feedback');
+         foreach (['title', 'description', 'kind', 'location'] as $field) {
+             $page->dontSeeElement("#event_{$field}.is-invalid");
+         }
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..ea893ba 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -37,6 +37,7 @@ class EventsAccessTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+30 days')),
+             'location' => 'Microsoft Teams',
+             'capacity' => 10,
++            'workload_hours' => 2,
+         ]);
+         $this->event->save();
+     }
+@@ -150,6 +151,7 @@ class EventsAccessTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Qualquer lugar',
+             'capacity' => '5',
++            'workload_hours' => '2',
+         ]]]);
+         $client->post($uri, ['form_params' => ['_method' => 'PUT', 'event' => ['title' => 'Título Alterado']]]);
+         $client->post($uri, ['form_params' => ['_method' => 'DELETE']]);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..47df5a9 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -137,6 +137,49 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_create_with_invalid_workload_hours_shows_error_below_the_field(): void
++    {
++        foreach (['', '0'] as $workloadHours) {
++            $response = $this->post(
++                action: 'create',
++                controllerName: self::CONTROLLER,
++                params: ['event' => $this->validParams(['workload_hours' => $workloadHours, 'location' => 'Bloco C'])]
++            );
++
++            $message = $workloadHours === '' ? 'não pode ser vazio!' : 'deve ser maior ou igual a 1!';
++            $this->assertCount(0, Event::all());
++            $this->assertMatchesRegularExpression(
++                '/id="event_workload_hours"[^>]*value="' . $workloadHours . '">\s*'
++                    . '<div class="invalid-feedback">' . $message . '<\/div>/',
++                $response
++            );
++            $this->assertMatchesRegularExpression('/class="form-control is-invalid" id="event_workload_hours"/', $response);
++            $this->assertStringContainsString('value="Oficina de Testes"', $response);
++            $this->assertStringContainsString('value="Bloco C"', $response);
++            $this->assertDoesNotMatchRegularExpression('/is-invalid" id="event_(title|location|capacity)"/', $response);
++        }
++    }
++
++    public function test_create_saves_workload_hours_and_show_displays_it(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['workload_hours' => '16'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertInstanceOf(Event::class, $event);
++        $this->assertEquals(16, $event->workload_hours);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertStringContainsString('Carga horária', $show);
++        $this->assertStringContainsString('16 h', $show);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $this->assertStringContainsString('16 h', $index);
++    }
++
+     public function test_create_without_audience_marks_audience_field(): void
+     {
+         $params = $this->validParams();
+@@ -280,6 +323,7 @@ class EventsControllerTest extends ControllerTestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Bloco A',
+             'capacity' => '20',
++            'workload_hours' => '8',
+         ], $overrides);
+     }
+ 
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..c39a528 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -45,6 +45,7 @@ class EnrollmentTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Online',
+             'capacity' => 5,
++            'workload_hours' => 2,
+         ]);
+         $this->event->save();
+     }
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..9a7af6b 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -50,6 +50,7 @@ class EventTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+30 days')),
+             'location' => 'Auditório Central',
+             'capacity' => 10,
++            'workload_hours' => 4,
+         ], $overrides);
+     }
+ 
+@@ -90,7 +91,8 @@ class EventTest extends TestCase
+         $this->assertFalse($event->isValid());
+         $this->assertFalse($event->save());
+ 
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity', 'workload_hours'];
++        foreach ($fields as $field) {
+             $this->assertEquals('não pode ser vazio!', $event->errors($field), $field);
+         }
+     }
+@@ -109,6 +111,7 @@ class EventTest extends TestCase
+             'audience' => ['audience'],
+             'starts_on' => ['starts_on'],
+             'capacity' => ['capacity'],
++            'workload_hours' => ['workload_hours'],
+         ];
+     }
+ 
+@@ -128,7 +131,8 @@ class EventTest extends TestCase
+     private function errorsOf(Event $event): array
+     {
+         $errors = [];
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity', 'workload_hours'];
++        foreach ($fields as $field) {
+             if ($event->errors($field) !== null) {
+                 $errors[$field] = $event->errors($field);
+             }
+@@ -207,6 +211,41 @@ class EventTest extends TestCase
+         $this->assertTrue($event->isValid());
+     }
+ 
++    public function test_workload_hours_should_not_be_empty(): void
++    {
++        $event = new Event($this->params(['workload_hours' => '']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser vazio!', $event->errors('workload_hours'));
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_workload_hours_should_be_at_least_one(): void
++    {
++        $event = new Event($this->params(['workload_hours' => 0]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('deve ser maior ou igual a 1!', $event->errors('workload_hours'));
++
++        $event->workload_hours = -2;
++        $this->assertFalse($event->isValid());
++
++        $event->workload_hours = 'quatro';
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('deve ser um número inteiro!', $event->errors('workload_hours'));
++
++        $event->workload_hours = '1';
++        $this->assertTrue($event->isValid());
++    }
++
++    public function test_workload_hours_should_be_saved(): void
++    {
++        $event = $this->createEvent(['workload_hours' => 12]);
++
++        $this->assertEquals(12, Event::findById($event->id)?->workload_hours);
++    }
++
+     public function test_starts_on_should_be_a_valid_date(): void
+     {
+         foreach (['amanhã', '2030-02-31', '2030-13-01', '30/12/2030', '2030-1-5'] as $value) {
+-- 
+2.54.0 (Apple Git-157)
+
