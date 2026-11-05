@@ -1,0 +1,525 @@
+From 967540a9e424124b7fc9494f803d5d04112c49bf Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:16:27 -0300
+Subject: [PATCH] feat: Require a random access code after the password on
+ login
+
+A correct password no longer logs in: the user model generates a 4-digit code (1000-9999, valid for 5 minutes), the session keeps the pending user id and the code is shown in a flash as a simulated delivery. POST /login/code checks it and only then calls Auth::login. Login helpers for acceptance and access tests now complete the second step.
+---
+ app/Controllers/AuthenticationsController.php |  50 ++++++++-
+ app/Models/User.php                           |  47 +++++++-
+ app/views/authentications/code.phtml          |  14 +++
+ config/routes.php                             |   2 +
+ database/schema.sql                           |   3 +
+ .../Acceptance/authentications/LoginCest.php  |  38 +++++++
+ tests/Integration/Access/EventsAccessTest.php |   5 +
+ .../AuthenticationsControllerTest.php         | 106 +++++++++++++++++-
+ tests/Support/AcceptanceTester.php            |   4 +
+ tests/Support/Helper/LoginHelper.php          |  30 +++++
+ tests/Unit/Models/Users/UserTest.php          |  47 ++++++++
+ 11 files changed, 338 insertions(+), 8 deletions(-)
+ create mode 100644 app/views/authentications/code.phtml
+
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..510dab0 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -22,12 +22,48 @@ class AuthenticationsController extends Controller
+         $user = User::findByEmail($params['email']);
+ 
+         if ($user && $user->authenticate($params['password'])) {
++            // P12: a senha certa ainda não loga; o login termina em verifyCode, com o código.
++            $code = $user->generateLoginCode();
++            $_SESSION['pending_user_id'] = $user->id;
++            // Simula o envio do código (não há e-mail no projeto): o backend o devolve no flash.
++            FlashMessage::success("Seu código de acesso é {$code}");
++            $this->redirectTo(route('users.code'));
++        } else {
++            FlashMessage::danger('E-mail ou senha inválidos!');
++            $this->redirectTo(route('users.login'));
++        }
++    }
++
++    public function code(): void
++    {
++        if ($this->pendingUser() === null) {
++            $this->redirectTo(route('users.login'));
++            return;
++        }
++
++        $title = 'Código de acesso';
++        $this->render('authentications/code', compact('title'));
++    }
++
++    public function verifyCode(Request $request): void
++    {
++        $user = $this->pendingUser();
++        if ($user === null) {
++            $this->redirectTo(route('users.login'));
++            return;
++        }
++
++        $code = $request->getParam('code');
++        $code = is_string($code) ? trim($code) : '';
++
++        if ($user->verifyLoginCode($code)) {
++            unset($_SESSION['pending_user_id']);
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+             $this->redirectTo(route('dashboard.index'));
+         } else {
+-            FlashMessage::danger('E-mail ou senha inválidos!');
+-            $this->redirectTo(route('users.login'));
++            FlashMessage::danger('Código inválido!');
++            $this->redirectTo(route('users.code'));
+         }
+     }
+ 
+@@ -37,4 +73,14 @@ class AuthenticationsController extends Controller
+         FlashMessage::success('Logout realizado com sucesso!');
+         $this->redirectTo(route('users.login'));
+     }
++
++    /**
++     * Usuário que acertou a senha e ainda não informou o código (null se não houver).
++     */
++    private function pendingUser(): ?User
++    {
++        $id = $_SESSION['pending_user_id'] ?? null;
++
++        return is_int($id) || is_string($id) ? User::findById((int) $id) : null;
++    }
+ }
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ed68286..84c6cbd 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -13,11 +13,24 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $encrypted_password
+  * @property string $role
+  * @property string|null $last_login_at
++ * @property int|string|null $login_code código de acesso pendente (P12)
++ * @property string|null $login_code_expires_at
+  */
+ class User extends Model
+ {
+     protected static string $table = 'users';
+-    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
++    protected static array $columns = [
++        'name',
++        'email',
++        'encrypted_password',
++        'role',
++        'last_login_at',
++        'login_code',
++        'login_code_expires_at',
++    ];
++
++    /** Validade do código de acesso, em segundos. */
++    public const LOGIN_CODE_TTL = 300;
+ 
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+@@ -78,6 +91,38 @@ class User extends Model
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+     }
+ 
++    /**
++     * Gera e grava o código de acesso (1000 a 9999) pedido depois da senha. Substitui o anterior.
++     */
++    public function generateLoginCode(): int
++    {
++        $code = random_int(1000, 9999);
++        $this->update([
++            'login_code' => $code,
++            'login_code_expires_at' => date('Y-m-d H:i:s', time() + self::LOGIN_CODE_TTL),
++        ]);
++
++        return $code;
++    }
++
++    /**
++     * Confere o código digitado. Certo e dentro da validade: apaga o código (uso único) e retorna true.
++     */
++    public function verifyLoginCode(string $code): bool
++    {
++        if ($this->login_code === null || $this->login_code_expires_at === null) {
++            return false;
++        }
++
++        $expired = strtotime($this->login_code_expires_at) < time();
++
++        if ($expired || !ctype_digit($code) || (int) $code !== (int) $this->login_code) {
++            return false;
++        }
++
++        return $this->update(['login_code' => null, 'login_code_expires_at' => null]);
++    }
++
+     public function __set(string $property, mixed $value): void
+     {
+         parent::__set($property, $value);
+diff --git a/app/views/authentications/code.phtml b/app/views/authentications/code.phtml
+new file mode 100644
+index 0000000..d736675
+--- /dev/null
++++ b/app/views/authentications/code.phtml
+@@ -0,0 +1,14 @@
++<div class="card login mx-auto">
++    <div class="card-body">
++        <p>Informe o código de 4 dígitos para concluir o login.</p>
++        <form action="<?= route('users.verify_code') ?>" method="post">
++            <div class="mb-3">
++                <label for="login_code" class="form-label">Código de acesso</label>
++                <input type="text" class="form-control" id="login_code" name="code"
++                    inputmode="numeric" maxlength="4" autocomplete="one-time-code" required>
++            </div>
++            <button type="submit" class="btn btn-primary">Confirmar</button>
++            <a class="btn btn-link" href="<?= route('users.login') ?>">Voltar</a>
++        </form>
++    </div>
++</div>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..f8f465f 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -12,6 +12,8 @@ Route::get('/', [HomeController::class, 'index'])->name('root');
+ // Authentication
+ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.login');
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
++Route::get('/login/code', [AuthenticationsController::class, 'code'])->name('users.code');
++Route::post('/login/code', [AuthenticationsController::class, 'verifyCode'])->name('users.verify_code');
+ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
+ // Área do usuário (somente autenticados)
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..58b606d 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -11,6 +11,9 @@ CREATE TABLE users (
+     encrypted_password VARCHAR(255) NOT NULL,
+     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
+     last_login_at TIMESTAMP NULL,
++    -- P12: código de acesso de 4 dígitos pedido após a senha; vale 5 minutos e é apagado ao ser usado.
++    login_code SMALLINT UNSIGNED NULL,
++    login_code_expires_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     UNIQUE KEY uq_users_email (email)
+diff --git a/tests/Acceptance/authentications/LoginCest.php b/tests/Acceptance/authentications/LoginCest.php
+index 04eca11..6ef4632 100644
+--- a/tests/Acceptance/authentications/LoginCest.php
++++ b/tests/Acceptance/authentications/LoginCest.php
+@@ -37,6 +37,44 @@ class LoginCest extends BaseAcceptanceCest
+         $page->see('fulano@example.com');
+     }
+ 
++    public function loginAsksForTheCodeAfterThePassword(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ver a tela do código depois da senha certa, sem estar logado');
++        $page->submitCredentials('fulano@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/login/code');
++        $page->see('Código de acesso', 'h1');
++        $page->see('Seu código de acesso é', '.alert-success');
++
++        $page->amOnPage('/dashboard');
++        $page->seeCurrentUrlEquals('/login');
++    }
++
++    public function loginWithWrongCodeThenRightCode(AcceptanceTester $page): void
++    {
++        $page->wantTo('Errar o código uma vez e acertar na segunda');
++        $page->submitCredentials('fulano@example.com', '123456');
++        $code = $page->grabLoginCode();
++        $wrong = $code === '9999' ? '1000' : (string) ((int) $code + 1);
++
++        $page->fillField('code', $wrong);
++        $page->click('Confirmar');
++        $page->seeCurrentUrlEquals('/login/code');
++        $page->see('Código inválido!', '.alert-danger');
++
++        $page->fillField('code', $code);
++        $page->click('Confirmar');
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Login realizado com sucesso!');
++    }
++
++    public function codePageWithoutPasswordRedirectsToLogin(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/login/code');
++
++        $page->seeCurrentUrlEquals('/login');
++    }
++
+     public function logout(AcceptanceTester $page): void
+     {
+         $page->login('fulano@example.com', '123456');
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..cf0efbf 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -72,6 +72,11 @@ class EventsAccessTest extends TestCase
+         ]);
+ 
+         $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login/code', $response->getHeaderLine('Location'));
++
++        // P12: o segundo passo usa o código gravado no banco para este usuário.
++        $code = (string) User::findById($user->id)?->login_code;
++        $response = $client->post('/login/code', ['form_params' => ['code' => $code]]);
+         $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));
+ 
+         return $client;
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..166c20b 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -29,16 +29,110 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertMatchesRegularExpression('/Entrar/', $response);
+     }
+ 
+-    public function test_authenticate_with_valid_credentials_should_login(): void
++    private const CONTROLLER = 'App\Controllers\AuthenticationsController';
++
++    public function tearDown(): void
+     {
+-        $response = $this->post(
++        unset($_SESSION['pending_user_id'], $_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    private function submitValidCredentials(): string
++    {
++        return $this->post(
+             action: 'authenticate',
+-            controllerName: 'App\Controllers\AuthenticationsController',
++            controllerName: self::CONTROLLER,
+             params: ['user' => ['email' => 'fulano@example.com', 'password' => '123456']]
+         );
++    }
++
++    private function storedCode(): int
++    {
++        return (int) User::findById($this->user->id)?->login_code;
++    }
++
++    public function test_authenticate_with_valid_credentials_should_ask_for_the_code(): void
++    {
++        $response = $this->submitValidCredentials();
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login/code', $response);
++        $this->assertEquals($this->user->id, $_SESSION['pending_user_id']);
++
++        $code = $this->storedCode();
++        $this->assertGreaterThanOrEqual(1000, $code);
++        $this->assertLessThanOrEqual(9999, $code);
++        $this->assertEquals("Seu código de acesso é {$code}", $_SESSION['flash']['success']);
++    }
++
++    public function test_code_page_renders_form_when_there_is_a_pending_login(): void
++    {
++        $this->submitValidCredentials();
++
++        $response = $this->get(action: 'code', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Código de acesso\s*<\/h1>/', $response);
++        $this->assertStringContainsString('name="code"', $response);
++        $this->assertStringContainsString('action="/login/code"', $response);
++    }
++
++    public function test_code_page_without_pending_login_redirects_to_login(): void
++    {
++        $response = $this->get(action: 'code', controllerName: self::CONTROLLER);
++
++        $this->assertSame('Location: /login', $response);
++    }
++
++    public function test_verify_code_with_right_code_should_login(): void
++    {
++        $this->submitValidCredentials();
++
++        $response = $this->post(
++            action: 'verifyCode',
++            controllerName: self::CONTROLLER,
++            params: ['code' => (string) $this->storedCode()]
++        );
+ 
+         $this->assertTrue(Auth::check());
+-        $this->assertStringContainsString('Location: /dashboard', $response);
++        $this->assertSame('Location: /dashboard', $response);
++        $this->assertArrayNotHasKey('pending_user_id', $_SESSION);
++        $this->assertEquals('Login realizado com sucesso!', $_SESSION['flash']['success']);
++        $this->assertNull(User::findById($this->user->id)?->login_code);
++    }
++
++    public function test_verify_code_with_wrong_code_should_not_login(): void
++    {
++        $this->submitValidCredentials();
++        $wrong = (string) ($this->storedCode() === 9999 ? 1000 : $this->storedCode() + 1);
++
++        $response = $this->post(action: 'verifyCode', controllerName: self::CONTROLLER, params: ['code' => $wrong]);
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login/code', $response);
++        $this->assertEquals('Código inválido!', $_SESSION['flash']['danger']);
++        $this->assertEquals($this->user->id, $_SESSION['pending_user_id']);
++    }
++
++    public function test_verify_code_with_array_code_should_not_login(): void
++    {
++        $this->submitValidCredentials();
++
++        $response = $this->post(
++            action: 'verifyCode',
++            controllerName: self::CONTROLLER,
++            params: ['code' => [(string) $this->storedCode()]]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login/code', $response);
++    }
++
++    public function test_verify_code_without_pending_login_redirects_to_login(): void
++    {
++        $response = $this->post(action: 'verifyCode', controllerName: self::CONTROLLER, params: ['code' => '1234']);
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login', $response);
+     }
+ 
+     public function test_authenticate_with_invalid_credentials_should_not_login(): void
+@@ -50,7 +144,9 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         );
+ 
+         $this->assertFalse(Auth::check());
+-        $this->assertStringContainsString('Location: /login', $response);
++        $this->assertSame('Location: /login', $response);
++        $this->assertArrayNotHasKey('pending_user_id', $_SESSION);
++        $this->assertNull(User::findById($this->user->id)?->login_code);
+     }
+ 
+     public function test_destroy_should_logout(): void
+diff --git a/tests/Support/AcceptanceTester.php b/tests/Support/AcceptanceTester.php
+index a7b3eb5..990581f 100644
+--- a/tests/Support/AcceptanceTester.php
++++ b/tests/Support/AcceptanceTester.php
+@@ -26,6 +26,10 @@ use Tests\Support;
+  * @method void seeInCurrentUrl(string $url)
+  *
+  * @method void login(string $username, $password)
++ * @method void submitCredentials(string $username, string $password)
++ * @method string grabLoginCode()
++ * @method mixed grabFromCurrentUrl(?string $uri = NULL)
++ * @method mixed grabTextFrom($cssOrXPathOrRegex)
+  *
+  * @SuppressWarnings(PHPMD)
+  */
+diff --git a/tests/Support/Helper/LoginHelper.php b/tests/Support/Helper/LoginHelper.php
+index 729b7a1..dae396a 100644
+--- a/tests/Support/Helper/LoginHelper.php
++++ b/tests/Support/Helper/LoginHelper.php
+@@ -9,6 +9,22 @@ use Codeception\Module;
+ class LoginHelper extends Module
+ {
+     public function login(string $username, string $password): void
++    {
++        /** @var \Tests\Support\AcceptanceTester $page */
++        $page = $this->getModule('WebDriver');
++        $this->submitCredentials($username, $password);
++
++        // P12: com a senha certa vem a tela do código; o código chega no flash (simulação do envio).
++        if ($page->grabFromCurrentUrl() === '/login/code') {
++            $page->fillField('code', $this->grabLoginCode());
++            $page->click('Confirmar');
++        }
++    }
++
++    /**
++     * Só o primeiro passo do login (e-mail e senha), sem informar o código.
++     */
++    public function submitCredentials(string $username, string $password): void
+     {
+         /** @var \Tests\Support\AcceptanceTester $page */
+         $page = $this->getModule('WebDriver');
+@@ -18,6 +34,20 @@ class LoginHelper extends Module
+         $page->click('Entrar');
+     }
+ 
++    /**
++     * Lê o código de 4 dígitos do alerta "Seu código de acesso é 1234".
++     */
++    public function grabLoginCode(): string
++    {
++        /** @var \Tests\Support\AcceptanceTester $page */
++        $page = $this->getModule('WebDriver');
++        $text = $page->grabTextFrom('.alert-success');
++        \PHPUnit\Framework\Assert::assertMatchesRegularExpression('/\b\d{4}\b/', $text);
++        preg_match('/\b(\d{4})\b/', $text, $matches);
++
++        return $matches[1];
++    }
++
+     public function logout(): void
+     {
+         /** @var \Tests\Support\AcceptanceTester $page */
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..7e80fcf 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,51 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_generate_login_code_should_store_a_four_digit_code_with_expiration(): void
++    {
++        $code = $this->user->generateLoginCode();
++
++        $this->assertGreaterThanOrEqual(1000, $code);
++        $this->assertLessThanOrEqual(9999, $code);
++
++        $stored = User::findById($this->user->id);
++        $this->assertEquals($code, $stored->login_code);
++        $this->assertGreaterThan(time(), strtotime($stored->login_code_expires_at));
++    }
++
++    public function test_verify_login_code_should_accept_the_right_code_only_once(): void
++    {
++        $code = $this->user->generateLoginCode();
++        $stored = User::findById($this->user->id);
++
++        $this->assertTrue($stored->verifyLoginCode((string) $code));
++        $this->assertNull(User::findById($this->user->id)->login_code);
++        $this->assertFalse($stored->verifyLoginCode((string) $code));
++    }
++
++    public function test_verify_login_code_should_reject_wrong_or_malformed_codes(): void
++    {
++        $code = $this->user->generateLoginCode();
++        $wrong = $code === 9999 ? 1000 : $code + 1;
++
++        $this->assertFalse($this->user->verifyLoginCode((string) $wrong));
++        $this->assertFalse($this->user->verifyLoginCode(''));
++        $this->assertFalse($this->user->verifyLoginCode("{$code}x"));
++        $this->assertFalse($this->user->verifyLoginCode("-{$code}"));
++        $this->assertNotNull(User::findById($this->user->id)->login_code);
++    }
++
++    public function test_verify_login_code_without_code_should_be_false(): void
++    {
++        $this->assertFalse($this->user->verifyLoginCode('1234'));
++    }
++
++    public function test_verify_login_code_should_reject_an_expired_code(): void
++    {
++        $code = $this->user->generateLoginCode();
++        $this->user->update(['login_code_expires_at' => date('Y-m-d H:i:s', time() - 1)]);
++
++        $this->assertFalse($this->user->verifyLoginCode((string) $code));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

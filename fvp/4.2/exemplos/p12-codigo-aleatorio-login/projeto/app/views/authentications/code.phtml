@@ -1,0 +1,14 @@
+<div class="card login mx-auto">
+    <div class="card-body">
+        <p>Informe o código de 4 dígitos para concluir o login.</p>
+        <form action="<?= route('users.verify_code') ?>" method="post">
+            <div class="mb-3">
+                <label for="login_code" class="form-label">Código de acesso</label>
+                <input type="text" class="form-control" id="login_code" name="code"
+                    inputmode="numeric" maxlength="4" autocomplete="one-time-code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Confirmar</button>
+            <a class="btn btn-link" href="<?= route('users.login') ?>">Voltar</a>
+        </form>
+    </div>
+</div>
