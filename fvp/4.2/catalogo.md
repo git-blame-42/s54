@@ -216,8 +216,10 @@ Chance é estimativa a partir da rubrica, das issues de avaliação de
 código. Letras: M campo/validação, N listagem, O rotas e ações, P
 features novas, Q acesso, R views e flash, S testes, T populate e
 infra. A–H são da 4.1. Os cenários M7+, N7+, O5+, P13+, Q3+, R5+, S5 e
-T3 vieram de uma análise de lacunas (05/11) cruzada com um crítico
-independente, depois de os 40 primeiros terem exemplo pronto.
+T3+ vieram de análises de lacunas (05/11) feitas depois de os 40
+primeiros terem exemplo pronto; defeitos reais da base que não viraram
+cenário estão como armadilhas. A seção 5 liga frases típicas do
+enunciado ao cenário que as cobre.
 
 ## 5. Como o professor pede -> cenário
 
