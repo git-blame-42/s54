@@ -110,7 +110,7 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P6 no seu repositório: aplique o range inteiro
-  `f31006b..1d021c4` (P6 + S3, dois commits, nessa ordem).
+  `5dedab5..1d021c4` (P6 + S3, dois commits, nessa ordem).
 - Com P6 já aplicado: aplique só o topo, `1d021c4`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
@@ -121,7 +121,7 @@ git remote add fvp-s3 \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/projeto
 git fetch fvp-s3 fvp/s3-teste-unitario-model
 # range (P6 + S3):
-git cherry-pick f31006b..1d021c4
+git cherry-pick 5dedab5..1d021c4
 # ou só o topo, se já tem P6:
 # git cherry-pick 1d021c4
 git remote remove fvp-s3
@@ -133,7 +133,7 @@ git remote remove fvp-s3
 git fetch \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/solucao.bundle \
     fvp/s3-teste-unitario-model:fvp-s3
-git cherry-pick f31006b..1d021c4
+git cherry-pick 5dedab5..1d021c4
 # ou só o topo: git cherry-pick 1d021c4
 # opcional, limpa a ref
 git branch -D fvp-s3

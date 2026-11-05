@@ -127,7 +127,7 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P5 no seu repositório: aplique o range inteiro
-  `f31006b..e005375` (P5 + Q2, dois commits, nessa ordem).
+  `5dedab5..e005375` (P5 + Q2, dois commits, nessa ordem).
 - Com P5 já aplicado: aplique só o topo, `e005375`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
@@ -138,7 +138,7 @@ git remote add fvp-q2 \
     s50/fvp/4.2/exemplos/q2-bloquear-passado-cancelado/projeto
 git fetch fvp-q2 fvp/q2-bloquear-passado-cancelado
 # range (P5 + Q2):
-git cherry-pick f31006b..e005375
+git cherry-pick 5dedab5..e005375
 # ou só o topo, se já tem P5:
 # git cherry-pick e005375
 git remote remove fvp-q2
@@ -150,7 +150,7 @@ git remote remove fvp-q2
 git fetch \
     s50/fvp/4.2/exemplos/q2-bloquear-passado-cancelado/solucao.bundle \
     fvp/q2-bloquear-passado-cancelado:fvp-q2
-git cherry-pick f31006b..e005375
+git cherry-pick 5dedab5..e005375
 # ou só o topo: git cherry-pick e005375
 # opcional, limpa a ref
 git branch -D fvp-q2

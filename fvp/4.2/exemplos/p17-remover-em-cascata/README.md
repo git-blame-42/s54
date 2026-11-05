@@ -131,7 +131,7 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P16 no seu repositório: aplique o range inteiro
-  `f31006b..47030c1` (P16 + P17, dois commits, nessa ordem).
+  `5dedab5..47030c1` (P16 + P17, dois commits, nessa ordem).
 - Com P16 já aplicado: aplique só o topo, `47030c1`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
@@ -142,7 +142,7 @@ git remote add fvp-p17 \
     s50/fvp/4.2/exemplos/p17-remover-em-cascata/projeto
 git fetch fvp-p17 fvp/p17-remover-em-cascata
 # range (P16 + P17):
-git cherry-pick f31006b..47030c1
+git cherry-pick 5dedab5..47030c1
 # ou só o topo, se já tem P16:
 # git cherry-pick 47030c1
 git remote remove fvp-p17
@@ -154,7 +154,7 @@ git remote remove fvp-p17
 git fetch \
     s50/fvp/4.2/exemplos/p17-remover-em-cascata/solucao.bundle \
     fvp/p17-remover-em-cascata:fvp-p17
-git cherry-pick f31006b..47030c1
+git cherry-pick 5dedab5..47030c1
 # ou só o topo: git cherry-pick 47030c1
 # opcional, limpa a ref
 git branch -D fvp-p17

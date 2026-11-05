@@ -126,7 +126,7 @@ público. `<caminho>` abaixo é
 
 Escolha o que aplicar:
 
-- Sem O2 nem P2: aplique o range inteiro `f31006b..e590c00` (O2 + P2 +
+- Sem O2 nem P2: aplique o range inteiro `5dedab5..e590c00` (O2 + P2 +
   Q3, três commits, nessa ordem).
 - Com O2 e P2 já aplicados: aplique só o topo, `e590c00`.
 
@@ -138,7 +138,7 @@ git remote add fvp-q3 \
     s50/fvp/4.2/exemplos/q3-acao-so-participante/projeto
 git fetch fvp-q3 fvp/q3-acao-so-participante
 # range (O2 + P2 + Q3):
-git cherry-pick f31006b..e590c00
+git cherry-pick 5dedab5..e590c00
 # ou só o topo, se já tem O2 e P2:
 # git cherry-pick e590c00
 git remote remove fvp-q3
@@ -150,7 +150,7 @@ git remote remove fvp-q3
 git fetch \
     s50/fvp/4.2/exemplos/q3-acao-so-participante/solucao.bundle \
     fvp/q3-acao-so-participante:fvp-q3
-git cherry-pick f31006b..e590c00
+git cherry-pick 5dedab5..e590c00
 # ou só o topo: git cherry-pick e590c00
 # opcional, limpa a ref
 git branch -D fvp-q3

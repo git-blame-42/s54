@@ -145,7 +145,7 @@ público. `<caminho>` abaixo é `s50/fvp/4.2/exemplos/q5-token-csrf`.
 
 Escolha o que aplicar:
 
-- Sem O9: aplique o range inteiro `f31006b..41fd8ba` (O9 + Q5, dois
+- Sem O9: aplique o range inteiro `5dedab5..41fd8ba` (O9 + Q5, dois
   commits, nessa ordem).
 - Com O9 já aplicado: aplique só o topo, `41fd8ba`.
 
@@ -156,7 +156,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-q5 s50/fvp/4.2/exemplos/q5-token-csrf/projeto
 git fetch fvp-q5 fvp/q5-token-csrf
 # range (O9 + Q5):
-git cherry-pick f31006b..41fd8ba
+git cherry-pick 5dedab5..41fd8ba
 # ou só o topo, se já tem O9:
 # git cherry-pick 41fd8ba
 git remote remove fvp-q5
@@ -167,7 +167,7 @@ git remote remove fvp-q5
 ```
 git fetch s50/fvp/4.2/exemplos/q5-token-csrf/solucao.bundle \
     fvp/q5-token-csrf:fvp-q5
-git cherry-pick f31006b..41fd8ba
+git cherry-pick 5dedab5..41fd8ba
 # ou só o topo: git cherry-pick 41fd8ba
 # opcional, limpa a ref
 git branch -D fvp-q5

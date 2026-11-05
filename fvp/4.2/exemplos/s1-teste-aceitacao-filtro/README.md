@@ -125,8 +125,8 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-s1 \
     s50/fvp/4.2/exemplos/s1-teste-aceitacao-filtro/projeto
 git fetch fvp-s1 fvp/s1-teste-aceitacao-filtro
-# sem o N1: range f31006b..1f86e10 (8c3a316 e 1f86e10)
-git cherry-pick f31006b..1f86e10
+# sem o N1: range 5dedab5..1f86e10 (8c3a316 e 1f86e10)
+git cherry-pick 5dedab5..1f86e10
 # com o N1 já aplicado: só o topo
 # git cherry-pick 1f86e10
 git remote remove fvp-s1
@@ -139,7 +139,7 @@ git fetch \
     s50/fvp/4.2/exemplos/s1-teste-aceitacao-filtro/solucao.bundle \
     fvp/s1-teste-aceitacao-filtro:fvp-s1
 # o bundle traz os objetos; o cherry-pick cria commits novos
-git cherry-pick f31006b..1f86e10
+git cherry-pick 5dedab5..1f86e10
 # ou, com o N1 já aplicado: git cherry-pick 1f86e10
 # opcional, limpa a ref
 git branch -D fvp-s1
