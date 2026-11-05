@@ -116,12 +116,24 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M4 | Data de término não anterior ao início | média-alta | 25-35 min |
 | M5 | Validação condicional por modalidade | média | 15-25 min |
 | M6 | Unicidade (título único na mesma data) | média-alta | 15-20 min |
+| M7 | Horário do Evento (`TIME` ou `DATETIME`) | média-alta | 30-40 min |
+| M8 | Enum PHP para tipo e modalidade | média-baixa | 25-35 min |
+| M9 | Slug único gerado no backend | média | 25-35 min |
+| M10 | Campo que não muda depois de haver inscrições | média | 15-25 min |
+| M11 | Validar `user_id` no model | média | 15-20 min |
+| M12 | Último editor gravado da sessão | média-baixa | 20-25 min |
+| M13 | Montagem do Evento no model ou service | média-baixa | 10-20 min |
 | N1 | Filtro por tipo com `where` na paginação | alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
 | N4 | Mudar `per_page` ou deixar o usuário escolher | média-alta | 5-10 min |
 | N5 | Só Eventos futuros ou passados | média | 20-30 min |
 | N6 | Dado calculado na tela (badge "Lotado", total) | média | 10-15 min |
+| N7 | Painel administrativo com resumo | média | 20-30 min |
+| N8 | Ordenar clicando no cabeçalho da listagem | média | 25-35 min |
+| N9 | Filtro por período | média | 30-40 min |
+| N10 | Página e id inválidos, sem `(int)` cego | média-alta | 15-25 min |
+| N11 | `Model::count()` no framework | média | 15-20 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
@@ -155,7 +167,9 @@ Chance é estimativa a partir da rubrica, das issues de avaliação de
 2026-2 (4.1 e 4.2), do pedido real da FVP 4.1 e do que falta no
 código. Letras: M campo/validação, N listagem, O rotas e ações, P
 features novas, Q acesso, R views e flash, S testes, T populate e
-infra. A–H são da 4.1.
+infra. A–H são da 4.1. Os cenários M7+, N7+, O5+, P13+, Q3+, R5+, S5 e
+T3 vieram de uma análise de lacunas (05/11) cruzada com um crítico
+independente, depois de os 40 primeiros terem exemplo pronto.
 
 ## 5. Cenários
 
@@ -508,6 +522,416 @@ Armadilhas:
 
 Prova: `EventTest`; no navegador, cadastrar o mesmo título duas vezes.
 
+### M7. Horário do Evento
+
+Chance: média-alta. Tempo: 30-40 min.
+
+Pedido típico: "o Evento precisa de horário de início (e de fim)". Duas
+formas: (A) colunas `starts_time TIME NOT NULL` e `ends_time TIME NULL`
+ao lado de `starts_on` (menor, recomendada); (B) trocar `starts_on DATE`
+por `starts_at DATETIME` (renomeia a coluna em todos os pontos de M1 e
+muda a regra "não no passado" para considerar a hora).
+
+Arquivos: os de M1 (schema, `@property`, `$columns`, `validates()`,
+`FIELDS`, `FORM`, `IDX`, `SHOW`, `POP`, fixtures) mais `VAL:99-107`
+(`validDate` aceita `$format`), `VAL:116-138` (`notPastDate`, forma B),
+`FORM:70-75` (campo `date`), `ACT/BaseEventsCest.php:148-154` (a data é
+preenchida por `executeJS`; o campo `time` precisa do mesmo), `IDX:24` e
+`SHOW:23` (formatação da data).
+
+Passos (forma A):
+
+1. Testes em `EVT`: `'starts_time' => '14:00'` válido; `'25:00'`,
+   `'14h'` e `''` inválidos; `ends_time` antes de `starts_time` inválido
+   (compare as strings `H:i`, que ordenam bem).
+2. `SCH`: `starts_time TIME NOT NULL, ends_time TIME NULL` depois de
+   `starts_on`.
+3. `EV`: `@property`, `$columns`, e em `validates()`:
+
+   ```php
+   Validations::notEmpty('starts_time', $this) &&
+       Validations::validDate('starts_time', $this, 'H:i') &&
+       $this->validatesEndsTimeAfterStartsTime();
+   ```
+
+4. `EC:14`: `'starts_time'`, `'ends_time'` em `FIELDS`.
+5. `FORM`: `<input type="time" ...>` copiando o bloco de `starts_on`;
+   `IDX:24`/`SHOW:23`: `date('d/m/Y')` + `substr($event->starts_time, 0, 5)`.
+6. `POP:134-143`: `'starts_time' => '19:00'`; fixtures de M1 (`params()`,
+   `validParams()`, `seedEvents`, `validEventData`, `fillEventForm` com
+   `executeJS` para o `time`, `ACC`, `EnrollmentTest`).
+
+Armadilhas:
+
+- O MySQL devolve `TIME` como `HH:MM:SS`: ao **editar**, `validDate(...,
+  'H:i')` recusa `14:00:00`. Normalize antes de validar
+  (`$this->starts_time = substr((string) $this->starts_time, 0, 5)` em
+  `validates()` ou no construtor) ou aceite os dois formatos.
+- `type="time"` no Selenium: `fillField` não digita; use `executeJS`
+  como a base faz para `date` (`BaseEventsCest.php:148-154`).
+- Forma B: `notPastDate` compara só o dia (`VAL:130` zera a hora);
+  para "não no passado" por hora crie `notPastDateTime` com formato
+  `'Y-m-d H:i'` e sem `setTime(0, 0)`. O `<input type="datetime-local">`
+  envia `2026-11-20T19:00` (com `T`): troque o `T` por espaço antes de
+  validar ou use o formato `'Y-m-d\TH:i'`.
+- Fuso: o PHP está em `America/Sao_Paulo` (`Dockerfile:10`); o MySQL
+  guarda `TIME`/`DATETIME` sem fuso. Não misture com `TIMESTAMP`.
+- Formato na view: `date('H:i', strtotime($event->starts_time))`
+  funciona para `TIME`, mas `strtotime('')` vira 1970 (R3): proteja.
+
+Prova: `EventTest` e `EventsControllerTest`; no navegador, criar com
+hora, editar sem mexer na hora e salvar (é onde o `HH:MM:SS` morde).
+
+### M8. Enum PHP para tipo e modalidade
+
+Chance: média-baixa. Tempo: 25-35 min.
+
+Pedido típico: "troque as constantes `KINDS`/`MODALITIES` por um `enum`
+do PHP 8.1 com os rótulos" (OO e reutilização, assunto das issues da
+4.1).
+
+Arquivos: `EV:24-37` (`KINDS`, `MODALITIES`), `EV:66-70` (`inclusion`
+com `array_keys`), `FORM:37-44` e `:46-56` (laços sobre as constantes),
+`IDX:23`, `SHOW:14,17`, `EVT:140-168`, `POP:46-130` (valores crus,
+continuam válidos), `composer.json:7-14` (PSR-4 `App\` -> `app/`).
+
+Passos:
+
+1. Testes em `EVT`: `EventKind::from('lecture')->label() === 'Palestra'`;
+   `EventKind::tryFrom('x') === null`; `Event` com `kind` fora dos
+   `values()` inválido (já existe em `EVT:147-153`, só muda a fonte).
+2. `app/Models/Enums/EventKind.php`:
+
+   ```php
+   namespace App\Models\Enums;
+
+   enum EventKind: string
+   {
+       case Lecture = 'lecture';
+       case Workshop = 'workshop';
+       case ShortCourse = 'short_course';
+       case AcademicWeek = 'academic_week';
+
+       public function label(): string
+       {
+           return match ($this) {
+               self::Lecture => 'Palestra',
+               self::Workshop => 'Oficina',
+               self::ShortCourse => 'Minicurso',
+               self::AcademicWeek => 'Semana acadêmica',
+           };
+       }
+
+       /** @return array<int, string> */
+       public static function values(): array
+       {
+           return array_column(self::cases(), 'value');
+       }
+   }
+   ```
+
+3. `EV`: `Validations::inclusion('kind', $this, EventKind::values())`;
+   método `kindLabel(): string` com
+   `EventKind::tryFrom((string) $this->kind)?->label() ?? (string) $this->kind`.
+4. Views: `foreach (EventKind::cases() as $kind)` com `$kind->value` e
+   `$kind->label()` no `FORM`; `$event->kindLabel()` em `IDX`/`SHOW`.
+   Repita para `EventModality`. Pode manter `Event::KINDS` como atalho
+   gerado (`array_combine(EventKind::values(), array_map(...))`) para não
+   quebrar o resto de uma vez.
+
+Armadilhas:
+
+- `from()` lança `ValueError` com valor desconhecido (dado velho no
+  banco): use `tryFrom()` na exibição.
+- Enum não serve como chave de array e não é `string`: compare
+  `$event->kind === EventKind::Lecture->value`, não com o case.
+- O `fillEventForm` dos Cests seleciona pelo rótulo
+  (`BaseEventsCest.php:130-131`): os rótulos têm de continuar iguais.
+- Classe nova em `app/`: o PSR-4 resolve sem `dump-autoload`, mas se
+  alguém rodou `composer dump-autoload -o` (classmap) é preciso rodar
+  `./run composer dump-autoload` de novo.
+- `phpcs` PSR-12 aceita `enum`; `phpstan` nível 6 também. `match` sem
+  `default` é proposital: o `phpstan` avisa quando falta um case.
+
+Prova: `EventTest`; no navegador, formulário, listagem e `show`
+inalterados para o usuário.
+
+### M9. Slug único gerado no backend
+
+Chance: média. Tempo: 25-35 min.
+
+Pedido típico: "o Evento ganha um identificador legível (`slug`) gerado
+a partir do título, único, usado na URL `/events/{slug}`". Mesmo padrão
+de P1 (valor gerado e validado no servidor), com texto em vez de número.
+
+Arquivos: `SCH:21-38`, `EV:48-58`, `EV:60-82`, `MODEL:139-187` (`save()`
+a sobrescrever, como em P1), `MODEL:335` (`findBy`), `MODEL:347`
+(`exists`), `lib/StringUtils.php:5-27` (lugar do `slugify`),
+`tests/Unit/Lib/StringUtilsTest.php`, `ROUTES:26-35` (admin continua por
+`id`), O2 (`/events/{id}` vira `/events/{slug}`), `core/Router/Route.php:77-100`
+(o parâmetro de rota aceita qualquer texto), `SHOW`, `EVT:302-308`.
+
+Passos:
+
+1. Testes: `StringUtilsTest::test_slugify` (`'Semana Acadêmica 2026!'`
+   -> `semana-academica-2026`); `EVT`: `save()` gera `slug`, dois títulos
+   iguais geram `x` e `x-2`, editar o título não troca o `slug`.
+2. `lib/StringUtils.php`:
+
+   ```php
+   public static function slugify(string $text): string
+   {
+       $ascii = iconv('UTF-8', 'ASCII//TRANSLIT', $text);
+       $slug = strtolower(trim((string) $ascii));
+       $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
+
+       return trim($slug, '-');
+   }
+   ```
+
+3. `SCH`: `slug VARCHAR(255) NOT NULL` + `UNIQUE KEY uq_events_slug (slug)`.
+   `EV`: `'slug'` em `$columns`; `save()` sobrescrito gera quando
+   `newRecord()` e `slug` vazio: `$base = StringUtils::slugify($title)`,
+   e enquanto `self::exists(['slug' => $slug])` acrescenta `-2`, `-3`...
+   Em `validates()`: `notEmpty('slug') && uniqueness('slug')` (com a
+   guarda de P1 para registro novo).
+4. Rota do Participante (O2): `Route::get('/events/{slug}', ...)` e no
+   controller `Event::findBy(['slug' => $slug])` com `is_string`.
+   Admin continua por `id`.
+5. `SHOW`: mostre a URL pública.
+
+Armadilhas:
+
+- `/events/{slug}` e `/events/{id}` têm a mesma forma: o Router casa a
+  primeira declarada (`Route.php:77-100` só compara o número de partes).
+  Fique com uma.
+- `iconv` com `//TRANSLIT` depende do locale no Alpine/Debian; a imagem
+  `php:8.3.4-fpm` tem `iconv`, mas teste `'ç'`, `'ã'`. Alternativa sem
+  `iconv`: um mapa de acentos (`str_replace`).
+- Título só com símbolos vira slug vazio: caia em `'evento'` + id ou
+  recuse em `validates()`.
+- Trocar o slug ao editar quebra links já divulgados: gere só na
+  criação (diga isso ao professor).
+- `lib/` fora do `phpstan`: tipe tudo mesmo assim; `preg_replace` pode
+  devolver `null`, por isso o `?? ''`.
+
+Prova: `StringUtilsTest`, `EventTest`; no navegador, `/events/<slug>`
+abre o detalhe e o admin vê a URL no `show`.
+
+### M10. Campo que não muda depois de haver inscrições
+
+Chance: média. Tempo: 15-25 min.
+
+Pedido típico: "depois que alguém se inscreve, a data (ou o tipo, ou a
+modalidade) do Evento não pode mais mudar". Regra entre o registro
+original e o novo, no model.
+
+Arquivos: `EV:84-99` (`validatesStartsOnNotPast`, que já compara com o
+original via `findById`), `EV:104-115` (modelo de regra "só na edição"),
+`EV:142-145` (`hasEnrollments`), `FORM:70-75`, `EVT:499-547` (testes com
+`createPastEvent`/edição), `EVT:580-632` (regra com Inscrições),
+`ECT:191-240`.
+
+Passos:
+
+1. Testes em `EVT`: Evento com `enroll(1)` e `starts_on` alterada ->
+   inválido com "não pode mudar depois que há inscrições!"; sem
+   Inscrições pode; com Inscrições e mesma data pode.
+2. `EV`:
+
+   ```php
+   private function validatesFrozenFieldsWithEnrollments(): void
+   {
+       if ($this->newRecord() || !$this->hasEnrollments()) {
+           return;
+       }
+
+       $original = self::findById($this->id);
+
+       foreach (['starts_on', 'kind'] as $field) {
+           if ($original !== null && $original->$field !== $this->$field) {
+               $this->addError(
+                   $field,
+                   'não pode mudar depois que há inscrições!'
+               );
+           }
+       }
+   }
+   ```
+
+   chamado no fim de `validates()`.
+3. `FORM`: `readonly` nos campos congelados quando
+   `$event->hasEnrollments()` (só visual; a regra é a do model).
+4. `ECT`: `update` com data nova em Evento com `enroll()` -> form com o
+   erro e registro intacto.
+
+Armadilhas:
+
+- `readonly` **envia** o valor; `disabled` **não envia**: com
+  `disabled`, `fill()` recebe `null` e o `notEmpty` acusa campo vazio.
+  Use `readonly` (e o `select` não tem `readonly`: envie num `hidden`).
+- `validatesStartsOnNotPast` (`EV:91`) já carrega o original: carregue
+  uma vez e reaproveite para não dobrar consultas.
+- Comparação de `starts_on`: as duas vêm como `Y-m-d` (string), ok;
+  `capacity` viria `int` do banco e `string` do form: compare com
+  `(string)` dos dois lados.
+- O professor da 4.2 cobrou exatamente "detecção de alteração" (grupo
+  5): compare com o original do banco, não com o que o form diz que era.
+
+Prova: `EventTest`, `EventsControllerTest`; no navegador, Evento 1 do
+populate (3 inscritos) não aceita nova data.
+
+### M11. Validar `user_id` no model
+
+Chance: média. Tempo: 15-20 min.
+
+Pedido típico: "o Evento só pode pertencer a um usuário existente e
+administrador; hoje um `user_id` inválido estoura a FK (500)".
+
+Arquivos: `EV:60-82`, `SCH:35-36` (FK que hoje gera `PDOException`),
+`US:66-74` (`findById` via `Model`, `isAdmin`), `EVT:41-54` (`params()`
+traz `user_id` do admin), `EVT:86-114` (`user_id` não está na lista de
+obrigatórios), `ECT:101-112` (o controller já ignora `user_id` do form).
+
+Passos:
+
+1. Testes em `EVT`: `user_id` nulo -> erro; id inexistente -> erro;
+   id de Participante -> erro; admin -> válido.
+2. `EV::validates()`:
+
+   ```php
+   Validations::notEmpty('user_id', $this) && $this->validatesUserIsAdmin();
+   ```
+
+   ```php
+   private function validatesUserIsAdmin(): void
+   {
+       $user = User::findById((int) $this->user_id);
+
+       if ($user === null || !$user->isAdmin()) {
+           $this->addError('user_id', 'deve ser um administrador existente!');
+       }
+   }
+   ```
+
+3. Genérico (bônus de framework): `Validations::existence($attribute,
+   $obj, string $modelClass)` em `VAL`, com `$modelClass::findById`.
+
+Armadilhas:
+
+- `user_id` não está no form: o erro não tem campo para aparecer; mostre
+  `errors('user_id')` no flash `danger` ou como erro de `base`.
+- `test_empty_event_should_have_error_in_every_field` (`EVT:86-96`) e o
+  `requiredFieldsProvider` (`EVT:101-114`) não listam `user_id`:
+  acrescente, ou o teste novo é o único a cobrir.
+- A FK (`SCH:35-36`) continua como última barreira; a validação evita
+  o 500 antes.
+- `(int)` aqui é sobre um valor que o controller já controla
+  (`EC:53`), não entrada do form.
+
+Prova: `EventTest`; populate continua (todos com `$admin->id`).
+
+### M12. Último editor gravado da sessão
+
+Chance: média-baixa. Tempo: 20-25 min.
+
+Pedido típico: "registre quem fez a última alteração do Evento
+(`updated_by`) e mostre no detalhe; o valor vem do usuário logado, nunca
+do formulário".
+
+Arquivos: `SCH:21-38`, `EV:48-58`, `EV:117-120` (`user()`, modelo de
+`BelongsTo`), `EC:77-94` (`update`), `EC:14` (`FIELDS`: **não** entra),
+`SHOW:6-33`, `ECT:101-112` (modelo de "ignora campo do form"),
+`ECT:191-207`.
+
+Passos:
+
+1. Testes em `ECT`: `update` grava `updated_by` igual ao admin logado e
+   ignora `'updated_by' => '999'` vindo do form; `create` deixa `null`.
+2. `SCH`: `updated_by INT NULL` + `FOREIGN KEY (updated_by) REFERENCES
+   users (id) ON DELETE SET NULL`.
+3. `EV`: `'updated_by'` em `$columns`, `@property int|null`,
+   `editor(): BelongsTo` (`belongsTo(User::class, 'updated_by')`) e
+   `editorName(): string` (`null` -> `''`; `instanceof User`).
+4. `EC::update`, antes do `save()`:
+   `$event->updated_by = $this->currentUser()?->id;`.
+5. `SHOW`: "Última alteração por" quando houver.
+
+Armadilhas:
+
+- `BelongsTo::get()` devolve `Model` e lança erro se a FK for `null`:
+  cheque `$this->updated_by !== null` antes de chamar.
+- `save()` grava `NULL` na criação (coluna nullable): ok.
+- Para ver dois nomes diferentes no navegador é preciso um 2º admin
+  (T1/Q1).
+- Variante "data da alteração": `updated_at` já existe no schema
+  (`SCH:33`), mas não está em `$columns` (R5).
+
+Prova: `EventsControllerTest`; no navegador, editar e ver o nome.
+
+### M13. Montagem do Evento no model ou em um service
+
+Chance: média-baixa. Tempo: 10-20 min.
+
+Pedido típico: "tire a lógica de montar o Evento do controller
+(`fill`/`FIELDS`) e leve para o model ou para um service" (issues da
+4.2: "muita lógica no controller").
+
+Arquivos: `EC:14` (`FIELDS`), `EC:116-130` (`fill`), `EC:49-63` e
+`EC:77-94` (chamadas), `EV:198-206` (`setAudienceList`), `ECT:101-138`
+(os testes de create inválido e de `user_id` ignorado continuam
+valendo), `composer.json:7-14` (`App\` -> `app/`, para um
+`App\Services`).
+
+Passos:
+
+1. Teste em `EVT`: `fillFromForm(['title' => 'x', 'user_id' => 9,
+   'audience' => ['students']])` define `title`, ignora `user_id` e
+   monta `audience`; valores array em campo escalar viram `null`.
+2. `EV`:
+
+   ```php
+   /** Campos que o formulário pode definir (nunca user_id nem id). */
+   public const FORM_FIELDS = [
+       'title', 'description', 'kind', 'modality',
+       'starts_on', 'location', 'capacity',
+   ];
+
+   /** @param array<string, mixed> $params */
+   public function fillFromForm(array $params): void
+   {
+       foreach (self::FORM_FIELDS as $field) {
+           $value = $params[$field] ?? null;
+           $this->$field = is_scalar($value) ? (string) $value : null;
+       }
+
+       $audience = $params['audience'] ?? [];
+       $this->setAudienceList(
+           is_array($audience) ? array_filter($audience, 'is_scalar') : []
+       );
+   }
+   ```
+
+3. `EC`: `fill()` vira duas linhas: valida a forma do payload
+   (`is_array`) e chama `$event->fillFromForm($params)`. Remova
+   `FIELDS` do controller.
+4. Variante service: `app/Services/EventForm.php` com
+   `apply(Event $event, mixed $params): void` e teste unitário próprio.
+
+Armadilhas:
+
+- A checagem `is_array($params)` (forma do payload) fica no controller:
+  "validar a forma no limite HTTP" (avaliação 4.1 do grupo 2); a regra
+  de quais campos entram fica no model.
+- `?? null` aqui é sobre campo **opcional de presença** (o form pode não
+  enviar) e o `notEmpty` do model cobra em seguida; não é o `?? ''`
+  condenado nas issues. Saiba explicar.
+- Linha da constante passa de 80 colunas; o limite do projeto é 130.
+- Não exponha `fillFromForm` a `user_id`: `ECT:101-112` tem de continuar
+  verde.
+
+Prova: `EventTest` novo e `EventsControllerTest` inalterado.
+
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
 Chance: alta (`where` é a linha nova da rubrica; manter o filtro na
@@ -793,6 +1217,318 @@ Armadilhas:
 - O Evento lotado do populate é o primeiro (3/3), na página 1.
 
 Prova: teste de controller; o primeiro Evento mostra "Lotado".
+
+### N7. Painel administrativo com resumo
+
+Chance: média. Tempo: 20-30 min.
+
+Pedido típico: "no painel administrativo mostre quantos Eventos há por
+tipo, os próximos três e o total de Inscrições" (agregação no model).
+
+Arquivos: `app/Controllers/Admin/DashboardController.php:9-13`,
+`app/views/admin/dashboard/index.phtml:1-5`, `EV` (métodos novos; N5
+`upcoming()` serve de base), `EN`, `MODEL:300-333` (`where`, modelo de
+SQL com `prepare`), `EV:25-30` (`KINDS`, rótulos), N6 (contador
+simples, se já existir), `tests/Integration/Controllers/Admin/` (teste
+novo de controller; N6 tem um `DashboardControllerTest` como modelo).
+
+Passos:
+
+1. Testes em `EVT`: `Event::countByKind()` com 2 Palestras e 1 Oficina
+   devolve `['lecture' => 2, 'workshop' => 1, ...]` com `0` nos demais.
+2. `EV`:
+
+   ```php
+   /** @return array<string, int> */
+   public static function countByKind(): array
+   {
+       $stmt = Database::getDatabaseConn()->prepare(
+           'SELECT kind, COUNT(*) AS total FROM events GROUP BY kind'
+       );
+       $stmt->execute();
+
+       $totals = array_fill_keys(array_keys(self::KINDS), 0);
+       foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+           $totals[$row['kind']] = (int) $row['total'];
+       }
+
+       return $totals;
+   }
+   ```
+
+   `nextEvents(int $limit = 3): array` com `WHERE starts_on >= :today
+   ORDER BY starts_on, id LIMIT :limit` (`bindValue(':limit', $limit,
+   PDO::PARAM_INT)`), `@return array<static>`.
+3. `DashboardController::index`: `$byKind = Event::countByKind();`,
+   `$next = Event::nextEvents();`, `$enrollments = count(Enrollment::all())`
+   (ou `Enrollment::count()`, N11); tudo no `compact`.
+4. View: tabela tipo/quantidade com `Event::KINDS[$kind]`, lista dos
+   próximos com link para o `show`, cartão de Inscrições.
+
+Armadilhas:
+
+- `LIMIT :limit` precisa de `PDO::PARAM_INT`, senão vira `'3'` com
+  aspas e o MySQL recusa.
+- Tipos sem Evento não voltam do `GROUP BY`: preencha com `0` a partir
+  de `KINDS` (acima) para a tabela não "sumir" linhas.
+- `fetchColumn`/`COUNT` devolvem string: `(int)`.
+- Variável fora do `compact`: 500. `$title` idem.
+- `AdminDashboardCest` (`tests/Acceptance/admin/AdminDashboardCest.php`)
+  roda sem dados: a view precisa funcionar com zero Eventos.
+
+Prova: testes; no navegador o populate mostra 4/4/4/4 por tipo e 14
+Inscrições.
+
+### N8. Ordenar clicando no cabeçalho da listagem
+
+Chance: média. Tempo: 25-35 min.
+
+Pedido típico: "clicar em Título ou Data ordena a listagem (crescente e
+decrescente), e a ordem se mantém ao paginar". Junta N3 (`ORDER BY` no
+`Paginator`) com N1 forma 2 (`queryParams`).
+
+Arquivos: `PAG:18-26` e `:124-128` (N3: `orderBy`), `MODEL:284-294`,
+`EC:16-27`, `IDX:11-16` (cabeçalhos), `PAGES:6,16,22` (links com
+`queryParams`, N1 forma 2), `ECT:39-57`, `ACT/ListEventsCest.php:19-33`
+(assume a ordem de `id`), `ACT/CreateSuccessfullyCest.php`.
+
+Passos:
+
+1. Testes em `ECT`: `params: ['sort' => 'title', 'dir' => 'desc']`
+   ordena; `sort` fora da lista cai na ordem padrão; os links de página
+   trazem `?sort=title&dir=desc`.
+2. `EC`: constantes `SORTS = ['starts_on', 'title']` e `DIRS = ['asc',
+   'desc']`, e:
+
+   ```php
+   $sort = $request->getParam('sort');
+   $sort = is_string($sort) && in_array($sort, self::SORTS, true)
+       ? $sort
+       : 'starts_on';
+   ```
+
+   idem `$dir`; `orderBy: "{$sort} {$dir}, id"` e
+   `queryParams: ['sort' => $sort, 'dir' => $dir]`.
+3. `IDX:11-16`: cabeçalhos viram links
+   `route('admin.events.index', ['sort' => 'title', 'dir' => $next])`
+   com `$next = $dir === 'asc' ? 'desc' : 'asc'` e uma seta no ativo.
+4. `PAGES` com `array_merge(['page' => X], $paginator->queryParams())`
+   (N1 forma 2).
+
+Armadilhas:
+
+- `ORDER BY` não aceita `bindValue` para nome de coluna: a única defesa
+  é a lista fechada (`in_array(..., true)`). Nunca interpole o valor cru.
+- `?sort[]=x` vem como array: `is_string` antes.
+- Desempate por `id`, senão títulos iguais trocam de página.
+- A ordem padrão muda de `id` para `starts_on`: `ListEventsCest:19-33`
+  e `CreateSuccessfullyCest` assumem `id` (ver N3).
+- Ordenação de texto segue a collation do MySQL (`utf8mb4_0900_ai_ci`,
+  sem distinguir acentos nem maiúsculas); diga isso se perguntarem.
+
+Prova: testes; no navegador, clicar em Título, ir à página 2 e ver a
+ordem mantida.
+
+### N9. Filtro por período
+
+Chance: média. Tempo: 30-40 min.
+
+Pedido típico: "filtrar os Eventos entre duas datas (de/até); data
+inválida mostra erro, não é ignorada em silêncio".
+
+Arquivos: `EV` (método novo com `BETWEEN`; N5 `upcoming()` é o molde),
+`EC:16-27`, `IDX:1-3` (form), `VAL:140-153` (`parseDate`, privado: copie
+a ideia), `PAG:147-169` (só igualdade: a forma paginada exige estender
+o `Paginator`, como P11 fez com `IS NULL`), `ECT:39-57`, `EVT:366-376`.
+
+Passos (forma 1, sem paginação quando filtrado):
+
+1. Testes em `EVT`: três Eventos em datas distintas; `betweenDates(a, b)`
+   devolve só o do meio. `ECT`: `from` inválido (`'2026-13-40'`) -> form
+   com mensagem e listagem normal; válido -> só os do intervalo.
+2. `EV`:
+
+   ```php
+   /** @return array<static> */
+   public static function betweenDates(string $from, string $to): array
+   {
+       $columns = implode(', ', static::$columns);
+       $stmt = Database::getDatabaseConn()->prepare(
+           "SELECT id, {$columns} FROM events "
+           . 'WHERE starts_on BETWEEN :from AND :to ORDER BY starts_on, id'
+       );
+       $stmt->bindValue(':from', $from);
+       $stmt->bindValue(':to', $to);
+       $stmt->execute();
+
+       $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+       return array_map(fn($row) => new static($row), $rows);
+   }
+   ```
+
+3. `EC::index`: leia `from`/`to` com `is_string`; valide cada um com
+   `DateTimeImmutable::createFromFormat('!Y-m-d', $v)` + `format() === $v`
+   (como `VAL:140-153`); inválido -> `$error = 'Data inválida!'` e
+   listagem padrão; ambos válidos -> `Event::betweenDates(...)`,
+   `$paginator = null`. `from`, `to` e `error` sempre no `compact`.
+4. `IDX`: dois `<input type="date">` com os valores mantidos, botão
+   "Filtrar", "Limpar"; mensagem de erro em vermelho; guarda do
+   `$paginator` nulo (N1 forma 1).
+5. Forma 2 (paginada): `Paginator` com condições `>=`/`<=` (estenda
+   `buildConditions`/`bindConditions` em `lib/`, nunca em `core/`), e
+   `queryParams` com `from`/`to`.
+
+Armadilhas:
+
+- `from > to`: troque ou acuse; não devolva lista vazia sem aviso.
+- Só um dos dois preenchido: decida (hoje em diante / até) e teste.
+- `BETWEEN` com `DATE` inclui as duas pontas; com `DATETIME` (M7 forma
+  B) o `to` precisa de `23:59:59`.
+- A validação está no controller porque não há model para o filtro;
+  diga que é validação de **entrada**, não regra de negócio.
+- `$paginator` nulo na `IDX:40`: 500 se esquecer a guarda.
+
+Prova: testes; no navegador, filtrar o populate por duas semanas e
+depois digitar uma data inválida.
+
+### N10. Página e id inválidos sem conversão silenciosa
+
+Chance: média-alta. Tempo: 15-25 min.
+
+Pedido típico: "`/admin/events/page/abc` e `/admin/events/page/999` não
+podem mostrar lixo; `/admin/events/abc/edit` não pode virar `id = 0`
+por mágica" (issue 4.2 do grupo 5: conversão silenciosa com `(int)`).
+
+Arquivos: `EC:19` (`max(1, (int) $request->getParam('page', 1))`),
+`EC:132-135` (`findEvent` com `(int)`), `PAG:81-86` (`entriesInfo` com
+página fora do intervalo imprime "Mostrando 4996 - 4995 de 16"),
+`PAG:51-54` (`totalOfPages`), `PAG:104-115` (`loadTotals`),
+`ECT:39-57`, `ACT/PaginateEventsCest.php`, `ACC:85-97` (`/page/2`).
+
+Passos:
+
+1. Testes em `ECT`: `page => 'abc'` -> `Location: /admin/events` e flash
+   `danger`; `page => '999'` -> idem (ou redireciona para a última
+   página; escolha e teste); `page => '2'` continua ok. `findEvent` com
+   `id => 'abc'` -> "Evento não encontrado!" sem passar por `(int)`.
+2. `EC`: método privado
+
+   ```php
+   private function pageParam(Request $request): ?int
+   {
+       $page = $request->getParam('page', '1');
+
+       $valid = is_string($page) && ctype_digit($page) && (int) $page >= 1;
+
+       return $valid ? (int) $page : null;
+   }
+   ```
+
+   e em `index()`: `null` -> `FlashMessage::danger('Página inválida!')`,
+   `redirectTo(route('admin.events.index'))`, `return`.
+3. `PAG`:
+
+   ```php
+   public function isOutOfRange(): bool
+   {
+       return $this->page > max(1, $this->totalOfPages);
+   }
+   ```
+
+   Em `index()`, depois de montar o paginador,
+   `if ($paginator->isOutOfRange())` -> mesma saída do passo 2.
+4. `findEvent`:
+
+   ```php
+   $id = $request->getParam('id');
+   if (!is_string($id) || !ctype_digit($id)) {
+       return null;
+   }
+
+   return Event::findById((int) $id);
+   ```
+
+Armadilhas:
+
+- O parâmetro de rota chega como **string** (`Route.php:91-98`), mas o
+  padrão `getParam('page', 1)` é `int`: trate os dois (`(string)` antes
+  do `ctype_digit`, ou padrão `'1'`).
+- `ctype_digit('')` é `false` e `ctype_digit('007')` é `true` (página 7):
+  aceitável; se quiser recusar zeros à esquerda, compare
+  `(string) (int) $page === $page`.
+- `totalOfPages` é `0` sem Eventos: página 1 tem de continuar válida
+  (`max(1, ...)`).
+- Divisão em `PAG:114` só depende de `per_page` (N4), não da página.
+- `(int) 'abc'` hoje vira `0` e cai em "não encontrado" por sorte;
+  `(int) '12abc'` vira `12` e abre outro Evento: é o caso que a
+  validação explícita fecha.
+
+Prova: `EventsControllerTest`, `PaginateEventsCest`; no navegador,
+`/admin/events/page/abc` e `/admin/events/page/99`.
+
+### N11. `Model::count()` no framework
+
+Chance: média. Tempo: 15-20 min.
+
+Pedido típico: "a listagem faz uma consulta por linha para contar
+inscritos (`count(Enrollment::where(...))`); crie `count()` no
+ActiveRecord e use" (bônus "Funcionalidades Extras no Framework").
+
+Arquivos: `MODEL:300-333` (`where`: a montagem de condições a
+reaproveitar), `MODEL:261-282` (`all`), `EV:125-132`
+(`enrollmentsCount`), `core/Database/ActiveRecord/BelongsToMany.php:59-82`
+(`count()` da relação, modelo de `SELECT COUNT`), `EVT:465-481`,
+`tests/Unit/Models/Events/EnrollmentTest.php`.
+
+Passos:
+
+1. Testes: `Enrollment::count() === 0` no banco vazio;
+   `Enrollment::count(['event_id' => $event->id]) === 2` depois de
+   `enroll($event, 2)`; `Event::count()`; `enrollmentsCount()` continua
+   devolvendo o mesmo.
+2. `MODEL`, ao lado de `where`:
+
+   ```php
+   /** @param array<string, mixed> $conditions */
+   public static function count(array $conditions = []): int
+   {
+       $sql = 'SELECT COUNT(*) FROM ' . static::$table;
+
+       if ($conditions !== []) {
+           $sql .= ' WHERE ' . implode(' AND ', array_map(
+               fn(string $column) => "{$column} = :{$column}",
+               array_keys($conditions)
+           ));
+       }
+
+       $stmt = Database::getDatabaseConn()->prepare($sql);
+       foreach ($conditions as $column => $value) {
+           $stmt->bindValue($column, $value);
+       }
+       $stmt->execute();
+
+       return (int) $stmt->fetchColumn();
+   }
+   ```
+
+3. `EV:131`: `return Enrollment::count(['event_id' => $this->id]);`.
+   N6/N7: `Enrollment::count()` no painel.
+
+Armadilhas:
+
+- `fetchColumn()` devolve string: `(int)`.
+- Mudança em `core/`: mínima, com teste, e sem alterar assinaturas
+  existentes; o `phpstan` cobre `core` (PHPDoc do array).
+- Nome `count` não colide com nada em `Model`; se preferir,
+  `countWhere`.
+- O N+1 na listagem continua (uma consulta por linha), só mais barata;
+  acabar com ele exige um `JOIN` com `GROUP BY` (N7) ou um `LEFT JOIN`
+  no `Paginator`. Saiba dizer.
+- Não troque `enrollmentsCount()` por `participants()->count()`
+  (`BelongsToMany:59-82`) sem motivo: os testes já cobrem o atual.
+
+Prova: testes; a listagem continua igual no navegador.
 
 ### O1. Rota RESTful nova com página (lotados)
 
