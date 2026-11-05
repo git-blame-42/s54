@@ -93,6 +93,7 @@ class EventsAccessTest extends TestCase
             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
             'admin.events.update' => ['PUT', '/admin/events/1'],
             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
+            'admin.events.duplicate' => ['POST', '/admin/events/1/duplicate'],
         ];
     }
 
@@ -106,7 +107,6 @@ class EventsAccessTest extends TestCase
         return [
             'admin.events.update' => ['PUT', '/admin/events/1'],
             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
-            'admin.events.duplicate' => ['POST', '/admin/events/1/duplicate'],
         ];
     }
 

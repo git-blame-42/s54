@@ -12,7 +12,7 @@ Branch no clone: `fvp/p6-duplicar-evento`, a partir de `main`
 
 | Commit    | Mensagem                                     |
 |-----------|----------------------------------------------|
-| `858c551` | `feat: Duplicate an Event from the listing`  |
+| `267afc4` | `feat: Duplicate an Event from the listing`  |
 
 Os testes unitários de `duplicate()` ficam de propósito no cenário S3
 (`s3-teste-unitario-model`), empilhado sobre este; aqui ficam
@@ -65,7 +65,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 159, Integration 52, Acceptance 24 (base: 159 /
+Resultado obtido: Unit 159, Integration 53, Acceptance 24 (base: 159 /
 45 / 23). PHPCS e PHPStan sem erros. Schema não mudou.
 
 Testes novos:
@@ -110,7 +110,7 @@ público. `<caminho>` abaixo é `s50/fvp/4.2/exemplos/p6-duplicar-evento`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-p6 s50/fvp/4.2/exemplos/p6-duplicar-evento/projeto
 git fetch fvp-p6 fvp/p6-duplicar-evento
-git cherry-pick 858c551
+git cherry-pick 267afc4
 git remote remove fvp-p6
 ```
 
@@ -119,7 +119,7 @@ git remote remove fvp-p6
 ```
 git fetch s50/fvp/4.2/exemplos/p6-duplicar-evento/solucao.bundle \
     fvp/p6-duplicar-evento:fvp-p6
-git cherry-pick 858c551
+git cherry-pick 267afc4
 # opcional, limpa a ref
 git branch -D fvp-p6
 ```
