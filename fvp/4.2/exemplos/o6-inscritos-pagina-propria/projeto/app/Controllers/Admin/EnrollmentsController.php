@@ -16,15 +16,24 @@ class EnrollmentsController extends Controller
 
     public function index(Request $request): void
     {
-        $event = Event::findById((int) $request->getParam('id'));
+        $id = $this->positiveInt($request->getParam('id'));
+        $event = $id === null ? null : Event::findById($id);
         if ($event === null) {
             FlashMessage::danger('Evento não encontrado!');
             $this->redirectTo(route('admin.events.index'));
             return;
         }
 
+        // Sem {page} na rota é a página 1; "abc", "0" ou "-1" não viram página 1 em silêncio.
+        $page = $this->positiveInt($request->getParam('page', '1'));
+        if ($page === null) {
+            FlashMessage::danger('Página inválida!');
+            $this->redirectTo(route('admin.events.enrollments.index', ['id' => $event->id]));
+            return;
+        }
+
         $paginator = $event->enrollments()->paginate(
-            page: max(1, (int) $request->getParam('page', 1)),
+            page: $page,
             per_page: self::PER_PAGE,
             route: 'admin.events.enrollments.paginate',
             routeParams: ['id' => $event->id]
@@ -33,5 +42,15 @@ class EnrollmentsController extends Controller
 
         $title = 'Inscritos: ' . htmlspecialchars($event->title);
         $this->render('admin/enrollments/index', compact('event', 'enrollments', 'paginator', 'title'));
+    }
+
+    /**
+     * Inteiro >= 1 vindo da rota, ou null se o texto não for um inteiro positivo.
+     */
+    private function positiveInt(mixed $value): ?int
+    {
+        $number = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        return $number === false ? null : $number;
     }
 }

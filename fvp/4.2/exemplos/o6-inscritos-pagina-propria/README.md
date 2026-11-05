@@ -13,7 +13,7 @@ Branch no clone: `fvp/o6-inscritos-pagina-propria`, a partir de `main`
 
 | Commit    | Mensagem                                           |
 |-----------|----------------------------------------------------|
-| `3572e7f` | `feat: List event enrollments on a paginated page` |
+| `028883a` | `feat: List event enrollments on a paginated page` |
 
 ## O que mudou
 
@@ -23,15 +23,22 @@ Branch no clone: `fvp/o6-inscritos-pagina-propria`, a partir de `main`
   - `GET /admin/events/{id}/enrollments/page/{page}`
     (`admin.events.enrollments.paginate`).
 - `app/Controllers/Admin/EnrollmentsController.php` (novo), `index`:
-  acha o Evento pelo `id` (senão flash "Evento não encontrado!" e
-  volta para `/admin/events`) e pagina com
+  converte `id` e `page` da rota com `filter_var(...,
+  FILTER_VALIDATE_INT, min_range 1)` (método privado `positiveInt`).
+  `id` inválido ou Evento inexistente: flash "Evento não encontrado!"
+  e volta para `/admin/events`. `page` inválida (`abc`, `0`, `-1`,
+  `2x`): flash "Página inválida!" e volta para a página 1 dos
+  inscritos. Sem `{page}` na rota vale 1. Depois pagina com
   `$event->enrollments()->paginate(page:, per_page: 5, route:
   'admin.events.enrollments.paginate', routeParams: ['id' => ...])`.
   `$title` = "Inscritos: <título>".
 - `app/views/admin/enrollments/index.phtml` (nova): "N inscrito(s) de
   M vagas.", tabela Nome / E-mail / Inscrito em (`d/m/Y H:i`), a
-  paginação de sempre e "Voltar ao evento". Sem inscritos: "Nenhum
-  inscrito neste evento." (sem tabela nem paginação).
+  paginação de sempre e "Voltar ao evento". Sem inscritos
+  (`totalOfRegisters() === 0`): "Nenhum inscrito neste evento.".
+  Página além da última (há inscritos, mas não nesta página): "Esta
+  página não existe." com link para a primeira. Nos dois casos, sem
+  tabela nem paginação.
 - `app/views/admin/events/show.phtml`: botão "Inscritos (N)" ao lado
   de "Editar".
 - `app/Models/Event.php`: `enrollments(): HasMany` por `event_id`.
@@ -53,7 +60,9 @@ Branch no clone: `fvp/o6-inscritos-pagina-propria`, a partir de `main`
   - `Admin\EnrollmentsControllerTest` (novo, Integration): página 1
     com 5 de 7 e link para `/page/2`; página 2 com os 2 restantes;
     não mostra inscritos de outro Evento; Evento sem inscritos; id
-    inexistente redireciona com flash.
+    inexistente redireciona com flash; página 3 de 2 diz "Esta página
+    não existe." (e não "Nenhum inscrito"); `page` `abc`/`0`/`-1`/`2x`
+    e `id` `abc`/`0`/`<id>x` redirecionam com flash.
   - `EventsControllerTest`: o show tem o link "Inscritos (1)".
   - `EventsAccessTest`: as duas rotas entram em `eventRoutes()`
     (sem sessão vai para `/login`, Participante para `/dashboard`) e
@@ -83,6 +92,12 @@ Branch no clone: `fvp/o6-inscritos-pagina-propria`, a partir de `main`
   seleciona `$columns`. Ao pô-la em `$columns`, `Model::save()` manda
   `NULL` explícito e o `NOT NULL` derruba o `INSERT`; por isso o
   `save()` do `Enrollment` preenche a data antes.
+- Sem `(int)` nos parâmetros: `(int) 'abc'` é 0 e `(int) '2x'` é 2,
+  então uma URL errada viraria outra página em silêncio. O
+  `filter_var` recusa e o controller avisa. Na view, a capacidade sai
+  com `htmlspecialchars((string) ...)`, sem conversão.
+- A mensagem de lista vazia olha `totalOfRegisters()`, não o array da
+  página: em `/page/9` o array vem vazio mas o Evento tem inscritos.
 - Nome e e-mail por `$enrollment->user` (o `__get` chama
   `user()->get()`): uma consulta por linha, no máximo 5 por página.
   O3 (`participants()`, `BelongsToMany`) faria uma consulta só, mas
@@ -103,7 +118,7 @@ docker compose stop selenium
 ./run db:populate
 ```
 
-Resultado obtido: Unit 161 testes, Integration 55, Acceptance 25
+Resultado obtido: Unit 161 testes, Integration 58, Acceptance 25
 (eram 159 / 45 / 23 na base). PHPCS e PHPStan sem erros; PSR-4
 estrito ok; schema sem mudança; `db:populate` cria 16 Eventos e 14
 Inscrições.
@@ -151,7 +166,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-o6 \
     s50/fvp/4.2/exemplos/o6-inscritos-pagina-propria/projeto
 git fetch fvp-o6 fvp/o6-inscritos-pagina-propria
-git cherry-pick 3572e7f
+git cherry-pick 028883a
 git remote remove fvp-o6
 ```
 
@@ -162,7 +177,7 @@ git fetch \
     s50/fvp/4.2/exemplos/o6-inscritos-pagina-propria/solucao.bundle \
     fvp/o6-inscritos-pagina-propria:fvp-o6
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 3572e7f
+git cherry-pick 028883a
 # opcional, limpa a ref
 git branch -D fvp-o6
 ```
@@ -226,5 +241,9 @@ Arquivos que costumam conflitar neste cenário e por quê:
   já foram apagados do banco e o `seedEvents` da base tentaria
   inscrevê-los (erro de chave estrangeira). O `_before` do Cest novo
   zera a lista antes de chamar o da base.
+- `empty($enrollments)` para "Nenhum inscrito": numa página além da
+  última a tela diria "7 inscrito(s)" e "Nenhum inscrito" juntos.
+- `max(1, (int) $request->getParam('page'))` parece seguro, mas
+  `/page/abc` vira página 1 e `/page/2x` vira página 2 sem aviso.
 - `$title` vai cru para o `<h1>` do layout: `htmlspecialchars` no
   título do Evento, como o `show` já faz.

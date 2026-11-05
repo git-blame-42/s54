@@ -1,9 +1,14 @@
 <p>
-    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= (int) $event->capacity ?> vagas.
+    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= htmlspecialchars((string) $event->capacity) ?> vagas.
 </p>
 
-<?php if (empty($enrollments)) : ?>
+<?php if ($paginator->totalOfRegisters() === 0) : ?>
     <p>Nenhum inscrito neste evento.</p>
+<?php elseif (empty($enrollments)) : ?>
+    <p>
+        Esta página não existe.
+        <a href="<?= route('admin.events.enrollments.index', ['id' => $event->id]) ?>">Ir para a primeira página</a>.
+    </p>
 <?php else : ?>
     <table class="table table-striped align-middle">
         <thead>

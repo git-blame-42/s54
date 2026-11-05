@@ -123,6 +123,51 @@ class EnrollmentsControllerTest extends ControllerTestCase
         $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
     }
 
+    public function test_page_beyond_the_last_says_the_page_does_not_exist(): void
+    {
+        $this->enrollParticipants($this->event, 7);
+
+        $response = $this->get(
+            action: 'index',
+            controllerName: self::CONTROLLER,
+            params: ['id' => $this->event->id, 'page' => '3']
+        );
+
+        $this->assertStringContainsString('7 inscrito(s) de 20 vagas.', $response);
+        $this->assertStringContainsString('Esta página não existe.', $response);
+        $this->assertStringContainsString("href=\"/admin/events/{$this->event->id}/enrollments\"", $response);
+        $this->assertStringNotContainsString('Nenhum inscrito neste evento.', $response);
+        $this->assertStringNotContainsString('<table', $response);
+    }
+
+    public function test_invalid_page_redirects_to_first_page_with_flash(): void
+    {
+        foreach (['abc', '0', '-1', '2x'] as $page) {
+            unset($_SESSION['flash']);
+
+            $response = $this->get(
+                action: 'index',
+                controllerName: self::CONTROLLER,
+                params: ['id' => $this->event->id, 'page' => $page]
+            );
+
+            $this->assertSame("Location: /admin/events/{$this->event->id}/enrollments", $response, $page);
+            $this->assertEquals('Página inválida!', $_SESSION['flash']['danger'], $page);
+        }
+    }
+
+    public function test_invalid_event_id_redirects_to_events_index(): void
+    {
+        foreach (['abc', '0', "{$this->event->id}x"] as $id) {
+            unset($_SESSION['flash']);
+
+            $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => $id]);
+
+            $this->assertSame('Location: /admin/events', $response, $id);
+            $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger'], $id);
+        }
+    }
+
     private function enrollParticipants(Event $event, int $total): void
     {
         for ($number = 1; $number <= $total; $number++) {

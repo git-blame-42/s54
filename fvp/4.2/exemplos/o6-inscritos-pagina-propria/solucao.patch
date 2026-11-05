@@ -1,4 +1,4 @@
-From 3572e7f8750364e52c8634c67f3c54151fc990eb Mon Sep 17 00:00:00 2001
+From 028883ac17a02c79887de929ab778a7f5baf9393 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:12:47 -0300
 Subject: [PATCH] feat: List event enrollments on a paginated page
@@ -9,21 +9,21 @@ date with 5 per page via Event::enrollments()->paginate(). Paginator
 gains fixed route params so page links keep the event id, and
 Enrollment now stores created_at.
 ---
- .../Admin/EnrollmentsController.php           |  37 +++++
+ .../Admin/EnrollmentsController.php           |  56 ++++++
  app/Models/Enrollment.php                     |  16 +-
  app/Models/Event.php                          |   6 +
- app/views/admin/enrollments/index.phtml       |  31 ++++
+ app/views/admin/enrollments/index.phtml       |  36 ++++
  app/views/admin/events/show.phtml             |   3 +
  app/views/paginator/_pages.phtml              |   6 +-
  config/routes.php                             |   7 +
  core/Database/ActiveRecord/HasMany.php        |   8 +-
  lib/Paginator.php                             |  12 +-
- .../admin/events/ListEnrollmentsCest.php      |  80 ++++++++++
+ .../admin/events/ListEnrollmentsCest.php      |  80 ++++++++
  tests/Integration/Access/EventsAccessTest.php |  24 ++-
- .../Admin/EnrollmentsControllerTest.php       | 145 ++++++++++++++++++
+ .../Admin/EnrollmentsControllerTest.php       | 190 ++++++++++++++++++
  .../Admin/EventsControllerTest.php            |   4 +
- tests/Unit/Models/Events/EnrollmentTest.php   |  46 ++++++
- 14 files changed, 417 insertions(+), 8 deletions(-)
+ tests/Unit/Models/Events/EnrollmentTest.php   |  46 +++++
+ 14 files changed, 486 insertions(+), 8 deletions(-)
  create mode 100644 app/Controllers/Admin/EnrollmentsController.php
  create mode 100644 app/views/admin/enrollments/index.phtml
  create mode 100644 tests/Acceptance/admin/events/ListEnrollmentsCest.php
@@ -31,10 +31,10 @@ Enrollment now stores created_at.
 
 diff --git a/app/Controllers/Admin/EnrollmentsController.php b/app/Controllers/Admin/EnrollmentsController.php
 new file mode 100644
-index 0000000..edc0a0b
+index 0000000..c7b5c0d
 --- /dev/null
 +++ b/app/Controllers/Admin/EnrollmentsController.php
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,56 @@
 +<?php
 +
 +namespace App\Controllers\Admin;
@@ -53,15 +53,24 @@ index 0000000..edc0a0b
 +
 +    public function index(Request $request): void
 +    {
-+        $event = Event::findById((int) $request->getParam('id'));
++        $id = $this->positiveInt($request->getParam('id'));
++        $event = $id === null ? null : Event::findById($id);
 +        if ($event === null) {
 +            FlashMessage::danger('Evento não encontrado!');
 +            $this->redirectTo(route('admin.events.index'));
 +            return;
 +        }
 +
++        // Sem {page} na rota é a página 1; "abc", "0" ou "-1" não viram página 1 em silêncio.
++        $page = $this->positiveInt($request->getParam('page', '1'));
++        if ($page === null) {
++            FlashMessage::danger('Página inválida!');
++            $this->redirectTo(route('admin.events.enrollments.index', ['id' => $event->id]));
++            return;
++        }
++
 +        $paginator = $event->enrollments()->paginate(
-+            page: max(1, (int) $request->getParam('page', 1)),
++            page: $page,
 +            per_page: self::PER_PAGE,
 +            route: 'admin.events.enrollments.paginate',
 +            routeParams: ['id' => $event->id]
@@ -70,6 +79,16 @@ index 0000000..edc0a0b
 +
 +        $title = 'Inscritos: ' . htmlspecialchars($event->title);
 +        $this->render('admin/enrollments/index', compact('event', 'enrollments', 'paginator', 'title'));
++    }
++
++    /**
++     * Inteiro >= 1 vindo da rota, ou null se o texto não for um inteiro positivo.
++     */
++    private function positiveInt(mixed $value): ?int
++    {
++        $number = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
++
++        return $number === false ? null : $number;
 +    }
 +}
 diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
@@ -129,16 +148,21 @@ index ba66870..bb68417 100644
       */
 diff --git a/app/views/admin/enrollments/index.phtml b/app/views/admin/enrollments/index.phtml
 new file mode 100644
-index 0000000..9bf8718
+index 0000000..2977e17
 --- /dev/null
 +++ b/app/views/admin/enrollments/index.phtml
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,36 @@
 +<p>
-+    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= (int) $event->capacity ?> vagas.
++    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= htmlspecialchars((string) $event->capacity) ?> vagas.
 +</p>
 +
-+<?php if (empty($enrollments)) : ?>
++<?php if ($paginator->totalOfRegisters() === 0) : ?>
 +    <p>Nenhum inscrito neste evento.</p>
++<?php elseif (empty($enrollments)) : ?>
++    <p>
++        Esta página não existe.
++        <a href="<?= route('admin.events.enrollments.index', ['id' => $event->id]) ?>">Ir para a primeira página</a>.
++    </p>
 +<?php else : ?>
 +    <table class="table table-striped align-middle">
 +        <thead>
@@ -429,10 +453,10 @@ index 4396d14..0c6dbd3 100644
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
 new file mode 100644
-index 0000000..5a38eb0
+index 0000000..8456061
 --- /dev/null
 +++ b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,190 @@
 +<?php
 +
 +namespace Tests\Integration\Controllers\Admin;
@@ -556,6 +580,51 @@ index 0000000..5a38eb0
 +
 +        $this->assertSame('Location: /admin/events', $response);
 +        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_page_beyond_the_last_says_the_page_does_not_exist(): void
++    {
++        $this->enrollParticipants($this->event, 7);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $this->event->id, 'page' => '3']
++        );
++
++        $this->assertStringContainsString('7 inscrito(s) de 20 vagas.', $response);
++        $this->assertStringContainsString('Esta página não existe.', $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$this->event->id}/enrollments\"", $response);
++        $this->assertStringNotContainsString('Nenhum inscrito neste evento.', $response);
++        $this->assertStringNotContainsString('<table', $response);
++    }
++
++    public function test_invalid_page_redirects_to_first_page_with_flash(): void
++    {
++        foreach (['abc', '0', '-1', '2x'] as $page) {
++            unset($_SESSION['flash']);
++
++            $response = $this->get(
++                action: 'index',
++                controllerName: self::CONTROLLER,
++                params: ['id' => $this->event->id, 'page' => $page]
++            );
++
++            $this->assertSame("Location: /admin/events/{$this->event->id}/enrollments", $response, $page);
++            $this->assertEquals('Página inválida!', $_SESSION['flash']['danger'], $page);
++        }
++    }
++
++    public function test_invalid_event_id_redirects_to_events_index(): void
++    {
++        foreach (['abc', '0', "{$this->event->id}x"] as $id) {
++            unset($_SESSION['flash']);
++
++            $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => $id]);
++
++            $this->assertSame('Location: /admin/events', $response, $id);
++            $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger'], $id);
++        }
 +    }
 +
 +    private function enrollParticipants(Event $event, int $total): void
