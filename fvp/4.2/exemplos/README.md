@@ -107,6 +107,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type
+- R2. Nome do criador no show/listagem (BelongsTo)
+  `r2-nome-do-criador/`
+  - feat: Show event creator name in listing and show
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in

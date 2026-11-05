@@ -1,0 +1,191 @@
+From a7c3aa56649b9f3347f6c45af3c3af6617fe3c0a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:10:40 -0300
+Subject: [PATCH] feat: Show event creator name in listing and show
+
+Event::creatorName() reads the name through the user() BelongsTo
+relation; the listing gets a "Criado por" column and the show page a
+"Criado por" item.
+---
+ app/Models/Event.php                          | 11 +++++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 ++
+ .../admin/events/ListEventsCest.php           |  4 ++
+ .../Admin/EventsControllerTest.php            | 47 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 10 ++++
+ 6 files changed, 77 insertions(+)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e411f29 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -119,6 +119,17 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * Nome de quem cadastrou o Evento (relação BelongsTo com users).
++     * A FK fk_events_user garante que o usuário existe.
++     */
++    public function creatorName(): string
++    {
++        $creator = $this->user()->get();
++
++        return $creator instanceof User ? $creator->name : '';
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..f9f1de7 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Criado por</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= htmlspecialchars($event->creatorName()) ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..a13ad9b 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Criado por</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->creatorName()) ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..c5ad2b8 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -15,6 +15,7 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('Eventos', 'h1');
+         $page->see('Novo Evento');
+         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
++        $page->see('Criado por', 'table thead');
+ 
+         // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
+         $rows = $page->grabMultiple('table tbody tr');
+@@ -27,6 +28,7 @@ class ListEventsCest extends BaseEventsCest
+             $this->assertContains($kind, $row);
+             $this->assertContains(date('d/m/Y', (int) strtotime($event->starts_on)), $row);
+             $this->assertContains($event->location, $row);
++            $this->assertContains($this->admin->name, $row);
+             $this->assertContains('Ver', $row);
+             $this->assertContains('Editar', $row);
+             $this->assertContains('Remover', $row);
+@@ -56,6 +58,8 @@ class ListEventsCest extends BaseEventsCest
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+         $page->see($event->title, 'h1');
+         $page->see($event->description);
++        $page->see('Criado por');
++        $page->see($this->admin->name);
+         $page->seeLink('Editar');
+         $page->seeLink('Voltar');
+     }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..5e502f9 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,39 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_shows_creator_name(): void
++    {
++        $this->createEvent(['title' => 'Evento do Admin']);
++        $other = $this->createAdmin('Outra Administradora', 'outra.admin@example.com');
++        $this->createEvent(['title' => 'Evento da Outra', 'user_id' => $other->id]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<th>Criado por</th>', $response);
++        $this->assertMatchesRegularExpression('/Evento do Admin.*?<td>Admin<\/td>/s', $response);
++        $this->assertMatchesRegularExpression('/Evento da Outra.*?<td>Outra Administradora<\/td>/s', $response);
++    }
++
++    public function test_show_renders_creator_name(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/<dt[^>]*>Criado por<\/dt>\s*<dd[^>]*>Admin<\/dd>/', $response);
++    }
++
++    public function test_show_escapes_creator_name(): void
++    {
++        $creator = $this->createAdmin('Ana <b>Admin</b>', 'ana@example.com');
++        $event = $this->createEvent(['user_id' => $creator->id]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Ana &lt;b&gt;Admin&lt;/b&gt;', $response);
++        $this->assertStringNotContainsString('<b>Admin</b>', $response);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+@@ -299,6 +332,20 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
++    private function createAdmin(string $name, string $email): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
+     private function enroll(Event $event, string $email = 'participante@example.com'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..83ed8e6 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -448,6 +448,16 @@ class EventTest extends TestCase
+         $this->assertEquals($this->admin->id, $event->user()->get()->id);
+     }
+ 
++    public function test_creator_name_should_return_the_name_of_the_creator(): void
++    {
++        $other = $this->createUser('Outra Administradora', 'other@example.com', 'admin');
++        $mine = $this->createEvent(['title' => 'Evento 1']);
++        $theirs = $this->createEvent(['title' => 'Evento 2', 'user_id' => $other->id]);
++
++        $this->assertSame('Administrador', $mine->creatorName());
++        $this->assertSame('Outra Administradora', $theirs->creatorName());
++    }
++
+     public function test_user_should_have_many_events(): void
+     {
+         $other = $this->createUser('Outro Admin', 'other@example.com', 'admin');
+-- 
+2.54.0 (Apple Git-157)
+
