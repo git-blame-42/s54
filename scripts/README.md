@@ -130,7 +130,8 @@ Confere, sem alterar nada: Ubuntu 24.04, memória, disco, sudo; git,
 curl, bash; docker (cliente, daemon sem sudo, compose v2, modo
 rootful/rootless); se o Docker rootless é viável (uidmap, subuid,
 systemd de usuário, user namespaces, AppArmor do 24.04, porta 80,
-cgroup v2); portas 80, 8080, 4444 e 5900 livres; acesso a GitHub,
+cgroup v2); portas 80, 8080, 4444 e 5900 (ocupada é AVISO, com o
+container ou processo dono: o 07 e o 08 liberam); acesso a GitHub,
 Docker Hub e ao repositório apt da Docker. Sai com 0 se não houver
 FALHA. O que impede só o rootless conta como AVISO quando o docker
 rootful já funciona, porque o framework não usa o rootless.

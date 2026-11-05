@@ -18,7 +18,8 @@ Verifica, sem alterar nada:
   - ferramentas: git, curl, bash
   - docker: cliente, daemon acessível sem sudo, compose v2, modo
   - docker rootless: pré-requisitos e se é viável nesta máquina
-  - portas livres que o framework publica: ${PORTS[*]}
+  - portas que o framework publica: ${PORTS[*]} (em uso = AVISO com o
+    dono; o 07 e o 08 liberam)
   - rede: GitHub, Docker Hub, repositório apt da Docker
 
 Sai com 0 se não houve FALHA (avisos não contam).
@@ -262,6 +263,17 @@ check_rootless() {
     "'docker run -u \$(id -u)'. Use o Docker rootful (grupo docker)."
 }
 
+# Dono da porta sem pedir senha (o 05 não deve travar no sudo).
+port_owner_hint() { # porta
+  local re='s/.*users:(("\([^"]*\)",pid=\([0-9]*\),.*/\1 (PID \2)/p' out
+  out="$(ss -Hltnp "sport = :$1" 2>/dev/null | sed -n "$re" | head -n 1)"
+  if [[ -z "$out" ]] && sudo_available; then
+    out="$(sudo -n ss -Hltnp "sport = :$1" 2>/dev/null | sed -n "$re" \
+      | head -n 1)"
+  fi
+  echo "${out:-dono desconhecido (veja: sudo ss -ltnp)}"
+}
+
 check_ports() {
   step "Portas que o framework publica"
   local p busy=()
@@ -271,8 +283,17 @@ check_ports() {
   if (( ${#busy[@]} == 0 )); then
     c_ok "portas livres: ${PORTS[*]}"
   else
-    c_fail "portas em uso: ${busy[*]} (o docker compose up vai falhar)." \
-      "Veja quem usa: sudo ss -ltnp"
+    for p in "${busy[@]}"; do
+      if docker_usable && [[ -n "$(docker ps -q --filter "publish=$p")" ]]
+      then
+        info "  porta $p: container $(docker ps --filter "publish=$p" \
+          --format '{{.Names}}' | xargs)"
+      else
+        info "  porta $p: $(port_owner_hint "$p")"
+      fi
+    done
+    c_warn "portas em uso: ${busy[*]}. O 07 e o 08 liberam antes de" \
+      "subir (docker stop no container; SIGTERM/SIGKILL no processo)."
   fi
 }
 
