@@ -13,7 +13,7 @@ Branch no clone: `fvp/p19-remocao-em-lote`, a partir de `main`
 
 | Commit    | Mensagem                            |
 |-----------|-------------------------------------|
-| `c22f59a` | `feat: Add bulk removal of events`  |
+| `fffe903` | `feat: Add bulk removal of events`  |
 
 ## O que mudou
 
@@ -23,16 +23,19 @@ Branch no clone: `fvp/p19-remocao-em-lote`, a partir de `main`
   o `POST` sem `_method` continua sendo o `create`.
 - `app/Models/Event.php`: `destroyMany(array $ids): array` (estático).
   Para cada id (sem repetir): `findById`; se não existe, vai para
-  `missing`; senão chama `safeDestroy()` (a regra P03 do código-base:
+  `missing`; senão chama `safeDestroy()` (regra P03 do projeto:
   Evento com inscrições não sai) e anota o título em `removed` ou
-  `blocked`. PHPDoc `@return array{removed: array<int, string>,
-  blocked: array<int, string>, missing: array<int, int>}`.
+  `blocked`. PHPDoc como o catálogo pede: `@param list<int> $ids` e
+  `@return array{removed: list<string>, blocked: list<string>,
+  missing: list<int>}`.
 - `Admin\EventsController::destroyMany`: valida `ids[]` no método
   privado `selectedIds()`: precisa ser array não vazio e cada item
   string com `ctype_digit` e diferente de `"0"`. Um item inválido
   invalida a seleção inteira: flash `danger` "Selecione ao menos um
   evento válido para remover!" e nada é removido. Com ids válidos,
-  chama o model e monta **um flash por tipo**:
+  chama o model, que remove o que pode e devolve o resto (sem
+  transação: um Evento barrado não desfaz os já removidos), e monta
+  **um flash por tipo**:
   - `success`: "N evento(s) removido(s) com sucesso!";
   - `danger`: "Não é possível remover eventos com inscrições:
     Evento 01, Evento 03; 1 evento(s) não encontrado(s)!" (só as
@@ -48,7 +51,8 @@ Branch no clone: `fvp/p19-remocao-em-lote`, a partir de `main`
   - `EventTest` (2): remove os sem inscrições e deixa os outros;
     lista misturada (livre, com inscrição, inexistente, repetido) cai
     em `removed`, `blocked` e `missing`.
-  - `EventsControllerTest` (5 + 8 casos): form e checkboxes na
+  - `EventsControllerTest` (4 testes + 8 casos do provider = 12
+    execuções): form e checkboxes na
     listagem; remoção de dois; flash `success` e `danger` juntos;
     `invalidIdsProvider` (sem ids, lista vazia, texto, `1abc`, `-1`,
     `0`, `1.5`, lista aninhada) não remove nada; um id inválido
@@ -70,17 +74,22 @@ Branch no clone: `fvp/p19-remocao-em-lote`, a partir de `main`
   pularia a regra (e a FK `RESTRICT` derrubaria a requisição com 500
   no primeiro Evento com inscrição).
 - Validação no limite HTTP: `is_array` e `ctype_digit` antes de tocar
-  no banco. Rejeitar tudo quando um item é inválido é mais simples de
-  explicar do que remover "os que deu"; seleção legítima pela tela
-  nunca tem item inválido.
+  no banco. Um item inválido (formato) rejeita a seleção inteira:
+  seleção legítima pela tela nunca tem item inválido.
+- Com todos os ids válidos, a escolha é "remove o que pode e avisa o
+  resto", sem transação: os sem inscrições saem, os com inscrições
+  ficam (`blocked`) e os inexistentes são avisados (`missing`). "Tudo
+  ou nada" é outro pedido (transação na mesma conexão, cenário P17).
 - Um flash por tipo: o `FlashMessage` guarda `$_SESSION['flash']
   [$type] = $value`, então dois `danger` seguidos fariam o segundo
   apagar o primeiro. Por isso os problemas são juntados numa frase.
 - `form="bulk_destroy_form"`: cada linha já tem um `<form>` de
   "Remover" (DELETE de um). Envolver a tabela num `<form>` criaria
-  form dentro de form, que o HTML não permite (o navegador fecha o de
-  fora no primeiro de dentro). O atributo `form` liga o checkbox a um
-  formulário que está em outro lugar da página.
+  form dentro de form, que o HTML não permite: o parser ignora a tag
+  `<form>` interna e o primeiro `</form>` interno fecha o form de
+  fora, então os checkboxes seguintes ficam sem form e o "Remover"
+  de cada linha passa a enviar o form errado. O atributo `form` liga
+  o checkbox a um formulário que está em outro lugar da página.
 - Nome da rota com `_` (`destroy_many`): o Router aceita qualquer
   nome; a restrição de `{[a-z,_]+}` é só para parâmetro de URI.
 
@@ -139,9 +148,8 @@ docker compose exec web curl -s -i -b /tmp/c \
 - N10 (`n10-pagina-id-invalido`): a mesma ideia de não converter com
   `(int)` às cegas; aqui `ctype_digit` recusa `1abc`, que `(int)`
   transformaria em 1.
-- L3 e L4 da 4.1 (citados no levantamento de lacunas da 4.2; sem
-  exemplo pronto no s50): remoção e validação de parâmetros no
-  `UsersController`, no mesmo molde.
+- P17 (`p17-remover-em-cascata`): usa transação na mesma conexão;
+  é o modelo para uma variante "tudo ou nada" do lote.
 - P11 (`p11-soft-delete-arquivar`): com arquivamento, o lote pode
   arquivar em vez de remover (troque `safeDestroy()` por `archive()`
   no laço).
@@ -163,7 +171,7 @@ s50/fvp/recriar.sh s50/fvp/4.2/exemplos/p19-remocao-em-lote
 cd /caminho/do/seu/repositorio
 git remote add fvp-p19 s50/fvp/4.2/exemplos/p19-remocao-em-lote/projeto
 git fetch fvp-p19 fvp/p19-remocao-em-lote
-git cherry-pick c22f59a
+git cherry-pick fffe903
 git remote remove fvp-p19
 ```
 
@@ -172,7 +180,7 @@ git remote remove fvp-p19
 ```
 D=s50/fvp/4.2/exemplos/p19-remocao-em-lote
 git fetch $D/solucao.bundle fvp/p19-remocao-em-lote:fvp-p19
-git cherry-pick c22f59a
+git cherry-pick fffe903
 # opcional, limpa a ref
 git branch -D fvp-p19
 ```

@@ -173,11 +173,12 @@ class Event extends Model
     }
 
     /**
-     * Remoção em lote: aplica a mesma regra do safeDestroy() (P03) a cada id.
-     * Devolve os títulos removidos, os barrados (com o motivo) e os ids que não existem.
+     * Remoção em lote: aplica a cada id a mesma regra do safeDestroy() (regra P03 do projeto: Evento com
+     * Inscrições não é removido). Sem transação: remove o que pode e devolve o resto.
+     * Devolve os títulos removidos, os títulos barrados (com Inscrições) e os ids que não existem.
      *
-     * @param array<int, int> $ids
-     * @return array{removed: array<int, string>, blocked: array<int, string>, missing: array<int, int>}
+     * @param list<int> $ids
+     * @return array{removed: list<string>, blocked: list<string>, missing: list<int>}
      */
     public static function destroyMany(array $ids): array
     {

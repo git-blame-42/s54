@@ -167,7 +167,7 @@ class EventsController extends Controller
      * ids[] do formulário: precisa ser um array não vazio só com inteiros positivos em texto ("12").
      * Qualquer item inválido invalida a seleção inteira (nada é removido).
      *
-     * @return array<int, int>|null
+     * @return list<int>|null
      */
     private function selectedIds(mixed $ids): ?array
     {

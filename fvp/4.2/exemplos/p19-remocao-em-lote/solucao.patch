@@ -1,4 +1,4 @@
-From c22f59a5805991b343af295e5bc8cf1f24922b55 Mon Sep 17 00:00:00 2001
+From fffe90330255fd3823b26eab14c2e833f48c96eb Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:10:52 -0300
 Subject: [PATCH] feat: Add bulk removal of events
@@ -6,18 +6,18 @@ Subject: [PATCH] feat: Add bulk removal of events
 DELETE /admin/events receives ids[], validates them and applies the safeDestroy rule to each event, with one flash message per type.
 ---
  app/Controllers/Admin/EventsController.php    |  55 ++++++++++
- app/Models/Event.php                          |  26 +++++
+ app/Models/Event.php                          |  27 +++++
  app/views/admin/events/index.phtml            |  13 +++
  config/routes.php                             |   3 +
  .../admin/events/DestroyManyEventsCest.php    |  57 ++++++++++
  tests/Integration/Access/EventsAccessTest.php |   5 +-
  .../Admin/EventsControllerTest.php            | 101 ++++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        |  32 ++++++
- 8 files changed, 291 insertions(+), 1 deletion(-)
+ 8 files changed, 292 insertions(+), 1 deletion(-)
  create mode 100644 tests/Acceptance/admin/events/DestroyManyEventsCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
-index ca4ada1..e0cf53d 100644
+index ca4ada1..73dca08 100644
 --- a/app/Controllers/Admin/EventsController.php
 +++ b/app/Controllers/Admin/EventsController.php
 @@ -129,6 +129,61 @@ class EventsController extends Controller
@@ -62,7 +62,7 @@ index ca4ada1..e0cf53d 100644
 +     * ids[] do formulário: precisa ser um array não vazio só com inteiros positivos em texto ("12").
 +     * Qualquer item inválido invalida a seleção inteira (nada é removido).
 +     *
-+     * @return array<int, int>|null
++     * @return list<int>|null
 +     */
 +    private function selectedIds(mixed $ids): ?array
 +    {
@@ -83,19 +83,20 @@ index ca4ada1..e0cf53d 100644
      {
          return Event::findById((int) $request->getParam('id'));
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..895c358 100644
+index ba66870..c27f4f0 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
-@@ -172,6 +172,32 @@ class Event extends Model
+@@ -172,6 +172,33 @@ class Event extends Model
          }
      }
  
 +    /**
-+     * Remoção em lote: aplica a mesma regra do safeDestroy() (P03) a cada id.
-+     * Devolve os títulos removidos, os barrados (com o motivo) e os ids que não existem.
++     * Remoção em lote: aplica a cada id a mesma regra do safeDestroy() (regra P03 do projeto: Evento com
++     * Inscrições não é removido). Sem transação: remove o que pode e devolve o resto.
++     * Devolve os títulos removidos, os títulos barrados (com Inscrições) e os ids que não existem.
 +     *
-+     * @param array<int, int> $ids
-+     * @return array{removed: array<int, string>, blocked: array<int, string>, missing: array<int, int>}
++     * @param list<int> $ids
++     * @return array{removed: list<string>, blocked: list<string>, missing: list<int>}
 +     */
 +    public static function destroyMany(array $ids): array
 +    {
@@ -268,7 +269,7 @@ index 4396d14..8927874 100644
          $events = Event::all();
          $this->assertCount(1, $events);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..e679017 100644
+index bc62d1d..26b38e8 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -6,6 +6,7 @@ use App\Models\Enrollment;
@@ -283,7 +284,7 @@ index bc62d1d..e679017 100644
          );
      }
  
-+    /* ------------------- P19: remoção em lote ------------------- */
++    /* ------------------- remoção em lote ------------------- */
 +
 +    public function test_index_shows_bulk_destroy_form_and_checkboxes(): void
 +    {
@@ -387,14 +388,14 @@ index bc62d1d..e679017 100644
       * @param array<string, mixed> $overrides
       * @return array<string, mixed>
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..595d793 100644
+index f961b4c..8cb57dc 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -672,6 +672,38 @@ class EventTest extends TestCase
          $this->assertNotNull($event->errors('base'));
      }
  
-+    /* ------------------- P19: remoção em lote ------------------- */
++    /* ------------------- remoção em lote ------------------- */
 +
 +    public function test_destroy_many_should_remove_events_without_enrollments(): void
 +    {

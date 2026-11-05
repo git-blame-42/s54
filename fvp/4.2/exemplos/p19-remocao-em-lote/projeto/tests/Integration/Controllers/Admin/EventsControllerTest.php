@@ -266,7 +266,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- P19: remoção em lote ------------------- */
+    /* ------------------- remoção em lote ------------------- */
 
     public function test_index_shows_bulk_destroy_form_and_checkboxes(): void
     {

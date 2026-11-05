@@ -672,7 +672,7 @@ class EventTest extends TestCase
         $this->assertNotNull($event->errors('base'));
     }
 
-    /* ------------------- P19: remoção em lote ------------------- */
+    /* ------------------- remoção em lote ------------------- */
 
     public function test_destroy_many_should_remove_events_without_enrollments(): void
     {
