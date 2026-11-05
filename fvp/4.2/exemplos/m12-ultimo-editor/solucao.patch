@@ -1,0 +1,284 @@
+From f44b8b139d47310fd4eb20351eaf1e4a0162dac7 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:04:59 -0300
+Subject: [PATCH] feat: Record the last editor of an event
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+events.updated_by is set from the logged admin on update, never from the
+form. Event::editor() and editorName() back the 'Última edição por' line
+on the admin show page.
+---
+ app/Controllers/Admin/EventsController.php    |  2 +
+ app/Models/Event.php                          | 24 ++++++
+ app/views/admin/events/show.phtml             |  4 +
+ database/schema.sql                           |  4 +
+ .../admin/events/LastEditorCest.php           | 28 +++++++
+ .../Admin/EventsControllerTest.php            | 73 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 20 +++++
+ 7 files changed, 155 insertions(+)
+ create mode 100644 tests/Acceptance/admin/events/LastEditorCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8938a4c 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -82,6 +82,8 @@ class EventsController extends Controller
+             return;
+         }
+         $this->fill($event, $request);
++        // Último editor vem da sessão, nunca do formulário (updated_by não está em FIELDS).
++        $event->updated_by = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..837a154 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|null $updated_by id do último Administrador que editou (da sessão, nunca do formulário)
+  */
+ class Event extends Model
+ {
+@@ -55,6 +56,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'updated_by',
+     ];
+ 
+     public function validates(): void
+@@ -119,6 +121,28 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * Último usuário que editou o Evento (coluna updated_by).
++     */
++    public function editor(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'updated_by');
++    }
++
++    /**
++     * Nome do último editor, ou '' se o Evento nunca foi editado.
++     */
++    public function editorName(): string
++    {
++        if ($this->updated_by === null) {
++            return '';
++        }
++
++        $editor = $this->editor()->get();
++
++        return $editor instanceof User ? $editor->name : '';
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..4744af8 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
++<?php if ($event->editorName() !== '') : ?>
++    <p class="text-muted last-editor">Última edição por <?= htmlspecialchars($event->editorName()) ?></p>
++<?php endif; ?>
++
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..4f73634 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,11 +29,15 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Último editor: gravado da sessão no update (nunca do formulário); NULL se nunca foi editado.
++    updated_by  INT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
++    CONSTRAINT fk_events_updated_by FOREIGN KEY (updated_by) REFERENCES users (id)
++        ON DELETE SET NULL ON UPDATE CASCADE,
+     INDEX index_events_on_starts_on (starts_on)
+ );
+ 
+diff --git a/tests/Acceptance/admin/events/LastEditorCest.php b/tests/Acceptance/admin/events/LastEditorCest.php
+new file mode 100644
+index 0000000..7561913
+--- /dev/null
++++ b/tests/Acceptance/admin/events/LastEditorCest.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++class LastEditorCest extends BaseEventsCest
++{
++    public function showLastEditorAfterUpdate(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Ver quem fez a última edição do Evento');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->dontSee('Última edição por');
++
++        $page->click('Editar');
++        $this->fillEventForm($page, ['title' => 'Evento 02 Revisado']);
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento atualizado com sucesso!');
++        $page->see('Última edição por Administrador', '.last-editor');
++        Assert::assertEquals($this->admin->id, Event::findById($event->id)?->updated_by);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..7dd36cf 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,18 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_displays_the_last_editor_only_after_an_edit(): void
++    {
++        $event = $this->createEvent();
++
++        $before = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $event->update(['updated_by' => $this->admin->id]);
++        $after = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringNotContainsString('Última edição por', $before);
++        $this->assertStringContainsString('Última edição por Admin', $after);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+@@ -206,6 +218,53 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
++    public function test_update_records_the_logged_admin_as_last_editor(): void
++    {
++        $other = $this->createAdmin('Outra Admin', 'outra@example.com');
++        $event = $this->createEvent();
++        $this->assertNull(Event::findById($event->id)->updated_by);
++
++        Auth::login($other);
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Título Novo'])]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertEquals($other->id, $updated->updated_by);
++        $this->assertEquals($this->admin->id, $updated->user_id);
++    }
++
++    public function test_update_ignores_updated_by_sent_by_the_form(): void
++    {
++        $other = $this->createAdmin('Outra Admin', 'outra@example.com');
++        $event = $this->createEvent();
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: [
++                'id' => $event->id,
++                'updated_by' => $other->id,
++                'event' => $this->validParams(['updated_by' => $other->id]),
++            ]
++        );
++
++        $this->assertEquals($this->admin->id, Event::findById($event->id)->updated_by);
++    }
++
++    public function test_create_leaves_updated_by_empty(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => 'Novo', 'updated_by' => $this->admin->id])]
++        );
++
++        $this->assertNull(Event::findBy(['title' => 'Novo'])->updated_by);
++    }
++
+     public function test_update_with_invalid_data_renders_form_and_keeps_record(): void
+     {
+         $event = $this->createEvent(['title' => 'Original']);
+@@ -299,6 +358,20 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
++    private function createAdmin(string $name, string $email): User
++    {
++        $admin = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++
++        return $admin;
++    }
++
+     private function enroll(Event $event, string $email = 'participante@example.com'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..21a4c41 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -448,6 +448,26 @@ class EventTest extends TestCase
+         $this->assertEquals($this->admin->id, $event->user()->get()->id);
+     }
+ 
++    public function test_new_event_should_have_no_editor(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertNull(Event::findById($event->id)->updated_by);
++        $this->assertSame('', $event->editorName());
++    }
++
++    public function test_editor_should_belong_to_the_user_in_updated_by(): void
++    {
++        $editor = $this->createUser('Maria Editora', 'maria@example.com', 'admin');
++        $event = $this->createEvent();
++
++        $this->assertTrue($event->update(['updated_by' => $editor->id]));
++        $found = Event::findById($event->id);
++
++        $this->assertEquals($editor->id, $found->editor()->get()->id);
++        $this->assertSame('Maria Editora', $found->editorName());
++    }
++
+     public function test_user_should_have_many_events(): void
+     {
+         $other = $this->createUser('Outro Admin', 'other@example.com', 'admin');
+-- 
+2.54.0 (Apple Git-157)
+
