@@ -63,6 +63,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M6. Unicidade (título único na mesma data)
   `m6-unicidade-titulo-data/`
   - feat: Require unique event title on the same date
+- M7. Horário do Evento
+  `m7-horario-do-evento/`
+  - feat: Replace event date with starts_at datetime
 - M9. Slug único gerado no backend
   `m9-slug-unico-gerado/`
   - feat: Generate a unique slug for each event
