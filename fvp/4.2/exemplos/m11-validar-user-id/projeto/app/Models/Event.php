@@ -9,7 +9,7 @@ use PDOException;
 
 /**
  * @property int $id
- * @property int $user_id
+ * @property int|string|null $user_id inteiro do banco; string se vier de fora (validado por filter_var)
  * @property string $title
  * @property string $description
  * @property string $kind
@@ -91,7 +91,8 @@ class Event extends Model
      */
     private function validatesCreatorIsAdmin(): bool
     {
-        $creator = User::findById((int) $this->user_id);
+        $id = filter_var($this->user_id, FILTER_VALIDATE_INT);
+        $creator = $id === false ? null : User::findById($id);
 
         if ($creator === null || !$creator->isAdmin()) {
             $this->addError('user_id', 'deve ser um administrador!');

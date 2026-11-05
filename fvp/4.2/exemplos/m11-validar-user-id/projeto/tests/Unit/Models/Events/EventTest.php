@@ -123,6 +123,16 @@ class EventTest extends TestCase
         $this->assertCount(0, Event::all());
     }
 
+    public function test_user_id_with_trailing_text_should_be_invalid(): void
+    {
+        foreach (["{$this->admin->id}abc", '1.5', 'abc'] as $value) {
+            $event = new Event($this->params(['user_id' => $value]));
+
+            $this->assertFalse($event->isValid(), $value);
+            $this->assertEquals('não existe!', $event->errors('user_id'), $value);
+        }
+    }
+
     public function test_admin_as_creator_should_be_valid(): void
     {
         $event = new Event($this->params(['user_id' => (string) $this->admin->id]));

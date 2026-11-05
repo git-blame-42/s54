@@ -265,6 +265,28 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
+    public function test_create_without_logged_user_shows_the_user_id_error_instead_of_500(): void
+    {
+        Auth::logout();
+
+        $response = $this->post(
+            action: 'create',
+            controllerName: self::CONTROLLER,
+            params: ['event' => $this->validParams()]
+        );
+
+        $this->assertCount(0, Event::all());
+        $this->assertStringContainsString('id="event_user_id_error"', $response);
+        $this->assertStringContainsString('Responsável: não pode ser vazio!', $response);
+    }
+
+    public function test_form_without_user_id_error_has_no_user_id_alert(): void
+    {
+        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+
+        $this->assertStringNotContainsString('id="event_user_id_error"', $response);
+    }
+
     /**
      * @param array<string, mixed> $overrides
      * @return array<string, mixed>

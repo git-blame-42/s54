@@ -7,16 +7,16 @@ precisa existir e ser Administrador. Faça uma validação genérica
 estrangeiras."
 
 Chance: média. Tempo estimado: 15-20 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, M11 ("Validar `user_id` no model (usuário
-existe e é admin; hoje PDOException/500): `Validations::exists`-like,
-EVT sem user_id").
+`s50/fvp/4.2/catalogo.md`, M11 (pedido típico: "o Evento só pode
+pertencer a um usuário existente e administrador; hoje um `user_id`
+inválido estoura a FK (500)").
 
 Branch no clone: `fvp/m11-validar-user-id`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
 
 Commit:
 
-- `879d905` `feat: Validate that the event creator exists and is an
+- `494bae7` `feat: Validate that the event creator exists and is an
   admin`
 
 ## O que mudou
@@ -35,8 +35,16 @@ Commit:
       $this->validatesCreatorIsAdmin();
   ```
 
-  `validatesCreatorIsAdmin()` (privado) busca `User::findById` e, se
-  não for `isAdmin()`, adiciona "deve ser um administrador!".
+  `validatesCreatorIsAdmin()` (privado) converte com
+  `filter_var(..., FILTER_VALIDATE_INT)` (nada de `(int)`), busca
+  `User::findById` e, se não for `isAdmin()`, adiciona "deve ser um
+  administrador!". O `@property` de `user_id` passou a
+  `int|string|null` (string quando vem de fora do banco).
+- `app/views/admin/events/_form.phtml`: `user_id` não é campo do
+  formulário, então o erro dele não tinha onde aparecer. Agora, se
+  houver `errors('user_id')`, um `alert-danger`
+  (`#event_user_id_error`) mostra "Responsável: <mensagem>" acima dos
+  campos.
 - Controller sem mudança: `create` continua pondo
   `$event->user_id = $this->currentUser()?->id` e `fill()` nunca copia
   `user_id` do formulário.
@@ -46,7 +54,11 @@ Commit:
     existente (int e string), id desconhecido, `null`/texto/array e
     `$conditions`.
   - `EventTest`: `user_id` vazio, inexistente (sem gravar e sem
-    exceção), Participante como criador e Administrador válido.
+    exceção), com texto (`'1abc'`, `'1.5'`, `'abc'`), Participante
+    como criador e Administrador válido.
+  - `EventsControllerTest`: `create` sem usuário logado (`user_id`
+    nulo) mostra "Responsável: não pode ser vazio!" no form, sem 500
+    e sem gravar; o form sem erro não mostra o alerta.
 
 ## Por que assim
 
@@ -58,8 +70,17 @@ Commit:
   do M2): serve para `event_id` em Inscrição, `user_id` em comentário
   etc. A consulta é a do model (`Model::exists`, com `prepare` +
   `bindValue`), sem SQL em `lib/`.
-- `filter_var(..., FILTER_VALIDATE_INT)` antes da consulta: `'abc'`
-  ou array viram "não existe!" em vez de ir para o banco.
+- `filter_var(..., FILTER_VALIDATE_INT)` antes da consulta: `'abc'`,
+  `'1abc'` ou array viram "não existe!" em vez de ir para o banco.
+  Com `(int)`, `'1abc'` viraria o usuário 1.
+- Erro visível: como `user_id` vem da sessão e não tem campo, o
+  catálogo sugere mostrar o erro no flash ou como `base`; aqui ele vai
+  num alerta próprio no topo do form, que funciona para create e
+  update.
+- Nomes diferentes do catálogo: lá o passo usa
+  `validatesUserIsAdmin()` com uma mensagem só ("deve ser um
+  administrador existente!") e cita `Validations::existence` como
+  bônus. Aqui a genérica se chama `exists` e há duas mensagens.
 - "É admin" em método do model, não em `$conditions`: com
   `exists(..., ['role' => 'admin'])` a mensagem seria "não existe!"
   para um Participante, o que confunde. Duas mensagens distintas
@@ -85,7 +106,7 @@ docker compose up -d selenium && sleep 5
 ./run db:populate
 ```
 
-Resultado obtido: Unit 168 testes, Integration 45, Acceptance 23
+Resultado obtido: Unit 169 testes, Integration 47, Acceptance 23
 (base: 159 / 45 / 23). PHPCS e PHPStan sem erros. `db:populate` sem
 mudança (os 16 Eventos são do Administrador). Sem a mudança no
 `Event`, os testes de `user_id` inexistente e de Participante falham
@@ -102,8 +123,13 @@ Testes novos:
 - `EventTest`:
   - `test_user_id_should_be_required`
   - `test_unknown_user_id_should_be_invalid_instead_of_a_foreign_key_error`
+  - `test_user_id_with_trailing_text_should_be_invalid`
   - `test_participant_as_creator_should_be_invalid`
   - `test_admin_as_creator_should_be_valid`
+
+- `EventsControllerTest`:
+  - `test_create_without_logged_user_shows_the_user_id_error_instead_of_500`
+  - `test_form_without_user_id_error_has_no_user_id_alert`
 
 `user_id` forjado no formulário: o teste já existia,
 `EventsControllerTest::test_create_ignores_user_id_sent_by_the_form`
@@ -142,7 +168,7 @@ deste cenário no s50: `s50/fvp/4.2/exemplos/m11-validar-user-id`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-m11 s50/fvp/4.2/exemplos/m11-validar-user-id/projeto
 git fetch fvp-m11 fvp/m11-validar-user-id
-git cherry-pick 879d905
+git cherry-pick 494bae7
 git remote remove fvp-m11
 ```
 
@@ -152,7 +178,7 @@ git remote remove fvp-m11
 git fetch s50/fvp/4.2/exemplos/m11-validar-user-id/solucao.bundle \
     fvp/m11-validar-user-id:fvp-m11
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 879d905
+git cherry-pick 494bae7
 # opcional, limpa a ref
 git branch -D fvp-m11
 ```
@@ -198,8 +224,11 @@ Depois de aplicar: rode os testes e o `./run phpcs` (sem schema).
 - Todo teste ou populate que cria Evento com `user_id` de
   Participante passa a falhar na validação (aqui nenhum fazia isso;
   `EventTest::test_user_should_have_many_events` usa outro admin).
-- `$event->user_id` pode chegar como string (form, PDO): por isso o
-  `filter_var` e o `(int)` no `findById`.
+- `$event->user_id` pode chegar como string (de um form, se o
+  `user_id` passar a vir dele): por isso `filter_var` nas duas
+  checagens, nunca `(int)`.
+- Sem o alerta no form, a validação barra o Evento mas o usuário só
+  vê "Existem dados incorretos!" sem saber o motivo.
 - `lib/` fica fora do PHPStan: a assinatura com `class-string` no
   PHPDoc é documentação, não verificação.
 - Teste de `exists` com model anônimo precisa de banco: o arquivo usa

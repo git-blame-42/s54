@@ -1,21 +1,32 @@
-From 879d905b38cf5dc0c02f145c4d1627f5c437e8ea Mon Sep 17 00:00:00 2001
+From 494bae7e23f06da0fbe9ca206d2f765e1213f093 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:41:13 -0300
 Subject: [PATCH] feat: Validate that the event creator exists and is an admin
 
-Add a generic Validations::exists that checks the attribute is the id of a record of the given model, with optional extra conditions. Event::validates uses it for user_id and then requires the creator to be an admin, so an unknown user_id is a validation error instead of a foreign key PDOException.
+Add a generic Validations::exists that checks the attribute is the id of a record of the given model, with optional extra conditions. Event::validates uses it for user_id and then requires the creator to be an admin, so an unknown user_id is a validation error instead of a foreign key PDOException. Since user_id is not a form field, the form shows its error in an alert above the fields.
 ---
- app/Models/Event.php                          | 20 +++++
+ app/Models/Event.php                          | 23 ++++-
+ app/views/admin/events/_form.phtml            |  6 ++
  lib/Validations.php                           | 21 +++++
+ .../Admin/EventsControllerTest.php            | 22 +++++
  .../Lib/Validations/ExistsValidationsTest.php | 87 +++++++++++++++++++
- tests/Unit/Models/Events/EventTest.php        | 36 ++++++++
- 4 files changed, 164 insertions(+)
+ tests/Unit/Models/Events/EventTest.php        | 46 ++++++++++
+ 6 files changed, 204 insertions(+), 1 deletion(-)
  create mode 100644 tests/Unit/Lib/Validations/ExistsValidationsTest.php
 
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..5f3b7c1 100644
+index ba66870..4984983 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
+@@ -9,7 +9,7 @@ use PDOException;
+ 
+ /**
+  * @property int $id
+- * @property int $user_id
++ * @property int|string|null $user_id inteiro do banco; string se vier de fora (validado por filter_var)
+  * @property string $title
+  * @property string $description
+  * @property string $kind
 @@ -59,6 +59,11 @@ class Event extends Model
  
      public function validates(): void
@@ -28,7 +39,7 @@ index ba66870..5f3b7c1 100644
          Validations::notEmpty('title', $this);
          Validations::notEmpty('description', $this);
          Validations::notEmpty('location', $this);
-@@ -81,6 +86,21 @@ class Event extends Model
+@@ -81,6 +86,22 @@ class Event extends Model
          }
      }
  
@@ -37,7 +48,8 @@ index ba66870..5f3b7c1 100644
 +     */
 +    private function validatesCreatorIsAdmin(): bool
 +    {
-+        $creator = User::findById((int) $this->user_id);
++        $id = filter_var($this->user_id, FILTER_VALIDATE_INT);
++        $creator = $id === false ? null : User::findById($id);
 +
 +        if ($creator === null || !$creator->isAdmin()) {
 +            $this->addError('user_id', 'deve ser um administrador!');
@@ -50,6 +62,23 @@ index ba66870..5f3b7c1 100644
      /**
       * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
       * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..0ec6103 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -13,6 +13,12 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     ? '<div class="invalid-feedback' . $extra . '">' . htmlspecialchars($event->errors($field)) . '</div>'
+     : '';
+ ?>
++<?php if ($event->errors('user_id') !== null) : ?>
++    <?php // user_id não é campo do formulário (vem da sessão): o erro aparece aqui, acima dos campos. ?>
++    <div class="alert alert-danger" id="event_user_id_error" role="alert">
++        Responsável: <?= htmlspecialchars($event->errors('user_id')) ?>
++    </div>
++<?php endif; ?>
+ <form action="<?= $action ?>" method="post" novalidate>
+     <?php if ($isUpdate) : ?>
+         <input type="hidden" name="_method" value="PUT">
 diff --git a/lib/Validations.php b/lib/Validations.php
 index f456148..0244592 100644
 --- a/lib/Validations.php
@@ -82,6 +111,39 @@ index f456148..0244592 100644
      /**
       * O valor deve ser um número inteiro maior ou igual a $min (aceita string numérica, como vem de um form).
       */
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..2607709 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,28 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_create_without_logged_user_shows_the_user_id_error_instead_of_500(): void
++    {
++        Auth::logout();
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams()]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('id="event_user_id_error"', $response);
++        $this->assertStringContainsString('Responsável: não pode ser vazio!', $response);
++    }
++
++    public function test_form_without_user_id_error_has_no_user_id_alert(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringNotContainsString('id="event_user_id_error"', $response);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
 diff --git a/tests/Unit/Lib/Validations/ExistsValidationsTest.php b/tests/Unit/Lib/Validations/ExistsValidationsTest.php
 new file mode 100644
 index 0000000..e5c26b1
@@ -176,10 +238,10 @@ index 0000000..e5c26b1
 +    }
 +}
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..a112c84 100644
+index f961b4c..84cf634 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
-@@ -95,6 +95,42 @@ class EventTest extends TestCase
+@@ -95,6 +95,52 @@ class EventTest extends TestCase
          }
      }
  
@@ -209,6 +271,16 @@ index f961b4c..a112c84 100644
 +        $this->assertFalse($event->save());
 +        $this->assertEquals('deve ser um administrador!', $event->errors('user_id'));
 +        $this->assertCount(0, Event::all());
++    }
++
++    public function test_user_id_with_trailing_text_should_be_invalid(): void
++    {
++        foreach (["{$this->admin->id}abc", '1.5', 'abc'] as $value) {
++            $event = new Event($this->params(['user_id' => $value]));
++
++            $this->assertFalse($event->isValid(), $value);
++            $this->assertEquals('não existe!', $event->errors('user_id'), $value);
++        }
 +    }
 +
 +    public function test_admin_as_creator_should_be_valid(): void

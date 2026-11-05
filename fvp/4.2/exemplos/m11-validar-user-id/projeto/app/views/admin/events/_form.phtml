@@ -13,6 +13,12 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
     ? '<div class="invalid-feedback' . $extra . '">' . htmlspecialchars($event->errors($field)) . '</div>'
     : '';
 ?>
+<?php if ($event->errors('user_id') !== null) : ?>
+    <?php // user_id não é campo do formulário (vem da sessão): o erro aparece aqui, acima dos campos. ?>
+    <div class="alert alert-danger" id="event_user_id_error" role="alert">
+        Responsável: <?= htmlspecialchars($event->errors('user_id')) ?>
+    </div>
+<?php endif; ?>
 <form action="<?= $action ?>" method="post" novalidate>
     <?php if ($isUpdate) : ?>
         <input type="hidden" name="_method" value="PUT">
