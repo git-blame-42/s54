@@ -148,6 +148,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | N13 | Filtro fora do `where` (SET, vagas) | média-baixa | 25-35 min |
 | N14 | Query Builder mínimo no core | baixa | 40-60 min |
 | N15 | Dois paginadores na mesma tela | baixa | 25-35 min |
+| N16 | Busca, filtro e ordenação juntos na paginação | média-alta | 35-45 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
@@ -159,6 +160,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | O9 | `_method` só via POST (falha real) | média | 15-20 min |
 | O10 | `Route::resource` ou `Route::prefix` no core | média-baixa | 25-40 min |
 | O11 | Página 404 amigável, sem stack trace | baixa | 20-25 min |
+| O12 | Busca e ordenação na resposta JSON | média-baixa | 20-30 min |
 | P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
 | P2 | Inscrição do Participante em um Evento | média-alta | 30-40 min |
 | P3 | Cancelar a própria inscrição | média | 15-20 min |
@@ -181,6 +183,9 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P20 | Exportar Evento em iCal (`.ics`) | baixa | 20-25 min |
 | P21 | Imagem de capa do Evento (upload) | baixa | 35-40 min |
 | P22 | Adiar o Evento uma semana com um botão | média-baixa | 20-30 min |
+| P23 | Código do registro exigido para remover | alta | 30-40 min |
+| P24 | Código com validade e limite de tentativas | média | 25-35 min |
+| P25 | Histórico de alterações do registro | média-baixa | 35-45 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
 | Q3 | Ação só para Participante | média-baixa | 20-30 min |
@@ -220,7 +225,9 @@ T3+ vieram de análises de lacunas (05/11) feitas depois de os 40
 primeiros terem exemplo pronto; defeitos reais da base que não viraram
 cenário estão como armadilhas. A seção 5 liga frases típicas do
 enunciado ao cenário que as cobre. As seções 6 e 7 reordenam tudo
-supondo um enunciado único para a turma inteira.
+supondo um enunciado único para a turma inteira; N16, O12, P23, P24
+e P25 saíram da análise dos projetos dos 7 grupos que entregaram a
+4.2.
 
 ## 5. Como o professor pede -> cenário
 
@@ -289,630 +296,890 @@ primeiro é o principal.
 | "Escreva o teste de aceitação disso" | S1 |
 | "Testes com negativo, texto e sem alteração" | S4 |
 | "Atualize o populate" ou "um segundo admin" | T1 |
+| "Busca, filtro e ordenação juntos na listagem" | N16 |
+| "A listagem em JSON aceita busca e ordenação" | O12 |
+| "Código gerado ao criar; para excluir, digite-o" | P23, P16 |
+| "O código expira em 5 minutos; 3 erros o anulam" | P24 |
+| "Guarde quem alterou o quê e quando" | P25 |
+| "Mostre o total de registros na listagem" | já na base (`PAGES:32`) |
 
 ## 6. Ranking sob pedido único para a turma
 
 Premissa: o professor dá o mesmo enunciado da FVP 4.2 a todos os
-grupos que entregaram a 4.2. Os domínios mudam (reservas, quadras,
-campanhas, pallets, pastas de links, eventos...), o framework é o
+grupos que entregaram a 4.2. Os domínios mudam, o framework é o
 mesmo. Então o pedido tem de caber em qualquer CRUD do template, como
 o da 4.1 ("login por código") coube em qualquer login. Cenários que
 dependem de inscrição, vagas, lotado ou check-in caem; os de
 CRUD e framework sobem.
+
+Os 7 grupos que entregaram a 4.2 e o recurso do CRUD de cada um:
+
+- g2: reservas de ambientes (`Reservation`, com horário acoplado).
+- g3: vendas (`Sale`, com itens).
+- g5: pallets (`Pallet`; sem `show` de item).
+- g6: pastas de links (`Folder`; API JSON via `fetch`, sem views,
+  paginação nem flash no CRUD).
+- g7: nós (`Event`).
+- g8: campanhas (`Campaign`; PostgreSQL).
+- g9: usuários da arena (`User`, CRUD do admin com bloquear/ativar).
+
+O que os 7 têm: model com `$columns`, `validates()` com `notEmpty`,
+`save()` e `destroy()`; um campo de texto editável; rotas nomeadas com
+middleware de auth; login; CRUD completo; flash `success`/`danger` e
+`redirectTo`; testes unitários e CI. O que ninguém tem: busca,
+ordenação escolhida, `per_page` variável, flash `warning`, CSRF no
+CRUD, services; o framework não tem `ORDER BY` nem `LIKE`. Só parte
+dos grupos tem campo de data editável (g2, g7, g8), campo numérico
+(g3, g5, g7), ENUM (g2, g3, g7; g9 com constantes) e `user_id` de dono
+(g2, g6, g7, g8). Pedido "que ninguém tem e todos conseguem" (busca,
+ordenação, código aleatório validado) é o mais plausível.
 
 Classes:
 
 - **genérico**: depende só do framework e do CRUD; o enunciado sai
   sem citar o domínio.
 - **adaptável**: escrito sobre Eventos, mas com equivalente óbvio em
-  outro CRUD (linha "Forma genérica"). Cai quando o equivalente
-  exige algo que nem todo recurso tem (data, ENUM, `user_id`, filho).
+  outro CRUD (linha "Forma genérica"). Cai quando o equivalente exige
+  algo que nem todo recurso tem (data, ENUM, `user_id`, filho).
 - **específico**: só existe no nosso domínio; sem equivalente.
+
+"Nos 7 grupos": V = direto no que o grupo já tem; A = viável com
+adaptação maior (form duplicado, API JSON, coluna simples nova);
+D = depende de estrutura que não existe (dono, filho, paginação).
 
 "Pedido único" é a chance sob enunciado único, na escala da seção 4;
 a chance original não muda. Ordem: chance pedido único, depois chance
-original, depois ID. Total: 55 genéricos, 34 adaptáveis, 11
-específicos. A matriz dos projetos dos outros grupos vai refinar esta
-lista.
-
+original, depois ID. Total: 105 cenários; 60 genéricos, 34 adaptáveis,
+11 específicos. N16, O12, P23, P24 e P25 vieram desta análise.
 1. M1 Campo novo em `events` com validação
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g7; A g5 g6 g8 g9.
    Por quê: Todo CRUD aceita coluna nova com validação; é a linha "campo novo +
-   validação" da rubrica e cabe no tempo.
+   validação" da rubrica e cabe no tempo. Mantida: cabe nos 7; g5 g8 g9 editam 2
+   forms, g6 mexe em JSON e home.js.
    Forma genérica: campo novo no recurso principal com validação.
 
 2. M2 Validação nova em `lib/Validations.php`
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8; A g6 g9.
    Por quê: Só depende de `Validations` e de um campo de texto ou número, que
-   todo recurso tem; linha da rubrica.
+   todo recurso tem; linha da rubrica. Mantida: só lib/Validations; g6 mostra
+   erro em alert, g9 em flash firstError.
    Forma genérica: a do título serve.
 
 3. N1 Filtro por tipo com `where` na paginação
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
    Por quê: Todo CRUD tem index paginado e algum campo para filtrar; é a linha
-   `where` da rubrica.
+   `where` da rubrica. Mantida: linha where da rubrica; g5 g8 sem campo
+   categórico, g6 sem paginação.
    Forma genérica: filtro por um campo do recurso com `where`, mantido na
    paginação.
 
 4. P1 Código de check-in aleatório (1000-9999)
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Transposição direta da FVP 4.1 para qualquer CRUD: campo gerado no
-   backend, único, validado no model.
+   backend, único, validado no model. Coluna + random_int + uniqueness cabe em
+   todos; g6 via JSON; análogo da 4.1. Mantém.
    Forma genérica: Código aleatório 1000-9999 único por registro, gerado no
    backend.
 
 5. S1 Teste de aceitação da modificação
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Acompanha qualquer pedido único; rubrica cobra Cest da coisa nova.
+   Mantida: Codeception/WebDriver em todos; g6 só tem 1 Cest e o CRUD é SPA.
    Forma genérica: a do título serve.
 
 6. S2 Teste de acesso por HTTP da rota nova
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Todo CRUD tem auth/admin; rota nova sempre pede prova de acesso.
+   Mantida: todos têm teste de acesso HTTP (g6 só da home, mas o padrão existe).
    Forma genérica: a do título serve.
 
 7. S3 Teste unitário do método novo do model
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Qualquer método novo no model pede teste unitário; independe do
-   domínio.
+   domínio. Mantida: todos têm Unit + CI.
    Forma genérica: a do título serve.
 
 8. T1 Populate: campo novo, mais Eventos, segundo admin
    Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
    Por quê: Todo grupo tem populate; vem junto de campo novo ou paginação.
+   Mantida: acessório; g5 e g6 sem populate da entidade, g8 com seed quebrado.
    Forma genérica: populate com campo novo, mais registros e segundo admin.
 
 9. T2 `phpcs`, `phpstan` e CI verdes
    Pedido único: alta (original: alta). Genérico.
-   Por quê: Implícito em qualquer pedido; CI é item da rubrica.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Implícito em qualquer pedido; CI é item da rubrica. Mantida: phpcs,
+   phpstan e CI nos 7.
    Forma genérica: a do título serve.
 
-10. N3 Ordenar por data no `Paginator`
+10. P23 Código gravado no registro, exigido para remover
+   Pedido único: alta (original: alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Pedido literal "código 1000-9999 gerado no create e exigido para
+   excluir": FVP 4.1 no CRUD. Coluna + random_int + conferência no model em
+   todos; g6 adapta no JSON.
+   Forma genérica: código aleatório gerado ao criar e exigido para remover ou
+   editar.
+
+11. N3 Ordenar por data no `Paginator`
    Pedido único: alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo `Paginator` do template não tem `ORDER BY`; pequeno, toca
-   paginação e vale para qualquer coluna.
+   paginação e vale para qualquer coluna. Paginator sem ORDER BY nos 6 (g9 já
+   tem order, g5 fixa id); g6 sem Paginator. Mantém.
    Forma genérica: `ORDER BY` por coluna do recurso no `Paginator`, com
    desempate por `id`.
 
-11. N10 Página e id inválidos, sem `(int)` cego
+12. N10 Página e id inválidos, sem `(int)` cego
    Pedido único: alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: O `(int)` cego vem do template e está em todo CRUD; pequeno,
-   apontado em issue de avaliação da 4.2.
+   apontado em issue de avaliação da 4.2. (int) cego em todos; g2 já valida
+   página e id, g5 usa filter_var; g6 só id. Mantém.
    Forma genérica: Página e id da rota validados, sem conversão silenciosa.
 
-12. P16 Remover só com código de confirmação
+13. P16 Remover só com código de confirmação
    Pedido único: alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo CRUD tem destroy; repete o padrão da FVP 4.1 (código no
-   backend, validado) numa ação nova.
+   backend, validado) numa ação nova. Sem mudança: ninguém tem, todos fazem
+   coluna + random_int; g6 adapta no JSON/home.js.
    Forma genérica: a do título serve.
 
-13. S4 Testes de borda pedidos pelo professor
+14. S4 Testes de borda pedidos pelo professor
    Pedido único: alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Vazio, inválido, não autorizado e update sem mudança existem em todo
-   CRUD.
+   CRUD. Mantida: bordas de validação/acesso em todos; g6 sem integração de
+   /folders.
    Forma genérica: testes de borda da validação e do acesso do recurso.
 
-14. P5 Status do Evento: cancelar e encerrar
-   Pedido único: média-alta (original: alta). Adaptável.
-   Por quê: Status ativo/inativo cabe em todo recurso, mas "encerrar por data" e
-   "barrar inscrição" são nossos.
-   Forma genérica: campo status (ENUM) no recurso com ação ativar/desativar.
-
 15. M6 Unicidade (título único na mesma data)
-   Pedido único: média-alta (original: média-alta). Genérico.
+   Pedido único: alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo recurso tem nome; `uniqueness` já existe e pode já estar em
-   uso, o que tira desafio.
+   uso, o que tira desafio. uniqueness pronta nos 7; g5 e g9 já usam, fazem
+   composto; g6 erro só em alert.
    Forma genérica: nome do recurso único (só ou combinado com outro campo).
 
-16. M17 Campo sim/não por checkbox (certificado)
-   Pedido único: média-alta (original: média-alta). Genérico.
-   Por quê: Booleano por checkbox cabe em qualquer recurso; é campo novo +
-   validação com armadilha comum a todos.
-   Forma genérica: campo sim/não por checkbox no recurso.
+16. N2 Busca por título (`LIKE`)
+   Pedido único: alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g5 g7 g8 g9; A g3 g6.
+   Por quê: Todo recurso tem nome e listagem; pequeno, mas `LIKE` foge do
+   `where` da rubrica. Ninguém tem LIKE e todos conseguem igual; g3 (venda) sem
+   nome, g6 sem Paginator.
+   Forma genérica: busca pelo nome do recurso na listagem.
 
-17. N4 Mudar `per_page` ou deixar o usuário escolher
-   Pedido único: média-alta (original: média-alta). Genérico.
-   Por quê: Vale para todo CRUD paginado, mas é pequeno demais para ser a FVP
-   inteira; entra como parte.
+17. N8 Ordenar clicando no cabeçalho da listagem
+   Pedido único: alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Funciona em qualquer listagem e junta `ORDER BY` com `queryParams`
+   na paginação; um pouco maior. Ordenação: ninguém escolhe, todos conseguem; g9
+   tem order sem bind; g6 lista no JS.
    Forma genérica: a do título serve.
 
-18. O1 Rota RESTful nova com página (lotados)
+18. P5 Status do Evento: cancelar e encerrar
+   Pedido único: média-alta (original: alta). Adaptável.
+   Nos 7 grupos: V g2 g8 g9; A g3 g5 g6 g7.
+   Por quê: Status ativo/inativo cabe em todo recurso, mas "encerrar por data" e
+   "barrar inscrição" são nossos. Sem D: g2, g8, g9 já têm status; g3, g5, g6,
+   g7 criam coluna; g9 já tem block/activate.
+   Forma genérica: campo status (ENUM) no recurso com ação ativar/desativar.
+
+19. M17 Campo sim/não por checkbox (certificado)
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g7; A g5 g6 g8 g9.
+   Por quê: Booleano por checkbox cabe em qualquer recurso; é campo novo +
+   validação com armadilha comum a todos. Mantida: igual ao campo novo; g5 g8 g9
+   têm 2 forms, g6 JSON; ninguém tem booleano.
+   Forma genérica: campo sim/não por checkbox no recurso.
+
+20. N4 Mudar `per_page` ou deixar o usuário escolher
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; D g6.
+   Por quê: Vale para todo CRUD paginado, mas é pequeno demais para ser a FVP
+   inteira; entra como parte. V em 6/7, g6 sem paginação; pequeno demais para
+   ser a FVP inteira. Mantém.
+   Forma genérica: a do título serve.
+
+21. O1 Rota RESTful nova com página (lotados)
    Pedido único: média-alta (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
    Por quê: "Lotados" é nosso, mas rota GET nova com página de subconjunto
-   existe em todo CRUD.
+   existe em todo CRUD. Critério por igualdade onde há ENUM/status; g5 g8 sem
+   categoria, g6 rota JSON. Mantém.
    Forma genérica: Rota GET nova listando registros do recurso que atendem a um
    critério.
 
-19. O2 Eventos para o Participante (lista e detalhe)
+22. P6 Duplicar Evento
    Pedido único: média-alta (original: média-alta). Genérico.
-   Por quê: Todo grupo tem admin x comum; lista e detalhe só leitura para o
-   comum vale em qualquer domínio.
-   Forma genérica: Lista e detalhe do recurso, só leitura, para o usuário comum.
-
-20. P6 Duplicar Evento
-   Pedido único: média-alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
    Por quê: Todo CRUD pode duplicar um registro; pequeno, mas não toca linha da
-   rubrica (só "+7 dias" é nosso).
+   rubrica (só "+7 dias" é nosso). Sem D; unicidade em g5 (item) e g9 (email)
+   obriga alterar campo; g3 copia itens; g6 JSON.
    Forma genérica: duplicar um registro do recurso.
 
-21. Q1 Só o dono edita e remove
-   Pedido único: média-alta (original: média-alta). Adaptável.
-   Por quê: Exige `user_id` no recurso (provável, não garantido); é o D8 da 4.1
-   levado ao CRUD.
-   Forma genérica: só o dono (`user_id`) edita e remove o registro.
+23. N16 Busca, filtro e ordenação juntos na paginação
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Nos 7 grupos: V g2 g5 g7 g8 g9; A g3 g6.
+   Por quê: Reúne N1, N2, N3 e N8, o que ninguém tem; maior (35-45 min), mas é a
+   listagem completa. Framework sem LIKE e ORDER BY nos 7; g3 sem nome, g6 sem
+   Paginator.
+   Forma genérica: busca, filtro e ordenação do recurso juntos, preservados na
+   paginação.
 
-22. M9 Slug único gerado no backend
+24. M19 "Nenhuma alteração" ao salvar sem mudar
    Pedido único: média-alta (original: média). Genérico.
-   Por quê: Todo recurso tem nome; é "código gerado no backend e validado",
-   irmão do precedente da 4.1.
-   Forma genérica: slug único gerado do nome do recurso.
-
-23. M19 "Nenhuma alteração" ao salvar sem mudar
-   Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo CRUD tem edição; pequeno, compara com o banco e cobra detecção
-   de alteração.
+   de alteração. Mantida: cabe em todo update, mas g5 já tem "Nenhuma
+   alteração"; g6 sem flash.
    Forma genérica: "nenhuma alteração" ao salvar a edição sem mudar nada.
 
-24. N2 Busca por título (`LIKE`)
+25. N11 `Model::count()` no framework
    Pedido único: média-alta (original: média). Genérico.
-   Por quê: Todo recurso tem nome e listagem; pequeno, mas `LIKE` foge do
-   `where` da rubrica.
-   Forma genérica: busca pelo nome do recurso na listagem.
-
-25. N8 Ordenar clicando no cabeçalho da listagem
-   Pedido único: média-alta (original: média). Genérico.
-   Por quê: Funciona em qualquer listagem e junta `ORDER BY` com `queryParams`
-   na paginação; um pouco maior.
-   Forma genérica: a do título serve.
-
-26. N11 `Model::count()` no framework
-   Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Core pequeno, igual em todo template; contar registros (total na
-   listagem, por dono) serve a qualquer CRUD.
+   listagem, por dono) serve a qualquer CRUD. count() falta no core dos 7, igual
+   para todos; g6 mostra o total via JSON.
    Forma genérica: `count()` no Model e total de registros na listagem.
 
-27. N12 Paginação com Primeira/Última e janela
+26. N12 Paginação com Primeira/Última e janela
    Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; D g6.
    Por quê: `Paginator` é item da rubrica e é igual em todo grupo; pequeno e
-   testável sem domínio.
+   testável sem domínio. _pages.phtml em 6/7 (g5 view própria); g6 sem
+   paginação; foco em view. Mantém.
    Forma genérica: a do título serve.
 
-28. O9 `_method` só via POST (falha real)
+27. O9 `_method` só via POST (falha real)
    Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Falha de segurança idêntica em todo template; pequeno, com teste
-   unitário de core.
+   unitário de core. Request.php:18 aceita _method em GET nos 7; fix de core com
+   teste unitário.
    Forma genérica: a do título serve.
 
-29. R4 Confirmar antes de remover (JS em arquivo)
+28. R4 Confirmar antes de remover (JS em arquivo)
    Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Todo CRUD tem destroy; pequeno, regra de JS em arquivo próprio já
-   cobrada pelo professor.
+   cobrada pelo professor. Mantida: V nos 7 (g6 já tem confirm em home.js);
+   pequeno e só de view.
    Forma genérica: confirmar remoção com JS em arquivo próprio.
 
-30. R5 Mostrar `created_at` e `updated_at`
+29. R5 Mostrar `created_at` e `updated_at`
    Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g3 g5 g7 g9; A g2 g6 g8.
    Por quê: Toda tabela pode ter `created_at`; o core não lê timestamps e
-   `save()` grava NULL: armadilha igual p/ todos.
+   `save()` grava NULL: armadilha igual p/ todos. Mantida: g2 (reservations) e
+   g8 sem created_at; g6 mexe no SQL e no JS; updated_at falta a todos.
    Forma genérica: exibir data de cadastro e de alteração do registro.
 
-31. R8 Lista de todos os erros no topo do formulário
-   Pedido único: média-alta (original: média). Genérico.
-   Por quê: Universal e ligado à validação (item da demonstração); exige método
-   pequeno no core.
-   Forma genérica: listar todos os erros de validação no topo do form.
-
-32. M4 Data de término não anterior ao início
-   Pedido único: média (original: média-alta). Adaptável.
-   Por quê: Nem todo recurso tem data; sem ela o grupo cria duas colunas e o
-   pedido cresce.
-   Forma genérica: segundo campo de data com ordem em relação ao primeiro.
-
-33. M7 Horário do Evento (`TIME` ou `DATETIME`)
-   Pedido único: média (original: média-alta). Adaptável.
-   Por quê: Depende de campo de data, que nem todo recurso tem; formato
-   `HH:MM:SS` gera armadilha igual para todos.
-   Forma genérica: campo de hora ou data-hora no recurso, validado.
-
-34. M18 Janela de datas: antecedência e limite
-   Pedido único: média (original: média-alta). Adaptável.
-   Por quê: Exige campo de data; quem não tem precisa criar antes, e o pedido
-   deixa de caber.
-   Forma genérica: data do recurso dentro de uma faixa de dias a partir de hoje.
-
-35. O5 Admin vê e lista só os próprios Eventos
-   Pedido único: média (original: média-alta). Adaptável.
-   Por quê: Mesma dependência de `user_id` do Q1, que é o pedido mais provável
-   dessa família.
-   Forma genérica: Admin só lista e cadastra registros dele (`user_id`).
-
-36. R2 Nome do criador no `show` e na listagem
-   Pedido único: média (original: média-alta). Adaptável.
-   Por quê: Depende de `user_id`/dono no recurso, que é provável mas não
-   garantido em todo CRUD.
-   Forma genérica: mostrar o usuário dono do registro (BelongsTo) no detalhe.
-
-37. M5 Validação condicional por modalidade
-   Pedido único: média (original: média). Adaptável.
-   Por quê: Exige um campo de categoria (tipo, status); comum mas não universal.
-   Forma genérica: campo obrigatório só quando outro campo tem certo valor.
-
-38. M10 Campo que não muda depois de haver inscrições
-   Pedido único: média (original: média). Adaptável.
+30. M10 Campo que não muda depois de haver inscrições
+   Pedido único: média-alta (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Inscrição é nossa, mas "não muda após criação" serve a todo CRUD e
-   cobra detecção de alteração.
+   cobra detecção de alteração. Todo update compara com o banco; g5 já só trava
+   na view (readonly); g6 só alert.
    Forma genérica: campo que não pode mudar depois de criado (comparar com o
    banco).
 
-39. M11 Validar `user_id` no model
+31. N9 Filtro por período
+   Pedido único: média-alta (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Validar o filtro no model vale para todos, mas exige campo de data
+   no recurso. De/até em data editável (g2 g7 g8) ou created_at (g3 g5 g9); g6
+   sem Paginator.
+   Forma genérica: Filtro de/até sobre campo de data do recurso, com validação.
+
+32. P8 Exportar a listagem em CSV
+   Pedido único: média-alta (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Roda em qualquer listagem, mas é formato de nicho fora da rubrica
+   (âncora de média). V nos 7: lê a listagem e responde com header CSV no
+   backend, inclusive g6 (API).
+   Forma genérica: a do título serve.
+
+33. Q2 Bloquear alterar Evento passado ou cancelado
+   Pedido único: média-alta (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Depende de campo de data ou status no recurso, comum mas não
+   universal. Todos têm data, created_at ou status para a regra no backend; g2
+   já bloqueia; g6 via JSON.
+   Forma genérica: bloquear editar/remover conforme data ou status do registro.
+
+34. M12 Último editor gravado da sessão
+   Pedido único: média-alta (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Só precisa de login e do recurso; valor vindo da sessão e nunca do
+   form serve a todo CRUD. Coluna nova + currentUser serve aos 7, sem campo no
+   form; g6 exibe via JS.
+   Forma genérica: a do título serve.
+
+35. Q5 Token CSRF nos formulários de Evento
+   Pedido único: média-alta (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Todo CRUD tem forms POST/DELETE e middleware; repete o A15 da 4.1,
+   mas mexe em rotas e helper de login. Ninguém tem CSRF no CRUD e todos
+   conseguem; backend. g6 tem no login, mas CRUD via fetch.
+   Forma genérica: token CSRF nos formulários do CRUD (criar, editar, remover).
+
+36. P11 Soft delete (arquivar Evento)
+   Pedido único: média-alta (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g9; A g3 g5 g6 g7 g8.
+   Por quê: Todo CRUD tem destroy; arquivar em vez de apagar é universal, mas
+   mexe no Paginator (`IS NULL`). Ninguém tem e todos conseguem; g2 (cancelado)
+   e g9 (inactive) já têm status; outros criam coluna.
+   Forma genérica: a do título serve.
+
+37. O2 Eventos para o Participante (lista e detalhe)
+   Pedido único: média (original: média-alta). Genérico.
+   Nos 7 grupos: V g3 g7; A g2 g5 g6 g8 g9.
+   Por quê: Todo grupo tem admin x comum; lista e detalhe só leitura para o
+   comum vale em qualquer domínio. Admin x comum no CRUD só g3 (produtos) e g7;
+   g2 g6 g8 CRUD igual a todos; g5 sem show.
+   Forma genérica: Lista e detalhe do recurso, só leitura, para o usuário comum.
+
+38. Q1 Só o dono edita e remove
+   Pedido único: média (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g6 g7 g8; D g3 g5 g9.
+   Por quê: Exige `user_id` no recurso (provável, não garantido); é o D8 da 4.1
+   levado ao CRUD. g3, g5, g9 sem user_id; g2 e g8 já escopam por dono.
+   Forma genérica: só o dono (`user_id`) edita e remove o registro.
+
+39. M7 Horário do Evento (`TIME` ou `DATETIME`)
+   Pedido único: média (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
+   Por quê: Depende de campo de data, que nem todo recurso tem; formato
+   `HH:MM:SS` gera armadilha igual para todos. Mantida: g3 g5 g6 g9 criam coluna
+   de hora; g2 já valida TIME.
+   Forma genérica: campo de hora ou data-hora no recurso, validado.
+
+40. M18 Janela de datas: antecedência e limite
+   Pedido único: média (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
+   Por quê: Exige campo de data; quem não tem precisa criar antes, e o pedido
+   deixa de caber. Mantida: g3 g5 g6 g9 sem data editável criam a coluna antes.
+   Forma genérica: data do recurso dentro de uma faixa de dias a partir de hoje.
+
+41. M9 Slug único gerado no backend
+   Pedido único: média (original: média). Genérico.
+   Nos 7 grupos: V g5 g7 g8 g9; A g2 g3 g6.
+   Por quê: Todo recurso tem nome; é "código gerado no backend e validado",
+   irmão do precedente da 4.1. g2 (só motive TEXT) e g3 (venda) sem campo nome;
+   g6 sem show nem view.
+   Forma genérica: slug único gerado do nome do recurso.
+
+42. R8 Lista de todos os erros no topo do formulário
+   Pedido único: média (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g7; A g5 g6 g8 g9.
+   Por quê: Universal e ligado à validação (item da demonstração); exige método
+   pequeno no core. g9 redireciona no erro (só firstError), g6 só alert; g5 e g8
+   com form duplicado.
+   Forma genérica: listar todos os erros de validação no topo do form.
+
+43. M5 Validação condicional por modalidade
    Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
+   Por quê: Exige um campo de categoria (tipo, status); comum mas não universal.
+   Mantida: g5 g6 g8 sem campo categórico condicionam por número/data; g6 só
+   alert.
+   Forma genérica: campo obrigatório só quando outro campo tem certo valor.
+
+44. M11 Validar `user_id` no model
+   Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g8; A g6; D g5 g9.
    Por quê: `user_id` no recurso é provável, não garantido; sem dono vale para
-   qualquer FK.
+   qualquer FK. Mantida: g5 e g9 sem FK na entidade; g2 já tem existsIn; g6 é
+   item da issue.
    Forma genérica: validar no model a FK do recurso (existe e tem o papel
    certo).
 
-40. M20 Preço em reais com vírgula
+45. M20 Preço em reais com vírgula
    Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7; A g6 g8 g9.
    Por quê: Valor decimal cabe na maioria dos recursos, mas em alguns domínios
-   soa forçado.
+   soa forçado. Mantida: g6 g8 g9 sem decimal e com 2 forms/JSON; preço soa
+   forçado em pastas/usuários.
    Forma genérica: campo decimal com vírgula, validado e formatado na view.
 
-41. N5 Só Eventos futuros ou passados
+46. N6 Dado calculado na tela (badge "Lotado", total)
    Pedido único: média (original: média). Adaptável.
-   Por quê: Exige campo de data no recurso; nem todo recurso tem data além de
-   `created_at`.
-   Forma genérica: Filtro por campo de data do recurso (antes/depois de hoje).
-
-42. N6 Dado calculado na tela (badge "Lotado", total)
-   Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: "Lotado" depende de vagas; o total de registros no painel serve a
-   todos, mas é pequeno.
+   todos, mas é pequeno. totalOfRegisters pronto em 6/7 (g6 SQL cru/JSON);
+   pequeno e de view. Mantém.
    Forma genérica: Total de registros no painel ou valor derivado na listagem.
 
-43. N7 Painel administrativo com resumo
+47. N7 Painel administrativo com resumo
    Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
    Por quê: Painel é genérico de nicho; contagem por tipo exige ENUM ou
-   categoria, que nem todos têm.
+   categoria, que nem todos têm. Categoria só g2 g3 g7 g9 (g9 constantes); g5 g6
+   g8 sem; core sem count. Mantém.
    Forma genérica: Painel admin com total por categoria e últimos N registros.
 
-44. N9 Filtro por período
-   Pedido único: média (original: média). Adaptável.
-   Por quê: Validar o filtro no model vale para todos, mas exige campo de data
-   no recurso.
-   Forma genérica: Filtro de/até sobre campo de data do recurso, com validação.
-
-45. P8 Exportar a listagem em CSV
+48. R1 Flash: texto, título do Evento, `warning`
    Pedido único: média (original: média). Genérico.
-   Por quê: Roda em qualquer listagem, mas é formato de nicho fora da rubrica
-   (âncora de média).
-   Forma genérica: a do título serve.
-
-46. Q2 Bloquear alterar Evento passado ou cancelado
-   Pedido único: média (original: média). Adaptável.
-   Por quê: Depende de campo de data ou status no recurso, comum mas não
-   universal.
-   Forma genérica: bloquear editar/remover conforme data ou status do registro.
-
-47. R1 Flash: texto, título do Evento, `warning`
-   Pedido único: média (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo CRUD tem flash no destroy; pequeno demais para pedido sozinho,
-   costuma vir junto.
+   costuma vir junto. Mantida: warning falta a todos, mas é pequeno demais; g6
+   sem flash no CRUD (fetch).
    Forma genérica: flash com o nome do registro e tipo `warning` novo.
 
-48. R3 Formatação na view com helper num só lugar
+49. R3 Formatação na view com helper num só lugar
    Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Truncar texto ou badge vale em qualquer CRUD; data por extenso exige
-   campo de data.
+   campo de data. Mantida: truncar/badge cabe em todos, mas é só apresentação;
+   g6 renderiza em JS.
    Forma genérica: método de apresentação no model (texto truncado, badge).
 
-49. M12 Último editor gravado da sessão
-   Pedido único: média (original: média-baixa). Genérico.
-   Por quê: Só precisa de login e do recurso; valor vindo da sessão e nunca do
-   form serve a todo CRUD.
-   Forma genérica: a do título serve.
+50. P17 Remover com inscrições, em cascata e confirmado
+   Pedido único: média (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g6 g7 g9; D g5 g8.
+   Por quê: Só faz sentido se o recurso tiver filhos com FK RESTRICT; nem todo
+   grupo tem segundo recurso. V em 5 (safeDestroy g7; cascata em g2 g3 g6 g9);
+   só g5 e g8 sem filhos.
+   Forma genérica: remover registro com filhos em cascata, após confirmação.
 
-50. M14 Contador de visualizações com `update()`
+51. P24 Código com validade e limite de tentativas
+   Pedido único: média (original: média). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Extensão natural do P16/P23 se o professor endurecer a regra do
+   código. Sessão ou coluna + relógio nos 7; g6 sem flash, só JSON.
+   Forma genérica: código de confirmação que expira e se invalida após 3 erros.
+
+52. M14 Contador de visualizações com `update()`
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: Coluna nova e `update()` no `show` servem a todo CRUD; pequeno, mas
-   foge das linhas da rubrica.
+   foge das linhas da rubrica. Mantida: g5 e g6 sem show de item; fora da
+   rubrica.
    Forma genérica: contador de visualizações no `show` com `update()`.
 
-51. M22 No máximo N Eventos por dia
+53. M22 No máximo N Eventos por dia
    Pedido único: média (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: "Por dia" exige data, mas "por dono" ou por valor de campo vale em
-   todo CRUD.
+   todo CRUD. count(where) por dono (g2 g6 g7 g8) ou por campo (g3 g5 g9);
+   nicho.
    Forma genérica: no máximo N registros por dono ou por valor de um campo.
 
-52. O7 `Route::patch` no core
+54. O7 `Route::patch` no core
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Core pequeno, igual em todo template; a ação parcial pode ser
-   qualquer campo do recurso.
+   qualquer campo do recurso. Router igual nos 7 (g6 já usa verbo real no
+   fetch); pedido de core raro.
    Forma genérica: a do título serve.
 
-53. O10 `Route::resource` ou `Route::prefix` no core
+55. O10 `Route::resource` ou `Route::prefix` no core
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: Item de framework da rubrica, aplicável a todo `routes.php`; 25-40
-   min e risco na ordem das rotas.
+   min e risco na ordem das rotas. g5 ações fora do REST, g6 só 4 ações JSON;
+   25-40 min e risco na ordem. Mantém.
    Forma genérica: a do título serve.
 
-54. P22 Adiar o Evento uma semana com um botão
+56. P22 Adiar o Evento uma semana com um botão
    Pedido único: média (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
    Por quê: Ação de um botão que altera campo é universal; exige campo de data,
-   comum mas não garantido.
+   comum mas não garantido. Sem mudança: data editável só em g2, g7, g8; os
+   outros usam outro campo ou coluna nova.
    Forma genérica: botão que soma N dias à data do recurso (ou altera campo).
 
-55. Q5 Token CSRF nos formulários de Evento
+57. Q6 Revisar escape e testar XSS
    Pedido único: média (original: média-baixa). Genérico.
-   Por quê: Todo CRUD tem forms POST/DELETE e middleware; repete o A15 da 4.1,
-   mas mexe em rotas e helper de login.
-   Forma genérica: token CSRF nos formulários do CRUD (criar, editar, remover).
-
-56. Q6 Revisar escape e testar XSS
-   Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: "Ponha `<script>` no campo de texto" roda em qualquer CRUD; pequeno,
-   mas não é linha da rubrica.
+   mas não é linha da rubrica. Mantida: V em 6/7 (g8 sem escape algum), mas é de
+   view; g6 monta via innerHTML.
    Forma genérica: escapar toda saída do recurso e provar com teste de XSS.
 
-57. R7 Voltar à mesma página após remover/editar
+58. R7 Voltar à mesma página após remover/editar
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; D g6.
    Por quê: Todo CRUD tem index paginado + destroy; toca a linha de paginação da
-   rubrica.
+   rubrica. Mantida: V em 6/7 (?page= ou /page/{page}); g6 sem paginação.
    Forma genérica: após remover/editar, voltar à mesma página da listagem.
 
-58. R10 "Salvar e cadastrar outro"
+59. R10 "Salvar e cadastrar outro"
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Todo create aceita o botão extra; pequeno, mas fora da rubrica.
+   Mantida: V em 6/7, mas é só botão + redirect, fora da rubrica; g6 usa modal
+   JSON.
    Forma genérica: botão "Salvar e cadastrar outro" no create.
 
-59. S5 `PaginatorTest` e Cests do `show`
+60. S5 `PaginatorTest` e Cests do `show`
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: `Paginator` e show estão em todo template; Paginator é linha da
-   rubrica sem teste próprio.
+   rubrica sem teste próprio. Mantida: g5 e g6 sem show; g6 não usa Paginator;
+   g2 e g5 já têm PaginatorTest.
    Forma genérica: a do título serve.
 
-60. T4 Itens por página e capacidade no `.env`
+61. T4 Itens por página e capacidade no `.env`
    Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; D g6.
    Por quê: `per_page` fixo existe em todo index paginado; limite máximo exige
-   campo numérico.
+   campo numérico. Mantida: per_page fixo em 6/7; g6 sem paginação; limite
+   numérico só g3 g5 g7.
    Forma genérica: itens por página (e limite de campo numérico) lidos do
    `.env`.
 
-61. O4 Resposta JSON da listagem
-   Pedido único: média (original: baixa). Genérico.
-   Por quê: Genérico de nicho, vale para todos via `renderJson`; prepara o Ajax
-   da 4.4.
-   Forma genérica: a do título serve.
-
-62. O8 Status HTTP corretos (404, 422)
-   Pedido único: média (original: baixa). Genérico.
-   Por quê: Todo CRUD responde 302 para não encontrado e 200 para form inválido;
-   pequeno, mas mexe em testes.
-   Forma genérica: a do título serve.
-
-63. P11 Soft delete (arquivar Evento)
-   Pedido único: média (original: baixa). Genérico.
-   Por quê: Todo CRUD tem destroy; arquivar em vez de apagar é universal, mas
-   mexe no Paginator (`IS NULL`).
-   Forma genérica: a do título serve.
-
-64. P19 Remoção em lote
-   Pedido único: média (original: baixa). Genérico.
-   Por quê: Toda listagem admin aceita checkbox e destroy em lote; sobe, mas
-   fica fora da rubrica.
-   Forma genérica: a do título serve.
-
-65. P7 "Meus eventos" do Participante
-   Pedido único: média-baixa (original: média-alta). Adaptável.
-   Por quê: Exige registros ligados ao usuário comum; no template o CRUD é do
-   admin e user_id não é garantido.
-   Forma genérica: página "meus registros" do usuário logado (por user_id).
-
-66. M3 Valor novo em ENUM/SET
-   Pedido único: média-baixa (original: média). Adaptável.
-   Por quê: Exige ENUM no recurso, não garantido em todos; pequeno demais para
-   render uma FVP sozinho.
-   Forma genérica: valor novo num campo de opções fixas do recurso.
-
-67. O3 Inscritos no `show` (`participants()`)
-   Pedido único: média-baixa (original: média). Adaptável.
-   Por quê: Exige relação N:N ou segundo recurso, que nem todo grupo tem;
-   inscrição é conceito nosso.
-   Forma genérica: Registros relacionados (1xN ou N:N) listados no `show`.
-
-68. P10 Comentários do Evento (recurso filho 1xN)
-   Pedido único: média-baixa (original: média). Genérico.
-   Por quê: Recurso filho cabe em qualquer CRUD, mas é o cenário mais longo e
-   antecipa a 4.3.
-   Forma genérica: comentários (recurso filho 1xN) no recurso.
-
-69. P17 Remover com inscrições, em cascata e confirmado
-   Pedido único: média-baixa (original: média). Adaptável.
-   Por quê: Só faz sentido se o recurso tiver filhos com FK RESTRICT; nem todo
-   grupo tem segundo recurso.
-   Forma genérica: remover registro com filhos em cascata, após confirmação.
-
-70. Q4 Perfil Organizador com CRUD dos próprios Eventos
-   Pedido único: média-baixa (original: média). Genérico.
-   Por quê: Todo grupo tem papéis e CRUD, mas papel novo + middleware + dono
-   passa dos 40 min.
-   Forma genérica: perfil novo com CRUD só dos próprios registros.
-
-71. R9 Lista de presença imprimível com layout próprio
-   Pedido único: média-baixa (original: média). Específico.
-   Por quê: Lista de inscritos só existe aqui; reaproveita só o layout de
-   impressão sem navbar.
-   Forma genérica: nenhuma.
-
-72. R12 Tela reflete as regras do model
-   Pedido único: média-baixa (original: média). Adaptável.
-   Por quê: Nossa regra usa inscrições; outros precisam de uma regra de estado
-   que bloqueie ação.
-   Forma genérica: esconder ação ou ajustar `min`/`max` conforme regra do model.
-
-73. M8 Enum PHP para tipo e modalidade
-   Pedido único: média-baixa (original: média-baixa). Adaptável.
-   Por quê: Refatoração que exige constantes de opções; nem todo recurso tem
-   ENUM e não acrescenta função.
-   Forma genérica: constantes de opções do recurso viram `enum` do PHP.
-
-74. M13 Montagem do Evento no model ou service
-   Pedido único: média-baixa (original: média-baixa). Genérico.
+62. M13 Montagem do Evento no model ou service
+   Pedido único: média (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Refatoração sem função nova é difícil de avaliar igual entre grupos;
-   rara em FVP.
+   rara em FVP. Sobe: ninguém tem service; issues de g3 e g6 já pedem tirar
+   lógica do controller.
    Forma genérica: mover a montagem do recurso do controller para model/service.
 
-75. M15 Escolher o responsável entre os admins
-   Pedido único: média-baixa (original: média-baixa). Adaptável.
-   Por quê: Exige `user_id` no recurso e inverte a regra do dono; maior e com
-   decisões por grupo.
-   Forma genérica: escolher no form o usuário responsável pelo recurso,
-   validado.
+63. O4 Resposta JSON da listagem
+   Pedido único: média (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Genérico de nicho, vale para todos via `renderJson`; prepara o Ajax
+   da 4.4. renderJson no core dos 7, mas g6 e g8 já respondem JSON; nicho.
+   Mantém.
+   Forma genérica: a do título serve.
 
-76. M21 Vagas ilimitadas (`capacity` NULL)
+64. O8 Status HTTP corretos (404, 422)
+   Pedido único: média (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Todo CRUD responde 302 para não encontrado e 200 para form inválido;
+   pequeno, mas mexe em testes. HTTPException no core dos 7; g2 já dá 404, g6 já
+   422/403; mexe em testes.
+   Forma genérica: a do título serve.
+
+65. P19 Remoção em lote
+   Pedido único: média (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
+   Por quê: Toda listagem admin aceita checkbox e destroy em lote; sobe, mas
+   fica fora da rubrica. Ninguém tem e V em 6 (checkbox + destroy em laço); fora
+   da rubrica.
+   Forma genérica: a do título serve.
+
+66. M16 Gancho `beforeValidation` no core (espaços)
+   Pedido único: média (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Genérico e pequeno, mas é mudança de core; o professor tende a pedir
+   no recurso, não no `Model`. Sobe: core igual nos 7 e trim vale para qualquer
+   campo texto; ainda é core.
+   Forma genérica: a do título serve.
+
+67. O11 Página 404 amigável, sem stack trace
+   Pedido único: média (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Stack trace aparece em todo template, mas é infra de erro, longe do
+   CRUD que a 4.2 avalia. ErrorsHandler idêntico nos 7; ainda longe do CRUD,
+   sobe só um degrau.
+   Forma genérica: a do título serve.
+
+68. M4 Data de término não anterior ao início
+   Pedido único: média-baixa (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
+   Por quê: Nem todo recurso tem data; sem ela o grupo cria duas colunas e o
+   pedido cresce. g8 já tem início <= fim; g3 g5 g6 g9 sem data criam 2 colunas.
+   Forma genérica: segundo campo de data com ordem em relação ao primeiro.
+
+69. O5 Admin vê e lista só os próprios Eventos
+   Pedido único: média-baixa (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g6 g7 g8; D g3 g5 g9.
+   Por quê: Mesma dependência de `user_id` do Q1, que é o pedido mais provável
+   dessa família. g3 g5 g9 sem user_id; g2 g6 g8 já escopam pelo dono. Cai.
+   Forma genérica: Admin só lista e cadastra registros dele (`user_id`).
+
+70. R2 Nome do criador no `show` e na listagem
+   Pedido único: média-baixa (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g6; D g3 g5 g9.
+   Por quê: Depende de `user_id`/dono no recurso, que é provável mas não
+   garantido em todo CRUD. g3 (Sale), g5 e g9 (entidade é o User) sem user_id
+   dono; g6 teria de expor no JSON.
+   Forma genérica: mostrar o usuário dono do registro (BelongsTo) no detalhe.
+
+71. N5 Só Eventos futuros ou passados
+   Pedido único: média-baixa (original: média). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
+   Por quê: Exige campo de data no recurso; nem todo recurso tem data além de
+   `created_at`. Futuro/passado exige data editável: só g2 g7 g8; g3 g5 g6 g9 só
+   têm created_at.
+   Forma genérica: Filtro por campo de data do recurso (antes/depois de hoje).
+
+72. O3 Inscritos no `show` (`participants()`)
+   Pedido único: média-baixa (original: média). Adaptável.
+   Nos 7 grupos: V g3 g7 g9; A g2 g6; D g5 g8.
+   Por quê: Exige relação N:N ou segundo recurso, que nem todo grupo tem;
+   inscrição é conceito nosso. g5 g8 sem entidade filha; g2 só 1 horário por
+   reserva; g6 sem show; g9 já lista. Mantém.
+   Forma genérica: Registros relacionados (1xN ou N:N) listados no `show`.
+
+73. P10 Comentários do Evento (recurso filho 1xN)
+   Pedido único: média-baixa (original: média). Genérico.
+   Nos 7 grupos: A g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Recurso filho cabe em qualquer CRUD, mas é o cenário mais longo e
+   antecipa a 4.3. Sem mudança: todos criam tabela e model filho; é o mais longo
+   e antecipa a 4.3.
+   Forma genérica: comentários (recurso filho 1xN) no recurso.
+
+74. R12 Tela reflete as regras do model
+   Pedido único: média-baixa (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; A g5 g6 g8.
+   Por quê: Nossa regra usa inscrições; outros precisam de uma regra de estado
+   que bloqueie ação. Mantida: g5, g6, g8 sem regra de estado que bloqueie ação;
+   g2 (pendente), g9 (si mesmo) têm.
+   Forma genérica: esconder ação ou ajustar `min`/`max` conforme regra do model.
+
+75. M21 Vagas ilimitadas (`capacity` NULL)
    Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g5 g7; A g2 g3 g6 g8 g9.
    Por quê: Exige campo numérico com limite já existente, que nem todo recurso
-   tem.
+   tem. Mantida: só g5 (minimum_amount) e g7 têm número com limite; demais criam
+   coluna.
    Forma genérica: campo numérico opcional em que vazio significa "sem limite".
 
-77. N13 Filtro fora do `where` (SET, vagas)
+76. N13 Filtro fora do `where` (SET, vagas)
    Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g3 g5 g7; A g2 g6 g8 g9.
    Por quê: SET e contagem de vagas são raros; serve só quem tem campo numérico
-   ou multivalorado.
+   ou multivalorado. Faixa numérica só g3 g5 g7; g2 g6 g8 g9 criariam coluna;
+   com LIKE vira N2. Mantém.
    Forma genérica: Filtro com condição que não é igualdade (faixa numérica,
    `LIKE`).
 
-78. O6 Inscritos em página própria, paginada
-   Pedido único: média-baixa (original: média-baixa). Adaptável.
-   Por quê: Exige recurso filho; parte reaproveitável: rota aninhada com `{id}`
-   e paginação dos links.
-   Forma genérica: Registros filhos de um recurso em rota aninhada paginada.
-
-79. R6 Partials reutilizados e Remover no `show`
+77. R6 Partials reutilizados e Remover no `show`
    Pedido único: média-baixa (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: Remover no show vale em todos; extrair partial exige várias telas
-   com a mesma tabela.
+   com a mesma tabela. Mantida: g5 e g6 sem show de item; partial é acessório de
+   view.
    Forma genérica: partial da tabela/ações do recurso e Remover no detalhe.
 
-80. R11 Evento anterior e próximo no detalhe
+78. R11 Evento anterior e próximo no detalhe
    Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: Por id vale em todos; ordenar por data exige campo de data e SQL
-   próprio.
+   próprio. Mantida: g5 e g6 sem show; framework sem ORDER BY nem ">", SQL
+   próprio em todos.
    Forma genérica: links anterior/próximo no detalhe (por id ou campo de ordem).
 
-81. R14 Título da aba com o nome do Evento
+79. R14 Título da aba com o nome do Evento
    Pedido único: média-baixa (original: baixa-média). Genérico.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5 g6.
    Por quê: Todo layout tem `<title>` e todo show tem nome; trivial e fora da
-   rubrica.
+   rubrica. Mantida: trivial; g8 e g9 já usam $title no layout; g5 e g6 sem
+   show.
    Forma genérica: `<title>` da aba com o nome do registro.
 
-82. T3 README e wiki da feature nova
+80. T3 README e wiki da feature nova
    Pedido único: média-baixa (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Vale para todos, mas é acessório; raramente vira o pedido em si.
+   Mantida: V nos 7, mas acessório; raramente vira o pedido.
    Forma genérica: a do título serve.
 
-83. M16 Gancho `beforeValidation` no core (espaços)
-   Pedido único: média-baixa (original: baixa). Genérico.
-   Por quê: Genérico e pequeno, mas é mudança de core; o professor tende a pedir
-   no recurso, não no `Model`.
-   Forma genérica: a do título serve.
+81. Q3 Ação só para Participante
+   Pedido único: média-baixa (original: média-baixa). Específico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g9; A g8.
+   Por quê: A ação barrada (inscrever-se) é nossa; o middleware "só não-admin" é
+   a parte reaproveitável. Middleware de papel cabe em 6 (g8 checa no
+   controller), mas a ação barrada é nossa.
+   Forma genérica: nenhuma.
+
+82. O12 Busca e ordenação na resposta JSON
+   Pedido único: média-baixa (original: média-baixa). Genérico.
+   Nos 7 grupos: V g6 g8; A g2 g3 g5 g7 g9.
+   Por quê: É a forma natural num projeto só-API; no nosso, acessório do N16 +
+   O4. g6 e g8 já respondem JSON; os demais usam renderJson do core.
+   Forma genérica: listagem JSON do recurso com ?q= e ?sort=, total e 422.
+
+83. P25 Histórico de alterações do registro
+   Pedido único: média-baixa (original: média-baixa). Genérico.
+   Nos 7 grupos: A g2 g3 g5 g6 g7 g8 g9.
+   Por quê: Ninguém tem e todos conseguem, mas tabela e model novos passam de 35
+   min. Todos criam tabela e model filho; comparar com o banco como no M19.
+   Forma genérica: tabela de log com campo, valor antigo, novo, usuário e data.
 
 84. N14 Query Builder mínimo no core
    Pedido único: média-baixa (original: baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g7 g8 g9; A g6.
    Por quê: Vale para todos e houve aula de Builder, mas 40-60 min de core
-   estoura a prova.
+   estoura a prova. Core igual em todos (g6 trocaria o SQL cru), mas 40-60 min
+   de core estoura. Mantém.
    Forma genérica: a do título serve.
 
-85. O11 Página 404 amigável, sem stack trace
-   Pedido único: média-baixa (original: baixa). Genérico.
-   Por quê: Stack trace aparece em todo template, mas é infra de erro, longe do
-   CRUD que a 4.2 avalia.
-   Forma genérica: a do título serve.
-
-86. P20 Exportar Evento em iCal (`.ics`)
+85. P20 Exportar Evento em iCal (`.ics`)
    Pedido único: média-baixa (original: baixa). Adaptável.
-   Por quê: Exige campo de data (nem todo recurso tem) e formato de nicho.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
+   Por quê: Exige campo de data (nem todo recurso tem) e formato de nicho. Sem
+   mudança: data só em g2, g7, g8; g3, g5, g6, g9 criariam data sem sentido;
+   formato de nicho.
    Forma genérica: exportar registro com data em .ics.
+
+86. P7 "Meus eventos" do Participante
+   Pedido único: baixa (original: média-alta). Adaptável.
+   Nos 7 grupos: V g2 g6 g7 g8; D g3 g5 g9.
+   Por quê: Exige registros ligados ao usuário comum; no template o CRUD é do
+   admin e user_id não é garantido. g3, g5, g9 sem user_id; g2, g6, g8 já listam
+   só os registros do dono.
+   Forma genérica: página "meus registros" do usuário logado (por user_id).
 
 87. P2 Inscrição do Participante em um Evento
    Pedido único: baixa (original: média-alta). Específico.
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Exige N:N usuário-recurso com vagas; nem todo CRUD tem inscrição, e
-   o NxN é tema da 4.4.
+   o NxN é tema da 4.4. Só g7 tem pivô N:N (event_user); g8 tem o model do pivô
+   sem tabela; os demais nada.
    Forma genérica: nenhuma.
 
 88. P13 Admin inscreve e remove um Participante
    Pedido único: baixa (original: média-alta). Específico.
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Depende de inscrição N:N; a parte "validar user_id vindo do form" já
-   é M11/M15.
+   é M11/M15. Sem mudança: N:N usuário-registro só em g7; g8 tem o model do pivô
+   sem tabela.
    Forma genérica: nenhuma.
 
-89. P3 Cancelar a própria inscrição
+89. M3 Valor novo em ENUM/SET
+   Pedido único: baixa (original: média). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; D g5 g6 g8.
+   Por quê: Exige ENUM no recurso, não garantido em todos; pequeno demais para
+   render uma FVP sozinho. g5, g6, g8 sem campo de opções fixas: o pedido vira
+   criar ENUM.
+   Forma genérica: valor novo num campo de opções fixas do recurso.
+
+90. Q4 Perfil Organizador com CRUD dos próprios Eventos
+   Pedido único: baixa (original: média). Genérico.
+   Nos 7 grupos: V g2 g8; A g6 g7; D g3 g5 g9.
+   Por quê: Todo grupo tem papéis e CRUD, mas papel novo + middleware + dono
+   passa dos 40 min. g3, g5, g9 sem user_id; papel novo + middleware + dono
+   passa dos 40 min.
+   Forma genérica: perfil novo com CRUD só dos próprios registros.
+
+91. R9 Lista de presença imprimível com layout próprio
    Pedido único: baixa (original: média). Específico.
-   Por quê: Só existe em cima de P2; sem inscrição não há o que cancelar.
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
+   Por quê: Lista de inscritos só existe aqui; reaproveita só o layout de
+   impressão sem navbar. Específico: lista de inscritos só existe em g7.
    Forma genérica: nenhuma.
 
-90. P14 Comprovante de inscrição com número gerado
+92. P3 Cancelar a própria inscrição
    Pedido único: baixa (original: média). Específico.
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
+   Por quê: Só existe em cima de P2; sem inscrição não há o que cancelar. Sem
+   mudança: depende do N:N de P2, que só g7 tem.
+   Forma genérica: nenhuma.
+
+93. P14 Comprovante de inscrição com número gerado
+   Pedido único: baixa (original: média). Específico.
+   Nos 7 grupos: A g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Vive na tabela de inscrição; o padrão "código 1000-9999 único" no
-   recurso já é P1.
+   recurso já é P1. Sem mudança: vive na tabela de inscrição, que só g7 tem;
+   código no recurso já é P1/P16.
    Forma genérica: nenhuma.
 
-91. P4 Confirmar presença pelo código do Evento
+94. M8 Enum PHP para tipo e modalidade
+   Pedido único: baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g9; D g5 g6 g8.
+   Por quê: Refatoração que exige constantes de opções; nem todo recurso tem
+   ENUM e não acrescenta função. g5, g6, g8 sem constantes de opções para virar
+   enum; refatoração sem função.
+   Forma genérica: constantes de opções do recurso viram `enum` do PHP.
+
+95. M15 Escolher o responsável entre os admins
+   Pedido único: baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g7 g8; A g2 g6; D g3 g5 g9.
+   Por quê: Exige `user_id` no recurso e inverte a regra do dono; maior e com
+   decisões por grupo. g3, g5, g9 sem user_id; em g2 e g6 o dono é sempre o
+   usuário logado.
+   Forma genérica: escolher no form o usuário responsável pelo recurso,
+   validado.
+
+96. O6 Inscritos em página própria, paginada
+   Pedido único: baixa (original: média-baixa). Adaptável.
+   Nos 7 grupos: V g3 g7 g9; A g2; D g5 g6 g8.
+   Por quê: Exige recurso filho; parte reaproveitável: rota aninhada com `{id}`
+   e paginação dos links. g5 g8 sem filho, g6 sem paginação; g2 só 1 horário por
+   reserva. Cai.
+   Forma genérica: Registros filhos de um recurso em rota aninhada paginada.
+
+97. P4 Confirmar presença pelo código do Evento
    Pedido único: baixa (original: média-baixa). Específico.
+   Nos 7 grupos: A g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Presença/inscrição são nossos; a parte "código gerado e validado" já
-   é P1/P16.
+   é P1/P16. Sem mudança: inscrição N:N só em g7, que ainda criaria coluna de
+   código/presença.
    Forma genérica: nenhuma.
 
-92. P9 Lista de espera quando lotado
+98. P9 Lista de espera quando lotado
    Pedido único: baixa (original: média-baixa). Específico.
+   Nos 7 grupos: A g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Exige vagas/lotado e inscrição; empilha P2 e P3, sem equivalente em
-   outros CRUDs.
+   outros CRUDs. Sem mudança: vagas + inscrição só em g7, que ainda criaria a
+   fila de espera.
    Forma genérica: nenhuma.
 
-93. P12 Login por código aleatório (FVP real 4.1)
+99. P12 Login por código aleatório (FVP real 4.1)
    Pedido único: baixa (original: média-baixa). Genérico.
+   Nos 7 grupos: V g2 g3 g5 g6 g7 g8 g9.
    Por quê: Genérico, mas já foi a FVP 4.1 de toda a turma; repetir não avalia
-   nada da 4.2.
+   nada da 4.2. Sem mudança: V nos 7, mas repete a FVP 4.1 e não avalia o CRUD.
    Forma genérica: a do título serve.
 
-94. P15 Inscrição via JSON
+100. P15 Inscrição via JSON
    Pedido único: baixa (original: média-baixa). Específico.
-   Por quê: Exige P2; a parte JSON genérica já é O4 (listagem em JSON).
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
+   Por quê: Exige P2; a parte JSON genérica já é O4 (listagem em JSON). Sem
+   mudança: exige a inscrição N:N de P2, que só g7 tem.
    Forma genérica: nenhuma.
 
-95. Q3 Ação só para Participante
+101. R13 Textos de vagas com concordância
    Pedido único: baixa (original: média-baixa). Específico.
-   Por quê: A ação barrada (inscrever-se) é nossa; o middleware "só não-admin" é
-   a parte reaproveitável.
-   Forma genérica: nenhuma.
-
-96. R13 Textos de vagas com concordância
-   Pedido único: baixa (original: média-baixa). Específico.
+   Nos 7 grupos: V g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Vagas e inscritos são só nossos; sobra só a ideia de plural no
-   model.
+   model. Mantida: vagas/inscritos só em g7.
    Forma genérica: nenhuma.
 
-97. M23 Data digitada como dd/mm/aaaa
+102. M23 Data digitada como dd/mm/aaaa
    Pedido único: baixa (original: baixa). Adaptável.
+   Nos 7 grupos: V g2 g7 g8; A g3 g5 g6 g9.
    Por quê: Exige campo de data e o `type="date"` já mostra dd/mm/aaaa; pedido
-   raro.
+   raro. Mantida: só 3 com data editável e type="date" já resolve; raro.
    Forma genérica: campo de data aceito em dd/mm/aaaa e gravado em Y-m-d.
 
-98. N15 Dois paginadores na mesma tela
+103. N15 Dois paginadores na mesma tela
    Pedido único: baixa (original: baixa). Adaptável.
+   Nos 7 grupos: V g2 g3 g7 g8 g9; A g5; D g6.
    Por quê: Precisa de critério para separar duas listas (datas) e de mexer no
-   `Paginator`; grande e raro.
+   `Paginator`; grande e raro. Dividir por status/ENUM/data em 5; g5 sem
+   categoria; g6 sem paginação; grande. Mantém.
    Forma genérica: Duas listagens paginadas independentes do recurso na mesma
    tela.
 
-99. P18 Evento privado com código de convite
+104. P18 Evento privado com código de convite
    Pedido único: baixa (original: baixa). Específico.
+   Nos 7 grupos: A g7; D g2 g3 g5 g6 g8 g9.
    Por quê: Convite e inscrição são nossos; o código gerado reaproveitável já é
-   P1.
+   P1. Sem mudança: convite e inscrição N:N só fazem sentido em g7.
    Forma genérica: nenhuma.
 
-100. P21 Imagem de capa do Evento (upload)
+105. P21 Imagem de capa do Evento (upload)
    Pedido único: baixa (original: baixa). Genérico.
+   Nos 7 grupos: A g2 g3 g5 g6 g7 g8 g9.
    Por quê: Cabe em qualquer recurso, mas upload é tema da 4.3 e passa de 40 min
-   com testes.
+   com testes. Sem mudança: ninguém tem upload no CRUD; tema da 4.3 e passa de
+   40 min com testes.
    Forma genérica: imagem (upload) no recurso.
 
 ## 7. Top 15 para estudar primeiro sob pedido único
@@ -926,21 +1193,22 @@ na lista porque acompanham qualquer pedido.
 | 1 | M1 | Base de quase tudo: coluna, `$columns`, form, validação, populate |
 | 2 | M2 | Regra nova em `Validations`, usada pelos itens seguintes |
 | 3 | S3 | Teste unitário do model; prova de 1, 2 e do resto |
-| 4 | P1 | Código gerado no backend e validado: o padrão da FVP 4.1 |
-| 5 | P16 | Mesmo padrão (código na sessão) aplicado ao destroy |
-| 6 | N1 | `where` mantido na paginação: linha da rubrica |
-| 7 | N3 | `ORDER BY` no `Paginator`, que falta em todo template |
-| 8 | N10 | Página e id inválidos sem `(int)`: defeito do template |
-| 9 | S1 | Cest de aceitação da mudança, cobrado em toda entrega |
-| 10 | S2 | Teste de acesso por HTTP de rota ou ação nova |
-| 11 | M6 | Unicidade com `$this->id` no update |
-| 12 | M19 | Comparar com o banco antes de salvar; base de M10 |
-| 13 | Q1 | Autorização do dono no servidor, se o recurso tem `user_id` |
-| 14 | M17 | Checkbox: campo ausente no POST e `TINYINT` volta int |
-| 15 | M9 | Slug: geração no backend + unicidade, juntando 4 e 11 |
+| 4 | M6 | Unicidade com `$this->id` no update; pronta nos 7 grupos |
+| 5 | P1 | Código gerado no backend e validado: o padrão da FVP 4.1 |
+| 6 | P23 | O código do registro exigido para remover: forma literal |
+| 7 | P16 | Mesmo padrão com o código na sessão, gerado na hora |
+| 8 | N1 | `where` mantido na paginação: linha da rubrica |
+| 9 | N2 | `LIKE` com bind: ninguém tem, o framework não oferece |
+| 10 | N3 | `ORDER BY` no `Paginator`, que falta em todo template |
+| 11 | N16 | Busca, filtro e ordenação juntos (inclui N8) |
+| 12 | N10 | Página e id inválidos sem `(int)`: defeito do template |
+| 13 | S1 | Cest de aceitação da mudança, cobrado em toda entrega |
+| 14 | S2 | Teste de acesso por HTTP de rota ou ação nova |
+| 15 | M19 | Comparar com o banco antes de salvar; base de M10 e P25 |
 
-Próximos, se sobrar tempo: R5, N11, N2, N8, N12, N4, O1, O2, O9, P5,
-P6, R4, R8 (todos média-alta sob pedido único).
+Próximos, se sobrar tempo: N8, P24, N11, O9, M10, M12, M17, P5, P6,
+P8, P11, Q2, Q5, R4, R5, N4, N9, N12, O1 (média-alta sob pedido
+único, menos P24).
 
 ## 8. Cenários
 
@@ -1447,7 +1715,7 @@ Pedido típico: "o Evento ganha um identificador legível (`slug`) gerado
 a partir do título, único, usado na URL `/events/{slug}`". Mesmo padrão
 de P1 (valor gerado e validado no servidor), com texto em vez de número.
 
-Arquivos: `SCH:21-38`, `EV:48-58`, `EV:60-82`, `MODEL:139-187` (`save()`
+Arquivos: `SCH:21-38`, `EV:48-58`, `EV:60-82`, `MODEL:138-184` (`save()`
 a sobrescrever, como em P1), `MODEL:335` (`findBy`), `MODEL:347`
 (`exists`), `lib/StringUtils.php:5-27` (lugar do `slugify`),
 `tests/Unit/Lib/StringUtilsTest.php`, `ROUTES:26-35` (admin continua por
@@ -2020,7 +2288,7 @@ Armadilhas:
 - Ordem: o PHP fica com o **último** valor de um nome repetido. Hidden
   depois do checkbox = sempre `0`.
 - O `DEFAULT 0` do schema não é usado: `save()` grava todas as colunas
-  (`MODEL:139-187`). Sem padrão no construtor nem normalização antes
+  (`MODEL:138-184`). Sem padrão no construtor nem normalização antes
   do `save()`, `POP:134-143` cria
   Eventos com `null` e lança `RuntimeException` (`POP:145-146`); o
   mesmo vale para `ECT:289-300` e `ACC:30-40`.
@@ -2397,7 +2665,7 @@ Armadilhas:
 - `type="number"` mostra vírgula em navegador pt-BR, mas com
   `novalidate` (`FORM:16`) um valor que o navegador não entende vai
   vazio. Prefira `type="text"` com `inputmode="decimal"`.
-- `save()` grava todas as colunas (`MODEL:139-187`): sem o padrão no
+- `save()` grava todas as colunas (`MODEL:138-184`): sem o padrão no
   construtor, `POP:134-143`, `ACC:30-40` e `ECT:289-300` gravam
   `null` e falham.
 - `ECT:85-112` posta `validParams()`: sem `price` o `fill` põe
@@ -3603,6 +3871,409 @@ Armadilhas:
 
 Prova: `ECT`; no navegador, avançar uma tabela não mexe na outra.
 
+### N16. Busca, filtro e ordenação juntos, mantidos na paginação
+
+Chance: média-alta. Tempo: 35-45 min.
+
+Pedido típico: "na listagem, busca pelo título, filtro por tipo e
+ordenação escolhida (coluna e direção), tudo junto e preservado ao
+trocar de página". Variante: "a listagem aceita `?q=`, `?kind=`,
+`?sort=` e `?dir=`, e o link da página 2 mantém os quatro". Nenhum
+projeto da turma tem busca, ordenação escolhida nem `per_page` variável,
+e o framework não tem `LIKE` nem `ORDER BY`: `where` e `Paginator` só
+fazem igualdade unida por `AND` (`MODEL:309-313`, `PAG:147-158`). Por
+isso o pedido é igualmente novo para todos. Hoje a `index` ignora tudo
+que não é `page` (`EC:16-27`) e a lista sai sem `ORDER BY`
+(`PAG:124-128`). Junta N1 forma 2, N2 e N8, com a validação no model.
+
+Arquivos: `EC:16-27` (`index`; `EC:19` lê `page` com `(int)`),
+`EV:25-30` (`KINDS`), `EV:142-145` (`hasEnrollments()`: métodos novos
+logo depois), `PAG:18-29` (construtor chama `loadTotals` e depois
+`loadRegisters`), `PAG:104-115` (o `COUNT` usa `buildConditions()`),
+`PAG:124-128` (SQL da página, sem `ORDER BY`), `PAG:147-169`
+(`buildConditions`/`bindConditions`, só igualdade), `PAG:93-97` (o
+partial só enxerga `$paginator`), `PAGES:6,16,22` (links só com
+`page`), `IDX:1-6` (botão e "Nenhum evento cadastrado."), `IDX:40`,
+`core/Router/Router.php:97-103` (`route()` põe o que não está na URI
+na query string, com `http_build_query`), `core/Router/Route.php:90`
+(nome de parâmetro de rota: `/^{[a-z,_]+}$/`), `CTC:22,73` (um
+`Request` por teste; `addParams` acumula), `ECT:39-57`, `ECT:280`
+(todos os Eventos do teste na mesma data), `EVT:59-65` (`createEvent`),
+`EVT:366-376` e `:390-413`, `ACT/PaginateEventsCest.php:22,28,34,40` (URL
+exata, sem query string), `ACT/BaseEventsCest.php:63-66,79,87`
+(títulos `Evento %02d`, tipos em rodízio).
+
+Passos:
+
+1. Testes primeiro.
+   - `EVT`, `listingFilters`: `[]` e `['q' => '  ', 'kind' => '',
+     'sort' => '', 'dir' => '']` dão o padrão (`q` vazio, `kind` nulo,
+     `id`, `asc`) sem erro. Com `#[DataProvider]`, cada inválido gera
+     erro na chave do parâmetro e cai no padrão: `kind=party`,
+     `sort=description` (coluna real, fora da lista),
+     `sort="id; DROP TABLE events"`, `dir=DESC` (maiúsculo),
+     `sort[]=title`, `q[]=x`, `q` com 256 caracteres.
+   - `EVT`, `listingPage`: 7 Oficinas `workshop`, 1 `lecture` com
+     "Oficina" no título e 2 sem. `q=Oficina` com `kind=workshop` dá
+     `totalOfRegisters()` 7, `totalOfPages()` 2 e 2 registros na página
+     2; `sort=title`, `dir=desc` põe o maior título primeiro; títulos
+     iguais saem por `id`; `q="100%"` acha "100% prático" e não
+     "100 dias"; `q="a_b"` não acha "axb"; página 9 vira a 2
+     (`getPage()`).
+   - `ECT`: os três juntos (abaixo); `sort=description` mostra
+     "Ordenação inválida." e a lista na ordem de cadastro; sem
+     parâmetros, `ECT:39-57` e `EVT:390-413` continuam verdes (os
+     parâmetros novos do `Paginator` são opcionais).
+
+   ```php
+   public function test_index_keeps_search_kind_and_sort_in_links(): void
+   {
+       for ($i = 1; $i <= 7; $i++) {
+           $this->createEvent(['title' => "Oficina {$i}"]);
+       }
+       $this->createEvent(['title' => 'Oficina X', 'kind' => 'lecture']);
+       $this->createEvent(['title' => 'Palestra 1']);
+
+       $page1 = $this->get(
+           action: 'index',
+           controllerName: self::CONTROLLER,
+           params: ['q' => 'Oficina', 'kind' => 'workshop',
+               'sort' => 'title', 'dir' => 'desc']
+       );
+
+       $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
+       $this->assertStringNotContainsString('Oficina X', $page1);
+       $this->assertStringNotContainsString('Palestra 1', $page1);
+       $this->assertLessThan(
+           strpos($page1, 'Oficina 3'),
+           strpos($page1, 'Oficina 7')
+       );
+       $this->assertStringContainsString(
+           '/admin/events/page/2?q=Oficina&kind=workshop&sort=title&dir=desc',
+           $page1
+       );
+   }
+   ```
+
+   - Cest `ACT/SearchEventsCest.php` (estende `BaseEventsCest`): busca
+     "Evento 1", Título, Decrescente, "Filtrar" -> "Mostrando 1 - 5 de
+     8" e "Evento 16" na primeira linha (o termo casa 01 e 10 a 16).
+     Clicar em "2" -> `seeInCurrentUrl('?q=Evento+1&sort=title&dir=desc')`,
+     "Mostrando 6 - 8 de 8", "Evento 01" na última linha. Escolher
+     Palestra -> "Mostrando 1 - 2 de 2" (Eventos 01 e 13).
+2. `PAG` (N1 forma 2 traz `queryParams`, N3 traz `orderBy`; aqui entram
+   também `where` e `binds`). Fim do construtor:
+
+   ```php
+       private ?string $route = null,
+       private string $where = '',
+       private array $binds = [],
+       private ?string $orderBy = null,
+       private array $queryParams = []
+   ) {
+       $this->loadTotals();
+       $this->page = max(1, min($this->page, $this->totalOfPages));
+       $this->loadRegisters();
+   }
+   ```
+
+   `buildConditions()` e `bindConditions()` passam a juntar a igualdade
+   com o fragmento do model:
+
+   ```php
+   private function buildConditions(): string
+   {
+       $parts = array_map(
+           fn($column) => "{$column} = :{$column}",
+           array_keys($this->conditions)
+       );
+       if ($this->where !== '') {
+           $parts[] = "({$this->where})";
+       }
+
+       return $parts === [] ? '' : ' WHERE ' . implode(' AND ', $parts);
+   }
+
+   private function bindConditions(PDOStatement $stmt): void
+   {
+       foreach ($this->conditions + $this->binds as $name => $value) {
+           $stmt->bindValue($name, $value);
+       }
+   }
+   ```
+
+   Em `loadRegisters()` (`PAG:122-128`), o `ORDER BY` antes do `LIMIT`:
+
+   ```php
+   $order = $this->orderBy !== null ? "ORDER BY {$this->orderBy}" : '';
+
+   $sql = <<<SQL
+       SELECT id, {$attributes} FROM {$this->table}
+       {$this->buildConditions()}
+       {$order}
+       LIMIT :limit OFFSET :offset
+   SQL;
+   ```
+
+   Getter `queryParams()` com `@return array<string, string>` (N1).
+3. `EV`: listas fechadas perto de `KINDS` e, depois de
+   `hasEnrollments()`, a leitura dos parâmetros e a consulta.
+   Import `use Lib\Paginator;`.
+
+   ```php
+   /** Ordens da listagem; 'id' (cadastro) é o padrão. */
+   public const SORTS = [
+       'id' => 'Cadastro',
+       'title' => 'Título',
+       'starts_on' => 'Data',
+   ];
+   public const DIRS = ['asc' => 'Crescente', 'desc' => 'Decrescente'];
+   ```
+
+   ```php
+   /**
+    * Lê os parâmetros da listagem. Ausente ou vazio: sem busca, todos
+    * os tipos, ordem de cadastro. Inválido: mensagem e o padrão.
+    *
+    * @param array<mixed> $params
+    * @return array{0: array{q: string, kind: ?string, sort: string,
+    *     dir: string}, 1: array<string, string>}
+    */
+   public static function listingFilters(array $params): array
+   {
+       $errors = [];
+
+       $q = $params['q'] ?? null;
+       $q = is_string($q) ? trim($q) : $q;
+       $qValid = $q === null || (is_string($q) && mb_strlen($q) <= 255);
+       if (!$qValid) {
+           $errors['q'] = 'Busca inválida (até 255 caracteres).';
+       }
+
+       $kind = self::choice($params['kind'] ?? null, self::KINDS);
+       $sort = self::choice($params['sort'] ?? null, self::SORTS);
+       $dir = self::choice($params['dir'] ?? null, self::DIRS);
+       $checks = [
+           'kind' => [$kind, 'Tipo inválido.'],
+           'sort' => [$sort, 'Ordenação inválida.'],
+           'dir' => [$dir, 'Direção inválida.'],
+       ];
+       foreach ($checks as $param => [$value, $message]) {
+           if ($value === false) {
+               $errors[$param] = $message;
+           }
+       }
+
+       $filters = [
+           'q' => $qValid && is_string($q) ? $q : '',
+           'kind' => is_string($kind) ? $kind : null,
+           'sort' => is_string($sort) ? $sort : 'id',
+           'dir' => is_string($dir) ? $dir : 'asc',
+       ];
+
+       return [$filters, $errors];
+   }
+
+   /**
+    * Uma página da listagem, com os filtros de listingFilters().
+    *
+    * @param array{q: string, kind: ?string, sort: string,
+    *     dir: string} $filters
+    */
+   public static function listingPage(
+       array $filters,
+       int $page,
+       int $perPage,
+       string $route
+   ): Paginator {
+       $where = '';
+       $binds = [];
+       if ($filters['q'] !== '') {
+           // '!' escapa os curingas: "100%" procura o texto "100%".
+           $term = strtr(
+               $filters['q'],
+               ['!' => '!!', '%' => '!%', '_' => '!_']
+           );
+           $where = "title LIKE :q ESCAPE '!'";
+           $binds['q'] = "%{$term}%";
+       }
+
+       // Nome de coluna não aceita bind: só entra o que está na lista.
+       $column = array_key_exists($filters['sort'], self::SORTS)
+           ? $filters['sort']
+           : 'id';
+       $dir = $filters['dir'] === 'desc' ? 'DESC' : 'ASC';
+       $order = $column === 'id'
+           ? "id {$dir}"
+           : "{$column} {$dir}, id ASC";
+       $kind = $filters['kind'];
+
+       return new Paginator(
+           class: static::class,
+           page: $page,
+           per_page: $perPage,
+           table: static::$table,
+           attributes: static::$columns,
+           conditions: $kind !== null ? ['kind' => $kind] : [],
+           route: $route,
+           where: $where,
+           binds: $binds,
+           orderBy: $order,
+           queryParams: self::listingQuery($filters),
+       );
+   }
+
+   /**
+    * Query string dos links: só o que difere do padrão.
+    *
+    * @param array{q: string, kind: ?string, sort: string,
+    *     dir: string} $filters
+    * @return array<string, string>
+    */
+   public static function listingQuery(array $filters): array
+   {
+       return array_filter([
+           'q' => $filters['q'],
+           'kind' => $filters['kind'] ?? '',
+           'sort' => $filters['sort'] === 'id' ? '' : $filters['sort'],
+           'dir' => $filters['dir'] === 'asc' ? '' : $filters['dir'],
+       ], fn(string $value) => $value !== '');
+   }
+
+   /**
+    * Lista fechada: null se ausente ou vazio, false se inválido.
+    *
+    * @param array<string, string> $allowed
+    */
+   private static function choice(
+       mixed $value,
+       array $allowed
+   ): string|false|null {
+       if ($value === null || $value === '') {
+           return null;
+       }
+
+       return is_string($value) && array_key_exists($value, $allowed)
+           ? $value
+           : false;
+   }
+   ```
+
+4. `EC::index`: o controller só repassa. `q`, `kind`, `sort` e `dir`
+   vão crus ao model, sem `(int)` nem `?? ''`; `page` segue como em
+   `EC:19`.
+
+   ```php
+   public function index(Request $request): void
+   {
+       [$filters, $errors] = Event::listingFilters($request->getParams());
+
+       $paginator = Event::listingPage(
+           $filters,
+           page: max(1, (int) $request->getParam('page', 1)),
+           perPage: self::PER_PAGE,
+           route: 'admin.events.paginate'
+       );
+       $events = $paginator->registers();
+
+       $title = 'Eventos';
+       $this->render(
+           'admin/events/index',
+           compact('events', 'paginator', 'title', 'filters', 'errors')
+       );
+   }
+   ```
+
+5. `PAGES:6,16,22`: cada `route(...)` passa a levar os filtros.
+
+   ```php
+   route(
+       $paginator->getRouteName(),
+       ['page' => $page] + $paginator->queryParams()
+   )
+   ```
+
+6. `IDX`: o form vai antes do `if (empty($events))` (`IDX:5`), com
+   `use App\Models\Event;` no topo da view ou o nome completo, como na
+   `IDX:23`. Em `IDX:6`, "Nenhum evento encontrado." quando
+   `Event::listingQuery($filters) !== []`.
+
+   ```php
+   <form method="get" action="<?= route('admin.events.index') ?>"
+         class="d-flex gap-2 mb-3">
+       <input class="form-control" name="q" placeholder="Título"
+              value="<?= htmlspecialchars($filters['q']) ?>">
+       <select class="form-select" name="kind">
+           <option value="">Todos os tipos</option>
+           <?php foreach (Event::KINDS as $value => $label) : ?>
+               <option value="<?= $value ?>"
+                   <?= $filters['kind'] === $value ? 'selected' : '' ?>>
+                   <?= $label ?>
+               </option>
+           <?php endforeach; ?>
+       </select>
+       <?php /* sort e dir: dois selects iguais, sobre SORTS e DIRS */ ?>
+       <button class="btn btn-secondary">Filtrar</button>
+   </form>
+   <?php foreach ($errors as $error) : ?>
+       <div class="alert alert-warning"><?= htmlspecialchars($error) ?></div>
+   <?php endforeach; ?>
+   ```
+
+Armadilhas:
+
+- `COUNT` e página com o mesmo `WHERE`: os dois passam por
+  `buildConditions()` (`PAG:107` e `PAG:126`). Pôr o `LIKE` só no
+  `SELECT` dá "Mostrando 1 - 2 de 16" e links para páginas vazias. O
+  `ORDER BY` fica só no `SELECT`.
+- `conditions + binds` (`bindConditions`): a chave da esquerda vence.
+  Nome de bind igual a coluna de `conditions` (`:kind`) some calado;
+  use `:q`.
+- `%` e `_` digitados: N2 aceita como curinga; aqui o pedido é escapar.
+  O escape padrão do `LIKE` no MySQL é a barra invertida, que também
+  teria de ser escapada; `ESCAPE '!'` deixa a regra explícita e vale
+  igual no PostgreSQL.
+- `ORDER BY` com nome de coluna não aceita bind (N8). `listingPage()` é
+  pública e pode ser chamada sem `listingFilters()`: por isso confere
+  `sort` contra `SORTS` de novo e troca `dir` por `ASC`/`DESC` fixos.
+- Padrão fora da query string: `PaginateEventsCest.php:22,28,34,40`
+  comparam a URL exata (`/admin/events/page/2`); com
+  `?sort=id&dir=asc` sempre presente, quebram. `http_build_query`
+  descarta `null` mas mantém `''` (`?kind=`): `listingQuery()` filtra.
+- Form GET: o navegador descarta a query string do `action`. Os quatro
+  campos ficam no form (select ou `hidden`); `action` aponta para
+  `admin.events.index`, sem `page`, e filtrar volta à página 1.
+- Página fora do intervalo depois de filtrar: sem o ajuste no
+  construtor, `/admin/events/page/4?q=Oficina` (1 página) cai em
+  `IDX:5-6`, "Nenhum evento cadastrado.", sem paginação para voltar.
+  Com ele, sai a última página. Nenhum teste da base abre página além
+  da última, então nada quebra. Alternativa: `redirectTo` para a última
+  página (URL honesta, duas consultas).
+- Filtro na rota, não: `/admin/events/page/{page}/{sortBy}` não casa o
+  regex de `Route.php:90` (só minúsculas, `_` e vírgula); o segmento
+  vira texto literal, a rota nunca casa e sai 404 (`Router.php:122`).
+  O regex só limita o nome: `/admin/events/page/abc` chega como `'abc'`
+  e `EC:19` faz página 1.
+- `CTC:22,73`: os `params` acumulam entre `get()` do mesmo teste. Um
+  segundo `get` sem `q` ainda busca o `q` anterior (`ECT:45-46` só
+  funciona porque troca `page`). Um cenário por teste, ou passe as
+  quatro chaves (`'q' => ''`).
+- `ECT:39-57` depende da ordem de `id`, e `ECT:280` dá a mesma data a
+  todos. O padrão `id` mantém o teste; padrão `starts_on` só passa com o
+  desempate por `id` e ainda quebra o `CreateSuccessfullyCest` (N3).
+- Dois parâmetros inválidos: `FlashMessage` guarda um texto por tipo
+  (`FLASH:25-28`) e só o último apareceria. Mostre `$errors` na view,
+  com `htmlspecialchars`.
+- `?q[]=x` chega como array: `trim()` em array lança `TypeError`; o
+  `is_string` vem antes, em `listingFilters()` e em `choice()`.
+- A busca segue a collation (`utf8mb4_0900_ai_ci`, N8): "oficina" acha
+  "Oficina" e "introducao" acha "Introdução". Diga isso se perguntarem.
+
+Prova: `EVT`, `ECT` e `SearchEventsCest`; no navegador (populate),
+buscar "de" (14 Eventos, 3 páginas), Título decrescente, ir à página 2
+e ver a URL e a ordem mantidas; `/admin/events/page/9?q=Oficina` mostra
+as 4 Oficinas.
+
 ### O1. Rota RESTful nova com página (lotados)
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -4273,6 +4944,166 @@ Armadilhas:
 Prova: testes do `viewFor`; com `APP_ENV=production`, `/nao-existe`
 mostra a página 404 com status 404 (aba Rede do navegador).
 
+### O12. Busca e ordenação na resposta JSON da listagem
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "a listagem em JSON aceita `?q=` e `?sort=`, com total e
+página no corpo". Variante: "parâmetro inválido responde 422 com os
+erros em JSON". Hoje a `index` só renderiza HTML (`EC:16-27`) e não lê
+`q` nem `sort`; o `Paginator` já tem o que o corpo pede: `getPage()`,
+`perPage()`, `totalOfRegisters()`, `totalOfPages()` (`PAG:31-54`).
+Empilha O4 (`acceptJson()` + `renderJson`) e N16 (`listingFilters()` e
+`listingPage()` no model). Sem N16 pronto, faça antes os passos 2 e 3
+dele.
+
+Arquivos: `CTRL:44-55` (`renderJson`: `$json` em `:49`, nenhum status),
+`core/Http/Request.php:52-55` (`acceptJson`), `Request.php:49`
+(`addParams`: parâmetro de rota sobrescreve o da query string),
+`EC:16-27`, `EC:19`, `PAG:12` e `PAG:113` (total tipado `int`),
+`CTC:29` (o `tearDown` já limpa `HTTP_ACCEPT`), `ACC:58-65`
+(`newClient` sem `http_errors`), `app/Middleware/Authenticate.php:14-17`
+(sem sessão: 302 para `/login`).
+
+Passos:
+
+1. Testes em `ECT`, com `http_response_code(200);` no `setUp` (O8):
+
+   ```php
+   public function test_index_json_searches_sorts_and_counts(): void
+   {
+       $this->createEvent(['title' => 'Oficina de PHP']);
+       $this->createEvent(['title' => 'Oficina de Java']);
+       $this->createEvent(['title' => 'Palestra de Redes']);
+       $_SERVER['HTTP_ACCEPT'] = 'application/json';
+
+       $response = $this->get(
+           action: 'index',
+           controllerName: self::CONTROLLER,
+           params: ['q' => 'Oficina', 'sort' => 'title', 'dir' => 'desc']
+       );
+       $json = json_decode($response, true);
+
+       $this->assertSame(
+           ['Oficina de PHP', 'Oficina de Java'],
+           array_column($json['events'], 'title')
+       );
+       $this->assertSame(2, $json['total']);
+       $this->assertSame(1, $json['page']);
+       $this->assertSame(1, $json['total_pages']);
+   }
+
+   public function test_index_json_rejects_invalid_params_with_422(): void
+   {
+       $_SERVER['HTTP_ACCEPT'] = 'application/json';
+
+       $response = $this->get(
+           action: 'index',
+           controllerName: self::CONTROLLER,
+           params: ['sort' => 'description', 'dir' => 'up']
+       );
+
+       $this->assertSame(422, http_response_code());
+       $this->assertSame(
+           ['sort' => 'Ordenação inválida.', 'dir' => 'Direção inválida.'],
+           json_decode($response, true)['errors']
+       );
+   }
+   ```
+
+   Variante por HTTP (`ACC`): `loggedClient`, `get('/admin/events?sort=x',
+   ['headers' => ['Accept' => 'application/json'], 'http_errors' =>
+   false])` -> 422.
+2. `EC::index` (N16 mais duas saídas JSON com *early return*):
+
+   ```php
+   [$filters, $errors] = Event::listingFilters($request->getParams());
+
+   if ($errors !== [] && $request->acceptJson()) {
+       http_response_code(422);
+       $this->renderJson('admin/events/index', compact('errors'));
+       return;
+   }
+
+   $paginator = Event::listingPage(/* igual a N16 */);
+   $events = $paginator->registers();
+
+   if ($request->acceptJson()) {
+       $data = compact('events', 'paginator', 'filters', 'errors');
+       $this->renderJson('admin/events/index', $data);
+       return;
+   }
+
+   // render do HTML como em N16
+   ```
+
+3. `app/views/admin/events/index.json.php`:
+
+   ```php
+   <?php
+
+   if ($errors !== []) {
+       $json['errors'] = $errors;
+       return;
+   }
+
+   $json['events'] = array_map(fn(\App\Models\Event $event) => [
+       'id' => $event->id,
+       'title' => $event->title,
+       'kind' => $event->kind,
+       'starts_on' => $event->starts_on,
+   ], $events);
+   $json['page'] = $paginator->getPage();
+   $json['per_page'] = $paginator->perPage();
+   $json['total'] = $paginator->totalOfRegisters();
+   $json['total_pages'] = $paginator->totalOfPages();
+   $json['filters'] = $filters;
+   ```
+
+4. Diga a diferença. Um projeto só-API (CRUD em JSON consumido por
+   `fetch`, sem views no servidor) devolve sempre JSON, lê a página por
+   `?page=` (sem `/page/{page}`), responde 401 em JSON sem sessão e 422
+   com `errors` por campo; o cliente guarda os filtros e monta a
+   navegação a partir de `total` e `total_pages`, sem `_pages.phtml` nem
+   `queryParams`. No nosso, o JSON é uma segunda saída da mesma rota e
+   da mesma ação, escolhida pelo `Accept` (O4). O HTML continua
+   tolerante (aviso e padrão, N16) e só o JSON responde 422: quem pede
+   JSON é um programa e precisa do status para saber que errou.
+
+Armadilhas:
+
+- Validar antes de consultar: o 422 sai antes de `listingPage()`.
+  Responder 200 com a lista padrão no JSON esconde o erro do cliente.
+- `renderJson` não define status (`CTRL:44-55`): `http_response_code`
+  antes dele. O status fica no processo do PHPUnit (O8): sem zerar no
+  `setUp`, o teste seguinte herda o 422.
+- No 422 a view recebe só `$errors`: o `return` logo depois de
+  `$json['errors']` encerra só a view (o `renderJson` ainda faz o
+  `echo`) e evita `$events` indefinido, warning que vira 500.
+- `total` e `page` vêm do `Paginator`, não de `count($events)` (que dá
+  só os 5 da página). `page` sai já ajustado: `?page=9` com 2
+  resultados devolve `"page":1`.
+- Tipos: `id` sai `int` (INT do PDO) e `total` também, porque a
+  propriedade `int` (`PAG:12`) converte o texto de `fetchColumn()`
+  (`PAG:113`). `json_decode` + `assertSame(2, ...)` confere isso.
+- `errors` vazio vira `[]` e com chaves vira objeto
+  (`{"sort": "Ordenação inválida."}`): no 422 sempre há chaves.
+- O Guzzle do `ACC` lança exceção em 4xx: `'http_errors' => false` na
+  requisição (`ACC:58-65` não define).
+- `?page=` funciona em `/admin/events` (`EC:19`; `Request.php:20`
+  copia `$_REQUEST`); em `/admin/events/page/2?page=5` vale o 2
+  (`Request.php:49`, `core/Router/Route.php:98`). Por isso um cliente
+  JSON nem precisa da rota `/page/{page}`.
+- Sem cookie, o cliente JSON recebe 302 para `/login`
+  (`Authenticate.php:14-17`), não 401. Mudar o middleware é outro
+  pedido; saiba dizer.
+- `queryParams` não vai para o JSON: só serve aos links do HTML.
+- `acceptJson()` exige `Accept` exato e o header tem `chartset`: O4.
+
+Prova: `ECT`; `curl -s -b <cookie> -H 'Accept: application/json'
+'http://localhost/admin/events?q=de&sort=title&dir=desc'` mostra
+`"total":14` e `"total_pages":3`; com `sort=x`, `curl -i` mostra 422.
+
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
 Chance: alta. Tempo: 25-35 min.
@@ -4285,7 +5116,7 @@ aparece no detalhe e na listagem". É a transposição direta do pedido
 real da FVP 4.1 (P12) para o CRUD: campo gerado no servidor, não
 editável pelo form, validado no model.
 
-Arquivos: `SCH:21-38`, `EV:10-21`, `EV:48-58`, `EV:60-82`, `MODEL:139-187`
+Arquivos: `SCH:21-38`, `EV:10-21`, `EV:48-58`, `EV:60-82`, `MODEL:138-184`
 (`save()`, que `Event` vai sobrescrever), `MODEL:347` (`exists()`),
 `VAL:78-94` (`integerMin`) e `VAL:155-205` (`uniqueness`), `EC:14`
 (`FIELDS`: o código **não** entra), `EC:49-63`, `IDX:11-26`, `SHOW:6-33`,
@@ -4761,7 +5592,7 @@ Pedido típico: "um botão 'Duplicar' cria uma cópia do Evento (título
 com '(cópia)', data daqui a 7 dias, sem inscrições) e abre a edição".
 
 Arquivos: `EV:48-58` (`$columns`), `MODEL:20-44` (`$attributes` é
-**privado** em `Model`: copie via `$this->$column`), `MODEL:139-187`,
+**privado** em `Model`: copie via `$this->$column`), `MODEL:138-184`,
 `EC:49-63` (`create`, modelo de redirect), `ROUTES:26-35`, `IDX:28-33`,
 `ECT:85-99`, `ACC:85-97`, `EVT`. Os testes de model do exemplo estão em
 `s3-teste-unitario-model`, empilhado sobre o `p6-...`; a rota POST entra
@@ -5063,8 +5894,9 @@ CREATE TABLE comments (
 
 Armadilhas:
 
-- Sem `DROP TABLE IF EXISTS comments` antes de `events`, o `migrate()`
-  falha por FK na 2ª execução.
+- Sem `DROP TABLE IF EXISTS comments` no topo do schema, a 2ª execução
+  falha no `CREATE TABLE comments` (tabela já existe); as FKs estão
+  desligadas em `SCH:1`.
 - `created_at` não está em `$columns`: o banco preenche; para exibir
   a data, acrescente a coluna em `$columns` **só se** aceitar que
   `save()` grave `NULL`... não: deixe fora e leia com SQL próprio, ou
@@ -6055,6 +6887,754 @@ Armadilhas:
 Prova: `EVT`, `ECT`, `ACC`; no navegador, "Adiar uma semana" no Evento
 16 mostra o flash com a data nova e o detalhe 7 dias depois.
 
+### P23. Código gravado no registro, exigido para remover ou editar
+
+Chance: alta. Tempo: 30-40 min.
+
+Pedido típico: "ao cadastrar, o backend gera um código de 4 dígitos
+(1000 a 9999) que fica gravado no Evento; o admin vê o código no
+detalhe e só remove o Evento se digitar esse código". Variante: "para
+salvar uma edição, exija o código". Hoje o `destroy` remove direto
+(`EC:96-111`, `safeDestroy` em `EC:104`) a partir do form da listagem
+(`IDX:30-33`), e não há coluna de código (`SCH:21-38`, `EV:48-58`).
+Difere de P16 (código na sessão, gerado ao abrir a tela de remoção, uso
+único) e de P1 (código público e único, só exibido): aqui o código
+nasce no create, fica no registro, não muda e serve de senha da ação.
+
+Arquivos: `SCH:21-38` (`:31` é `capacity`), `EV:10-21` (`@property`),
+`EV:48-58` (`$columns`), `US:28-35` (molde de padrão no construtor),
+`MODEL:32-42` (construtor zera as colunas e copia `$params`),
+`MODEL:139-184` (`save()` grava todas as colunas), `MODEL:255`,
+`MODEL:327` e `PAG:143` (`new static($row)`: o construtor roda também
+ao ler do banco), `EC:14` (`FIELDS`: o código não entra), `EC:77-94`
+(`update`, variante), `EC:96-111` (`destroy`),
+`core/Http/Request.php:57-60` (`getParam` devolve `mixed`), `SHOW:1-5`,
+`SHOW:35-36`, `IDX:30-33`, `FORM:16-19`, `ECT:242-266` (destroy),
+`ECT:289-300` (`createEvent`), `ACC:67-78` (`loggedClient`),
+`ACT/DeleteEventCest.php:50-54` (`clickRemove`), `POP:133-149`.
+
+Passos:
+
+1. Testes. Em `EVT`, gera na faixa e não muda ao salvar:
+
+   ```php
+   public function test_confirmation_code_should_be_kept(): void
+   {
+       $event = $this->createEvent();
+       $code = Event::findById($event->id)->confirmation_code;
+
+       $this->assertIsInt($code);
+       $this->assertGreaterThanOrEqual(1000, $code);
+       $this->assertLessThanOrEqual(9999, $code);
+
+       $event->title = 'Outro título';
+       $this->assertTrue($event->save());
+       $found = Event::findById($event->id);
+       $this->assertSame($code, $found->confirmation_code);
+   }
+
+   public function test_confirms_code_should_accept_only_the_code(): void
+   {
+       $event = new Event($this->params(['confirmation_code' => 4321]));
+
+       $this->assertTrue($event->confirmsCode('4321'));
+       foreach (['1234', '12a', ' 4321', '4321 ', '04321', ''] as $bad) {
+           $this->assertFalse($event->confirmsCode($bad), $bad);
+       }
+       $this->assertFalse($event->confirmsCode(null));
+       $this->assertFalse($event->confirmsCode(['4321']));
+   }
+   ```
+
+   Em `ECT`, um caso por teste: `destroy` sem `confirmation_code` e com
+   `'1234'` (Evento criado com `createEvent(['confirmation_code' =>
+   4321])`) -> Evento existe, `Location: /admin/events/{id}` e flash
+   `danger` "Código de confirmação incorreto!". Os dois testes atuais
+   (`ECT:242-251` e `:253-266`) viram o caso "certo": acrescente
+   `'confirmation_code' => (string) $event->confirmation_code` em
+   `params`. `create` com `'confirmation_code' => '42'` em `event`
+   grava outro valor (cópia de `ECT:101-112`); `show` contém
+   `id="confirmation_code_value">4321<`. Em `ACC`, admin logado
+   (`ACC:67-78`): `DELETE` com `'0000'` -> 302 para
+   `/admin/events/{id}`, Evento existe; com o código certo -> 302 para
+   `/admin/events`. Cest: código errado volta ao `show` com o flash.
+2. `SCH`, depois de `capacity` (`SCH:31`):
+   `confirmation_code SMALLINT UNSIGNED NOT NULL,`. Rode
+   `./run db:populate`: os 16 Eventos ganham código no construtor.
+3. `EV`: `@property int|string $confirmation_code`, `'confirmation_code'`
+   em `$columns`, e:
+
+   ```php
+   public const CODE_MIN = 1000;
+   public const CODE_MAX = 9999;
+
+   /**
+    * @param array<string, mixed> $params
+    */
+   public function __construct($params = [])
+   {
+       parent::__construct($params);
+
+       $code = $this->confirmation_code;
+       if ($code === null || $code === '') {
+           $this->confirmation_code = random_int(
+               self::CODE_MIN,
+               self::CODE_MAX
+           );
+       }
+   }
+
+   /** Confere o código digitado sem conversão: '04321' não vale. */
+   public function confirmsCode(mixed $input): bool
+   {
+       if (!is_string($input) || !ctype_digit($input)) {
+           return false;
+       }
+
+       return hash_equals((string) $this->confirmation_code, $input);
+   }
+   ```
+
+4. `EC::destroy`, depois de `findEvent` e antes de `safeDestroy()`:
+
+   ```php
+   $given = $request->getParam('confirmation_code');
+   if (!$event->confirmsCode($given)) {
+       FlashMessage::danger('Código de confirmação incorreto!');
+       $this->redirectTo(
+           route('admin.events.show', ['id' => $event->id])
+       );
+       return;
+   }
+   ```
+
+5. `SHOW:1-5`: `$code = (int) $event->confirmation_code;` no bloco
+   PHP. Depois de "Vagas" (`SHOW:28-32`), o código; depois de
+   `SHOW:35-36`, o form:
+
+   ```php
+   <dt class="col-sm-3">Código de confirmação</dt>
+   <dd class="col-sm-9">
+       <span id="confirmation_code_value"><?= $code ?></span>
+   </dd>
+   ```
+
+   ```php
+   <form class="mt-3" method="post"
+       action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>">
+       <input type="hidden" name="_method" value="DELETE">
+       <label for="confirmation_code" class="form-label">
+           Digite o código para remover
+       </label>
+       <input type="text" class="form-control" id="confirmation_code"
+           name="confirmation_code" inputmode="numeric" maxlength="4"
+           autocomplete="off">
+       <button type="submit" class="btn btn-danger mt-2">
+           Confirmar remoção
+       </button>
+   </form>
+   ```
+
+6. `IDX:30-33`: o form vira um link "Remover" para
+   `admin.events.show`. `clickRemove` (`DeleteEventCest.php:50-54`)
+   passa a clicar, `grabTextFrom('#confirmation_code_value')`,
+   `fillField('#confirmation_code', $code)` e clicar em
+   "Confirmar remoção".
+7. Variante (editar): o mesmo `input` dentro do
+   `if ($isUpdate)` (`FORM:17-19`); em `EC::update`, depois do `fill`
+   (`EC:84`), código errado -> `FlashMessage::danger(...)` e
+   `render('admin/events/edit', ...)` seguido de `return` (mesmo padrão
+   de `EC:90-92`, que mantém o que foi digitado).
+
+Armadilhas:
+
+- `save()` grava todas as colunas (`MODEL:145-155`, `:175-177`). Sem o
+  código em `$columns`, o `INSERT` não o envia e a coluna `NOT NULL`
+  sem padrão lança `PDOException`; com coluna `NULL` o código some e
+  `confirmsCode` sempre falha.
+- Gerar no `create` do controller: populate (`POP:134-147`),
+  `ACC:30-41` e `BaseEventsCest.php:83-94` fazem `new Event(...)` +
+  `save()` e gravam `NULL` (`PDOException`). Gerar em `save()` depois
+  do `isValid()` e validar a faixa em `validates()`: o populate lança
+  `RuntimeException` (`POP:145-146`). O construtor cobre todos.
+- "Só se vazio" é obrigatório: o construtor roda em toda leitura
+  (`MODEL:255`, `:327`, `PAG:143`). Gerar sempre troca o código a cada
+  carga: o `show` mostra um, o `destroy` confere outro e nada é
+  removido. O teste "não muda ao salvar" pega isso.
+- Nunca em `FIELDS` (`EC:14`): o `fill` (`EC:123-126`) poria `NULL`
+  quando o campo não vem e deixaria o admin escolher o código.
+- `confirmsCode(string $input)`: `getParam` pode devolver `null` ou
+  array (`Request.php:57-60`) e o tipo `string` lança `TypeError`
+  (500). Use `mixed` + `is_string`, ou `is_string` no controller. Sem
+  `(int)`: `(int) ' 4321'` e `(int) '04321'` dão `4321`, e
+  `(int) '12a'` dá `12`.
+- `hash_equals(conhecido, digitado)` só aceita strings: converta o
+  valor do banco com `(string)`. Com 9000 valores e o código na tela,
+  o tempo da comparação pesa pouco; a força bruta pesa mais (P24).
+- Testes que mudam: `ECT:242-251` e `:253-266` falham sem o código
+  (`Location` vira `/admin/events/{id}` e o flash vira o do código);
+  `ACT/DeleteEventCest.php:11-28` e `:30-48` via `clickRemove`.
+  `ACC:155` não muda (o Participante é barrado antes). Os testes de
+  `safeDestroy` (`EVT:634-683`) não mudam: a conferência fica fora dele.
+- `CTC` usa um único `Request` por teste (`CTC:22`) e `addParams` faz
+  `array_merge` (`Request.php:47-50`): um `destroy` "sem código"
+  depois de um com código ainda envia o código. Um caso por teste.
+- `'42'` no teste de create: valor fora da faixa nunca é gerado. Com
+  `'1111'` o teste falha 1 vez em 9000.
+- Confira o código antes de `safeDestroy()`: com Inscrições e código
+  certo a mensagem antiga continua (`DeleteEventCest.php:41`); com
+  código errado não se revela se há Inscrições.
+- Form da listagem sem o campo (`IDX:30-33`) sempre falha: troque por
+  link ou tire.
+- Não precisa ser único (difere de P1): é conferido junto com o `id`.
+  Com P1 na base, não reuse `checkin_code`: ele aparece na listagem.
+- Variante: os testes de update (`ECT:191-240`) e os Cests
+  `UpdateSuccessfullyCest`/`UpdateWithInvalidDataCest` passam a mandar
+  o código. Código errado com dados inválidos mostra só o erro do
+  código: diga que é proposital.
+
+Prova: `EVT`, `ECT`, `ACC` e `DeleteEventCest`; no navegador, criar,
+ver o código no `show`, errar (flash, mesma tela) e acertar.
+
+### P24. Código de confirmação com validade e limite de tentativas
+
+Chance: média. Tempo: 25-35 min.
+
+Pedido típico: "o código vale 5 minutos e aceita só 3 tentativas;
+depois disso é invalidado e outro precisa ser gerado; mostre mensagens
+diferentes para código errado, expirado e tentativas esgotadas".
+Empilha P16 (ou P23). Hoje a base remove direto (`EC:96-111`); com P16
+o código nunca expira e some na primeira conferência, certa ou errada
+(P16, passo 2).
+
+Arquivos: P16 (`lib/ConfirmationCode.php`, `EC::delete` no passo 4,
+`EC::destroy` no passo 5), `config/bootstrap.php:3` (`session_start`;
+no PHPUnit `$_SESSION` é só um array), `ECT:17-37` (`setUp`/`tearDown`
+limpam só `flash`), `VAL:116-121` (`notPastDate` recebe
+`?\DateTimeImmutable $now`: precedente de relógio injetável),
+`tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php:136-154`
+(fixa instante e fuso, sem `sleep`), `Dockerfile:9-10` (PHP em
+`America/Sao_Paulo`), `docker-compose.yml:30-42` (MySQL sem fuso: UTC),
+`SCH:32-33` (`CURRENT_TIMESTAMP` é o relógio do MySQL), `FLASH:7-15`,
+`MODEL:189-213`.
+
+Passos:
+
+1. Testes em `tests/Unit/Lib/ConfirmationCodeTest.php` (limpe
+   `$_SESSION['confirmation']` no `setUp` e no `tearDown`), com
+   `$t = 1_000_000` e `$code = ConfirmationCode::issue('e1', $t)`:
+   certo em `$t + 300` -> `Ok` (borda); em `$t + 301` -> `Expired`;
+   errado duas vezes -> `Wrong`, `Wrong`; terceira -> `Exhausted`;
+   depois disso o certo -> `Exhausted`; certo duas vezes -> `Ok` e
+   depois `Expired` (uso único); `'12a'`, `' 1234'`, `null` e array ->
+   `Wrong` e contam tentativa; `current()` com código vivo devolve o
+   mesmo e não zera tentativas; `current()` depois de `Exhausted` abre
+   entrada nova (confira `attempts`, não "código diferente": pode
+   repetir 1 vez em 9000). Em `ECT`: os três flashes distintos, com a
+   sessão montada por `issue("event-{$id}", time() - 301)` (expirado) e
+   `$_SESSION['confirmation'][...]['attempts'] = 3` (esgotado).
+2. `lib/CodeCheck.php`:
+
+   ```php
+   enum CodeCheck
+   {
+       case Ok;
+       case Wrong;
+       case Expired;
+       case Exhausted;
+
+       public function message(): string
+       {
+           return match ($this) {
+               self::Ok => 'Código confirmado!',
+               self::Wrong => 'Código incorreto! Tente de novo.',
+               self::Expired => 'Código expirado! Um novo foi gerado.',
+               self::Exhausted =>
+                   'Tentativas esgotadas! Um novo código foi gerado.',
+           };
+       }
+   }
+   ```
+
+3. `lib/ConfirmationCode.php` (substitui a classe de P16; o relógio
+   entra como parâmetro, `time()` só no padrão):
+
+   ```php
+   final class ConfirmationCode
+   {
+       public const TTL_SECONDS = 300;
+       public const MAX_ATTEMPTS = 3;
+
+       public static function issue(string $key, ?int $now = null): int
+       {
+           $code = random_int(1000, 9999);
+           $_SESSION['confirmation'][$key] = [
+               'code' => $code,
+               'issued_at' => $now ?? time(),
+               'attempts' => 0,
+           ];
+
+           return $code;
+       }
+
+       /** Código vivo da chave; se não houver, gera outro. */
+       public static function current(string $key, ?int $now = null): int
+       {
+           $now ??= time();
+           $entry = $_SESSION['confirmation'][$key] ?? null;
+
+           if (is_array($entry) && self::state($entry, $now) === null) {
+               return $entry['code'];
+           }
+
+           return self::issue($key, $now);
+       }
+
+       public static function check(
+           string $key,
+           mixed $given,
+           ?int $now = null
+       ): CodeCheck {
+           $now ??= time();
+           $entry = $_SESSION['confirmation'][$key] ?? null;
+           if (!is_array($entry)) {
+               return CodeCheck::Expired;
+           }
+
+           $state = self::state($entry, $now);
+           if ($state !== null) {
+               return $state;
+           }
+
+           $code = (string) $entry['code'];
+           if (is_string($given) && ctype_digit($given)
+               && hash_equals($code, $given)) {
+               unset($_SESSION['confirmation'][$key]);
+               return CodeCheck::Ok;
+           }
+
+           $attempts = $entry['attempts'] + 1;
+           $_SESSION['confirmation'][$key]['attempts'] = $attempts;
+
+           return $attempts >= self::MAX_ATTEMPTS
+               ? CodeCheck::Exhausted
+               : CodeCheck::Wrong;
+       }
+
+       /**
+        * @param array{code: int, issued_at: int, attempts: int} $entry
+        */
+       private static function state(array $entry, int $now): ?CodeCheck
+       {
+           if ($entry['attempts'] >= self::MAX_ATTEMPTS) {
+               return CodeCheck::Exhausted;
+           }
+           if ($now - $entry['issued_at'] > self::TTL_SECONDS) {
+               return CodeCheck::Expired;
+           }
+
+           return null;
+       }
+   }
+   ```
+
+4. `EC::delete` (P16, passo 4): troque `issue` por `current`. Assim
+   recarregar a tela não zera as tentativas, e um código expirado ou
+   esgotado é trocado ao voltar para a tela.
+5. `EC::destroy` (P16, passo 5):
+
+   ```php
+   $result = ConfirmationCode::check(
+       "event-{$event->id}",
+       $request->getParam('confirmation_code')
+   );
+   if ($result !== CodeCheck::Ok) {
+       FlashMessage::danger($result->message());
+       $this->redirectTo(
+           route('admin.events.delete', ['id' => $event->id])
+       );
+       return;
+   }
+   ```
+
+Armadilhas:
+
+- Se `delete()` continuar chamando `issue`, cada erro volta para a tela,
+  que gera código novo com `attempts = 0`: o limite nunca dispara. É o
+  motivo de `current()`.
+- `sleep(301)` no teste: proibitivo. O instante entra como parâmetro
+  (como o `$now` de `VAL:120`); o controller não passa nada e vale
+  `time()`.
+- `time()` é epoch, sem fuso. `new DateTimeImmutable('@' . $t)` sai em
+  UTC: `->format('Y-m-d H:i:s')` dá 3 horas a mais que `date()` no PHP
+  em `America/Sao_Paulo` (`Dockerfile:9-10`). Guarde e compare inteiros
+  (`getTimestamp()`), nunca strings de fusos diferentes.
+- Sessão nos testes de controller: `$_SESSION` sobrevive entre testes
+  do mesmo processo e `ECT:33-37` só limpa `flash`. Sem
+  `unset($_SESSION['confirmation'])` no `tearDown`, tentativas de um
+  teste vazam para o outro. Os testes de P16 que montam
+  `$_SESSION['confirmation'][...] = 1234` passam a receber `Expired`
+  (o formato agora é array): troque por `issue(...)`.
+- Testes HTTP (`ACC`) não enxergam a sessão do servidor: leia o código
+  do HTML da tela de remoção (regex no corpo) antes do `DELETE`.
+- Sobre P23 (código no registro), a validade vira coluna: grave o
+  instante como `INT UNSIGNED` (epoch) ou `DATETIME` com
+  `date('Y-m-d H:i:s', $now)` do PHP. `NOW()` ou `CURRENT_TIMESTAMP`
+  usam o relógio do MySQL em UTC (`docker-compose.yml:30-42`,
+  `SCH:32-33`): lido pelo PHP em Brasília, o código nasce 3 horas no
+  futuro e só expira depois de 3h05.
+- Ainda sobre P23: `attempts` `NOT NULL` precisa de `0` no construtor
+  (`save()` grava `NULL` e ignora o `DEFAULT`), e `update()` não valida
+  e devolve `false` se nada mudou (`MODEL:189-213`): não use o retorno
+  como "deu certo".
+- Mensagens distintas cabem num flash só (`FLASH:7-15`, um texto por
+  tipo): use `danger` com o texto de `message()`.
+
+Prova: `ConfirmationCodeTest`, `ECT`; no navegador, errar três vezes
+(mensagens "incorreto" e "esgotadas", código novo na tela) e acertar.
+
+### P25. Histórico de alterações do registro
+
+Chance: média-baixa. Tempo: 35-45 min.
+
+Pedido típico: "guarde quem alterou o quê e quando em cada Evento, e
+mostre o histórico no detalhe" (ou "quero auditoria das edições").
+Vale para qualquer CRUD. Hoje nada fica registrado: o `save()` reescreve
+todas as colunas (`MODEL:160-180`) sem rastro, e `updated_at`
+(`SCH:33`) só diria quando, sem quem nem o quê, e nem é lido
+(`EV:48-58`). Difere de M12 (só o último editor, uma coluna) e de R5
+(datas): aqui é uma tabela filha com uma linha por campo alterado.
+
+Arquivos: `SCH:1` (`foreign_key_checks = 0`), `SCH:3-5` (os `DROP`),
+`SCH:43-53` (tabela filha com FKs, molde), `EN:1-29` (model filho com
+`BelongsTo`, molde), `EV:48-58` (`$columns`), `EV:88-99` (molde: lê o
+original com `findById`), `EV:166-172` (`safeDestroy` traduz qualquer
+`PDOException` como "possui inscrições"), `EV:198-206`
+(`setAudienceList` guarda a ordem recebida), `US:28-35` (padrão no
+construtor), `MODEL:139-184` (`save`; PDO próprio em `MODEL:142`),
+`MODEL:300-330` (`where` sem `ORDER BY`), `HASMANY:19-22` (`get` usa
+`where`), `core/Database/Database.php:10-22` (PDO novo por chamada),
+`EC:29-39` (`show`), `EC:77-94` (`update`), `EC:53` (usuário da
+sessão no `create`), `SHOW:33-36`, `POP:10` (`migrate`), `ECT:191-207`,
+`ECT:272-300`, `tests/Unit/Models/Events/EnrollmentTest.php:17-50`
+(`setUp` com Evento salvo, molde), `ACT/BaseEventsCest.php:77-106`
+(seed) e `:122-155` (`fillEventForm`).
+
+Passos:
+
+1. Testes. `tests/Unit/Models/Events/EventChangeTest.php`, `setUp`
+   copiado de `EnrollmentTest.php:17-50` (Evento com `capacity` 5 e
+   `audience` `'students'`). Casos: muda `title` e `location` -> 2
+   linhas com `field`, `old_value`, `new_value` e `user_id` certos;
+   Evento relido do banco e salvo sem mudança -> 0 linhas; `capacity`
+   `'5'` e `'+5'` contra `5` do banco -> 0; Evento salvo com
+   `'students,staff'` e reenviado como `'staff,students'` -> 0; Evento
+   novo com `saveWithHistory` -> 0 (decisão no passo 4); update
+   inválido (`capacity` `'0'`) -> `false` e 0 linhas; `history()` traz
+   a mais recente primeiro; `destroy()` do Evento apaga o histórico;
+   `EventChange` com `field` vazio ou `'id'` -> inválido.
+
+   ```php
+   public function test_update_changing_two_fields_records_two_rows(): void
+   {
+       $event = Event::findById($this->event->id);
+       $event->title = 'Oficina Revista';
+       $event->location = 'Bloco C';
+       $event->capacity = '5'; // do form vem string; o banco tem 5
+
+       $this->assertTrue($event->saveWithHistory($this->admin->id));
+
+       $rows = EventChange::where(['event_id' => $event->id]);
+       $fields = array_map(fn(EventChange $c) => $c->field, $rows);
+       sort($fields);
+       $this->assertSame(['location', 'title'], $fields);
+       $this->assertEquals($this->admin->id, $rows[0]->user_id);
+   }
+   ```
+
+   `ECT`: `put` com `validParams(['title' => 'Título Novo',
+   'user_id' => '999'])` -> 1 linha, `field` `'title'`, `user_id` do
+   admin logado (nunca o 999); `capacity` `'20'` igual ao banco não
+   gera linha (`ECT:282`). `show` do mesmo Evento contém
+   `id="event-history"` e `<td>Título</td>`. Cest novo
+   `ACT/EventHistoryCest.php` (estende `BaseEventsCest`): edita só o
+   título do Evento 02, volta ao `show` e vê "Histórico de alterações",
+   "Título" e "Administrador" em `#event-history`, sem "Vagas" (o form
+   reenvia `'22'` contra `22` do banco); o `show` do Evento 03 mostra
+   "Nenhuma alteração registrada.".
+2. `SCH`: `DROP TABLE IF EXISTS event_changes;` junto de `SCH:3-5` e,
+   depois de `events`:
+
+   ```sql
+   -- Histórico: uma linha por campo alterado na edição de um Evento.
+   CREATE TABLE event_changes (
+       id         INT AUTO_INCREMENT PRIMARY KEY,
+       event_id   INT NOT NULL,
+       user_id    INT NOT NULL,
+       field      VARCHAR(64) NOT NULL,
+       old_value  TEXT NULL,
+       new_value  TEXT NULL,
+       created_at DATETIME NOT NULL,
+       CONSTRAINT fk_event_changes_event FOREIGN KEY (event_id)
+           REFERENCES events (id) ON DELETE CASCADE,
+       CONSTRAINT fk_event_changes_user FOREIGN KEY (user_id)
+           REFERENCES users (id) ON DELETE RESTRICT,
+       INDEX index_event_changes_on_event_id_and_created_at
+           (event_id, created_at)
+   );
+   ```
+
+3. `app/Models/EventChange.php`: `$table = 'event_changes'`,
+   `$columns` com as 6 colunas (inclusive `created_at`), `@property`
+   de cada uma, `LABELS` (`'title' => 'Título'`, ...), `event()` e
+   `user()` como `EN:20-28`, e:
+
+   ```php
+   /** @param array<string, mixed> $params */
+   public function __construct($params = [])
+   {
+       parent::__construct($params);
+       if ($this->created_at === null) {
+           $this->created_at = date('Y-m-d H:i:s');
+       }
+   }
+
+   public function validates(): void
+   {
+       Validations::notEmpty('event_id', $this);
+       Validations::notEmpty('user_id', $this);
+       Validations::notEmpty('field', $this) &&
+           Validations::inclusion('field', $this, Event::columns());
+   }
+
+   public function userName(): string
+   {
+       $user = $this->user()->get();
+
+       return $user instanceof User ? $user->name : '';
+   }
+
+   /** @return array<int, EventChange> mais recente primeiro */
+   public static function forEvent(int $eventId): array
+   {
+       $sql = 'SELECT id, ' . implode(', ', self::$columns)
+           . ' FROM event_changes WHERE event_id = :event_id'
+           . ' ORDER BY created_at DESC, id DESC';
+       $stmt = Database::getDatabaseConn()->prepare($sql);
+       $stmt->bindValue(':event_id', $eventId, PDO::PARAM_INT);
+       $stmt->execute();
+
+       $changes = [];
+       foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+           $changes[] = new self($row);
+       }
+
+       return $changes;
+   }
+   ```
+
+4. `Model::save` (bônus de framework, 2 linhas): assinatura
+   `save(?PDO $pdo = null): bool` e, em `MODEL:142`,
+   `$pdo ??= Database::getDatabaseConn();`. Quem chama `save()` sem
+   argumento não muda. `Event` (`use Core\Database\Database;` e
+   `HasMany`):
+
+   ```php
+   public function eventChanges(): HasMany
+   {
+       return $this->hasMany(EventChange::class, 'event_id');
+   }
+
+   /** @return array<int, EventChange> */
+   public function history(): array
+   {
+       return $this->newRecord() ? [] : EventChange::forEvent($this->id);
+   }
+
+   /**
+    * Campos que diferem do banco: [campo => [antes, depois]].
+    *
+    * @return array<string, array{0: string, 1: string}>
+    */
+   public function changedFields(): array
+   {
+       $original = $this->newRecord() ? null : self::findById($this->id);
+       if ($original === null) {
+           return [];
+       }
+
+       $changed = [];
+       foreach (self::$columns as $column) {
+           $old = self::comparable($column, $original->$column);
+           $new = self::comparable($column, $this->$column);
+           if ($old !== $new) {
+               $changed[$column] = [$old, $new];
+           }
+       }
+
+       return $changed;
+   }
+
+   /** Texto para comparar: 20 e '20' iguais, SET em ordem fixa. */
+   private static function comparable(string $column, mixed $value): string
+   {
+       if (!is_scalar($value)) {
+           return '';
+       }
+       $text = str_replace("\r\n", "\n", (string) $value);
+
+       if (in_array($column, ['user_id', 'capacity'], true)) {
+           $number = filter_var($text, FILTER_VALIDATE_INT);
+           return $number === false ? $text : (string) $number;
+       }
+       if ($column === 'audience' && $text !== '') {
+           $list = explode(',', $text);
+           sort($list);
+           return implode(',', $list);
+       }
+
+       return $text;
+   }
+
+   /** Salva e registra os campos alterados na mesma transação. */
+   public function saveWithHistory(int $userId): bool
+   {
+       if ($this->newRecord()) {
+           return $this->save();
+       }
+
+       $changed = $this->changedFields(); // antes do save()
+       $pdo = Database::getDatabaseConn();
+       $pdo->beginTransaction();
+       if (!$this->save($pdo)) {
+           $pdo->rollBack();
+           return false;
+       }
+
+       foreach ($changed as $field => [$old, $new]) {
+           $change = new EventChange([
+               'event_id' => $this->id, 'user_id' => $userId,
+               'field' => $field,
+               'old_value' => $old, 'new_value' => $new,
+           ]);
+           if (!$change->save($pdo)) {
+               $pdo->rollBack();
+               $this->addError('base', 'falha ao gravar o histórico!');
+               return false;
+           }
+       }
+       $pdo->commit();
+
+       return true;
+   }
+   ```
+
+   Decisão: o `create` não gera linha. A criação já tem `created_at`
+   (`SCH:32`) e o criador em `user_id` (`EC:53`); uma linha "criado"
+   repetiria isso, e o `create` segue com `save()` simples. Se o
+   professor quiser "criado por" no histórico, inclua `'created'` na
+   lista do `inclusion` e grave uma linha com `old_value` `NULL`.
+5. `EC::update` (`EC:86`), o usuário vem da sessão, nunca do form:
+
+   ```php
+   $userId = $this->currentUser()?->id;
+   if ($userId !== null && $event->saveWithHistory($userId)) {
+   ```
+
+   O `else` não muda. `EC::show` (`EC:37-38`): `$changes =
+   $event->history();` e `compact('event', 'changes', 'title')`.
+6. `SHOW`: `use App\Models\EventChange;` em `SHOW:2` e, entre o
+   `</dl>` (`SHOW:33`) e os botões (`SHOW:35-36`):
+
+   ```php
+   <h2 class="h4 mt-4">Histórico de alterações</h2>
+   <?php if ($changes === []) : ?>
+       <p>Nenhuma alteração registrada.</p>
+   <?php else : ?>
+   <table class="table table-sm" id="event-history">
+       <tr><th>Quando</th><th>Quem</th><th>Campo</th>
+           <th>Antes</th><th>Depois</th></tr>
+       <?php foreach ($changes as $change) : ?>
+       <tr>
+           <td><?= date('d/m/Y H:i', strtotime($change->created_at)) ?></td>
+           <td><?= htmlspecialchars($change->userName()) ?></td>
+           <td><?= htmlspecialchars(
+               EventChange::LABELS[$change->field] ?? $change->field
+           ) ?></td>
+           <td><?= htmlspecialchars((string) $change->old_value) ?></td>
+           <td><?= htmlspecialchars((string) $change->new_value) ?></td>
+       </tr>
+       <?php endforeach; ?>
+   </table>
+   <?php endif; ?>
+   ```
+
+Armadilhas:
+
+- Transação: `getDatabaseConn()` abre um PDO novo a cada chamada
+  (`Database.php:10-22`) e o `save()` abre o seu (`MODEL:142`).
+  `beginTransaction()` num `$pdo` e `save()` sem argumento ficam em
+  conexões diferentes: nada é desfeito junto. Pior: inserir em
+  `event_changes` dentro da transação e só depois chamar `save()` sem
+  o `$pdo` trava a requisição. A FK põe trava compartilhada na linha
+  do Evento, e o `UPDATE` da outra conexão espera até
+  `innodb_lock_wait_timeout` (50 s). Por isso o `$pdo` vai para o
+  `save()` (passo 4). Os `findById` das validações (`EV:91`,
+  `EV:131`) só leem e podem ficar fora.
+- Sem mexer no core: `save()` primeiro e as linhas depois, sem
+  transação. Se uma linha falhar, o Evento fica salvo sem histórico;
+  diga isso se o professor perguntar.
+- `changedFields()` antes do `save()`: depois dele o banco já tem o
+  valor novo e o diff sai sempre vazio.
+- `save()` grava todas as colunas (`MODEL:160-180`): não dá para
+  descobrir o que mudou olhando o `UPDATE`; o diff é no model. Mudar
+  o core para devolver `false` sem mudança quebra o `update` (M19).
+- INT volta do PDO como int (`20`) e o form manda string (`'20'`):
+  `!==` cru registra mudança falsa em todo save. `(string)` sozinho não
+  basta: `'+20'` e `' 20'` passam no `integerMin` (`VAL:81`), o MySQL
+  grava 20 e o texto difere; por isso o `filter_var`. É só comparação:
+  nada é gravado convertido.
+- SET: o banco devolve na ordem da definição (`SCH:28`) e
+  `setAudienceList` guarda a ordem recebida (`EV:198-206`); ordene.
+  Textarea manda `\r\n` (M19). ENUM e SET ficam crus no histórico
+  (`'workshop'`); para rótulo, `Event::KINDS[$valor] ?? $valor` na view.
+- `created_at` em `$columns` sem valor iria `NULL` (`MODEL:153-155`):
+  o padrão vem do construtor (`US:28-35`). `DATETIME` com `date()` do
+  PHP fica no fuso de São Paulo (`Dockerfile:10`), igual a
+  `last_login_at`. Com `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` fora de
+  `$columns`, a hora sai em UTC (3 h adiantada) e o `new self($row)`
+  com `created_at` lança "Property created_at not found"
+  (`MODEL:74-87`); ver R5.
+- Ordem: o framework não tem `ORDER BY` (`MODEL:300-330`) e
+  `HASMANY:19-22` usa `where`. O `eventChanges()` serve à relação; a
+  listagem ordenada é SQL no model (`forEvent`). Duas linhas do mesmo
+  save têm o mesmo segundo: `id DESC` desempata.
+- `user_id` só da sessão: `fill` nunca lê esse campo (`EC:123-126`),
+  e o teste com `'user_id' => '999'` prova isso (molde `ECT:101-112`).
+  `$userId` nulo cai no `else` ("dados incorretos"); com o middleware
+  `admin` (`ROUTES:22`) isso não acontece.
+- Schema: `SCH:1` desliga as FKs, então a ordem dos `DROP` não importa,
+  mas sem `DROP TABLE IF EXISTS event_changes` o `CREATE` falha na 2ª
+  aplicação (`./run db:reset`, `POP:10`). Os testes não pegam: cada
+  teste recria o banco do zero (`tests/TestCase.php:10-19`). O populate
+  não muda: ele só cria Eventos (`POP:133-149`), e criação não gera
+  linha.
+- Remoção do pai: `ON DELETE CASCADE` apaga o histórico junto e o
+  `safeDestroy` segue igual. Com `RESTRICT`, todo Evento editado vira
+  irremovível, e o `catch` de `EV:168-171` diria "possui inscrições",
+  mensagem errada. Diga qual escolheu; guardar histórico de Evento
+  removido é outro pedido.
+- Se M12 já estiver aplicado, `updated_by` entra em `$columns` e vira
+  linha a cada edição: tire-o do laço. Com M19, `hasChanges()` pode
+  virar `changedFields() !== []` (mas Evento novo dá `[]`).
+- Escape do `old_value`/`new_value` na view: um título com `<script>`
+  vai para o histórico (Q6). `$changes` fora do `compact`: 500 (§9).
+- Testes existentes continuam verdes: o `update` ainda redireciona e
+  dá o mesmo flash (`ECT:205-206`); quem chama `save()` sem argumento
+  não muda.
+
+Prova: testes; no navegador, editar só o título e ver uma linha só.
+
 ### Q1. Só o dono edita e remove
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -6687,7 +8267,7 @@ Pedido típico: "mostre quando o Evento foi cadastrado e alterado pela
 `$columns`, então o ActiveRecord nem as lê.
 
 Arquivos: `SCH:32-33`, `EV:48-58`, `MODEL:233-256` (`findById` só
-seleciona `$columns`), `MODEL:139-187` (`save()` grava **todas** as
+seleciona `$columns`), `MODEL:138-184` (`save()` grava **todas** as
 colunas de `$columns`: pôr `created_at` lá faz o `INSERT` mandar `NULL`),
 `SHOW:6-33`, `IDX:11-26`, `US:76-79` (`registerLogin` grava hora do PHP),
 `Dockerfile:10` (PHP em `America/Sao_Paulo`; o MySQL do compose fica em
@@ -7784,7 +9364,7 @@ requisição).
 ## 9. Armadilhas gerais do CRUD de Eventos
 
 - `Model::save()` grava **todas** as colunas de `$columns`
-  (`MODEL:139-187`): coluna sem valor vai como `NULL`, o `DEFAULT` do
+  (`MODEL:138-184`): coluna sem valor vai como `NULL`, o `DEFAULT` do
   schema não é usado. Padrões ficam no construtor (`US:28-35`).
 - `Model::update([...])` não valida (`MODEL:189`); `save()` valida.
 - `Model::where` só faz igualdade (`MODEL:309-311`); `all()` e o
