@@ -48,7 +48,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
         <label for="event_user_id" class="form-label">Responsável</label>
         <select class="form-select<?= $invalid('user_id') ?>" id="event_user_id" name="event[user_id]">
             <?php foreach (User::admins() as $admin) : ?>
-                <option value="<?= $admin->id ?>" <?= (int) $event->user_id === $admin->id ? 'selected' : '' ?>>
+                <option value="<?= $admin->id ?>" <?= (string) $event->user_id === (string) $admin->id ? 'selected' : '' ?>>
                     <?= htmlspecialchars($admin->name) ?>
                 </option>
             <?php endforeach; ?>

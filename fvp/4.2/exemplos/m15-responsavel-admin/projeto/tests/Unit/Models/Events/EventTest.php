@@ -167,6 +167,46 @@ class EventTest extends TestCase
 
         $this->assertFalse($event->save());
         $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
+        $this->assertCount(1, $this->errorsOf($event));
+        $this->assertCount(0, Event::all());
+    }
+
+    /**
+     * Valores que (int) transformaria num id válido (ou em 0) e que não são um id inteiro.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function malformedUserIdProvider(): array
+    {
+        return [
+            'número seguido de letras' => ['{admin}abc'],
+            'só letras' => ['abc'],
+            'decimal' => ['{admin}.5'],
+            'zero' => ['0'],
+            'negativo' => ['-{admin}'],
+        ];
+    }
+
+    #[DataProvider('malformedUserIdProvider')]
+    public function test_malformed_user_id_should_be_invalid(string $value): void
+    {
+        // {admin} vira o id do admin: com (int), '1abc' e '1.5' seriam aceitos como o admin 1.
+        $userId = str_replace('{admin}', (string) $this->admin->id, $value);
+        $event = new Event($this->params(['user_id' => $userId]));
+
+        $this->assertFalse($event->save());
+        $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
+        $this->assertCount(1, $this->errorsOf($event));
+        $this->assertCount(0, Event::all());
+    }
+
+    public function test_numeric_string_user_id_of_admin_should_be_saved_as_integer(): void
+    {
+        $event = new Event($this->params(['user_id' => (string) $this->admin->id]));
+
+        $this->assertTrue($event->save());
+        $this->assertSame($this->admin->id, $event->user_id);
+        $this->assertEquals($this->admin->id, Event::findById($event->id)?->user_id);
     }
 
     public function test_changing_user_id_to_participant_on_update_should_be_invalid(): void

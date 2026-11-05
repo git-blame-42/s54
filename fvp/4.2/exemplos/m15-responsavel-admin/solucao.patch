@@ -1,4 +1,4 @@
-From 8883f05716c38accf65a63d82a93dc48ed4d23ea Mon Sep 17 00:00:00 2001
+From fda346d638156ffeab137df8644b72807d9a9f35 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:10:59 -0300
 Subject: [PATCH] feat: Choose the responsible admin for an event
@@ -8,15 +8,15 @@ the logged admin as default. Event::validates() requires an existing
 admin, so a forged participant or unknown id is rejected instead of
 breaking the foreign key. The show page displays the responsible.
 ---
- app/Controllers/Admin/EventsController.php    |  13 ++-
- app/Models/Event.php                          |  17 ++-
+ app/Controllers/Admin/EventsController.php    |  13 +-
+ app/Models/Event.php                          |  23 +++-
  app/Models/User.php                           |  10 ++
- app/views/admin/events/_form.phtml            |  13 +++
+ app/views/admin/events/_form.phtml            |  13 ++
  app/views/admin/events/show.phtml             |   3 +
- .../admin/events/ChooseResponsibleCest.php    |  38 +++++++
- .../Admin/EventsControllerTest.php            | 103 +++++++++++++++++-
- tests/Unit/Models/Events/EventTest.php        |  57 +++++++++-
- 8 files changed, 247 insertions(+), 7 deletions(-)
+ .../admin/events/ChooseResponsibleCest.php    |  38 ++++++
+ .../Admin/EventsControllerTest.php            | 116 +++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        |  97 ++++++++++++++-
+ 8 files changed, 306 insertions(+), 7 deletions(-)
  create mode 100644 tests/Acceptance/admin/events/ChooseResponsibleCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
@@ -66,7 +66,7 @@ index ca4ada1..8a4c0f4 100644
          $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
      }
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..c5b6d45 100644
+index ba66870..c511e40 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -9,7 +9,7 @@ use PDOException;
@@ -87,7 +87,7 @@ index ba66870..c5b6d45 100644
          Validations::notEmpty('title', $this);
          Validations::notEmpty('description', $this);
          Validations::notEmpty('location', $this);
-@@ -81,6 +83,19 @@ class Event extends Model
+@@ -81,6 +83,25 @@ class Event extends Model
          }
      }
  
@@ -97,11 +97,17 @@ index ba66870..c5b6d45 100644
 +     */
 +    private function validatesUserIsAdmin(): void
 +    {
-+        $user = User::findById((int) $this->user_id);
++        // filter_var e não (int): (int) '1abc' daria 1 e aprovaria o admin 1 com '1abc' indo para o INSERT.
++        $id = filter_var($this->user_id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
++        $user = $id === false ? null : User::findById($id);
 +
 +        if ($user === null || !$user->isAdmin()) {
 +            $this->addError('user_id', 'deve ser um administrador existente!');
++            return;
 +        }
++
++        // Valor conferido: o INSERT/UPDATE recebe o inteiro (ex.: ' 2' ou '+2' do formulário viram 2).
++        $this->user_id = $id;
 +    }
 +
      /**
@@ -129,7 +135,7 @@ index ed68286..49ce35e 100644
      {
          return $this->role === 'admin';
 diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
-index 2e98c21..3a34428 100644
+index 2e98c21..4610d45 100644
 --- a/app/views/admin/events/_form.phtml
 +++ b/app/views/admin/events/_form.phtml
 @@ -7,6 +7,7 @@
@@ -148,7 +154,7 @@ index 2e98c21..3a34428 100644
 +        <label for="event_user_id" class="form-label">Responsável</label>
 +        <select class="form-select<?= $invalid('user_id') ?>" id="event_user_id" name="event[user_id]">
 +            <?php foreach (User::admins() as $admin) : ?>
-+                <option value="<?= $admin->id ?>" <?= (int) $event->user_id === $admin->id ? 'selected' : '' ?>>
++                <option value="<?= $admin->id ?>" <?= (string) $event->user_id === (string) $admin->id ? 'selected' : '' ?>>
 +                    <?= htmlspecialchars($admin->name) ?>
 +                </option>
 +            <?php endforeach; ?>
@@ -218,10 +224,10 @@ index 0000000..5aae5af
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..5ae7a65 100644
+index bc62d1d..4240442 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-@@ -98,19 +98,104 @@ class EventsControllerTest extends ControllerTestCase
+@@ -98,19 +98,117 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertEquals('Evento cadastrado com sucesso!', $_SESSION['flash']['success']);
      }
  
@@ -282,6 +288,19 @@ index bc62d1d..5ae7a65 100644
 +        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
 +    }
 +
++    public function test_create_with_malformed_user_id_is_rejected(): void
++    {
++        // '1abc' com (int) viraria o admin logado; tem de ser recusado.
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['user_id' => "{$this->admin->id}abc"])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('deve ser um administrador existente!', $response);
++    }
++
 +    public function test_create_without_user_id_uses_logged_admin(): void
 +    {
 +        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
@@ -328,7 +347,7 @@ index bc62d1d..5ae7a65 100644
      public function test_create_with_invalid_data_renders_form_with_errors_and_values(): void
      {
          $response = $this->post(
-@@ -299,6 +384,20 @@ class EventsControllerTest extends ControllerTestCase
+@@ -299,6 +397,20 @@ class EventsControllerTest extends ControllerTestCase
          return $event;
      }
  
@@ -350,7 +369,7 @@ index bc62d1d..5ae7a65 100644
      {
          $user = User::findByEmail($email) ?? new User([
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..ce85009 100644
+index f961b4c..6b88598 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -90,7 +90,8 @@ class EventTest extends TestCase
@@ -381,7 +400,7 @@ index f961b4c..ce85009 100644
              if ($event->errors($field) !== null) {
                  $errors[$field] = $event->errors($field);
              }
-@@ -137,6 +140,56 @@ class EventTest extends TestCase
+@@ -137,6 +140,96 @@ class EventTest extends TestCase
          return $errors;
      }
  
@@ -412,6 +431,46 @@ index f961b4c..ce85009 100644
 +
 +        $this->assertFalse($event->save());
 +        $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertCount(0, Event::all());
++    }
++
++    /**
++     * Valores que (int) transformaria num id válido (ou em 0) e que não são um id inteiro.
++     *
++     * @return array<string, array{string}>
++     */
++    public static function malformedUserIdProvider(): array
++    {
++        return [
++            'número seguido de letras' => ['{admin}abc'],
++            'só letras' => ['abc'],
++            'decimal' => ['{admin}.5'],
++            'zero' => ['0'],
++            'negativo' => ['-{admin}'],
++        ];
++    }
++
++    #[DataProvider('malformedUserIdProvider')]
++    public function test_malformed_user_id_should_be_invalid(string $value): void
++    {
++        // {admin} vira o id do admin: com (int), '1abc' e '1.5' seriam aceitos como o admin 1.
++        $userId = str_replace('{admin}', (string) $this->admin->id, $value);
++        $event = new Event($this->params(['user_id' => $userId]));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_numeric_string_user_id_of_admin_should_be_saved_as_integer(): void
++    {
++        $event = new Event($this->params(['user_id' => (string) $this->admin->id]));
++
++        $this->assertTrue($event->save());
++        $this->assertSame($this->admin->id, $event->user_id);
++        $this->assertEquals($this->admin->id, Event::findById($event->id)?->user_id);
 +    }
 +
 +    public function test_changing_user_id_to_participant_on_update_should_be_invalid(): void

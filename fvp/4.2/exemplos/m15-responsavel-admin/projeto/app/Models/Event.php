@@ -89,11 +89,17 @@ class Event extends Model
      */
     private function validatesUserIsAdmin(): void
     {
-        $user = User::findById((int) $this->user_id);
+        // filter_var e não (int): (int) '1abc' daria 1 e aprovaria o admin 1 com '1abc' indo para o INSERT.
+        $id = filter_var($this->user_id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $user = $id === false ? null : User::findById($id);
 
         if ($user === null || !$user->isAdmin()) {
             $this->addError('user_id', 'deve ser um administrador existente!');
+            return;
         }
+
+        // Valor conferido: o INSERT/UPDATE recebe o inteiro (ex.: ' 2' ou '+2' do formulário viram 2).
+        $this->user_id = $id;
     }
 
     /**

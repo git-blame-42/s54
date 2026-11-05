@@ -153,6 +153,19 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
     }
 
+    public function test_create_with_malformed_user_id_is_rejected(): void
+    {
+        // '1abc' com (int) viraria o admin logado; tem de ser recusado.
+        $response = $this->post(
+            action: 'create',
+            controllerName: self::CONTROLLER,
+            params: ['event' => $this->validParams(['user_id' => "{$this->admin->id}abc"])]
+        );
+
+        $this->assertCount(0, Event::all());
+        $this->assertStringContainsString('deve ser um administrador existente!', $response);
+    }
+
     public function test_create_without_user_id_uses_logged_admin(): void
     {
         $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);

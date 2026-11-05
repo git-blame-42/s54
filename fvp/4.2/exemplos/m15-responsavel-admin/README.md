@@ -11,7 +11,7 @@ Branch no clone: `fvp/m15-responsavel-admin`, a partir de `main`
 
 | Commit    | Mensagem                                         |
 |-----------|--------------------------------------------------|
-| `8883f05` | `feat: Choose the responsible admin for an event` |
+| `fda346d` | `feat: Choose the responsible admin for an event` |
 
 ## O que mudou
 
@@ -21,9 +21,13 @@ Branch no clone: `fvp/m15-responsavel-admin`, a partir de `main`
   - `validates()` começa com
     `Validations::notEmpty('user_id', $this) &&
     $this->validatesUserIsAdmin();` (validação do M11);
-  - `validatesUserIsAdmin()`: `User::findById((int) $this->user_id)`;
-    se não existir ou não for admin, erro
-    "deve ser um administrador existente!" no campo `user_id`.
+  - `validatesUserIsAdmin()`: confere o formato com
+    `filter_var($this->user_id, FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 1]])` e só então
+    `User::findById($id)`; formato inválido, usuário inexistente ou
+    não admin dão o erro "deve ser um administrador existente!" no
+    campo `user_id`. Válido, o `user_id` passa a ser o inteiro
+    conferido (o `INSERT` não recebe a string do formulário).
 - `app/Controllers/Admin/EventsController.php`:
   - `new()`: `$event->user_id = $this->currentUser()?->id;` (o
     select abre com o logado);
@@ -33,22 +37,27 @@ Branch no clone: `fvp/m15-responsavel-admin`, a partir de `main`
     gravado no update).
 - `app/views/admin/events/_form.phtml`: `<select id="event_user_id"
   name="event[user_id]">` "Responsável", com `User::admins()`,
-  `selected` no atual e o erro do campo (`is-invalid` +
+  `selected` no atual (comparação `(string) $event->user_id ===
+  (string) $admin->id`) e o erro do campo (`is-invalid` +
   `invalid-feedback`).
 - `app/views/admin/events/show.phtml`: "Responsável" com
   `htmlspecialchars($event->user()->get()->name)`.
 - Testes:
   - `EventTest`: outro admin é válido; Participante e id inexistente
-    são inválidos (só o erro de `user_id`, nada gravado); trocar para
-    Participante na edição é recusado; `User::admins()` só traz
+    são inválidos (os testes conferem que só há o erro de `user_id` e
+    que nada foi gravado); ids mal formados (`'1abc'`, `'abc'`,
+    `'1.5'`, `'0'`, `'-1'`, com o id do admin no lugar do 1) são
+    recusados; string numérica válida é gravada como inteiro; trocar
+    para Participante na edição é recusado; `User::admins()` só traz
     admins. `user_id` entrou na lista de obrigatórios
     (`requiredFieldsProvider`, Evento vazio e `errorsOf`).
   - `EventsControllerTest`: o antigo
     `test_create_ignores_user_id_sent_by_the_form` foi invertido para
     `test_create_with_unknown_user_id_renders_form_with_error` (o form
-    agora manda); outro admin grava e aparece no show; Participante é
-    recusado; sem `user_id` fica o logado; o `new` lista só admins
-    com o logado selecionado; o `update` troca o responsável.
+    agora manda); outro admin grava e aparece no show; Participante e
+    `'<id do admin>abc'` são recusados; sem `user_id` fica o logado;
+    o `new` lista só admins com o logado selecionado; o `update` troca
+    o responsável.
   - `tests/Acceptance/admin/events/ChooseResponsibleCest.php` (novo):
     cria um segundo admin, cadastra escolhendo-o no select, vê o nome
     no show e o select da edição com ele selecionado.
@@ -89,7 +98,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 165, Integration 50, Acceptance 24 (base:
+Resultado obtido: Unit 171, Integration 51, Acceptance 24 (base:
 159 / 45 / 23). PHPCS e PHPStan sem erros. `./run db:populate` sem
 erro (todos os Eventos do populate usam o admin). Schema não mudou.
 
@@ -127,7 +136,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-m15 \
     s50/fvp/4.2/exemplos/m15-responsavel-admin/projeto
 git fetch fvp-m15 fvp/m15-responsavel-admin
-git cherry-pick 8883f05
+git cherry-pick fda346d
 git remote remove fvp-m15
 ```
 
@@ -138,7 +147,7 @@ git fetch \
     s50/fvp/4.2/exemplos/m15-responsavel-admin/solucao.bundle \
     fvp/m15-responsavel-admin:fvp-m15
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 8883f05
+git cherry-pick fda346d
 # opcional, limpa a ref
 git branch -D fvp-m15
 ```
@@ -193,7 +202,13 @@ mudança de schema).
   escolha do formulário (era o comportamento antigo).
 - Apagar o teste que conferia "ignora `user_id` do form": inverta a
   asserção; o caso continua importante (id inválido).
-- `selected` com `===` entre string do banco e `int` do id: nunca
-  casa. Converta (`(int) $event->user_id === $admin->id`).
+- `selected` com `===` entre tipos diferentes: depois de um POST com
+  erro, `$event->user_id` é a string do formulário (`'2'`), e o
+  `id` do admin é `int`; `'2' === 2` nunca casa. Compare as duas
+  como string (`(string) ... === (string) ...`); `(int)` de novo
+  aceitaria `'2abc'` como 2.
+- `(int) $this->user_id` na validação: `(int) '1abc'` é 1, então
+  `'1abc'` passaria como o admin 1 (e iria para o `INSERT`). Use
+  `filter_var(..., FILTER_VALIDATE_INT)`, como no M11.
 - Participante não chega ao formulário (grupo `admin`), mas a
   validação cobre quem forjar o POST.
