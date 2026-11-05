@@ -1,0 +1,1265 @@
+From f9d7cf3d029431365e008523aee2b75402a71b6f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:32:33 -0300
+Subject: [PATCH 1/3] feat: Search, filter and sort admin events together
+
+Event::listingFilters reads q, kind, sort and dir and returns an error for
+each invalid value, which the view shows while the default is used.
+Event::listingPage builds the WHERE (title LIKE with ESCAPE '!' plus the
+kind equality) and the whitelisted ORDER BY with id as tie-breaker. The
+Paginator gets optional where, binds, orderBy and queryParams, runs COUNT
+with the same WHERE, clamps the page to the last one and keeps the
+non-default filters in the page links.
+---
+ app/Controllers/Admin/EventsController.php    |  22 +-
+ app/Models/Event.php                          | 130 +++++++++++
+ app/views/admin/events/index.phtml            |  38 +++-
+ app/views/paginator/_pages.phtml              |  10 +-
+ lib/Paginator.php                             |  52 +++--
+ .../admin/events/SearchEventsCest.php         |  66 ++++++
+ .../Admin/EventsControllerTest.php            | 126 +++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 205 ++++++++++++++++++
+ 8 files changed, 627 insertions(+), 22 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/SearchEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..446e6f8 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,15 +15,18 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
++        [$filters, $errors] = Event::listingFilters($request->getParams());
++
++        $paginator = Event::listingPage(
++            $filters,
++            page: $this->pageParam($request),
++            perPage: self::PER_PAGE,
+             route: 'admin.events.paginate'
+         );
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'title', 'filters', 'errors'));
+     }
+ 
+     public function show(Request $request): void
+@@ -129,6 +132,17 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * Número da página (`/admin/events/page/{page}` ou `?page=`): inteiro maior que zero, senão a 1.
++     * A última página é garantida pelo Paginator.
++     */
++    private function pageParam(Request $request): int
++    {
++        $page = filter_var($request->getParam('page', 1), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
++
++        return is_int($page) ? $page : 1;
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..463d6a7 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\Paginator;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -18,6 +19,8 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ *
++ * @phpstan-type ListingFilters array{q: string, kind: ?string, sort: string, dir: string}
+  */
+ class Event extends Model
+ {
+@@ -44,6 +47,19 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Ordens da listagem (`?sort=`), com o rótulo do formulário; 'id' (cadastro) é o padrão. */
++    public const SORTS = [
++        'id' => 'Cadastro',
++        'title' => 'Título',
++        'starts_on' => 'Data',
++    ];
++
++    /** Direções da listagem (`?dir=`), com o rótulo do formulário; 'asc' é o padrão. */
++    public const DIRS = [
++        'asc' => 'Crescente',
++        'desc' => 'Decrescente',
++    ];
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -144,6 +160,120 @@ class Event extends Model
+         return $this->enrollmentsCount() > 0;
+     }
+ 
++    /**
++     * Lê os parâmetros da listagem (q, kind, sort, dir) como chegaram da requisição.
++     *
++     * Ausente ou vazio: sem busca, todos os tipos, ordem de cadastro, crescente. Inválido: não some
++     * calado; ganha uma mensagem na chave do parâmetro e o valor padrão no lugar.
++     *
++     * @param array<mixed> $params
++     * @return array{0: ListingFilters, 1: array<string, string>}
++     */
++    public static function listingFilters(array $params): array
++    {
++        $errors = [];
++
++        $q = $params['q'] ?? null;
++        $q = is_string($q) ? trim($q) : $q;
++        $qValid = $q === null || (is_string($q) && mb_strlen($q) <= 255);
++        if (!$qValid) {
++            $errors['q'] = 'Busca inválida (até 255 caracteres).';
++        }
++
++        $kind = self::choice($params['kind'] ?? null, self::KINDS);
++        $sort = self::choice($params['sort'] ?? null, self::SORTS);
++        $dir = self::choice($params['dir'] ?? null, self::DIRS);
++        $checks = [
++            'kind' => [$kind, 'Tipo inválido.'],
++            'sort' => [$sort, 'Ordenação inválida.'],
++            'dir' => [$dir, 'Direção inválida.'],
++        ];
++        foreach ($checks as $param => [$value, $message]) {
++            if ($value === false) {
++                $errors[$param] = $message;
++            }
++        }
++
++        $filters = [
++            'q' => $qValid && is_string($q) ? $q : '',
++            'kind' => is_string($kind) ? $kind : null,
++            'sort' => is_string($sort) ? $sort : 'id',
++            'dir' => is_string($dir) ? $dir : 'asc',
++        ];
++
++        return [$filters, $errors];
++    }
++
++    /**
++     * Uma página da listagem com busca por título, filtro por tipo e ordenação, tudo junto.
++     *
++     * O WHERE e o ORDER BY são montados aqui; o Paginator usa o mesmo WHERE (e os mesmos valores)
++     * no COUNT e na consulta da página, que recebe o ORDER BY e o LIMIT/OFFSET.
++     *
++     * @param ListingFilters $filters valores lidos por listingFilters()
++     */
++    public static function listingPage(array $filters, int $page, int $perPage, string $route): Paginator
++    {
++        $where = '';
++        $binds = [];
++        if ($filters['q'] !== '') {
++            // '!' escapa os curingas do LIKE: "100%" procura o texto "100%", não "100" seguido de qualquer coisa.
++            $term = strtr($filters['q'], ['!' => '!!', '%' => '!%', '_' => '!_']);
++            $where = "title LIKE :q ESCAPE '!'";
++            $binds['q'] = "%{$term}%";
++        }
++
++        // Nome de coluna não aceita bind: só entra o que está na lista. O id desempata valores iguais.
++        $column = array_key_exists($filters['sort'], self::SORTS) ? $filters['sort'] : 'id';
++        $dir = $filters['dir'] === 'desc' ? 'DESC' : 'ASC';
++        $order = $column === 'id' ? "id {$dir}" : "{$column} {$dir}, id ASC";
++        $kind = $filters['kind'];
++
++        return new Paginator(
++            class: static::class,
++            page: $page,
++            per_page: $perPage,
++            table: static::$table,
++            attributes: static::$columns,
++            conditions: $kind !== null ? ['kind' => $kind] : [],
++            route: $route,
++            where: $where,
++            binds: $binds,
++            orderBy: $order,
++            queryParams: self::listingQuery($filters),
++        );
++    }
++
++    /**
++     * Query string dos links de página: só o que difere do padrão.
++     *
++     * @param ListingFilters $filters
++     * @return array<string, string>
++     */
++    public static function listingQuery(array $filters): array
++    {
++        return array_filter([
++            'q' => $filters['q'],
++            'kind' => $filters['kind'] ?? '',
++            'sort' => $filters['sort'] === 'id' ? '' : $filters['sort'],
++            'dir' => $filters['dir'] === 'asc' ? '' : $filters['dir'],
++        ], fn(string $value) => $value !== '');
++    }
++
++    /**
++     * Valor de uma lista fechada: null se ausente ou vazio, false se inválido.
++     *
++     * @param array<string, string> $allowed
++     */
++    private static function choice(mixed $value, array $allowed): string|false|null
++    {
++        if ($value === null || $value === '') {
++            return null;
++        }
++
++        return is_string($value) && array_key_exists($value, $allowed) ? $value : false;
++    }
++
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+      * retorna false e registra o motivo em errors('base').
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..fd369a7 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,9 +1,45 @@
++<?php use App\Models\Event; ?>
++
+ <div class="mb-3">
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<form method="get" action="<?= route('admin.events.index') ?>" class="d-flex gap-2 mb-3">
++    <label class="visually-hidden" for="filter_q">Buscar por título</label>
++    <input class="form-control" type="search" id="filter_q" name="q" placeholder="Título"
++           value="<?= htmlspecialchars($filters['q']) ?>">
++
++    <label class="visually-hidden" for="filter_kind">Tipo</label>
++    <select class="form-select" id="filter_kind" name="kind">
++        <option value="">Todos os tipos</option>
++        <?php foreach (Event::KINDS as $value => $label) : ?>
++            <option value="<?= $value ?>" <?= $filters['kind'] === $value ? 'selected' : '' ?>><?= $label ?></option>
++        <?php endforeach; ?>
++    </select>
++
++    <label class="visually-hidden" for="filter_sort">Ordenar por</label>
++    <select class="form-select" id="filter_sort" name="sort">
++        <?php foreach (Event::SORTS as $value => $label) : ?>
++            <option value="<?= $value ?>" <?= $filters['sort'] === $value ? 'selected' : '' ?>><?= $label ?></option>
++        <?php endforeach; ?>
++    </select>
++
++    <label class="visually-hidden" for="filter_dir">Direção</label>
++    <select class="form-select" id="filter_dir" name="dir">
++        <?php foreach (Event::DIRS as $value => $label) : ?>
++            <option value="<?= $value ?>" <?= $filters['dir'] === $value ? 'selected' : '' ?>><?= $label ?></option>
++        <?php endforeach; ?>
++    </select>
++
++    <button type="submit" class="btn btn-secondary">Filtrar</button>
++</form>
++
++<?php foreach ($errors as $error) : ?>
++    <div class="alert alert-warning" role="alert"><?= htmlspecialchars($error) ?></div>
++<?php endforeach; ?>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= Event::listingQuery($filters) !== [] ? 'Nenhum evento encontrado.' : 'Nenhum evento cadastrado.' ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..b9b680a 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -1,9 +1,13 @@
++<?php
++// URL de cada link: a página mais os parâmetros guardados no Paginator (busca, filtro, ordenação).
++$pageUrl = fn (int $p) => route($paginator->getRouteName(), ['page' => $p] + $paginator->queryParams());
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +17,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..5981cac 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -15,6 +15,13 @@ class Paginator
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions filtros por igualdade (WHERE coluna = valor)
++     * @param string $where condição SQL extra, com placeholders nomeados, somada às de $conditions com AND
++     * @param array<string, mixed> $binds valores dos placeholders de $where
++     * @param string|null $orderBy cláusula do ORDER BY; quem chama monta a partir de uma lista fechada
++     * @param array<string, string> $queryParams parâmetros mantidos na query string dos links de página
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,9 +29,15 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private string $where = '',
++        private array $binds = [],
++        private ?string $orderBy = null,
++        private array $queryParams = []
+     ) {
+         $this->loadTotals();
++        // Página além da última (ex.: depois de filtrar) vira a última; sem registros, a 1.
++        $this->page = max(1, min($this->page, $this->totalOfPages));
+         $this->loadRegisters();
+     }
+ 
+@@ -38,6 +51,16 @@ class Paginator
+         return $this->per_page;
+     }
+ 
++    /**
++     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.
++     *
++     * @return array<string, string>
++     */
++    public function queryParams(): array
++    {
++        return $this->queryParams;
++    }
++
+     public function totalOfRegistersOfPage(): int
+     {
+         return $this->totalOfRegistersOfPage;
+@@ -120,10 +143,12 @@ class Paginator
+         $this->offset = $this->per_page * ($this->page - 1);
+ 
+         $attributes = implode(', ', $this->attributes);
++        $order = $this->orderBy !== null ? "ORDER BY {$this->orderBy}" : '';
+ 
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$order}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+@@ -144,27 +169,26 @@ class Paginator
+         }
+     }
+ 
++    /**
++     * O mesmo WHERE serve ao COUNT (loadTotals) e à página (loadRegisters).
++     */
+     private function buildConditions(): string
+     {
+-        if (empty($this->conditions)) {
+-            return '';
++        $parts = array_map(
++            fn($column) => "{$column} = :{$column}",
++            array_keys($this->conditions)
++        );
++        if ($this->where !== '') {
++            $parts[] = "({$this->where})";
+         }
+ 
+-        $sqlConditions = array_map(function ($column) {
+-            return "{$column} = :{$column}";
+-        }, array_keys($this->conditions));
+-
+-        return ' WHERE ' . implode(' AND ', $sqlConditions);
++        return $parts === [] ? '' : ' WHERE ' . implode(' AND ', $parts);
+     }
+ 
+     private function bindConditions(PDOStatement $stmt): void
+     {
+-        if (empty($this->conditions)) {
+-            return;
+-        }
+-
+-        foreach ($this->conditions as $column => $value) {
+-            $stmt->bindValue($column, $value);
++        foreach ($this->conditions + $this->binds as $name => $value) {
++            $stmt->bindValue($name, $value);
+         }
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/SearchEventsCest.php b/tests/Acceptance/admin/events/SearchEventsCest.php
+new file mode 100644
+index 0000000..0b28b3d
+--- /dev/null
++++ b/tests/Acceptance/admin/events/SearchEventsCest.php
+@@ -0,0 +1,66 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Busca por título, filtro por tipo e ordenação escolhida, juntos e mantidos ao trocar de página.
++ */
++class SearchEventsCest extends BaseEventsCest
++{
++    public function searchSortPaginateAndFilter(AcceptanceTester $page): void
++    {
++        $page->wantTo('Buscar, ordenar e filtrar a listagem, mantendo tudo ao paginar');
++        $page->amOnPage('/admin/events');
++
++        // "1" casa o Evento 01 e os Eventos 10 a 16 ("Evento 1" não casaria o 01).
++        $page->fillField('#filter_q', '1');
++        $page->selectOption('#filter_sort', 'Título');
++        $page->selectOption('#filter_dir', 'Decrescente');
++        $page->click('Filtrar');
++        $page->see('Mostrando 1 - 5 de 8');
++        $this->seeTitlesInOrder($page, [16, 15, 14, 13, 12]);
++
++        // Página 2: busca e ordenação continuam na URL e na tela.
++        $page->click('2', '.pagination');
++        $page->seeInCurrentUrl('/admin/events/page/2?q=1&sort=title&dir=desc');
++        $page->see('Mostrando 6 - 8 de 8');
++        $this->seeTitlesInOrder($page, [11, 10, 1]);
++        $page->see($this->title(1), 'table tbody tr:last-child');
++        $page->seeInField('#filter_q', '1');
++        $page->seeOptionIsSelected('#filter_sort', 'Título');
++        $page->seeOptionIsSelected('#filter_dir', 'Decrescente');
++
++        // Filtro por tipo junto: Palestras são os Eventos 01, 05, 09 e 13; só 13 e 01 casam a busca.
++        $page->selectOption('#filter_kind', 'Palestra');
++        $page->click('Filtrar');
++        $page->see('Mostrando 1 - 2 de 2');
++        $this->seeTitlesInOrder($page, [13, 1]);
++    }
++
++    public function invalidParamShowsWarningAndUsesDefault(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ver um aviso quando a listagem recebe um parâmetro inválido');
++        $page->amOnPage('/admin/events?kind=party&sort=title&dir=desc');
++
++        $page->see('Tipo inválido.', '.alert-warning');
++        // O tipo recusado volta a "Todos os tipos"; a ordenação válida continua valendo.
++        $page->seeOptionIsSelected('#filter_kind', 'Todos os tipos');
++        $page->see('Mostrando 1 - 5 de 16');
++        $page->see($this->title(16), 'table tbody tr:first-child');
++    }
++
++    /**
++     * Linhas da tabela: exatamente estes Eventos, nesta ordem.
++     *
++     * @param array<int, int> $numbers
++     */
++    private function seeTitlesInOrder(AcceptanceTester $page, array $numbers): void
++    {
++        $page->seeNumberOfElements('table tbody tr', count($numbers));
++        foreach ($numbers as $index => $number) {
++            $page->see($this->title($number), 'table tbody tr:nth-child(' . ($index + 1) . ')');
++        }
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..28fc6b0 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,132 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_keeps_search_kind_and_sort_in_links(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Oficina {$i}"]);
++        }
++        $this->createEvent(['title' => 'Oficina X', 'kind' => 'lecture']);
++        $this->createEvent(['title' => 'Palestra 1']);
++
++        $page1 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['q' => 'Oficina', 'kind' => 'workshop', 'sort' => 'title', 'dir' => 'desc']
++        );
++
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
++        $this->assertStringNotContainsString('Oficina X', $page1);
++        $this->assertStringNotContainsString('Palestra 1', $page1);
++        $this->assertLessThan(strpos($page1, 'Oficina 3'), strpos($page1, 'Oficina 7'));
++        $this->assertStringContainsString(
++            '/admin/events/page/2?q=Oficina&kind=workshop&sort=title&dir=desc',
++            $page1
++        );
++        // O formulário volta preenchido.
++        $this->assertStringContainsString('value="Oficina"', $page1);
++        $this->assertMatchesRegularExpression('/<option value="workshop"\s+selected>/', $page1);
++        $this->assertMatchesRegularExpression('/<option value="title"\s+selected>/', $page1);
++        $this->assertMatchesRegularExpression('/<option value="desc"\s+selected>/', $page1);
++    }
++
++    public function test_index_second_page_keeps_search_kind_and_sort(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Oficina {$i}"]);
++        }
++        $this->createEvent(['title' => 'Oficina X', 'kind' => 'lecture']);
++
++        $page2 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['q' => 'Oficina', 'kind' => 'workshop', 'sort' => 'title', 'dir' => 'desc', 'page' => '2']
++        );
++
++        $this->assertStringContainsString('Mostrando 6 - 7 de 7', $page2);
++        $this->assertLessThan(strpos($page2, 'Oficina 1'), strpos($page2, 'Oficina 2'));
++        $this->assertStringNotContainsString('Oficina 3', $page2);
++        $this->assertStringContainsString(
++            '/admin/events/page/1?q=Oficina&kind=workshop&sort=title&dir=desc',
++            $page2
++        );
++    }
++
++    public function test_index_with_invalid_sort_shows_warning_and_registration_order(): void
++    {
++        $this->createEvent(['title' => 'Bravo']);
++        $this->createEvent(['title' => 'Alfa']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'description']);
++
++        $this->assertStringContainsString(
++            '<div class="alert alert-warning" role="alert">Ordenação inválida.</div>',
++            $response
++        );
++        $this->assertLessThan(strpos($response, 'Alfa'), strpos($response, 'Bravo'));
++        $this->assertMatchesRegularExpression('/<option value="id"\s+selected>/', $response);
++        $this->assertStringNotContainsString('sort=description', $response);
++    }
++
++    public function test_index_shows_every_invalid_param_and_keeps_the_valid_ones(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git', 'kind' => 'workshop']);
++        $this->createEvent(['title' => 'Palestra de Git', 'kind' => 'lecture']);
++        $this->createEvent(['title' => 'Oficina de Docker', 'kind' => 'workshop']);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['q' => 'Git', 'kind' => 'party', 'sort' => 'title', 'dir' => ['desc']]
++        );
++
++        $this->assertStringContainsString('Tipo inválido.', $response);
++        $this->assertStringContainsString('Direção inválida.', $response);
++        $this->assertSame(2, substr_count($response, 'alert-warning'));
++        $this->assertStringNotContainsString('party', $response);
++        // Busca e ordenação válidas continuam valendo; tipo e direção voltam ao padrão.
++        $this->assertLessThan(strpos($response, 'Palestra de Git'), strpos($response, 'Oficina de Git'));
++        $this->assertStringNotContainsString('Oficina de Docker', $response);
++    }
++
++    public function test_index_without_params_keeps_registration_order_and_clean_links(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => "Evento {$i}", 'starts_on' => date('Y-m-d', strtotime('+' . (20 - $i) . ' days'))]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertLessThan(strpos($response, 'Evento 5'), strpos($response, 'Evento 1'));
++        $this->assertStringContainsString('href="/admin/events/page/2"', $response);
++        $this->assertStringNotContainsString('alert-warning', $response);
++    }
++
++    public function test_index_search_escapes_the_term_and_shows_message_without_results(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['q' => '<b>"x"</b>']);
++
++        $this->assertStringContainsString('Nenhum evento encontrado.', $response);
++        $this->assertStringContainsString('value="&lt;b&gt;&quot;x&quot;&lt;/b&gt;"', $response);
++        $this->assertStringNotContainsString('<b>"x"</b>', $response);
++        $this->assertStringNotContainsString('Oficina de Git', $response);
++    }
++
++    public function test_index_page_param_must_be_a_positive_integer(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $text = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '2abc']);
++        $beyond = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '9']);
++
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $text);
++        $this->assertStringContainsString('Mostrando 6 - 7 de 7', $beyond);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..62b739d 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,211 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    /* ------------------- listagem: busca, filtro e ordenação ------------------- */
++
++    /**
++     * Filtros já validados, com o padrão no que não foi informado.
++     *
++     * @param array<string, mixed> $params
++     * @return array{q: string, kind: ?string, sort: string, dir: string}
++     */
++    private function filters(array $params = []): array
++    {
++        [$filters, $errors] = Event::listingFilters($params);
++        $this->assertSame([], $errors);
++
++        return $filters;
++    }
++
++    /**
++     * @param array<Event> $events
++     * @return array<int, string>
++     */
++    private function titles(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_listing_filters_should_default_when_params_are_missing_or_empty(): void
++    {
++        $default = ['q' => '', 'kind' => null, 'sort' => 'id', 'dir' => 'asc'];
++
++        $this->assertSame([$default, []], Event::listingFilters([]));
++        $this->assertSame(
++            [$default, []],
++            Event::listingFilters(['q' => '  ', 'kind' => '', 'sort' => '', 'dir' => ''])
++        );
++    }
++
++    public function test_listing_filters_should_accept_valid_params(): void
++    {
++        $this->assertSame(
++            [['q' => 'git', 'kind' => 'workshop', 'sort' => 'starts_on', 'dir' => 'desc'], []],
++            Event::listingFilters(['q' => ' git ', 'kind' => 'workshop', 'sort' => 'starts_on', 'dir' => 'desc'])
++        );
++    }
++
++    /**
++     * @return array<string, array{string, mixed, string}>
++     */
++    public static function invalidListingParamProvider(): array
++    {
++        return [
++            'tipo fora da lista' => ['kind', 'party', 'Tipo inválido.'],
++            'coluna real fora da lista' => ['sort', 'description', 'Ordenação inválida.'],
++            'coluna com SQL' => ['sort', 'id; DROP TABLE events', 'Ordenação inválida.'],
++            'direção maiúscula' => ['dir', 'DESC', 'Direção inválida.'],
++            'sort como array' => ['sort', ['title'], 'Ordenação inválida.'],
++            'busca como array' => ['q', ['x'], 'Busca inválida (até 255 caracteres).'],
++            'busca com 256 caracteres' => ['q', str_repeat('a', 256), 'Busca inválida (até 255 caracteres).'],
++        ];
++    }
++
++    #[DataProvider('invalidListingParamProvider')]
++    public function test_listing_filters_should_report_invalid_param_and_use_the_default(
++        string $param,
++        mixed $value,
++        string $message
++    ): void {
++        $default = ['q' => '', 'kind' => null, 'sort' => 'id', 'dir' => 'asc'];
++
++        [$filters, $errors] = Event::listingFilters([$param => $value]);
++
++        $this->assertSame([$param => $message], $errors);
++        $this->assertSame($default, $filters);
++    }
++
++    public function test_listing_filters_should_keep_valid_params_next_to_an_invalid_one(): void
++    {
++        [$filters, $errors] = Event::listingFilters(['q' => 'git', 'kind' => 'party', 'sort' => 'title', 'dir' => 'up']);
++
++        $this->assertSame(['kind' => 'Tipo inválido.', 'dir' => 'Direção inválida.'], $errors);
++        $this->assertSame(['q' => 'git', 'kind' => null, 'sort' => 'title', 'dir' => 'asc'], $filters);
++    }
++
++    public function test_listing_filters_should_accept_a_search_with_255_characters(): void
++    {
++        $this->assertSame(str_repeat('á', 255), $this->filters(['q' => str_repeat('á', 255)])['q']);
++    }
++
++    public function test_listing_page_should_search_filter_and_count_with_the_same_where(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Oficina {$i}", 'kind' => 'workshop']);
++        }
++        $this->createEvent(['title' => 'Oficina na palestra', 'kind' => 'lecture']);
++        $this->createEvent(['title' => 'Palestra 1', 'kind' => 'workshop']);
++        $this->createEvent(['title' => 'Palestra 2', 'kind' => 'lecture']);
++
++        $filters = $this->filters(['q' => 'Oficina', 'kind' => 'workshop']);
++        $page1 = Event::listingPage($filters, 1, 5, 'admin.events.paginate');
++        $page2 = Event::listingPage($filters, 2, 5, 'admin.events.paginate');
++
++        $this->assertSame(7, $page1->totalOfRegisters());
++        $this->assertSame(2, $page1->totalOfPages());
++        $this->assertSame(['Oficina 1', 'Oficina 2', 'Oficina 3', 'Oficina 4', 'Oficina 5'], $this->titles($page1->registers()));
++        $this->assertSame(['Oficina 6', 'Oficina 7'], $this->titles($page2->registers()));
++        $this->assertSame(7, $page2->totalOfRegisters());
++        $this->assertSame(['q' => 'Oficina', 'kind' => 'workshop'], $page1->queryParams());
++    }
++
++    public function test_listing_page_should_ignore_case_in_the_search(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++        $this->createEvent(['title' => 'Palestra de Docker']);
++
++        $page = Event::listingPage($this->filters(['q' => 'GIT']), 1, 5, 'admin.events.paginate');
++
++        $this->assertSame(['Oficina de Git'], $this->titles($page->registers()));
++    }
++
++    public function test_listing_page_should_sort_by_the_chosen_column_and_break_ties_by_id(): void
++    {
++        $this->createEvent(['title' => 'Bravo']);
++        $this->createEvent(['title' => 'Delta']);
++        $this->createEvent(['title' => 'Alfa']);
++        $this->createEvent(['title' => 'Bravo']);
++        $bravos = array_map(fn(Event $event) => $event->id, Event::where(['title' => 'Bravo']));
++
++        $desc = Event::listingPage($this->filters(['sort' => 'title', 'dir' => 'desc']), 1, 5, 'admin.events.paginate');
++        $asc = Event::listingPage($this->filters(['sort' => 'title']), 1, 5, 'admin.events.paginate');
++        $default = Event::listingPage($this->filters(), 1, 5, 'admin.events.paginate');
++
++        $this->assertSame(['Delta', 'Bravo', 'Bravo', 'Alfa'], $this->titles($desc->registers()));
++        $this->assertSame(['Alfa', 'Bravo', 'Bravo', 'Delta'], $this->titles($asc->registers()));
++        // Títulos iguais saem por id, nas duas direções.
++        $this->assertSame($bravos, [$desc->registers()[1]->id, $desc->registers()[2]->id]);
++        $this->assertSame($bravos, [$asc->registers()[1]->id, $asc->registers()[2]->id]);
++        $this->assertSame(['Bravo', 'Delta', 'Alfa', 'Bravo'], $this->titles($default->registers()));
++    }
++
++    public function test_listing_page_should_sort_by_date_descending(): void
++    {
++        $this->createEvent(['title' => 'Daqui a 10 dias', 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
++        $this->createEvent(['title' => 'Daqui a 30 dias', 'starts_on' => date('Y-m-d', strtotime('+30 days'))]);
++        $this->createEvent(['title' => 'Daqui a 20 dias', 'starts_on' => date('Y-m-d', strtotime('+20 days'))]);
++
++        $page = Event::listingPage($this->filters(['sort' => 'starts_on', 'dir' => 'desc']), 1, 5, 'admin.events.paginate');
++
++        $this->assertSame(['Daqui a 30 dias', 'Daqui a 20 dias', 'Daqui a 10 dias'], $this->titles($page->registers()));
++    }
++
++    public function test_listing_page_should_treat_percent_and_underscore_as_literal_text(): void
++    {
++        $this->createEvent(['title' => '100% prático']);
++        $this->createEvent(['title' => '100 dias de código']);
++        $this->createEvent(['title' => 'Variável a_b']);
++        $this->createEvent(['title' => 'Variável axb']);
++        $this->createEvent(['title' => 'Atenção! Vagas']);
++
++        $percent = Event::listingPage($this->filters(['q' => '100%']), 1, 5, 'admin.events.paginate');
++        $underscore = Event::listingPage($this->filters(['q' => 'a_b']), 1, 5, 'admin.events.paginate');
++        $bang = Event::listingPage($this->filters(['q' => 'o! V']), 1, 5, 'admin.events.paginate');
++        $injection = Event::listingPage($this->filters(['q' => "' OR '1'='1"]), 1, 5, 'admin.events.paginate');
++
++        $this->assertSame(['100% prático'], $this->titles($percent->registers()));
++        $this->assertSame(['Variável a_b'], $this->titles($underscore->registers()));
++        $this->assertSame(['Atenção! Vagas'], $this->titles($bang->registers()));
++        $this->assertSame(0, $injection->totalOfRegisters());
++    }
++
++    public function test_listing_page_beyond_the_last_should_become_the_last(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Oficina {$i}"]);
++        }
++
++        $page = Event::listingPage($this->filters(['q' => 'Oficina']), 9, 5, 'admin.events.paginate');
++        $empty = Event::listingPage($this->filters(['q' => 'nada']), 3, 5, 'admin.events.paginate');
++
++        $this->assertSame(2, $page->getPage());
++        $this->assertSame(['Oficina 6', 'Oficina 7'], $this->titles($page->registers()));
++        $this->assertSame(1, $empty->getPage());
++        $this->assertSame([], $empty->registers());
++    }
++
++    public function test_listing_page_should_not_trust_unchecked_sort_and_dir(): void
++    {
++        $this->createEvent(['title' => 'Bravo']);
++        $this->createEvent(['title' => 'Alfa']);
++
++        $filters = ['q' => '', 'kind' => null, 'sort' => 'title; DROP TABLE events', 'dir' => 'DESC; --'];
++        $page = Event::listingPage($filters, 1, 5, 'admin.events.paginate');
++
++        $this->assertSame(['Bravo', 'Alfa'], $this->titles($page->registers()));
++        $this->assertCount(2, Event::all());
++    }
++
++    public function test_listing_query_should_keep_only_what_differs_from_the_default(): void
++    {
++        $this->assertSame([], Event::listingQuery($this->filters()));
++        $this->assertSame(
++            ['q' => '50%', 'kind' => 'lecture', 'sort' => 'starts_on'],
++            Event::listingQuery($this->filters(['q' => '50%', 'kind' => 'lecture', 'sort' => 'starts_on', 'dir' => 'asc']))
++        );
++        $this->assertSame(['dir' => 'desc'], Event::listingQuery($this->filters(['sort' => 'id', 'dir' => 'desc'])));
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 34b8b3ecdd90307d74679b9a45e02eaa04f50f7a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:15:33 -0300
+Subject: [PATCH 2/3] feat: Return JSON for admin events listing
+
+When the client sends Accept: application/json, EventsController::index renders admin/events/index.json.php through renderJson with the page events, the page number and the total; otherwise it renders the HTML listing.
+---
+ app/Controllers/Admin/EventsController.php    |  6 +++
+ app/views/admin/events/index.json.php         | 23 +++++++++
+ tests/Integration/Access/EventsAccessTest.php | 22 +++++++++
+ .../Admin/EventsControllerTest.php            | 48 +++++++++++++++++++
+ 4 files changed, 99 insertions(+)
+ create mode 100644 app/views/admin/events/index.json.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index 446e6f8..564356a 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -25,6 +25,12 @@ class EventsController extends Controller
+         );
+         $events = $paginator->registers();
+ 
++        // Mesma rota, duas representações: JSON quando o cliente pede (Accept: application/json).
++        if ($request->acceptJson()) {
++            $this->renderJson('admin/events/index', compact('events', 'paginator'));
++            return;
++        }
++
+         $title = 'Eventos';
+         $this->render('admin/events/index', compact('events', 'paginator', 'title', 'filters', 'errors'));
+     }
+diff --git a/app/views/admin/events/index.json.php b/app/views/admin/events/index.json.php
+new file mode 100644
+index 0000000..f6d9bca
+--- /dev/null
++++ b/app/views/admin/events/index.json.php
+@@ -0,0 +1,23 @@
++<?php
++
++/**
++ * Listagem de Eventos em JSON (usada pelo renderJson quando Accept: application/json).
++ * Campos um a um: nunca serializar o objeto inteiro.
++ *
++ * @var array<\App\Models\Event> $events
++ * @var \Lib\Paginator $paginator
++ */
++
++$json['events'] = array_map(fn(\App\Models\Event $event) => [
++    'id' => $event->id,
++    'title' => $event->title,
++    'kind' => $event->kind,
++    'modality' => $event->modality,
++    'starts_on' => $event->starts_on,
++    'location' => $event->location,
++    'capacity' => (int) $event->capacity,
++    'enrollments' => $event->enrollmentsCount(),
++    'available_spots' => $event->availableSpots(),
++], $events);
++$json['page'] = $paginator->getPage();
++$json['total'] = $paginator->totalOfRegisters();
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..5a2b949 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,28 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_events_index_as_json_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->get('/admin/events', ['headers' => ['Accept' => 'application/json']]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_admin_should_get_events_index_as_json(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get('/admin/events', ['headers' => ['Accept' => 'application/json']]);
++        $json = json_decode((string) $response->getBody(), true);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringStartsWith('application/json', $response->getHeaderLine('Content-Type'));
++        $this->assertIsArray($json);
++        $this->assertSame('Palestra de Acesso', $json['events'][0]['title']);
++        $this->assertSame(1, $json['total']);
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index 28fc6b0..9ad6ddd 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -193,6 +193,54 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_returns_json_when_client_accepts_json(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}", 'capacity' => 10]);
++        }
++        $this->enroll(Event::findBy(['title' => 'Evento 1']));
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $json = json_decode($response, true);
++
++        $this->assertIsArray($json);
++        $this->assertSame(1, $json['page']);
++        $this->assertSame(7, $json['total']);
++        $this->assertCount(5, $json['events']);
++        $this->assertSame('Evento 1', $json['events'][0]['title']);
++        $this->assertSame('workshop', $json['events'][0]['kind']);
++        $this->assertSame(10, $json['events'][0]['capacity']);
++        $this->assertSame(1, $json['events'][0]['enrollments']);
++        $this->assertSame(9, $json['events'][0]['available_spots']);
++        $this->assertStringNotContainsString('<table', $response);
++    }
++
++    public function test_index_returns_json_for_the_requested_page(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++        $json = json_decode($response, true);
++
++        $this->assertIsArray($json);
++        $this->assertSame(2, $json['page']);
++        $this->assertSame(['Evento 6', 'Evento 7'], array_column($json['events'], 'title'));
++    }
++
++    public function test_index_renders_html_without_json_accept_header(): void
++    {
++        $this->createEvent(['title' => 'Evento HTML']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<table', $response);
++        $this->assertNull(json_decode($response, true));
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 88ed8e170079c8c08966b3fcd7992f0797530774 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:44:57 -0300
+Subject: [PATCH 3/3] feat: Search and sort the admin events JSON listing
+
+The JSON listing reuses Event::listingFilters and Event::listingPage, so
+it accepts q, kind, sort and dir and returns per_page, total, total_pages
+and the applied filters along with the events. Invalid params on a JSON
+request answer 422 with the errors keyed by param, before querying; the
+HTML listing keeps the warning and the defaults.
+---
+ app/Controllers/Admin/EventsController.php    |   9 +-
+ app/views/admin/events/index.json.php         |  12 ++
+ tests/Integration/Access/EventsAccessTest.php |  41 +++++++
+ .../Admin/EventsControllerTest.php            | 109 ++++++++++++++++++
+ 4 files changed, 170 insertions(+), 1 deletion(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index 564356a..cacd235 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -17,6 +17,13 @@ class EventsController extends Controller
+     {
+         [$filters, $errors] = Event::listingFilters($request->getParams());
+ 
++        // Quem pede JSON é um programa: parâmetro inválido responde 422 com os erros, antes de consultar.
++        if ($errors !== [] && $request->acceptJson()) {
++            http_response_code(422);
++            $this->renderJson('admin/events/index', compact('errors'));
++            return;
++        }
++
+         $paginator = Event::listingPage(
+             $filters,
+             page: $this->pageParam($request),
+@@ -27,7 +34,7 @@ class EventsController extends Controller
+ 
+         // Mesma rota, duas representações: JSON quando o cliente pede (Accept: application/json).
+         if ($request->acceptJson()) {
+-            $this->renderJson('admin/events/index', compact('events', 'paginator'));
++            $this->renderJson('admin/events/index', compact('events', 'paginator', 'filters', 'errors'));
+             return;
+         }
+ 
+diff --git a/app/views/admin/events/index.json.php b/app/views/admin/events/index.json.php
+index f6d9bca..b5adfc6 100644
+--- a/app/views/admin/events/index.json.php
++++ b/app/views/admin/events/index.json.php
+@@ -4,10 +4,19 @@
+  * Listagem de Eventos em JSON (usada pelo renderJson quando Accept: application/json).
+  * Campos um a um: nunca serializar o objeto inteiro.
+  *
++ * Com parâmetro inválido (status 422) só `$errors` chega aqui: o corpo leva só os erros.
++ *
++ * @var array<string, string> $errors
+  * @var array<\App\Models\Event> $events
+  * @var \Lib\Paginator $paginator
++ * @var array{q: string, kind: ?string, sort: string, dir: string} $filters
+  */
+ 
++if ($errors !== []) {
++    $json['errors'] = $errors;
++    return;
++}
++
+ $json['events'] = array_map(fn(\App\Models\Event $event) => [
+     'id' => $event->id,
+     'title' => $event->title,
+@@ -20,4 +29,7 @@ $json['events'] = array_map(fn(\App\Models\Event $event) => [
+     'available_spots' => $event->availableSpots(),
+ ], $events);
+ $json['page'] = $paginator->getPage();
++$json['per_page'] = $paginator->perPage();
+ $json['total'] = $paginator->totalOfRegisters();
++$json['total_pages'] = $paginator->totalOfPages();
++$json['filters'] = $filters;
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 5a2b949..1c93ae8 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -194,6 +194,47 @@ class EventsAccessTest extends TestCase
+         $this->assertSame(1, $json['total']);
+     }
+ 
++    public function test_admin_should_get_searched_events_as_json_with_totals(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get('/admin/events?q=acesso&sort=title&dir=desc', [
++            'headers' => ['Accept' => 'application/json'],
++        ]);
++        $json = json_decode((string) $response->getBody(), true);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertIsArray($json);
++        $this->assertSame(['Palestra de Acesso'], array_column($json['events'], 'title'));
++        $this->assertSame(1, $json['total']);
++        $this->assertSame(1, $json['total_pages']);
++    }
++
++    public function test_admin_should_get_422_with_errors_for_invalid_json_listing_params(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get('/admin/events?sort=x', [
++            'headers' => ['Accept' => 'application/json'],
++            'http_errors' => false,
++        ]);
++        $json = json_decode((string) $response->getBody(), true);
++
++        $this->assertEquals(422, $response->getStatusCode());
++        $this->assertStringStartsWith('application/json', $response->getHeaderLine('Content-Type'));
++        $this->assertSame(['errors' => ['sort' => 'Ordenação inválida.']], $json);
++    }
++
++    public function test_admin_should_get_html_with_status_200_for_invalid_listing_params(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get('/admin/events?sort=x', ['http_errors' => false]);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Ordenação inválida.', (string) $response->getBody());
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index 9ad6ddd..84da8f5 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -18,6 +18,8 @@ class EventsControllerTest extends ControllerTestCase
+     {
+         parent::setUp();
+         $_SESSION['flash'] = [];
++        // O status HTTP fica no processo do PHPUnit: sem zerar, um teste herdaria o 422 do anterior.
++        http_response_code(200);
+ 
+         $this->admin = new User([
+             'name' => 'Admin',
+@@ -241,6 +243,113 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertNull(json_decode($response, true));
+     }
+ 
++    public function test_index_json_searches_sorts_and_counts(): void
++    {
++        $this->createEvent(['title' => 'Oficina de PHP']);
++        $this->createEvent(['title' => 'Oficina de Java']);
++        $this->createEvent(['title' => 'Palestra de Redes']);
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['q' => 'Oficina', 'sort' => 'title', 'dir' => 'desc']
++        );
++        $json = json_decode($response, true);
++
++        $this->assertSame(200, http_response_code());
++        $this->assertSame(['Oficina de PHP', 'Oficina de Java'], array_column($json['events'], 'title'));
++        $this->assertSame(2, $json['total']);
++        $this->assertSame(1, $json['page']);
++        $this->assertSame(1, $json['total_pages']);
++        $this->assertSame(5, $json['per_page']);
++        $this->assertSame(['q' => 'Oficina', 'kind' => null, 'sort' => 'title', 'dir' => 'desc'], $json['filters']);
++        $this->assertArrayNotHasKey('errors', $json);
++    }
++
++    public function test_index_json_filters_by_kind_and_paginates(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Oficina {$i}", 'kind' => 'workshop']);
++        }
++        $this->createEvent(['title' => 'Palestra 1', 'kind' => 'lecture']);
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['kind' => 'workshop', 'sort' => 'title', 'page' => '2']
++        );
++        $json = json_decode($response, true);
++
++        $this->assertSame(['Oficina 6', 'Oficina 7'], array_column($json['events'], 'title'));
++        $this->assertSame(7, $json['total']);
++        $this->assertSame(2, $json['page']);
++        $this->assertSame(2, $json['total_pages']);
++    }
++
++    public function test_index_json_page_beyond_the_last_returns_the_last(): void
++    {
++        $this->createEvent(['title' => 'Oficina 1']);
++        $this->createEvent(['title' => 'Oficina 2']);
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '9']);
++        $json = json_decode($response, true);
++
++        $this->assertSame(1, $json['page']);
++        $this->assertSame(2, $json['total']);
++        $this->assertCount(2, $json['events']);
++    }
++
++    public function test_index_json_rejects_invalid_params_with_422(): void
++    {
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['sort' => 'description', 'dir' => 'up']
++        );
++
++        $this->assertSame(422, http_response_code());
++        $this->assertSame(
++            ['sort' => 'Ordenação inválida.', 'dir' => 'Direção inválida.'],
++            json_decode($response, true)['errors']
++        );
++    }
++
++    public function test_index_json_rejects_invalid_search_and_kind_without_listing(): void
++    {
++        $this->createEvent(['title' => 'Oficina de PHP']);
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['q' => ['x'], 'kind' => 'party', 'sort' => 'title']
++        );
++        $json = json_decode($response, true);
++
++        $this->assertSame(422, http_response_code());
++        $this->assertSame(['errors'], array_keys($json));
++        $this->assertSame(
++            ['q' => 'Busca inválida (até 255 caracteres).', 'kind' => 'Tipo inválido.'],
++            $json['errors']
++        );
++    }
++
++    public function test_index_html_with_invalid_param_keeps_status_200_and_warns(): void
++    {
++        $this->createEvent(['title' => 'Oficina de PHP']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'description']);
++
++        $this->assertSame(200, http_response_code());
++        $this->assertStringContainsString('Ordenação inválida.', $response);
++        $this->assertStringContainsString('Oficina de PHP', $response);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+-- 
+2.54.0 (Apple Git-157)
+
