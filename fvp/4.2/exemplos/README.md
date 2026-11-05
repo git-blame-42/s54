@@ -305,6 +305,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R13. Textos de vagas com concordância
   `r13-concordancia-vagas/`
   - feat: Show available spots with number agreement
+- R14. Título da aba com o nome da página e do Evento
+  `r14-titulo-da-pagina/`
+  - feat: Show page title in the browser tab
 - R2. Nome do criador no show/listagem (BelongsTo)
   `r2-nome-do-criador/`
   - feat: Show event creator name in listing and show

@@ -1,0 +1,132 @@
+From 373c74f5a0749c914cd3de2980b09203fd34a476 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:45:07 -0300
+Subject: [PATCH] feat: Show page title in the browser tab
+
+The layout starts with <!DOCTYPE html> and renders $title, escaped once,
+in both <title> and <h1>. The event show action now passes the raw
+title, so special characters are not escaped twice.
+---
+ app/Controllers/Admin/EventsController.php    |  3 ++-
+ app/views/layouts/application.phtml           |  5 ++--
+ .../admin/events/ListEventsCest.php           |  2 ++
+ .../Admin/EventsControllerTest.php            | 25 +++++++++++++++++++
+ .../Controllers/HomeControllerTest.php        |  1 +
+ 5 files changed, 33 insertions(+), 3 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..2130b28 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -34,7 +34,8 @@ class EventsController extends Controller
+             return;
+         }
+ 
+-        $title = htmlspecialchars($event->title);
++        // Texto cru: o layout escapa $title no <title> e no <h1>.
++        $title = $event->title;
+         $this->render('admin/events/show', compact('event', 'title'));
+     }
+ 
+diff --git a/app/views/layouts/application.phtml b/app/views/layouts/application.phtml
+index 5e52801..efaa1bf 100644
+--- a/app/views/layouts/application.phtml
++++ b/app/views/layouts/application.phtml
+@@ -1,9 +1,10 @@
++<!DOCTYPE html>
+ <html lang="pt-br">
+ 
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <title>Eventos do Câmpus</title>
++    <title><?= htmlspecialchars($title) ?> | Eventos do Câmpus</title>
+ 
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+     <script src="/assets/js/application.js"></script>
+@@ -23,7 +24,7 @@
+ 
+         <header class="mb-3">
+             <h1>
+-                <?= $title ?>
++                <?= htmlspecialchars($title) ?>
+             </h1>
+         </header>
+ 
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..6d6385e 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -49,12 +49,14 @@ class ListEventsCest extends BaseEventsCest
+ 
+         $page->wantTo('Listagem de todos os registros (links para ver e editar)');
+         $page->amOnPage('/admin/events');
++        $page->seeInTitle('Eventos | Eventos do Câmpus');
+ 
+         $page->seeLink('Ver', "/admin/events/{$event->id}");
+         $page->seeLink('Editar', "/admin/events/{$event->id}/edit");
+         $page->click('Ver', $this->rowOf('Evento 01'));
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+         $page->see($event->title, 'h1');
++        $page->seeInTitle('Evento 01 | Eventos do Câmpus');
+         $page->see($event->description);
+         $page->seeLink('Editar');
+         $page->seeLink('Voltar');
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..a875747 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -46,6 +46,8 @@ class EventsControllerTest extends ControllerTestCase
+         $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
+ 
+         $this->assertMatchesRegularExpression('/<h1>\s*Eventos\s*<\/h1>/', $page1);
++        $this->assertStringStartsWith('<!DOCTYPE html>', $page1);
++        $this->assertStringContainsString('<title>Eventos | Eventos do Câmpus</title>', $page1);
+         $this->assertStringContainsString('Novo Evento', $page1);
+         $this->assertStringContainsString('Evento 1', $page1);
+         $this->assertStringContainsString('Evento 5', $page1);
+@@ -160,6 +162,29 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_puts_event_title_in_the_browser_tab(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra Final']);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('<title>Palestra Final | Eventos do Câmpus</title>', $response);
++        $this->assertMatchesRegularExpression('/<h1>\s*Palestra Final\s*<\/h1>/', $response);
++    }
++
++    public function test_show_escapes_event_title_once_in_tab_and_heading(): void
++    {
++        $event = $this->createEvent(['title' => 'A & <b>B</b>']);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $escaped = 'A &amp; &lt;b&gt;B&lt;/b&gt;';
++        $this->assertStringContainsString("<title>{$escaped} | Eventos do Câmpus</title>", $response);
++        $this->assertMatchesRegularExpression('/<h1>\s*' . preg_quote($escaped, '/') . '\s*<\/h1>/', $response);
++        $this->assertStringNotContainsString('&amp;amp;', $response);
++        $this->assertStringNotContainsString('<b>B</b>', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Integration/Controllers/HomeControllerTest.php b/tests/Integration/Controllers/HomeControllerTest.php
+index b258185..27d30da 100644
+--- a/tests/Integration/Controllers/HomeControllerTest.php
++++ b/tests/Integration/Controllers/HomeControllerTest.php
+@@ -12,6 +12,7 @@ class HomeControllerTest extends ControllerTestCase
+         );
+ 
+         $this->assertMatchesRegularExpression('/<h1>\s*Home Page\s*<\/h1>/', $response);
++        $this->assertStringContainsString('<title>Home Page | Eventos do Câmpus</title>', $response);
+         $this->assertMatchesRegularExpression('/TSI3D Framework Template/', $response);
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
