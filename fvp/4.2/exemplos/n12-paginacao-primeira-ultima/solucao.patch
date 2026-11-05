@@ -1,0 +1,342 @@
+From 29f6bcd2e14683963afbb2bf3e02ba51a7e90fc5 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:56:31 -0300
+Subject: [PATCH] feat: Add first/last links and a three-page window to
+ pagination
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Paginator gets firstPage(), lastPage() and pagesWindow(), a window of page numbers centered on the current page and kept inside the limits. _pages.phtml shows Primeira, Anterior, the window, Próxima and Última, building the URLs with a $pageUrl closure.
+---
+ app/views/paginator/_pages.phtml              |  28 +++-
+ lib/Paginator.php                             |  33 +++++
+ .../admin/events/PaginateEventsCest.php       |  25 +++-
+ .../Admin/EventsControllerTest.php            |  24 ++++
+ tests/Unit/Lib/PaginatorTest.php              | 125 ++++++++++++++++++
+ 5 files changed, 228 insertions(+), 7 deletions(-)
+ create mode 100644 tests/Unit/Lib/PaginatorTest.php
+
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..10b53e4 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -1,32 +1,48 @@
++<?php
++/** @var \Lib\Paginator $paginator */
++$pageUrl = fn(int $page): string => route($paginator->getRouteName(), ['page' => $page]);
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->firstPage()) ?>">Primeira</a>
++            </li>
++            <li class="page-item">
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
++            <li class="page-item disabled">
++                <a class="page-link">Primeira</a>
++            </li>
+             <li class="page-item disabled">
+                 <a class="page-link">Anterior</a>
+             </li>
+         <?php endif; ?>
+ 
+-        <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
++        <?php foreach ($paginator->pagesWindow() as $page) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+             </li>
+-        <?php endfor; ?>
++        <?php endforeach; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
++            </li>
++            <li class="page-item">
++                <a class="page-link" href="<?= $pageUrl($paginator->lastPage()) ?>">Última</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+                 <a class="page-link">Próxima</a>
+             </li>
++            <li class="page-item disabled">
++                <a class="page-link">Última</a>
++            </li>
+         <?php endif; ?>
+     </ul>
+ </nav>
+ 
+-<div class="d-flex justify-content-end"><?= $paginator->entriesInfo() ?></div>
+\ No newline at end of file
++<div class="d-flex justify-content-end"><?= $paginator->entriesInfo() ?></div>
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..1bc464e 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -73,6 +73,39 @@ class Paginator
+         return $this->nextPage() <= $this->totalOfPages();
+     }
+ 
++    public function firstPage(): int
++    {
++        return 1;
++    }
++
++    /**
++     * Última página; nunca menor que 1 (sem registros, a única página é a 1).
++     */
++    public function lastPage(): int
++    {
++        return max(1, $this->totalOfPages);
++    }
++
++    /**
++     * Números de página exibidos na navegação: no máximo $size páginas, centradas na atual e
++     * deslocadas para caber entre a primeira e a última (ex.: 4 páginas, atual 1 => [1, 2, 3];
++     * atual 3 => [2, 3, 4]; atual 4 => [2, 3, 4]). Página fora do intervalo usa o limite mais próximo.
++     *
++     * @return array<int>
++     */
++    public function pagesWindow(int $size = 3): array
++    {
++        $size = max(1, $size);
++        $last = $this->lastPage();
++        $current = min(max($this->page, $this->firstPage()), $last);
++
++        $start = $current - intdiv($size - 1, 2);
++        $start = max($this->firstPage(), min($start, $last - $size + 1));
++        $end = min($last, $start + $size - 1);
++
++        return range($start, $end);
++    }
++
+     public function isPage(int $page): bool
+     {
+         return $this->page === $page;
+diff --git a/tests/Acceptance/admin/events/PaginateEventsCest.php b/tests/Acceptance/admin/events/PaginateEventsCest.php
+index b4ee6fc..e9550c4 100644
+--- a/tests/Acceptance/admin/events/PaginateEventsCest.php
++++ b/tests/Acceptance/admin/events/PaginateEventsCest.php
+@@ -15,7 +15,10 @@ class PaginateEventsCest extends BaseEventsCest
+         $this->seeEventsOfPage($page, 1);
+         $page->see('Mostrando 1 - 5 de 16');
+         $page->seeElement('.pagination');
+-        $page->seeNumberOfElements('.pagination .page-item', 6);
++        // Primeira, Anterior, janela 1 2 3, Próxima, Última (4 páginas, mas só 3 números).
++        $page->seeNumberOfElements('.pagination .page-item', 7);
++        $page->seeNumberOfElements('.pagination .page-item.disabled', 2);
++        $page->dontSeeLink('4');
+ 
+         // Página 2 pelo número.
+         $page->click('2', '.pagination');
+@@ -28,6 +31,9 @@ class PaginateEventsCest extends BaseEventsCest
+         $page->seeCurrentUrlEquals('/admin/events/page/3');
+         $this->seeEventsOfPage($page, 3);
+         $page->see('Mostrando 11 - 15 de 16');
++        // Na página 3 a janela anda: 2 3 4.
++        $page->seeLink('4');
++        $page->dontSeeLink('1');
+ 
+         // Última página: só o Evento 16.
+         $page->click('4', '.pagination');
+@@ -41,6 +47,23 @@ class PaginateEventsCest extends BaseEventsCest
+         $this->seeEventsOfPage($page, 3);
+     }
+ 
++    public function jumpToLastAndFirstPages(AcceptanceTester $page): void
++    {
++        $page->wantTo('Paginação dos registros (Primeira e Última)');
++        $page->amOnPage('/admin/events');
++
++        $page->click('Última', '.pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/4');
++        $this->seeEventsOfPage($page, 4);
++        $page->seeNumberOfElements('.pagination .page-item.disabled', 2);
++        $page->see('2', '.pagination');
++        $page->see('3', '.pagination');
++
++        $page->click('Primeira', '.pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/1');
++        $this->seeEventsOfPage($page, 1);
++    }
++
+     public function openPageTwoAndThreeDirectly(AcceptanceTester $page): void
+     {
+         $page->wantTo('Paginação dos registros (acesso direto às páginas 2 e 3)');
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..9be0a2b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,30 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_shows_first_and_last_links_and_a_window_of_three_pages(): void
++    {
++        // 21 Eventos, 5 por página = 5 páginas; na página 2 a janela é 1, 2, 3.
++        for ($i = 1; $i <= 21; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('<a class="page-link" href="/admin/events/page/1">Primeira</a>', $page2);
++        $this->assertStringContainsString('<a class="page-link" href="/admin/events/page/1">Anterior</a>', $page2);
++        $this->assertStringContainsString('<a class="page-link" href="/admin/events/page/3">Próxima</a>', $page2);
++        $this->assertStringContainsString('<a class="page-link" href="/admin/events/page/5">Última</a>', $page2);
++        $this->assertStringContainsString('href="/admin/events/page/3">3</a>', $page2);
++        $this->assertStringNotContainsString('>4</a>', $page2);
++        $this->assertMatchesRegularExpression(
++            '/page-item active">\s*<a class="page-link" href="\/admin\/events\/page\/2">2</',
++            $page2
++        );
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 1]);
++        $this->assertMatchesRegularExpression('/page-item disabled">\s*<a class="page-link">Primeira<\/a>/', $page1);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+diff --git a/tests/Unit/Lib/PaginatorTest.php b/tests/Unit/Lib/PaginatorTest.php
+new file mode 100644
+index 0000000..a070827
+--- /dev/null
++++ b/tests/Unit/Lib/PaginatorTest.php
+@@ -0,0 +1,125 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use App\Models\Event;
++use App\Models\User;
++use Lib\Paginator;
++use PHPUnit\Framework\Attributes\DataProvider;
++use Tests\TestCase;
++
++/**
++ * Paginator: firstPage(), lastPage() e pagesWindow() (janela de números em volta da página atual).
++ */
++class PaginatorTest extends TestCase
++{
++    private function createEvents(int $total): void
++    {
++        $admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++
++        for ($i = 1; $i <= $total; $i++) {
++            $event = new Event([
++                'user_id' => $admin->id,
++                'title' => "Evento {$i}",
++                'description' => 'Descrição.',
++                'kind' => 'lecture',
++                'modality' => 'online',
++                'audience' => 'students',
++                'starts_on' => date('Y-m-d', strtotime('+10 days')),
++                'location' => 'Online',
++                'capacity' => 10,
++            ]);
++            $this->assertTrue($event->save());
++        }
++    }
++
++    private function paginator(int $page, int $perPage): Paginator
++    {
++        return Event::paginate(page: $page, per_page: $perPage, route: 'admin.events.paginate');
++    }
++
++    /**
++     * 7 Eventos, 1 por página = 7 páginas. Página 0 não entra: o Paginator calcula OFFSET negativo e o
++     * MySQL recusa; o controller já usa max(1, page).
++     *
++     * @return array<string, array{int, array<int>}>
++     */
++    public static function windowProvider(): array
++    {
++        return [
++            'início (página 1)' => [1, [1, 2, 3]],
++            'segunda página' => [2, [1, 2, 3]],
++            'meio (página 4)' => [4, [3, 4, 5]],
++            'penúltima' => [6, [5, 6, 7]],
++            'fim (página 7)' => [7, [5, 6, 7]],
++            'página 99 (fora, depois)' => [99, [5, 6, 7]],
++        ];
++    }
++
++    /**
++     * @param array<int> $expected
++     */
++    #[DataProvider('windowProvider')]
++    public function test_pages_window_should_be_centered_and_respect_the_limits(int $page, array $expected): void
++    {
++        $this->createEvents(7);
++
++        $this->assertSame($expected, $this->paginator($page, 1)->pagesWindow());
++    }
++
++    public function test_first_and_last_page(): void
++    {
++        $this->createEvents(16);
++
++        $paginator = $this->paginator(2, 5);
++
++        $this->assertSame(1, $paginator->firstPage());
++        $this->assertSame(4, $paginator->lastPage());
++        $this->assertSame([1, 2, 3], $paginator->pagesWindow());
++        $this->assertSame([2, 3, 4], $this->paginator(4, 5)->pagesWindow());
++    }
++
++    public function test_single_page_should_have_a_window_with_only_page_one(): void
++    {
++        $this->createEvents(3);
++
++        $paginator = $this->paginator(1, 5);
++
++        $this->assertSame(1, $paginator->lastPage());
++        $this->assertSame([1], $paginator->pagesWindow());
++    }
++
++    public function test_without_records_last_page_should_be_one(): void
++    {
++        $paginator = $this->paginator(1, 5);
++
++        $this->assertSame(0, $paginator->totalOfPages());
++        $this->assertSame(1, $paginator->lastPage());
++        $this->assertSame([1], $paginator->pagesWindow());
++    }
++
++    public function test_window_should_not_be_larger_than_the_number_of_pages(): void
++    {
++        $this->createEvents(2);
++
++        $this->assertSame([1, 2], $this->paginator(1, 1)->pagesWindow());
++        $this->assertSame([1, 2], $this->paginator(2, 1)->pagesWindow(5));
++    }
++
++    public function test_window_size_can_be_changed(): void
++    {
++        $this->createEvents(7);
++
++        $this->assertSame([2, 3, 4, 5, 6], $this->paginator(4, 1)->pagesWindow(5));
++        $this->assertSame([3, 4, 5, 6], $this->paginator(4, 1)->pagesWindow(4));
++        $this->assertSame([4], $this->paginator(4, 1)->pagesWindow(1));
++        $this->assertSame([4], $this->paginator(4, 1)->pagesWindow(0));
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

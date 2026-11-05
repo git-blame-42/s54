@@ -1,0 +1,48 @@
+<?php
+/** @var \Lib\Paginator $paginator */
+$pageUrl = fn(int $page): string => route($paginator->getRouteName(), ['page' => $page]);
+?>
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-end">
+
+        <?php if ($paginator->hasPreviousPage()) : ?>
+            <li class="page-item">
+                <a class="page-link" href="<?= $pageUrl($paginator->firstPage()) ?>">Primeira</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+            </li>
+        <?php else : ?>
+            <li class="page-item disabled">
+                <a class="page-link">Primeira</a>
+            </li>
+            <li class="page-item disabled">
+                <a class="page-link">Anterior</a>
+            </li>
+        <?php endif; ?>
+
+        <?php foreach ($paginator->pagesWindow() as $page) : ?>
+            <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+            </li>
+        <?php endforeach; ?>
+
+        <?php if ($paginator->hasNextPage()) : ?>
+            <li class="page-item">
+                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="<?= $pageUrl($paginator->lastPage()) ?>">Última</a>
+            </li>
+        <?php else : ?>
+            <li class="page-item disabled">
+                <a class="page-link">Próxima</a>
+            </li>
+            <li class="page-item disabled">
+                <a class="page-link">Última</a>
+            </li>
+        <?php endif; ?>
+    </ul>
+</nav>
+
+<div class="d-flex justify-content-end"><?= $paginator->entriesInfo() ?></div>

@@ -78,6 +78,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N11. `Model::count()` no framework
   `n11-model-count/`
   - feat: Add Model::count() and use it for enrollments and
+- N12. Paginação Primeira/Última + janela de 3 números
+  `n12-paginacao-primeira-ultima/`
+  - feat: Add first/last links and a three-page window to
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title
