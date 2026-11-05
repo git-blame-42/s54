@@ -132,6 +132,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N15. Dois paginadores na mesma tela (próximos/passados)
   `n15-dois-paginadores/`
   - feat: Paginate upcoming and past events in two tables
+- N16. Busca, filtro e ordenação juntos, mantidos na paginação
+  `n16-busca-filtro-ordenacao/`
+  - feat: Search, filter and sort admin events together
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title
@@ -165,6 +168,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O11. Página 404 amigável, sem stack trace fora de development
   `o11-404-amigavel/`
   - feat: Show friendly 404/500 pages without stack trace outside
+- O12. Busca e ordenação na resposta JSON da listagem
+  `o12-busca-ordenacao-json/`
+  - feat: Search, filter and sort admin events together
+  - feat: Return JSON for admin events listing
+  - feat: Search and sort the admin events JSON listing
 - O2. Listagem e detalhe de Eventos para o Participante
   `o2-eventos-para-participante/`
   - feat: Add events listing and details for participants

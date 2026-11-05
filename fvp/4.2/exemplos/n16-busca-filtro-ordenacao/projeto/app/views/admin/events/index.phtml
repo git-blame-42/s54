@@ -1,0 +1,77 @@
+<?php use App\Models\Event; ?>
+
+<div class="mb-3">
+    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+</div>
+
+<form method="get" action="<?= route('admin.events.index') ?>" class="d-flex gap-2 mb-3">
+    <label class="visually-hidden" for="filter_q">Buscar por título</label>
+    <input class="form-control" type="search" id="filter_q" name="q" placeholder="Título"
+           value="<?= htmlspecialchars($filters['q']) ?>">
+
+    <label class="visually-hidden" for="filter_kind">Tipo</label>
+    <select class="form-select" id="filter_kind" name="kind">
+        <option value="">Todos os tipos</option>
+        <?php foreach (Event::KINDS as $value => $label) : ?>
+            <option value="<?= $value ?>" <?= $filters['kind'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+        <?php endforeach; ?>
+    </select>
+
+    <label class="visually-hidden" for="filter_sort">Ordenar por</label>
+    <select class="form-select" id="filter_sort" name="sort">
+        <?php foreach (Event::SORTS as $value => $label) : ?>
+            <option value="<?= $value ?>" <?= $filters['sort'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+        <?php endforeach; ?>
+    </select>
+
+    <label class="visually-hidden" for="filter_dir">Direção</label>
+    <select class="form-select" id="filter_dir" name="dir">
+        <?php foreach (Event::DIRS as $value => $label) : ?>
+            <option value="<?= $value ?>" <?= $filters['dir'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+        <?php endforeach; ?>
+    </select>
+
+    <button type="submit" class="btn btn-secondary">Filtrar</button>
+</form>
+
+<?php foreach ($errors as $error) : ?>
+    <div class="alert alert-warning" role="alert"><?= htmlspecialchars($error) ?></div>
+<?php endforeach; ?>
+
+<?php if (empty($events)) : ?>
+    <p><?= Event::listingQuery($filters) !== [] ? 'Nenhum evento encontrado.' : 'Nenhum evento cadastrado.' ?></p>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Vagas</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($events as $event) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($event->title) ?></td>
+                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                    <td><?= htmlspecialchars($event->location) ?></td>
+                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php $paginator->renderPagesNavigation(); ?>
+<?php endif; ?>
