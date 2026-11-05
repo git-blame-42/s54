@@ -90,6 +90,25 @@ Na tela: como `admin@example.com`, abra `/admin/events/1` (sem a
 linha), clique em "Editar", salve, e veja "Última edição por
 Administrador" (o nome do admin do populate).
 
+O populate da base tem um admin só, que também é o criador de todos
+os Eventos. Para ver que o editor é quem está logado (e não o
+criador), é preciso um segundo admin:
+
+- com T1 ou Q1 aplicado, o populate já cria `admin2@example.com`
+  (senha `123456`);
+- sem eles, promova um Participante direto no banco:
+
+```
+docker compose exec db mysql -ueventos-user -peventos-pwd \
+  eventos_development \
+  -e "UPDATE users SET role='admin' WHERE email='user@example.com'"
+```
+
+Entre com o segundo admin, edite o Evento 1 e o `show` passa a dizer
+"Última edição por Usuário" (ou o nome do admin2), embora o Evento
+seja do Administrador. O `test_update_records_the_logged_admin_as_last_editor`
+faz o mesmo com uma segunda admin criada no teste.
+
 ## Relação com outros cenários
 
 - R2 (nome do criador no `show` e na listagem): mesmo molde
