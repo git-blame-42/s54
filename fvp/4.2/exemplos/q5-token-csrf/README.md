@@ -10,7 +10,8 @@ só no login).
 
 Branch no clone: `fvp/q5-token-csrf`, empilhada sobre O9
 (`fvp/o9-method-so-via-post`, mesmo SHA do exemplo do O9), que parte de
-`main` (`f31006b`). Base: `main` → O9 → Q5.
+`main` (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
+Base: `main` → O9 → Q5.
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
