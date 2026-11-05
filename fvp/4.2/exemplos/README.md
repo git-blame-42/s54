@@ -116,6 +116,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R3. Formatação na view com helper num só lugar
   `r3-helper-formatacao/`
   - refactor: Move event formatting to model helpers
+- R4. Confirmação antes de remover, JS em arquivo próprio
+  `r4-confirmacao-js-arquivo/`
+  - feat: Confirm before removing an event
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in
