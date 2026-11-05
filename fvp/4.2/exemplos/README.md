@@ -104,6 +104,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P5. Status do Evento: cancelar e encerrar
   `p5-status-cancelar-encerrar/`
   - feat: Add Event status with cancel and finish actions
+- P6. Duplicar Evento
+  `p6-duplicar-evento/`
+  - feat: Duplicate an Event from the listing
 - P7. "Meus eventos" do Participante
   `p7-meus-eventos/`
   - feat: Add events listing and details for participants
