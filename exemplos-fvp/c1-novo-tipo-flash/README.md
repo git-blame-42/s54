@@ -94,7 +94,8 @@ git remote remove fvp-c1
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/c1-novo-tipo-flash/solucao.bundle fvp/c1-novo-tipo-flash:fvp-c1
+git fetch s50/exemplos-fvp/c1-novo-tipo-flash/solucao.bundle \
+    fvp/c1-novo-tipo-flash:fvp-c1
 git cherry-pick 3fed8e8        # mesmo SHA; o bundle preserva o objeto
 git branch -D fvp-c1           # opcional, limpa a ref
 ```
@@ -106,8 +107,10 @@ o mesmo).
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/c1-novo-tipo-flash/solucao.patch        # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/c1-novo-tipo-flash/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/c1-novo-tipo-flash/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/c1-novo-tipo-flash/solucao.patch
 ```
 
 ### Se der conflito

@@ -78,15 +78,18 @@ navegador é o cenário G2.
 Resultado obtido: Unit 71 testes, Integration 14, Acceptance 13 (eram
 71 / 9 / 9 na base). Testes novos:
 
-- `AdminUsersAccessTest::test_users_index_should_redirect_to_login_without_session`
-- `AdminUsersAccessTest::test_users_paginate_should_redirect_to_login_without_session`
-- `Admin\UsersControllerTest::test_index_should_list_the_first_page_of_users`
-- `Admin\UsersControllerTest::test_index_should_list_the_requested_page`
-- `Admin\UsersControllerTest::test_index_should_render_pagination_links_with_the_admin_route`
-- `AdminUsersCest::accessUsersListWithoutLogin`
-- `AdminUsersCest::accessUsersListAsCommonUser`
-- `AdminUsersCest::listUsersAsAdmin`
-- `AdminUsersCest::navigateToTheSecondPage`
+- `AdminUsersAccessTest`:
+  - `test_users_index_should_redirect_to_login_without_session`
+  - `test_users_paginate_should_redirect_to_login_without_session`
+- `Admin\UsersControllerTest`:
+  - `test_index_should_list_the_first_page_of_users`
+  - `test_index_should_list_the_requested_page`
+  - `test_index_should_render_pagination_links_with_the_admin_route`
+- `AdminUsersCest`:
+  - `accessUsersListWithoutLogin`
+  - `accessUsersListAsCommonUser`
+  - `listUsersAsAdmin`
+  - `navigateToTheSecondPage`
 
 No navegador: `./run db:reset && ./run db:populate`, abra
 `http://localhost`, logue como `admin@example.com` / `123456`, clique
@@ -129,7 +132,8 @@ conflito e, por ter o mesmo pai, autor e data, gera o mesmo
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch            # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch  # só o diff, sem commit
 ```
 

@@ -61,7 +61,8 @@ Saída resumida de `./run db:seed`:
 
 ```
  fvp-g3-db-1 Copied database/schema.sql to fvp-g3-db-1:/tmp/
-Usuários criados: admin@example.com (admin) e user@example.com (participant), senha 123456
+Usuários criados: admin@example.com (admin) e user@example.com (participant),
+senha 123456
 ```
 
 `SELECT COUNT(*) FROM users;` depois do `db:seed`: 2 (também 2 ao rodar
@@ -109,16 +110,20 @@ git remote remove fvp-g3
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/g3-nova-tarefa-run/solucao.bundle fvp/g3-nova-tarefa-run:fvp-g3
-git cherry-pick 1c8732c        # o bundle traz o objeto; o cherry-pick cria um commit no alvo
+git fetch s50/exemplos-fvp/g3-nova-tarefa-run/solucao.bundle \
+    fvp/g3-nova-tarefa-run:fvp-g3
+# o bundle traz o objeto; o cherry-pick cria um commit no alvo
+git cherry-pick 1c8732c
 git branch -D fvp-g3           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/g3-nova-tarefa-run/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/g3-nova-tarefa-run/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/g3-nova-tarefa-run/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/g3-nova-tarefa-run/solucao.patch
 ```
 
 ### Se der conflito

@@ -106,7 +106,8 @@ com a mesma árvore e a mesma mensagem. Testado num clone limpo de
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 
@@ -142,7 +143,8 @@ O título do catálogo fala em "link Perfil"; a página `/profile` é o
 cenário A6. Ordem recomendada:
 
 ```
-git cherry-pick <sha do A6>     # f7d077b no s50/exemplos-fvp/a6-nova-pagina-restrita-profile
+# f7d077b no s50/exemplos-fvp/a6-nova-pagina-restrita-profile
+git cherry-pick <sha do A6>
 git cherry-pick a4144e1         # este cenário
 ```
 

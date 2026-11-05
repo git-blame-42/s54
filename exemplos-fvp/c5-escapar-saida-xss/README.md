@@ -61,7 +61,8 @@ Resultado: 10 arquivos, +136 / -7 linhas.
 
 ```
 ./run up -d          # espere ~15 s o MySQL subir
-./run composer dump-autoload   # obrigatório: lib/helpers.php entrou em autoload.files
+# obrigatório: lib/helpers.php entrou em autoload.files
+./run composer dump-autoload
 ./run phpcs
 ./run phpstan
 ./run test tests/Unit
@@ -120,7 +121,8 @@ git remote remove fvp-c5
 
 ```
 git fetch <caminho>/solucao.bundle fvp/c5-escapar-saida-xss:fvp-c5
-git cherry-pick 52d3893        # o bundle traz o objeto; o cherry-pick cria um commit novo
+# o bundle traz o objeto; o cherry-pick cria um commit novo
+git cherry-pick 52d3893
 git branch -D fvp-c5           # opcional, limpa a ref
 ```
 

@@ -71,10 +71,13 @@ Resultado: 7 arquivos, +74 / -6 linhas.
 Resultado obtido: Unit 73 testes, Integration 10, Acceptance 10 (eram
 71 / 9 / 9 na base). Testes novos:
 
-- `UserTest::test_is_active_should_return_true_by_default`
-- `UserTest::test_is_active_should_return_false_after_deactivation`
-- `AuthenticationsControllerTest::test_authenticate_inactive_user_should_not_login`
-- `LoginCest::loginWithInactiveUser`
+- `UserTest`:
+  - `test_is_active_should_return_true_by_default`
+  - `test_is_active_should_return_false_after_deactivation`
+- `AuthenticationsControllerTest`:
+  - `test_authenticate_inactive_user_should_not_login`
+- `LoginCest`:
+  - `loginWithInactiveUser`
 
 No navegador: `http://localhost/login`, entre com
 `inativo@example.com` / `123456`: volta para `/login` com "Usuário

@@ -116,7 +116,8 @@ de commit é outra); o conteúdo é o mesmo.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

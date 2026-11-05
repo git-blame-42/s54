@@ -17,11 +17,18 @@ equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 
 Três textos, cada um com o teste que o confere:
 
-| Antes | Depois | Onde mora | Teste que checa |
-|-------|--------|-----------|-----------------|
-| `E-mail ou senha inválidos!` | `Credenciais inválidas. Confira e-mail e senha.` | `app/Controllers/AuthenticationsController.php` | `LoginCest::loginWithInvalidCredentials` |
-| `Login realizado com sucesso!` | `Bem-vindo(a) de volta!` | `app/Controllers/AuthenticationsController.php` | `LoginCest::loginWithValidCredentials` |
-| `não pode ser vazio!` | `é obrigatório!` | `lib/Validations.php` (`notEmpty`) | `UserTest::test_errors_should_return_errors` |
+- Antes: `E-mail ou senha inválidos!`
+  - Depois: `Credenciais inválidas. Confira e-mail e senha.`
+  - Onde mora: `app/Controllers/AuthenticationsController.php`
+  - Teste que checa: `LoginCest::loginWithInvalidCredentials`
+- Antes: `Login realizado com sucesso!`
+  - Depois: `Bem-vindo(a) de volta!`
+  - Onde mora: `app/Controllers/AuthenticationsController.php`
+  - Teste que checa: `LoginCest::loginWithValidCredentials`
+- Antes: `não pode ser vazio!`
+  - Depois: `é obrigatório!`
+  - Onde mora: `lib/Validations.php` (`notEmpty`)
+  - Teste que checa: `UserTest::test_errors_should_return_errors`
 
 - `app/Controllers/AuthenticationsController.php`: dois `FlashMessage`
   em `authenticate()`.
@@ -119,7 +126,8 @@ seu repositório pode ser outro.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

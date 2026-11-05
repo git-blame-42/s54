@@ -13,10 +13,10 @@ existir para ter o botão). Branch no clone:
 continua equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver
 README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `55bdee0` | `feat: List users with pagination in admin area` | cenário D1 (mesmo commit, mesmo SHA) |
-| `af71186` | `feat: Allow admin to remove users` | este cenário |
+- `55bdee0` `feat: List users with pagination in admin area`
+  — cenário D1 (mesmo commit, mesmo SHA)
+- `af71186` `feat: Allow admin to remove users`
+  — este cenário
 
 ## O que mudou (só o commit `af71186`)
 
@@ -111,7 +111,8 @@ git fetch fvp-d2 fvp/d2-admin-remove-usuario
 
 git cherry-pick af71186             # alvo já tem o D1
 git cherry-pick 55bdee0 af71186     # alvo sem o D1: os dois, nesta ordem
-git cherry-pick main..fvp-d2/fvp/d2-admin-remove-usuario   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-d2/fvp/d2-admin-remove-usuario
 
 git remote remove fvp-d2
 ```

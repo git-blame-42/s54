@@ -13,11 +13,10 @@ Este cenário tem TRÊS commits de propósito: a solução se aplica em
 partes (schema e model -> rotas, controller e views -> testes) e o
 README mostra o cherry-pick de um intervalo.
 
-| Commit | Mensagem |
-|--------|----------|
-| `99d08ca` | `feat: Add events table and Event model` |
-| `5047f99` | `feat: Add events CRUD for authenticated users` |
-| `d07465c` | `test: Cover events CRUD with controller, access and acceptance tests` |
+- `99d08ca` `feat: Add events table and Event model`
+- `5047f99` `feat: Add events CRUD for authenticated users`
+- `d07465c` `test: Cover events CRUD with controller, access and acceptance
+  tests`
 
 Total: 18 arquivos, +873 linhas.
 

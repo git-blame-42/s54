@@ -101,16 +101,20 @@ git remote remove fvp-b9
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.bundle fvp/b9-bloquear-conta-tentativas:fvp-b9
-git cherry-pick 28ef577        # o bundle traz o objeto; o cherry-pick cria um commit novo
+git fetch s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.bundle \
+    fvp/b9-bloquear-conta-tentativas:fvp-b9
+# o bundle traz o objeto; o cherry-pick cria um commit novo
+git cherry-pick 28ef577
 git branch -D fvp-b9           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/b9-bloquear-conta-tentativas/solucao.patch
 ```
 
 ### Se der conflito

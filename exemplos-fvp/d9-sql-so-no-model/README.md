@@ -42,8 +42,8 @@ ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 - `app/views/admin/dashboard/index.phtml`: contadores "Administradores" e
   "Participantes" e uma tabela (nome, e-mail, perfil) em ordem de nome,
   com `htmlspecialchars` nas células.
-- `tests/Unit/Models/Users/UserTest.php`: `test_ordered_by_name_should_sort_ascending`
-  e `test_count_by_role`.
+- `tests/Unit/Models/Users/UserTest.php`:
+  `test_ordered_by_name_should_sort_ascending` e `test_count_by_role`.
 - `tests/Integration/Controllers/Admin/DashboardControllerTest.php` (novo):
   a página traz os contadores e os nomes na ordem.
 - `tests/Acceptance/admin/AdminDashboardCest.php`:
@@ -125,10 +125,13 @@ devolve nada.
 
 Testes novos:
 
-- `UserTest::test_ordered_by_name_should_sort_ascending`
-- `UserTest::test_count_by_role`
-- `DashboardControllerTest::test_index_should_show_counters_and_users_ordered_by_name`
-- `AdminDashboardCest::seeCountersAndUsersOrderedByName`
+- `UserTest`:
+  - `test_ordered_by_name_should_sort_ascending`
+  - `test_count_by_role`
+- `DashboardControllerTest`:
+  - `test_index_should_show_counters_and_users_ordered_by_name`
+- `AdminDashboardCest`:
+  - `seeCountersAndUsersOrderedByName`
 
 No navegador (após `./run db:populate`): entre como `admin@example.com`
 / `123456` e abra `http://localhost/admin`. Aparecem "Administradores: 1",
@@ -158,16 +161,20 @@ git remote remove fvp-d9
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/d9-sql-so-no-model/solucao.bundle fvp/d9-sql-so-no-model:fvp-d9
-git cherry-pick 991c3d5        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/d9-sql-so-no-model/solucao.bundle \
+    fvp/d9-sql-so-no-model:fvp-d9
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick 991c3d5
 git branch -D fvp-d9           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/d9-sql-so-no-model/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/d9-sql-so-no-model/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/d9-sql-so-no-model/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/d9-sql-so-no-model/solucao.patch
 ```
 
 ### Se der conflito

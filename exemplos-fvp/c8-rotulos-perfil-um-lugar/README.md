@@ -4,10 +4,10 @@ Pedido, como o professor faria na hora: "O texto 'Administrador' está
 no model e de novo na view. Deixe os rótulos de perfil num lugar só: o
 controller entrega as opções à view, e a view só faz o laço."
 
-Chance: média (surge assim que existe uma coluna "Perfil" na listagem ou
-um `<select>` de perfil). Tempo estimado: 15 min. Catálogo:
-`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1), C8 /
-issue reservas-academicas #15 (1º parágrafo).
+Chance: média (surge assim que existe uma coluna "Perfil" na listagem ou um
+`<select>` de perfil). Tempo estimado: 15 min. Catálogo:
+`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1),
+C8 / issue reservas-academicas #15 (1º parágrafo).
 
 Este cenário é empilhado sobre o D6, que por sua vez está sobre o D1:
 a coluna "Perfil" vem do D1 e o `<select name="user[role]">` com
@@ -16,11 +16,12 @@ opções fixas vem do D6. Branch no clone:
 `main` continua equivalente ao `86c81ca` do público (aqui `aa2b3be`;
 ver README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `55bdee0` | `feat: List users with pagination in admin area` | cenário D1 (mesmo commit, mesmo SHA) |
-| `894c74e` | `feat: Allow admin to change user role` | cenário D6 (mesmo commit, mesmo SHA) |
-| `166ed3b` | `refactor: Keep role labels in a single place` | este cenário |
+- `55bdee0` `feat: List users with pagination in admin area`
+  — cenário D1 (mesmo commit, mesmo SHA)
+- `894c74e` `feat: Allow admin to change user role`
+  — cenário D6 (mesmo commit, mesmo SHA)
+- `166ed3b` `refactor: Keep role labels in a single place`
+  — este cenário
 
 ## O que mudou (só o commit `166ed3b`)
 
@@ -187,7 +188,8 @@ seu repositório vai ser outro.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch               # cria commits novos, mesmas mensagens
+# cria commits novos, mesmas mensagens
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch     # só o diff, sem commit
 ```
 

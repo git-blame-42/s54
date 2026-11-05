@@ -13,10 +13,10 @@ equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 Este cenário é empilhado sobre o D1: sem a listagem não há o que
 responder em JSON. A branch tem dois commits:
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `55bdee0` | `feat: List users with pagination in admin area` | cenário D1, mesmo objeto (mesmo SHA) |
-| `56df768` | `feat: Return JSON for admin users listing` | este cenário |
+- `55bdee0` `feat: List users with pagination in admin area`
+  — cenário D1, mesmo objeto (mesmo SHA)
+- `56df768` `feat: Return JSON for admin users listing`
+  — este cenário
 
 ## O que mudou
 
@@ -72,10 +72,12 @@ Só o segundo commit (`56df768`), 4 arquivos, +79 / -2:
 Resultado obtido: Unit 71 testes, Integration 18, Acceptance 13 (eram
 71 / 9 / 9 na base e 71 / 14 / 13 depois do D1). Testes novos:
 
-- `UsersControllerTest::test_index_should_return_json_when_client_accepts_json`
-- `UsersControllerTest::test_index_should_return_json_for_the_requested_page`
-- `UsersControllerTest::test_index_should_render_html_without_json_accept_header`
-- `AdminUsersAccessTest::test_users_index_as_json_should_redirect_to_login_without_session`
+- `UsersControllerTest`:
+  - `test_index_should_return_json_when_client_accepts_json`
+  - `test_index_should_return_json_for_the_requested_page`
+  - `test_index_should_render_html_without_json_accept_header`
+- `AdminUsersAccessTest`:
+  - `test_users_index_as_json_should_redirect_to_login_without_session`
 
 No navegador: `http://localhost`, logue como `admin@example.com` /
 `123456`, abra `/admin/users` (HTML normal). Depois, no console do
@@ -93,8 +95,10 @@ mesmo `fetch` segue o redirecionamento para `/login` (status 302 na
 aba Network). Pela linha de comando, de dentro da rede do compose:
 
 ```
-docker compose exec php curl -s -c /tmp/c -d "user[email]=admin@example.com&user[password]=123456" http://web/login
-docker compose exec php curl -s -b /tmp/c -H "Accept: application/json" http://web/admin/users
+docker compose exec php curl -s -c /tmp/c -d \
+    "user[email]=admin@example.com&user[password]=123456" http://web/login
+docker compose exec php curl -s -b /tmp/c -H "Accept: application/json" \
+    http://web/admin/users
 ```
 
 Atenção: a porta 80 do `web` vai para o PHP de desenvolvimento; a
@@ -128,7 +132,8 @@ git remote add fvp-e1 <caminho>/projeto
 git fetch fvp-e1 fvp/e1-resposta-json-listagem
 
 git cherry-pick 55bdee0 56df768            # alvo sem D1
-git cherry-pick fvp-e1/main..fvp-e1/fvp/e1-resposta-json-listagem   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick fvp-e1/main..fvp-e1/fvp/e1-resposta-json-listagem
 git cherry-pick 56df768                    # alvo que já tem D1
 
 git remote remove fvp-e1
@@ -154,7 +159,8 @@ O patch é uma série com os dois commits.
 
 ```
 git am <caminho>/solucao.patch                 # alvo sem D1: aplica os dois
-git am --skip                                  # se o 1º (D1) já existe e conflitar, pule-o
+# se o 1º (D1) já existe e conflitar, pule-o
+git am --skip
 git apply --3way <caminho>/solucao.patch       # só o diff, sem commit
 ```
 

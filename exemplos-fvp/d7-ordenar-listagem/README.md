@@ -12,10 +12,10 @@ Este cenário é empilhado sobre o D1 (a listagem paginada
 continua equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver
 README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `55bdee0` | `feat: List users with pagination in admin area` | cenário D1 (mesmo commit, mesmo SHA) |
-| `8bf330e` | `feat: Order users listing by name` | este cenário |
+- `55bdee0` `feat: List users with pagination in admin area`
+  — cenário D1 (mesmo commit, mesmo SHA)
+- `8bf330e` `feat: Order users listing by name`
+  — este cenário
 
 ## O que mudou (só o commit `8bf330e`)
 
@@ -126,7 +126,8 @@ git fetch fvp-d7 fvp/d7-ordenar-listagem
 
 git cherry-pick 8bf330e             # alvo já tem o D1
 git cherry-pick 55bdee0 8bf330e     # alvo sem o D1: os dois, nesta ordem
-git cherry-pick main..fvp-d7/fvp/d7-ordenar-listagem   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-d7/fvp/d7-ordenar-listagem
 
 git remote remove fvp-d7
 ```

@@ -9,9 +9,7 @@ Chance: média. Tempo estimado: 20 min. Catálogo:
 Branch no clone: `fvp/a5-middleware-guest`. `main` continua equivalente
 ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 
-| Commit | Mensagem |
-|--------|----------|
-| `6fd0b03` | `feat: Add guest middleware to hide login from authenticated users` |
+- `6fd0b03` `feat: Add guest middleware to hide login from authenticated users`
 
 ## O que mudou
 
@@ -120,7 +118,8 @@ mesmo (`git diff fvp-a5 HEAD` vazio).
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

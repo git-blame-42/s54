@@ -103,16 +103,20 @@ git remote remove fvp-h1
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/h1-auth-attempt/solucao.bundle fvp/h1-auth-attempt:fvp-h1
-git cherry-pick a100370        # o bundle traz o objeto; o cherry-pick cria um commit novo
+git fetch s50/exemplos-fvp/h1-auth-attempt/solucao.bundle \
+    fvp/h1-auth-attempt:fvp-h1
+# o bundle traz o objeto; o cherry-pick cria um commit novo
+git cherry-pick a100370
 git branch -D fvp-h1           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/h1-auth-attempt/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/h1-auth-attempt/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/h1-auth-attempt/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/h1-auth-attempt/solucao.patch
 ```
 
 ### Se der conflito

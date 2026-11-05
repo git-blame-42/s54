@@ -6,8 +6,8 @@ Corrija a ordem de execução no mecanismo de middleware, não na
 aplicação."
 
 Chance: média. Tempo estimado: 15 min. Catálogo:
-`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1), A17 / issue
-ind-management #7.
+`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1),
+A17 / issue ind-management #7.
 
 Branch no clone: `fvp/a17-ordem-middlewares-core`. `main` continua
 equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
@@ -121,13 +121,16 @@ Sem a mudança no `core/`, os três testes novos de
 
 Testes novos:
 
-- `RouteWrapperMiddlewareTest::test_nested_groups_should_run_outer_middleware_first`
-- `RouteWrapperMiddlewareTest::test_nested_groups_should_only_add_outer_middleware_to_outer_routes`
-- `RouteWrapperMiddlewareTest::test_run_middlewares_should_execute_outer_group_before_inner_group`
-- `RouteTest::test_prepend_middleware_should_put_it_before_existing_ones`
-- `AdminAccessTest::test_visitor_should_be_redirected_to_login_with_login_message`
-- `AdminAccessTest::test_participant_should_be_redirected_to_dashboard_with_restricted_message`
-- `AdminAccessTest::test_admin_should_access_admin_area`
+- `RouteWrapperMiddlewareTest`:
+  - `test_nested_groups_should_run_outer_middleware_first`
+  - `test_nested_groups_should_only_add_outer_middleware_to_outer_routes`
+  - `test_run_middlewares_should_execute_outer_group_before_inner_group`
+- `RouteTest`:
+  - `test_prepend_middleware_should_put_it_before_existing_ones`
+- `AdminAccessTest`:
+  - `test_visitor_should_be_redirected_to_login_with_login_message`
+  - `test_participant_should_be_redirected_to_dashboard_with_restricted_message`
+  - `test_admin_should_access_admin_area`
 
 O acceptance `tests/Acceptance/admin/AdminDashboardCest.php` já cobria
 os três casos no navegador (visitante, usuário comum, admin) e continua
@@ -178,8 +181,10 @@ git remote remove fvp-a17
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.bundle fvp/a17-ordem-middlewares-core:fvp-a17
-git cherry-pick 42671f9        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.bundle \
+    fvp/a17-ordem-middlewares-core:fvp-a17
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick 42671f9
 git branch -D fvp-a17          # opcional, limpa a ref
 ```
 
@@ -188,8 +193,10 @@ O cherry-pick cria commit novo; o SHA no seu repositório vai ser outro.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a17-ordem-middlewares-core/solucao.patch
 ```
 
 ### Se der conflito

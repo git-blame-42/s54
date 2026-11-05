@@ -90,16 +90,20 @@ git remote remove fvp-g4
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/g4-populate-em-classes/solucao.bundle fvp/g4-populate-em-classes:fvp-g4
-git cherry-pick 7a1e7da        # o bundle traz o objeto; o cherry-pick cria um commit novo
+git fetch s50/exemplos-fvp/g4-populate-em-classes/solucao.bundle \
+    fvp/g4-populate-em-classes:fvp-g4
+# o bundle traz o objeto; o cherry-pick cria um commit novo
+git cherry-pick 7a1e7da
 git branch -D fvp-g4           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/g4-populate-em-classes/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/g4-populate-em-classes/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/g4-populate-em-classes/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/g4-populate-em-classes/solucao.patch
 ```
 
 ### Se der conflito

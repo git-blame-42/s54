@@ -115,7 +115,8 @@ git remote remove fvp-a14
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.bundle fvp/a14-expirar-sessao-inatividade:fvp-a14
+git fetch s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.bundle \
+    fvp/a14-expirar-sessao-inatividade:fvp-a14
 git cherry-pick 8270f1b      # o cherry-pick cria um commit novo, com outro SHA
 git branch -D fvp-a14        # opcional, limpa a ref
 ```
@@ -123,8 +124,10 @@ git branch -D fvp-a14        # opcional, limpa a ref
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a14-expirar-sessao-inatividade/solucao.patch
 ```
 
 ### Se der conflito

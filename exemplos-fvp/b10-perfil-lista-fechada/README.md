@@ -5,10 +5,10 @@ não garante que o perfil seja válido. Revise essa regra e a definição do
 perfil padrão. Avalie também a necessidade do método `getRole()`, criado
 mas não usado."
 
-Chance: alta. Tempo estimado: 15 min. Catálogo:
-`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1), B10 / issue
-ice-cream-manager #6 (item 7). Relacionado: reservas #15
-(`isValidForSignup()`, perfil restrito no cadastro público).
+Chance: alta. Tempo estimado: 15 min. Catálogo: `fvp-possiveis-modificacoes.md`,
+seção 9 (complemento 2, issues da Entrega 4.1), B10 / issue ice-cream-manager #6
+(item 7). Relacionado: reservas #15 (`isValidForSignup()`, perfil restrito no
+cadastro público).
 
 Branch no clone: `fvp/b10-perfil-lista-fechada`. `main` continua
 equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
@@ -122,8 +122,8 @@ Testes novos:
 - `UserTest::test_update_should_fail_with_empty_role`
 - `UserTest::test_admin_and_participant_roles_should_be_valid`
 
-O teste de perfil padrão (`test_new_user_should_have_participant_role_by_default`)
-já vem do H2.
+O teste de perfil padrão
+(`test_new_user_should_have_participant_role_by_default`) já vem do H2.
 
 ## Como aplicar em outro repositório (cherry-pick)
 
@@ -156,16 +156,20 @@ git remote remove fvp-b10
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.bundle fvp/b10-perfil-lista-fechada:fvp-b10
-git cherry-pick 2f28970^..3cd1685   # o bundle traz os objetos; o cherry-pick cria commits novos
+git fetch s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.bundle \
+    fvp/b10-perfil-lista-fechada:fvp-b10
+# o bundle traz os objetos; o cherry-pick cria commits novos
+git cherry-pick 2f28970^..3cd1685
 git branch -D fvp-b10               # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.patch       # cria commits novos com as mesmas mensagens
-git apply --3way s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.patch   # só o diff, sem commit
+# cria commits novos com as mesmas mensagens
+git am s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/b10-perfil-lista-fechada/solucao.patch
 ```
 
 Se o H2 já estiver no alvo, aplique o patch do B10 sozinho (pule o

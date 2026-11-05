@@ -13,12 +13,11 @@ Este cenário é EMPILHADO no D3 (`d3-crud-events`, CRUD de `events`):
 os três primeiros commits são os do D3, trazidos por fast-forward (mesmo
 SHA); o quarto é o do D8.
 
-| Commit | Mensagem |
-|--------|----------|
-| `99d08ca` | `feat: Add events table and Event model` (D3) |
-| `5047f99` | `feat: Add events CRUD for authenticated users` (D3) |
-| `d07465c` | `test: Cover events CRUD with controller, access and acceptance tests` (D3) |
-| `22c21f0` | `test: Prove event ownership rules` (D8) |
+- `99d08ca` `feat: Add events table and Event model` (D3)
+- `5047f99` `feat: Add events CRUD for authenticated users` (D3)
+- `d07465c` `test: Cover events CRUD with controller, access and acceptance
+  tests` (D3)
+- `22c21f0` `test: Prove event ownership rules` (D8)
 
 O commit do D8 tem 3 arquivos, +130/-9 linhas, só testes.
 
@@ -51,16 +50,39 @@ PROVAR a regra em cada ação.
 
 Tabela ação × proteção × teste:
 
-| Ação | Proteção | Teste |
-|------|----------|-------|
-| `index` | `current_user->events()->paginate()` | `EventsControllerTest::test_index_should_list_only_the_user_events` (D3); `EventCest::listOnlyMyEvents` (D3) |
-| `new` / `create` | `current_user->events()->new()`; `eventParams()` descarta `user_id` | `test_create_should_ignore_user_id_from_params` (D3); `UserTest::test_events_new_should_set_user_id` (D3) |
-| `show` | `findEvent()` → 404 | `test_show_should_respond_404_for_another_user_event` (D3); `EventCest::cannotSeeAnotherUserEvent` (D8) |
-| `edit` | `findEvent()` → 404 | `test_edit_should_respond_404_for_another_user_event` (D8); `EventCest::cannotEditAnotherUserEvent` (D8) |
-| `update` | `findEvent()` → 404 antes de ler o formulário | `test_update_should_respond_404_and_keep_another_user_event_intact` (D8): título, data e dono iguais depois |
-| `destroy` | `findEvent()` → 404 antes do `destroy()` | `test_destroy_should_respond_404_and_keep_another_user_event` (D8): evento continua no banco |
-| (base) | `HasMany::findById` filtra por `user_id` e `id` | `UserTest::test_events_find_by_id_should_return_null_for_another_user_event` (D8) |
-| sem sessão | middleware `auth` → 302 `/login` | `EventsAccessTest` (D3, 8 rotas) |
+- Ação: `index`
+  - Proteção: `current_user->events()->paginate()`
+  - Teste: `EventsControllerTest::test_index_should_list_only_the_user_events`
+    (D3); `EventCest::listOnlyMyEvents` (D3)
+- Ação: `new` / `create`
+  - Proteção: `current_user->events()->new()`; `eventParams()` descarta
+    `user_id`
+  - Teste: `test_create_should_ignore_user_id_from_params` (D3);
+    `UserTest::test_events_new_should_set_user_id` (D3)
+- Ação: `show`
+  - Proteção: `findEvent()` → 404
+  - Teste: `test_show_should_respond_404_for_another_user_event` (D3);
+    `EventCest::cannotSeeAnotherUserEvent` (D8)
+- Ação: `edit`
+  - Proteção: `findEvent()` → 404
+  - Teste: `test_edit_should_respond_404_for_another_user_event` (D8);
+    `EventCest::cannotEditAnotherUserEvent` (D8)
+- Ação: `update`
+  - Proteção: `findEvent()` → 404 antes de ler o formulário
+  - Teste: `test_update_should_respond_404_and_keep_another_user_event_intact`
+    (D8): título, data e dono iguais depois
+- Ação: `destroy`
+  - Proteção: `findEvent()` → 404 antes do `destroy()`
+  - Teste: `test_destroy_should_respond_404_and_keep_another_user_event` (D8):
+    evento continua no banco
+- Ação: (base)
+  - Proteção: `HasMany::findById` filtra por `user_id` e `id`
+  - Teste:
+    `UserTest::test_events_find_by_id_should_return_null_for_another_user_event`
+    (D8)
+- Ação: sem sessão
+  - Proteção: middleware `auth` → 302 `/login`
+  - Teste: `EventsAccessTest` (D3, 8 rotas)
 
 ## Por que assim
 
@@ -135,7 +157,8 @@ git remote add fvp-d8 <caminho>/projeto
 git fetch fvp-d8 fvp/d8-so-dono-ve-edita
 
 git cherry-pick 22c21f0                                    # alvo já tem o D3
-git cherry-pick main..fvp-d8/fvp/d8-so-dono-ve-edita       # alvo sem o D3: os quatro
+# alvo sem o D3: os quatro
+git cherry-pick main..fvp-d8/fvp/d8-so-dono-ve-edita
 
 git remote remove fvp-d8
 ```

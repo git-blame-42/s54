@@ -77,14 +77,17 @@ Resultado: 7 arquivos, +255 linhas.
 Resultado obtido: Unit 71 testes, Integration 15, Acceptance 11 (eram
 71 / 9 / 9 na base). Testes novos:
 
-- `UsersControllerTest::test_new_should_render_sign_up_form`
-- `UsersControllerTest::test_create_with_valid_data_should_save_and_redirect_to_login`
-- `UsersControllerTest::test_create_with_invalid_data_should_render_form_with_errors`
-- `UsersControllerTest::test_create_should_ignore_role_sent_in_the_request`
-- `SignUpAccessTest::test_sign_up_form_should_be_accessible_without_session`
-- `SignUpAccessTest::test_login_page_should_link_to_sign_up`
-- `SignUpCest::signUpWithValidDataAndLogin`
-- `SignUpCest::signUpWithInvalidDataShowsErrors`
+- `UsersControllerTest`:
+  - `test_new_should_render_sign_up_form`
+  - `test_create_with_valid_data_should_save_and_redirect_to_login`
+  - `test_create_with_invalid_data_should_render_form_with_errors`
+  - `test_create_should_ignore_role_sent_in_the_request`
+- `SignUpAccessTest`:
+  - `test_sign_up_form_should_be_accessible_without_session`
+  - `test_login_page_should_link_to_sign_up`
+- `SignUpCest`:
+  - `signUpWithValidDataAndLogin`
+  - `signUpWithInvalidDataShowsErrors`
 
 No navegador: `http://localhost/login`, clique em "Cadastre-se".
 Envie vazio: os campos ficam vermelhos com a mensagem embaixo e o flash
@@ -129,7 +132,8 @@ isso.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

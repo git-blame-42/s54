@@ -72,10 +72,12 @@ dump-autoload --strict-psr` ok.
 
 Testes novos:
 
-- `RequestTest::test_should_override_method_with_method_param`
-- `LogoutAccessTest::test_logout_via_get_should_not_be_found`
-- `LogoutAccessTest::test_logout_via_delete_should_redirect_to_login`
-- `LogoutAccessTest::test_logout_via_post_with_method_param_should_redirect_to_login`
+- `RequestTest`:
+  - `test_should_override_method_with_method_param`
+- `LogoutAccessTest`:
+  - `test_logout_via_get_should_not_be_found`
+  - `test_logout_via_delete_should_redirect_to_login`
+  - `test_logout_via_post_with_method_param_should_redirect_to_login`
 
 No navegador: `http://localhost`, login `user@example.com` / `123456`,
 abrir o menu do e-mail, clicar em "Sair": volta para `/login` com
@@ -117,7 +119,8 @@ de `cherry-pick ad28f7f` aplica sem conflito.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch            # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch  # só o diff, sem commit
 ```
 

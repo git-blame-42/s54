@@ -13,10 +13,10 @@ Branch no clone: `fvp/f2-teste-unitario-middleware`, com dois commits
 acima de `main`. `main` continua equivalente ao `86c81ca` do público
 (aqui `aa2b3be`; ver README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `1b4fcf4` | `refactor: Centralize redirect logic in BaseMiddleware` | cenário A1 (mesmo commit, mesmo SHA) |
-| `74654b0` | `test: Add unit tests for Authenticate and Admin middlewares` | este cenário |
+- `1b4fcf4` `refactor: Centralize redirect logic in BaseMiddleware`
+  — cenário A1 (mesmo commit, mesmo SHA)
+- `74654b0` `test: Add unit tests for Authenticate and Admin middlewares`
+  — este cenário
 
 ## O que mudou (só o commit `74654b0`)
 
@@ -111,7 +111,8 @@ git fetch fvp-f2 fvp/f2-teste-unitario-middleware
 
 git cherry-pick 74654b0             # alvo já tem o A1
 git cherry-pick 1b4fcf4 74654b0     # alvo sem o A1: os dois, nesta ordem
-git cherry-pick main..fvp-f2/fvp/f2-teste-unitario-middleware   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-f2/fvp/f2-teste-unitario-middleware
 
 git remote remove fvp-f2
 ```

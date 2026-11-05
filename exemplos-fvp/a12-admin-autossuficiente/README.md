@@ -11,10 +11,10 @@ Este cenário é empilhado sobre o A1 (usa o `deny()` do
 dois commits acima de `main`. `main` continua equivalente ao `86c81ca`
 do público (aqui `aa2b3be`; ver README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `1b4fcf4` | `refactor: Centralize redirect logic in BaseMiddleware` | cenário A1 (mesmo commit, mesmo SHA) |
-| `5eb9520` | `refactor: Make Admin middleware self-sufficient` | este cenário |
+- `1b4fcf4` `refactor: Centralize redirect logic in BaseMiddleware`
+  — cenário A1 (mesmo commit, mesmo SHA)
+- `5eb9520` `refactor: Make Admin middleware self-sufficient`
+  — este cenário
 
 ## O que mudou (só o commit `5eb9520`)
 
@@ -113,7 +113,8 @@ git fetch fvp-a12 fvp/a12-admin-autossuficiente
 
 git cherry-pick 5eb9520             # alvo já tem o A1
 git cherry-pick 1b4fcf4 5eb9520     # alvo sem o A1: os dois, nesta ordem
-git cherry-pick main..fvp-a12/fvp/a12-admin-autossuficiente   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-a12/fvp/a12-admin-autossuficiente
 
 git remote remove fvp-a12
 ```

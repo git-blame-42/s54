@@ -14,15 +14,34 @@ Este cenário tem UM COMMIT POR MIUDEZA, de propósito: o professor pede
 uma só, e o README mostra como trazer só aquele item. A suíte inteira
 ficou verde depois de cada commit.
 
-| # | Commit | Mensagem | Unit / Integration / Acceptance depois do commit |
-|---|--------|----------|------|
-| 1 | `dd37292` | `feat: Redirect to home after logout` | 71 / 9 / 9 |
-| 2 | `88f1d59` | `feat: Distinguish unknown email from wrong password on login` | 71 / 10 / 10 |
-| 3 | `6674fb0` | `feat: Use page title in the document title` | 71 / 11 / 10 |
-| 4 | `9cf2671` | `feat: Show admin-only content on user dashboard` | 71 / 13 / 11 |
-| 5 | `e74b72a` | `feat: Redirect authenticated users from home to dashboard` | 71 / 14 / 12 |
-| 6 | `c8dbf3f` | `refactor: Rename participant role to user` | 71 / 14 / 12 |
-| 7 | `6e1f5fd` | `feat: Show member since date on profile` | 75 / 15 / 12 |
+- #: 1
+  - Commit: `dd37292`
+  - Mensagem: `feat: Redirect to home after logout`
+  - Unit / Integration / Acceptance depois do commit: 71 / 9 / 9
+- #: 2
+  - Commit: `88f1d59`
+  - Mensagem: `feat: Distinguish unknown email from wrong password on login`
+  - Unit / Integration / Acceptance depois do commit: 71 / 10 / 10
+- #: 3
+  - Commit: `6674fb0`
+  - Mensagem: `feat: Use page title in the document title`
+  - Unit / Integration / Acceptance depois do commit: 71 / 11 / 10
+- #: 4
+  - Commit: `9cf2671`
+  - Mensagem: `feat: Show admin-only content on user dashboard`
+  - Unit / Integration / Acceptance depois do commit: 71 / 13 / 11
+- #: 5
+  - Commit: `e74b72a`
+  - Mensagem: `feat: Redirect authenticated users from home to dashboard`
+  - Unit / Integration / Acceptance depois do commit: 71 / 14 / 12
+- #: 6
+  - Commit: `c8dbf3f`
+  - Mensagem: `refactor: Rename participant role to user`
+  - Unit / Integration / Acceptance depois do commit: 71 / 14 / 12
+- #: 7
+  - Commit: `6e1f5fd`
+  - Mensagem: `feat: Show member since date on profile`
+  - Unit / Integration / Acceptance depois do commit: 75 / 15 / 12
 
 Total: 14 arquivos, +249 / -17 linhas.
 

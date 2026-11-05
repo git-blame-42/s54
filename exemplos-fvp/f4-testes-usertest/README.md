@@ -21,8 +21,8 @@ ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 - `tests/Unit/Models/Users/UserTest.php`: 6 testes novos (+57 linhas).
   Nenhum código de produção mudou.
   - `test_errors_should_return_password_confirmation_error_when_confirmation_is_missing`:
-    usuário novo sem `password_confirmation` não salva, erro
-    "as senhas devem ser idênticas!" em `password`, tabela continua com 2.
+    usuário novo sem `password_confirmation` não salva, erro "as senhas devem
+    ser idênticas!" em `password`, tabela continua com 2.
   - `test_save_should_fail_with_duplicated_email`: e-mail já usado no
     `setUp` não salva, erro "já existe um registro com esse dado" em
     `email`, tabela continua com 2.
@@ -46,21 +46,57 @@ Os casos de `findByEmail` (achou / `null`) já existiam na base
 Para a apresentação: abra `tests/Unit/Models/Users/UserTest.php`, não
 `app/Models/User.php`. A coluna da direita é o que se mostra na tela.
 
-| Método / regra do `User` | Antes (`86c81ca`) | Depois (`50bdeec`) |
-|---|---|---|
-| `__construct` (papel padrão `participant`) | `test_is_admin_should_return_false_by_default` | igual |
-| `validates` → `notEmpty` de `name` e `email` | `test_errors_should_return_errors` | igual |
-| `validates` → `passwordConfirmation` (senhas diferentes) | `test_errors_should_return_password_confirmation_error` | igual |
-| `validates` → `passwordConfirmation` (confirmação ausente) | nenhum | `test_errors_should_return_password_confirmation_error_when_confirmation_is_missing` |
-| `validates` → `uniqueness('email')` no cadastro | nenhum | `test_save_should_fail_with_duplicated_email` |
-| `validates` → `uniqueness('email')` na edição | nenhum | `test_update_should_accept_the_user_own_email`, `test_update_should_fail_with_email_of_another_user` |
-| `__set('password')` → `password_hash` | só indireto (`authenticate`) | `test_password_should_be_stored_as_hash`, `test_same_password_should_generate_different_hashes` |
-| `__set('password')` só em registro novo | `test_update_should_not_change_the_password` | igual |
-| `authenticate` | `test_authenticate_should_return_the_true`, `test_authenticate_should_return_false` | igual |
-| `findByEmail` | `test_find_by_email_should_return_the_user`, `test_find_by_email_should_return_null` | igual |
-| `isAdmin` | `test_is_admin_should_return_false_by_default`, `test_is_admin_should_return_true_for_admin_role` | igual |
-| `registerLogin` / `last_login_at` | `test_register_login_should_set_last_login_at`, `test_last_login_at_should_be_null_by_default` | igual |
-| herdados (`save`, `all`, `destroy`, `findById`) | `test_should_create_new_user`, `test_all_should_return_all_users`, `test_destroy_should_remove_the_user`, `test_find_by_id_should_return_the_user`, `test_find_by_id_should_return_null` | igual |
+- Método / regra do `User`: `__construct` (papel padrão `participant`)
+  - Antes (`86c81ca`): `test_is_admin_should_return_false_by_default`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `validates` → `notEmpty` de `name` e `email`
+  - Antes (`86c81ca`): `test_errors_should_return_errors`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `validates` → `passwordConfirmation` (senhas
+  diferentes)
+  - Antes (`86c81ca`): `test_errors_should_return_password_confirmation_error`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `validates` → `passwordConfirmation` (confirmação
+  ausente)
+  - Antes (`86c81ca`): nenhum
+  - Depois (`50bdeec`):
+    `test_errors_should_return_password_confirmation_error_when_confirmation_is_missing`
+- Método / regra do `User`: `validates` → `uniqueness('email')` no cadastro
+  - Antes (`86c81ca`): nenhum
+  - Depois (`50bdeec`): `test_save_should_fail_with_duplicated_email`
+- Método / regra do `User`: `validates` → `uniqueness('email')` na edição
+  - Antes (`86c81ca`): nenhum
+  - Depois (`50bdeec`): `test_update_should_accept_the_user_own_email`,
+    `test_update_should_fail_with_email_of_another_user`
+- Método / regra do `User`: `__set('password')` → `password_hash`
+  - Antes (`86c81ca`): só indireto (`authenticate`)
+  - Depois (`50bdeec`): `test_password_should_be_stored_as_hash`,
+    `test_same_password_should_generate_different_hashes`
+- Método / regra do `User`: `__set('password')` só em registro novo
+  - Antes (`86c81ca`): `test_update_should_not_change_the_password`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `authenticate`
+  - Antes (`86c81ca`): `test_authenticate_should_return_the_true`,
+    `test_authenticate_should_return_false`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `findByEmail`
+  - Antes (`86c81ca`): `test_find_by_email_should_return_the_user`,
+    `test_find_by_email_should_return_null`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `isAdmin`
+  - Antes (`86c81ca`): `test_is_admin_should_return_false_by_default`,
+    `test_is_admin_should_return_true_for_admin_role`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: `registerLogin` / `last_login_at`
+  - Antes (`86c81ca`): `test_register_login_should_set_last_login_at`,
+    `test_last_login_at_should_be_null_by_default`
+  - Depois (`50bdeec`): igual
+- Método / regra do `User`: herdados (`save`, `all`, `destroy`, `findById`)
+  - Antes (`86c81ca`): `test_should_create_new_user`,
+    `test_all_should_return_all_users`, `test_destroy_should_remove_the_user`,
+    `test_find_by_id_should_return_the_user`,
+    `test_find_by_id_should_return_null`
+  - Depois (`50bdeec`): igual
 
 Depois do commit, toda regra do `User` tem pelo menos um
 `test_<acao>_should_<resultado>` que a exercita diretamente.
@@ -94,9 +130,8 @@ Depois do commit, toda regra do `User` tem pelo menos um
 ./run test:browser
 ```
 
-Resultado obtido: Unit 77 testes, Integration 9, Acceptance 9 (eram
-71 / 9 / 9 na base). Testes novos (todos em
-`tests/Unit/Models/Users/UserTest.php`):
+Resultado obtido: Unit 77 testes, Integration 9, Acceptance 9 (eram 71 / 9 / 9
+na base). Testes novos (todos em `tests/Unit/Models/Users/UserTest.php`):
 `test_errors_should_return_password_confirmation_error_when_confirmation_is_missing`,
 `test_save_should_fail_with_duplicated_email`,
 `test_update_should_accept_the_user_own_email`,
@@ -146,7 +181,8 @@ cherry-pick cria um commit novo (SHA diferente).
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

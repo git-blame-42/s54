@@ -13,10 +13,10 @@ existir para ter o formulário na linha). Branch no clone:
 continua equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver
 README raiz).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `55bdee0` | `feat: List users with pagination in admin area` | cenário D1 (mesmo commit, mesmo SHA) |
-| `894c74e` | `feat: Allow admin to change user role` | este cenário |
+- `55bdee0` `feat: List users with pagination in admin area`
+  — cenário D1 (mesmo commit, mesmo SHA)
+- `894c74e` `feat: Allow admin to change user role`
+  — este cenário
 
 ## O que mudou (só o commit `894c74e`)
 
@@ -135,7 +135,8 @@ git fetch fvp-d6 fvp/d6-admin-altera-perfil
 
 git cherry-pick 894c74e             # alvo já tem o D1
 git cherry-pick 55bdee0 894c74e     # alvo sem o D1: os dois, nesta ordem
-git cherry-pick main..fvp-d6/fvp/d6-admin-altera-perfil   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-d6/fvp/d6-admin-altera-perfil
 
 git remote remove fvp-d6
 ```

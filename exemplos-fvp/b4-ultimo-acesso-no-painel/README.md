@@ -69,12 +69,15 @@ equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 Resultado obtido: Unit 74 testes, Integration 11, Acceptance 10 (eram
 71 / 9 / 9 na base). Testes novos:
 
-- `AuthTest::test_previous_login_at_should_be_null_on_first_login`
-- `AuthTest::test_previous_login_at_should_return_the_last_login_before_this_one`
-- `AuthTest::test_logout_should_clear_previous_login_at`
-- `DashboardControllerTest::test_index_should_show_first_access_message_on_first_login`
-- `DashboardControllerTest::test_index_should_show_previous_login_date_and_time`
-- `DashboardCest::accessDashboardShowsPreviousLogin`
+- `AuthTest`:
+  - `test_previous_login_at_should_be_null_on_first_login`
+  - `test_previous_login_at_should_return_the_last_login_before_this_one`
+  - `test_logout_should_clear_previous_login_at`
+- `DashboardControllerTest`:
+  - `test_index_should_show_first_access_message_on_first_login`
+  - `test_index_should_show_previous_login_date_and_time`
+- `DashboardCest`:
+  - `accessDashboardShowsPreviousLogin`
 
 No navegador: `http://localhost`. `./run db:reset && ./run db:populate`
 para zerar; logue como `user@example.com` / `123456`: o painel diz
@@ -118,7 +121,8 @@ fica idêntica à da branch do bundle.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

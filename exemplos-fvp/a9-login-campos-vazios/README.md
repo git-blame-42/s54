@@ -66,13 +66,16 @@ dump-autoload --strict-psr` ok. Schema não mudou.
 
 Testes novos:
 
-- `AuthenticationsControllerTest::test_authenticate_without_params_should_not_login`
-- `AuthenticationsControllerTest::test_authenticate_with_empty_fields_should_not_login`
-- `AuthenticationsControllerTest::test_authenticate_with_spaces_around_email_should_login`
-- `LoginAccessTest::test_login_form_should_disable_html5_validation`
-- `LoginAccessTest::test_post_login_without_params_should_redirect_to_login`
-- `LoginAccessTest::test_post_login_with_empty_fields_should_redirect_to_login`
-- `LoginCest::loginWithEmptyFields`
+- `AuthenticationsControllerTest`:
+  - `test_authenticate_without_params_should_not_login`
+  - `test_authenticate_with_empty_fields_should_not_login`
+  - `test_authenticate_with_spaces_around_email_should_login`
+- `LoginAccessTest`:
+  - `test_login_form_should_disable_html5_validation`
+  - `test_post_login_without_params_should_redirect_to_login`
+  - `test_post_login_with_empty_fields_should_redirect_to_login`
+- `LoginCest`:
+  - `loginWithEmptyFields`
 
 No navegador: `http://localhost/login`, clique em "Entrar" com os dois
 campos vazios. A página volta para `/login` com "E-mail ou senha
@@ -103,16 +106,20 @@ git remote remove fvp-a9
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a9-login-campos-vazios/solucao.bundle fvp/a9-login-campos-vazios:fvp-a9
-git cherry-pick c6a58c4        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/a9-login-campos-vazios/solucao.bundle \
+    fvp/a9-login-campos-vazios:fvp-a9
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick c6a58c4
 git branch -D fvp-a9           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a9-login-campos-vazios/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/a9-login-campos-vazios/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/a9-login-campos-vazios/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a9-login-campos-vazios/solucao.patch
 ```
 
 ### Se der conflito

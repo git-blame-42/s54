@@ -100,7 +100,8 @@ git remote remove fvp-a1
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch <caminho>/solucao.bundle fvp/a1-centralizar-redirect-middlewares:fvp-a1
+git fetch <caminho>/solucao.bundle \
+    fvp/a1-centralizar-redirect-middlewares:fvp-a1
 git cherry-pick 1b4fcf4       # mesmo SHA; o bundle preserva o objeto
 git branch -D fvp-a1          # opcional, limpa a ref
 ```
@@ -111,7 +112,8 @@ resultante tem o mesmo SHA `1b4fcf4` (pai igual, conteúdo igual).
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

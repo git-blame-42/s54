@@ -100,7 +100,8 @@ git remote remove fvp-a13
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.bundle fvp/a13-regenerar-sessao-login:fvp-a13
+git fetch s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.bundle \
+    fvp/a13-regenerar-sessao-login:fvp-a13
 git cherry-pick fc494a9        # o commit criado no alvo terá SHA novo
 git branch -D fvp-a13          # opcional, limpa a ref
 ```
@@ -108,8 +109,10 @@ git branch -D fvp-a13          # opcional, limpa a ref
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a13-regenerar-sessao-login/solucao.patch
 ```
 
 Testado: cherry-pick limpo sobre um clone de `86c81ca`.

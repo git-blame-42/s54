@@ -132,16 +132,20 @@ git remote remove fvp-g1
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/g1-novo-usuario-demo/solucao.bundle fvp/g1-novo-usuario-demo:fvp-g1
-git cherry-pick a346583        # o bundle traz o objeto a346583; o cherry-pick cria um commit novo no alvo
+git fetch s50/exemplos-fvp/g1-novo-usuario-demo/solucao.bundle \
+    fvp/g1-novo-usuario-demo:fvp-g1
+# o bundle traz o objeto a346583; o cherry-pick cria um commit novo no alvo
+git cherry-pick a346583
 git branch -D fvp-g1           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/g1-novo-usuario-demo/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/g1-novo-usuario-demo/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/g1-novo-usuario-demo/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/g1-novo-usuario-demo/solucao.patch
 ```
 
 Conferido: num clone limpo de `86c81ca`, o `git fetch` do bundle

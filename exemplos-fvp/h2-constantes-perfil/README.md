@@ -96,16 +96,20 @@ git remote remove fvp-h2
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/h2-constantes-perfil/solucao.bundle fvp/h2-constantes-perfil:fvp-h2
-git cherry-pick 2f28970        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/h2-constantes-perfil/solucao.bundle \
+    fvp/h2-constantes-perfil:fvp-h2
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick 2f28970
 git branch -D fvp-h2           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/h2-constantes-perfil/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/h2-constantes-perfil/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/h2-constantes-perfil/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/h2-constantes-perfil/solucao.patch
 ```
 
 ### Se der conflito

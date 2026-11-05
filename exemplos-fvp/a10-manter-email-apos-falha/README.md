@@ -12,10 +12,10 @@ equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 Empilhado no A9 (usa a variável `$email` que o A9 cria em
 `authenticate`).
 
-| Commit | Mensagem | Origem |
-|--------|----------|--------|
-| `c6a58c4` | `fix: Handle empty login form without HTML5 validation` | cenário A9 (mesmo commit, mesmo SHA) |
-| `17f997a` | `feat: Keep typed email after failed login` | este cenário |
+- `c6a58c4` `fix: Handle empty login form without HTML5 validation`
+  — cenário A9 (mesmo commit, mesmo SHA)
+- `17f997a` `feat: Keep typed email after failed login`
+  — este cenário
 
 ## O que mudou (só o commit `17f997a`)
 
@@ -70,7 +70,8 @@ Resultado obtido: Unit 71 testes, Integration 16, Acceptance 10 (eram
 
 Testes novos deste commit:
 
-- `AuthenticationsControllerTest::test_authenticate_failure_should_escape_typed_email`
+- `AuthenticationsControllerTest`:
+  - `test_authenticate_failure_should_escape_typed_email`
 
 Testes alterados: os três de falha em `AuthenticationsControllerTest`,
 os dois de POST em `LoginAccessTest` e `LoginCest::loginWithInvalidCredentials`.
@@ -104,7 +105,8 @@ git fetch fvp-a10 fvp/a10-manter-email-apos-falha
 
 git cherry-pick 17f997a             # alvo já tem o A9
 git cherry-pick c6a58c4 17f997a     # alvo sem o A9: os dois, nesta ordem
-git cherry-pick main..fvp-a10/fvp/a10-manter-email-apos-falha   # mesma coisa, por intervalo
+# mesma coisa, por intervalo
+git cherry-pick main..fvp-a10/fvp/a10-manter-email-apos-falha
 
 git remote remove fvp-a10
 ```
@@ -112,7 +114,8 @@ git remote remove fvp-a10
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.bundle fvp/a10-manter-email-apos-falha:fvp-a10
+git fetch s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.bundle \
+    fvp/a10-manter-email-apos-falha:fvp-a10
 git cherry-pick 17f997a             # alvo já tem o A9
 git cherry-pick main..fvp-a10       # alvo sem o A9: aplica os dois commits
 git branch -D fvp-a10               # opcional, limpa a ref
@@ -128,8 +131,10 @@ commits novos; o SHA no seu repositório vai ser outro.
 O patch tem os dois commits (A9 e A10). Alvo sem o A9:
 
 ```
-git am s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.patch       # cria dois commits novos com as mesmas mensagens
-git apply --3way s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.patch   # só o diff, sem commit
+# cria dois commits novos com as mesmas mensagens
+git am s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a10-manter-email-apos-falha/solucao.patch
 ```
 
 Alvo que já tem o A9: use o bundle ou o clone (item 1 ou 2) com

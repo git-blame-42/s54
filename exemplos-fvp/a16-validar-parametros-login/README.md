@@ -4,10 +4,10 @@ Pedido, como o professor faria na hora: "A ausência do parâmetro deve
 ser identificada e tratada, não substituída por string vazia. Valide
 que `user` tem `email` e `password` antes de consultar o model."
 
-Chance: alta. Tempo estimado: 15 min. Catálogo:
-`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1), A16 / issues
-ice-cream-manager #6 (item 3), reservas-academicas #15 e utfprarena #6
-("Tratamento de parâmetros").
+Chance: alta. Tempo estimado: 15 min. Catálogo: `fvp-possiveis-modificacoes.md`,
+seção 9 (complemento 2, issues da Entrega 4.1), A16 / issues ice-cream-manager
+#6 (item 3), reservas-academicas #15 e utfprarena #6 ("Tratamento de
+parâmetros").
 
 Branch no clone: `fvp/a16-validar-parametros-login`. `main` continua
 equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
@@ -60,7 +60,8 @@ equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 ./run test tests/Unit
 ./run test tests/Integration
 ./run test:browser
-./run composer dump-autoload -o --strict-psr   # depois: ./run composer dump-autoload
+# depois: ./run composer dump-autoload
+./run composer dump-autoload -o --strict-psr
 ```
 
 Resultado obtido: Unit 71 testes, Integration 13, Acceptance 9 (eram
@@ -70,10 +71,11 @@ Schema não mudou. Sem a correção, três dos testes novos falham com
 
 Testes novos:
 
-- `AuthenticationsControllerTest::test_authenticate_without_user_param_should_not_login`
-- `AuthenticationsControllerTest::test_authenticate_without_email_should_not_login`
-- `AuthenticationsControllerTest::test_authenticate_with_blank_password_should_not_login`
-- `AuthenticationsControllerTest::test_authenticate_with_non_string_email_should_not_login`
+- `AuthenticationsControllerTest`:
+  - `test_authenticate_without_user_param_should_not_login`
+  - `test_authenticate_without_email_should_not_login`
+  - `test_authenticate_with_blank_password_should_not_login`
+  - `test_authenticate_with_non_string_email_should_not_login`
 
 No terminal, com o stack de pé (POST sem `user`):
 
@@ -158,16 +160,20 @@ git remote remove fvp-a16
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a16-validar-parametros-login/solucao.bundle fvp/a16-validar-parametros-login:fvp-a16
-git cherry-pick 366da3b        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/a16-validar-parametros-login/solucao.bundle \
+    fvp/a16-validar-parametros-login:fvp-a16
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick 366da3b
 git branch -D fvp-a16          # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a16-validar-parametros-login/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/a16-validar-parametros-login/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/a16-validar-parametros-login/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/a16-validar-parametros-login/solucao.patch
 ```
 
 ### Se der conflito

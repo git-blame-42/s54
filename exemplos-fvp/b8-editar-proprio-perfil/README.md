@@ -111,16 +111,20 @@ git remote remove fvp-b8
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.bundle fvp/b8-editar-proprio-perfil:fvp-b8
-git cherry-pick d7a5d85        # o bundle traz o objeto; o cherry-pick cria um commit novo
+git fetch s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.bundle \
+    fvp/b8-editar-proprio-perfil:fvp-b8
+# o bundle traz o objeto; o cherry-pick cria um commit novo
+git cherry-pick d7a5d85
 git branch -D fvp-b8           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/b8-editar-proprio-perfil/solucao.patch
 ```
 
 ### Se der conflito

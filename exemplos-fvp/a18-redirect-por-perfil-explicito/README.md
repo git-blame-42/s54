@@ -7,8 +7,8 @@ assumir que um usuário que não é administrador necessariamente é
 cliente."
 
 Chance: média. Tempo estimado: 15 min. Catálogo:
-`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1), A18 / issue
-ice-cream-manager #6 (itens 2 e 6).
+`fvp-possiveis-modificacoes.md`, seção 9 (complemento 2, issues da Entrega 4.1),
+A18 / issue ice-cream-manager #6 (itens 2 e 6).
 
 Branch no clone: `fvp/a18-redirect-por-perfil-explicito`. `main`
 continua equivalente ao `86c81ca` do público (aqui `aa2b3be`; ver
@@ -105,12 +105,15 @@ dump-autoload -o --strict-psr` ok. O schema não mudou.
 
 Testes novos:
 
-- `UserTest::test_home_route_should_depend_on_role`
-- `UserTest::test_home_route_should_fail_with_unknown_role`
-- `AuthenticationsControllerTest::test_authenticate_admin_should_redirect_to_admin`
-- `AuthenticationsControllerTest::test_authenticate_with_unknown_role_should_fail_without_login`
-- `AdminDashboardCest::loginAsAdminShouldLandOnAdminDashboard`
-- `AdminDashboardCest::loginAsParticipantShouldLandOnUserDashboard`
+- `UserTest`:
+  - `test_home_route_should_depend_on_role`
+  - `test_home_route_should_fail_with_unknown_role`
+- `AuthenticationsControllerTest`:
+  - `test_authenticate_admin_should_redirect_to_admin`
+  - `test_authenticate_with_unknown_role_should_fail_without_login`
+- `AdminDashboardCest`:
+  - `loginAsAdminShouldLandOnAdminDashboard`
+  - `loginAsParticipantShouldLandOnUserDashboard`
 
 No navegador (`./run db:populate` antes): `http://localhost/login` com
 `admin@example.com` / `123456` cai em `/admin` ("Painel Administrativo"); com
@@ -138,7 +141,8 @@ diferentes dos daqui.
 
 ```
 cd /caminho/do/seu/repositorio
-git remote add fvp-a18 s50/exemplos-fvp/a18-redirect-por-perfil-explicito/projeto
+git remote add fvp-a18 \
+    s50/exemplos-fvp/a18-redirect-por-perfil-explicito/projeto
 git fetch fvp-a18 fvp/a18-redirect-por-perfil-explicito
 git cherry-pick 2f28970^..fb42b17   # H2 + A18; ou só: git cherry-pick fb42b17
 git remote remove fvp-a18
@@ -147,16 +151,21 @@ git remote remove fvp-a18
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.bundle fvp/a18-redirect-por-perfil-explicito:fvp-a18
-git cherry-pick 2f28970^..fb42b17   # o bundle traz os objetos; o cherry-pick cria commits novos
+git fetch s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.bundle \
+    fvp/a18-redirect-por-perfil-explicito:fvp-a18
+# o bundle traz os objetos; o cherry-pick cria commits novos
+git cherry-pick 2f28970^..fb42b17
 git branch -D fvp-a18               # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.patch       # cria commits novos com as mesmas mensagens
-git apply --3way s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.patch   # só o diff, sem commit
+# cria commits novos com as mesmas mensagens
+git am s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.patch
+# só o diff, sem commit
+git apply --3way \
+    s50/exemplos-fvp/a18-redirect-por-perfil-explicito/solucao.patch
 ```
 
 Se o alvo já tiver o H2, o primeiro patch do `git am` vai falhar ou

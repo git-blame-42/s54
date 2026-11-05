@@ -90,8 +90,11 @@ git remote remove fvp-d4
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/d4-busca-por-nome-email/solucao.bundle fvp/d4-busca-por-nome-email:fvp-d4
-git cherry-pick 3e8d1d3        # o bundle traz o objeto 3e8d1d3; o cherry-pick cria um commit novo, com outro SHA
+git fetch s50/exemplos-fvp/d4-busca-por-nome-email/solucao.bundle \
+    fvp/d4-busca-por-nome-email:fvp-d4
+# o bundle traz o objeto 3e8d1d3; o cherry-pick cria um commit novo, com outro
+# SHA
+git cherry-pick 3e8d1d3
 git branch -D fvp-d4           # opcional, limpa a ref
 ```
 
@@ -101,8 +104,10 @@ cherry-pick aplicaram sem conflito.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/d4-busca-por-nome-email/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/d4-busca-por-nome-email/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/d4-busca-por-nome-email/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/d4-busca-por-nome-email/solucao.patch
 ```
 
 ### Se der conflito
@@ -162,8 +167,10 @@ public function index(Request $request): void
 
 ```php
 <!-- app/views/admin/users/index.phtml, acima da tabela -->
-<form method="GET" action="<?= route('admin.users.index') ?>" class="d-flex gap-2 mb-3">
-  <input type="search" name="q" value="<?= htmlspecialchars($q) ?>" class="form-control" placeholder="Nome ou e-mail">
+<form method="GET" action="<?= route('admin.users.index') ?>"
+      class="d-flex gap-2 mb-3">
+  <input type="search" name="q" value="<?= htmlspecialchars($q) ?>"
+         class="form-control" placeholder="Nome ou e-mail">
   <button type="submit" class="btn btn-primary">Buscar</button>
 </form>
 ```

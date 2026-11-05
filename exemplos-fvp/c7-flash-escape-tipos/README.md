@@ -141,16 +141,20 @@ git remote remove fvp-c7
 ### 2. A partir do `solucao.bundle` (não precisa do clone)
 
 ```
-git fetch s50/exemplos-fvp/c7-flash-escape-tipos/solucao.bundle fvp/c7-flash-escape-tipos:fvp-c7
-git cherry-pick f6fb0d8        # o bundle traz o objeto; o cherry-pick cria commit novo
+git fetch s50/exemplos-fvp/c7-flash-escape-tipos/solucao.bundle \
+    fvp/c7-flash-escape-tipos:fvp-c7
+# o bundle traz o objeto; o cherry-pick cria commit novo
+git cherry-pick f6fb0d8
 git branch -D fvp-c7           # opcional, limpa a ref
 ```
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am s50/exemplos-fvp/c7-flash-escape-tipos/solucao.patch       # cria commit novo com a mesma mensagem
-git apply --3way s50/exemplos-fvp/c7-flash-escape-tipos/solucao.patch   # só o diff, sem commit
+# cria commit novo com a mesma mensagem
+git am s50/exemplos-fvp/c7-flash-escape-tipos/solucao.patch
+# só o diff, sem commit
+git apply --3way s50/exemplos-fvp/c7-flash-escape-tipos/solucao.patch
 ```
 
 ### Se der conflito
@@ -165,13 +169,12 @@ git cherry-pick --continue # ou: git am --continue
 
 Arquivos que costumam conflitar neste cenário e por quê:
 
-- `app/views/layouts/_flash_message.phtml`: C5 troca `$type` por
-  `e($type)` e `$msg` por `e($msg)` nas mesmas linhas. Fique com a
-  versão deste cenário e escolha um escape só para `$msg`: ou
-  `htmlspecialchars(...)` ou `e($msg)` (o helper do C5 faz o mesmo
-  `htmlspecialchars` com `ENT_QUOTES | ENT_SUBSTITUTE` e UTF-8). Nunca os dois juntos,
-  senão aparece `&amp;lt;` na tela. Se mantiver `e($type)`, tudo bem;
-  não muda nada para `success`/`danger`. Confira que o
+- `app/views/layouts/_flash_message.phtml`: C5 troca `$type` por `e($type)` e
+  `$msg` por `e($msg)` nas mesmas linhas. Fique com a versão deste cenário e
+  escolha um escape só para `$msg`: ou `htmlspecialchars(...)` ou `e($msg)` (o
+  helper do C5 faz o mesmo `htmlspecialchars` com `ENT_QUOTES | ENT_SUBSTITUTE`
+  e UTF-8). Nunca os dois juntos, senão aparece `&amp;lt;` na tela. Se mantiver
+  `e($type)`, tudo bem; não muda nada para `success`/`danger`. Confira que o
   `<?php endforeach; ?>` ficou (o C5 manteve a tag curta).
 - `tests/Integration/Controllers/HomeControllerTest.php`: outros
   cenários que testam a home podem acrescentar testes no fim da classe

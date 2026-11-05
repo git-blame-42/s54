@@ -30,8 +30,10 @@ foi mantida; vieram duas linhas novas depois dela.
 Saída de `./run db:populate`:
 
 ```
-Usuários criados: admin@example.com (admin) e user@example.com (participant), senha 123456
-Participantes extras: participante1@example.com a participante15@example.com, senha 123456
+Usuários criados: admin@example.com (admin) e user@example.com (participant),
+senha 123456
+Participantes extras: participante1@example.com a participante15@example.com,
+senha 123456
 Total de usuários no banco: 17
 ```
 
@@ -169,7 +171,8 @@ mensagem e o mesmo diff.
 ### 3. A partir do `solucao.patch` (`git am`)
 
 ```
-git am <caminho>/solucao.patch              # cria commit novo com a mesma mensagem
+# cria commit novo com a mesma mensagem
+git am <caminho>/solucao.patch
 git apply --3way <caminho>/solucao.patch    # só o diff, sem commit
 ```
 

@@ -10,9 +10,8 @@ seção F1 (molde do teste de middleware na seção F2 do complemento).
 Branch no clone: `fvp/f1-testes-que-faltam`. `main` continua equivalente
 ao `86c81ca` do público (aqui `aa2b3be`; ver README raiz).
 
-| Commit | Mensagem |
-|--------|----------|
-| `bfc8f2b` | `test: Add missing controller, access and middleware tests for authentication` |
+- `bfc8f2b` `test: Add missing controller, access and middleware tests for
+  authentication`
 
 ## O que mudou
 
@@ -50,17 +49,68 @@ Resultado: 10 arquivos, +320 / -2 linhas.
 "existia" = já estava em `86c81ca`; "adicionado" = entra neste commit;
 "—" = a camada não se aplica ou não foi coberta (motivo na coluna).
 
-| Cenário 4.1 | Aceitação | Acesso (Guzzle) | Controller | Unit |
-|-------------|-----------|-----------------|------------|------|
-| Área do usuário sem login | existia: `DashboardCest::accessDashboardWithoutLogin` | existia: `DashboardAccessTest::test_authenticated_route_should_redirect_to_login_without_session` | — (barrado antes, no middleware) | adicionado: `AuthenticateTest` (destino `/login` e flash) |
-| Área admin sem login | existia: `AdminDashboardCest::accessAdminWithoutLogin` | existia: `DashboardAccessTest::test_admin_route_should_redirect_to_login_without_session` | — | adicionado: `AdminTest::test_handle_without_session_should_not_redirect` |
-| Participante tenta `/admin` | existia: `AdminDashboardCest::accessAdminAsCommonUser` | — (Guzzle sem cookie de sessão) | — | adicionado: `AdminTest` (destino `/dashboard` e flash) |
-| Credenciais erradas | existia: `LoginCest::loginWithInvalidCredentials` | — | existia: `AuthenticationsControllerTest::test_authenticate_with_invalid_credentials_should_not_login` | existia: `UserTest::test_authenticate_should_return_false` |
-| Login com sucesso (usuário) | existia: `LoginCest::loginWithValidCredentials`, `DashboardCest::accessDashboardAfterLogin` | — | existia: `AuthenticationsControllerTest::test_authenticate_with_valid_credentials_should_login`; adicionado: `DashboardControllerTest` | existia: `AuthTest::test_login`, `test_user`, `test_check`; adicionado: `AuthenticateTest::test_handle_with_session_should_not_redirect` |
-| Login com sucesso (admin) | existia: `AdminDashboardCest::accessAdminAsAdmin` | — | adicionado: `Admin\DashboardControllerTest` | existia: `UserTest::test_is_admin_should_return_true_for_admin_role`; adicionado: `AdminTest::test_handle_with_admin_should_not_redirect` |
-| Logout | existia: `LoginCest::logout`; adicionado: `LoginCest::accessDashboardAfterLogout` | — | existia: `AuthenticationsControllerTest::test_destroy_should_logout` | existia: `AuthTest::test_logout`; adicionado: `AuthTest::test_logout_should_remove_user_id_from_session` |
-| Sessão ausente ou inválida | — | — | — | adicionado: `AuthTest::test_user_without_session_should_return_null`, `test_check_without_session_should_return_false`, `test_check_with_nonexistent_user_id_should_return_false` |
-| Rotas públicas (`/`, `/login`) | existia: `HomeIndexCest::seeHomePage` | existia: `HomeAccessTest::test_should_access_home_route` (`GET /` → 200), `DashboardAccessTest::test_public_route_should_be_accessible_without_session` | existia: `HomeControllerTest`, `AuthenticationsControllerTest::test_render_login_page` | — |
+- Cenário 4.1: Área do usuário sem login
+  - Aceitação: existia: `DashboardCest::accessDashboardWithoutLogin`
+  - Acesso (Guzzle): existia:
+    `DashboardAccessTest::test_authenticated_route_should_redirect_to_login_without_session`
+  - Controller: — (barrado antes, no middleware)
+  - Unit: adicionado: `AuthenticateTest` (destino `/login` e flash)
+- Cenário 4.1: Área admin sem login
+  - Aceitação: existia: `AdminDashboardCest::accessAdminWithoutLogin`
+  - Acesso (Guzzle): existia:
+    `DashboardAccessTest::test_admin_route_should_redirect_to_login_without_session`
+  - Controller: —
+  - Unit: adicionado:
+    `AdminTest::test_handle_without_session_should_not_redirect`
+- Cenário 4.1: Participante tenta `/admin`
+  - Aceitação: existia: `AdminDashboardCest::accessAdminAsCommonUser`
+  - Acesso (Guzzle): — (Guzzle sem cookie de sessão)
+  - Controller: —
+  - Unit: adicionado: `AdminTest` (destino `/dashboard` e flash)
+- Cenário 4.1: Credenciais erradas
+  - Aceitação: existia: `LoginCest::loginWithInvalidCredentials`
+  - Acesso (Guzzle): —
+  - Controller: existia:
+    `AuthenticationsControllerTest::test_authenticate_with_invalid_credentials_should_not_login`
+  - Unit: existia: `UserTest::test_authenticate_should_return_false`
+- Cenário 4.1: Login com sucesso (usuário)
+  - Aceitação: existia: `LoginCest::loginWithValidCredentials`,
+    `DashboardCest::accessDashboardAfterLogin`
+  - Acesso (Guzzle): —
+  - Controller: existia:
+    `AuthenticationsControllerTest::test_authenticate_with_valid_credentials_should_login`;
+    adicionado: `DashboardControllerTest`
+  - Unit: existia: `AuthTest::test_login`, `test_user`, `test_check`;
+    adicionado: `AuthenticateTest::test_handle_with_session_should_not_redirect`
+- Cenário 4.1: Login com sucesso (admin)
+  - Aceitação: existia: `AdminDashboardCest::accessAdminAsAdmin`
+  - Acesso (Guzzle): —
+  - Controller: adicionado: `Admin\DashboardControllerTest`
+  - Unit: existia: `UserTest::test_is_admin_should_return_true_for_admin_role`;
+    adicionado: `AdminTest::test_handle_with_admin_should_not_redirect`
+- Cenário 4.1: Logout
+  - Aceitação: existia: `LoginCest::logout`; adicionado:
+    `LoginCest::accessDashboardAfterLogout`
+  - Acesso (Guzzle): —
+  - Controller: existia:
+    `AuthenticationsControllerTest::test_destroy_should_logout`
+  - Unit: existia: `AuthTest::test_logout`; adicionado:
+    `AuthTest::test_logout_should_remove_user_id_from_session`
+- Cenário 4.1: Sessão ausente ou inválida
+  - Aceitação: —
+  - Acesso (Guzzle): —
+  - Controller: —
+  - Unit: adicionado: `AuthTest::test_user_without_session_should_return_null`,
+    `test_check_without_session_should_return_false`,
+    `test_check_with_nonexistent_user_id_should_return_false`
+- Cenário 4.1: Rotas públicas (`/`, `/login`)
+  - Aceitação: existia: `HomeIndexCest::seeHomePage`
+  - Acesso (Guzzle): existia: `HomeAccessTest::test_should_access_home_route`
+    (`GET /` → 200),
+    `DashboardAccessTest::test_public_route_should_be_accessible_without_session`
+  - Controller: existia: `HomeControllerTest`,
+    `AuthenticationsControllerTest::test_render_login_page`
+  - Unit: —
 
 Não adicionado de propósito: teste de acesso `GET /` → 200 (já existe em
 `HomeAccessTest`); aceitação de logout do admin (o
