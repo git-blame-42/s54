@@ -222,6 +222,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P20. Exportar Evento em iCal (.ics), botão "Adicionar ao calendário"
   `p20-exportar-ical/`
   - feat: Export an Event as an iCalendar file
+- P21. Imagem de capa (banner) do Evento por upload
+  `p21-banner-upload/`
+  - feat: Add event cover image upload
 - P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
   `p3-cancelar-inscricao/`
   - feat: Add events listing and details for participants

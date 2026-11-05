@@ -1,0 +1,873 @@
+From a65b218bf905390d1bb1059c388d5187e00edae7 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:32:09 -0300
+Subject: [PATCH] feat: Add event cover image upload
+
+Store the banner in public/assets/uploads/events/ with a generated name,
+validate type with finfo and size up to 2 MB in Event::validates().
+---
+ app/Controllers/Admin/EventsController.php    |  14 ++
+ app/Models/Event.php                          |  57 ++++-
+ app/Services/EventBanner.php                  | 142 +++++++++++++
+ app/views/admin/events/_form.phtml            |  15 +-
+ app/views/admin/events/show.phtml             |   5 +
+ database/schema.sql                           |   2 +
+ .../admin/events/BannerUploadCest.php         | 102 +++++++++
+ .../Admin/EventsControllerTest.php            |  70 +++++-
+ tests/Support/Data/banner-falso.png           |   1 +
+ tests/Support/Data/banner.png                 | Bin 0 -> 345 bytes
+ tests/Unit/Models/Events/EventTest.php        |  52 +++++
+ tests/Unit/Services/EventBannerTest.php       | 199 ++++++++++++++++++
+ 12 files changed, 656 insertions(+), 3 deletions(-)
+ create mode 100644 app/Services/EventBanner.php
+ create mode 100644 tests/Acceptance/admin/events/BannerUploadCest.php
+ create mode 100644 tests/Support/Data/banner-falso.png
+ create mode 100644 tests/Support/Data/banner.png
+ create mode 100644 tests/Unit/Services/EventBannerTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..0fa10dc 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -50,6 +50,7 @@ class EventsController extends Controller
+     {
+         $event = new Event();
+         $this->fill($event, $request);
++        $event->attachBanner($this->bannerUpload());
+         $event->user_id = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+@@ -82,6 +83,7 @@ class EventsController extends Controller
+             return;
+         }
+         $this->fill($event, $request);
++        $event->attachBanner($this->bannerUpload());
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+@@ -129,6 +131,18 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * Arquivo da imagem de capa. O Request do framework não carrega $_FILES, então ele é lido aqui.
++     *
++     * @return array<string, mixed>|null
++     */
++    private function bannerUpload(): ?array
++    {
++        $file = $_FILES['event_banner'] ?? null;
++
++        return is_array($file) ? $file : null;
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..dc82a16 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -2,6 +2,7 @@
+ 
+ namespace App\Models;
+ 
++use App\Services\EventBanner;
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
+ use Lib\Validations;
+@@ -18,6 +19,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property string|null $banner_name nome gerado do arquivo da imagem de capa; use banner()->url()
+  */
+ class Event extends Model
+ {
+@@ -55,8 +57,12 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'banner_name',
+     ];
+ 
++    /** @var array<string, mixed>|null arquivo de $_FILES anexado ao Evento; validado em validates(), gravado em save() */
++    private ?array $bannerUpload = null;
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+@@ -79,6 +85,49 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        if ($this->bannerUpload !== null) {
++            $this->banner()->validate($this->bannerUpload);
++        }
++    }
++
++    /**
++     * Grava o Evento e, se houver arquivo anexado e válido, a imagem de capa. A validação do arquivo
++     * acontece antes do INSERT/UPDATE, então um arquivo inválido não deixa registro nem arquivo órfão.
++     */
++    public function save(): bool
++    {
++        if (!parent::save()) {
++            return false;
++        }
++
++        if ($this->bannerUpload !== null) {
++            $this->banner()->store($this->bannerUpload);
++            $this->bannerUpload = null;
++        }
++
++        return true;
++    }
++
++    public function banner(): EventBanner
++    {
++        return new EventBanner($this);
++    }
++
++    /**
++     * Anexa o arquivo enviado no formulário ($_FILES['event_banner']). Campo vazio (UPLOAD_ERR_NO_FILE)
++     * não anexa nada: na edição, o banner atual é mantido.
++     *
++     * @param array<string, mixed>|null $file
++     */
++    public function attachBanner(?array $file): void
++    {
++        if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
++            $this->bannerUpload = null;
++            return;
++        }
++
++        $this->bannerUpload = $file;
+     }
+ 
+     /**
+@@ -164,12 +213,18 @@ class Event extends Model
+         }
+ 
+         try {
+-            return $this->destroy();
++            $destroyed = $this->destroy();
+         } catch (PDOException $e) {
+             // FK RESTRICT: alguém se inscreveu entre a contagem e o DELETE.
+             $this->addError('base', 'não foi possível remover o evento, pois ele possui inscrições!');
+             return false;
+         }
++
++        if ($destroyed) {
++            $this->banner()->delete();
++        }
++
++        return $destroyed;
+     }
+ 
+     /**
+diff --git a/app/Services/EventBanner.php b/app/Services/EventBanner.php
+new file mode 100644
+index 0000000..b478872
+--- /dev/null
++++ b/app/Services/EventBanner.php
+@@ -0,0 +1,142 @@
++<?php
++
++namespace App\Services;
++
++use App\Models\Event;
++use Core\Constants\Constants;
++use finfo;
++use RuntimeException;
++
++/**
++ * Imagem de capa (banner) do Evento, no molde do ProfileAvatar.
++ *
++ * O arquivo vai para public/assets/uploads/events/ com nome gerado (nunca o nome enviado pelo
++ * navegador) e esse nome fica em events.banner_name. O tipo é conferido pelo conteúdo (finfo),
++ * não pela extensão, e o tamanho pelo arquivo recebido.
++ */
++class EventBanner
++{
++    /** Tipos aceitos (MIME detectado pelo finfo) e a extensão usada no nome gerado. */
++    public const TYPES = [
++        'image/jpeg' => 'jpg',
++        'image/png' => 'png',
++    ];
++
++    /** Tamanho máximo: 2 MB (o php/uploads.ini aceita até 40 MB; o limite da regra é este). */
++    public const MAX_SIZE = 2 * 1024 * 1024;
++
++    private const BASE_DIR = '/assets/uploads/events/';
++
++    public function __construct(
++        private Event $event
++    ) {
++    }
++
++    /**
++     * URL pública da imagem, ou null se o Evento não tem banner.
++     */
++    public function url(): ?string
++    {
++        $name = $this->event->banner_name;
++
++        if ($name === null || $name === '') {
++            return null;
++        }
++
++        return self::BASE_DIR . $name;
++    }
++
++    /**
++     * Valida o arquivo de $_FILES e registra o problema em errors('banner') do Evento.
++     *
++     * @param array<string, mixed> $file
++     */
++    public function validate(array $file): bool
++    {
++        $error = $file['error'] ?? UPLOAD_ERR_NO_FILE;
++        $tmpPath = $file['tmp_name'] ?? null;
++
++        if ($error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE) {
++            $this->event->addError('banner', 'deve ter no máximo 2 MB!');
++        } elseif ($error !== UPLOAD_ERR_OK || !is_string($tmpPath) || !is_file($tmpPath)) {
++            $this->event->addError('banner', 'não foi possível enviar o arquivo!');
++        } elseif (filesize($tmpPath) > self::MAX_SIZE) {
++            $this->event->addError('banner', 'deve ter no máximo 2 MB!');
++        } elseif ($this->mimeType($tmpPath) === null) {
++            $this->event->addError('banner', 'deve ser uma imagem JPG ou PNG!');
++        }
++
++        return $this->event->errors('banner') === null;
++    }
++
++    /**
++     * Grava o arquivo já validado com nome gerado, apaga o banner anterior e atualiza banner_name.
++     *
++     * @param array<string, mixed> $file
++     */
++    public function store(array $file): void
++    {
++        $tmpPath = (string) ($file['tmp_name'] ?? '');
++        $mimeType = $this->mimeType($tmpPath);
++
++        if ($mimeType === null) {
++            throw new RuntimeException('Imagem de capa inválida: valide o arquivo antes de gravar.');
++        }
++
++        $name = bin2hex(random_bytes(16)) . '.' . self::TYPES[$mimeType];
++
++        if (!$this->moveUploadedFile($tmpPath, $this->storeDir() . $name)) {
++            throw new RuntimeException('Não foi possível gravar a imagem de capa em ' . $this->storeDir());
++        }
++
++        $this->delete();
++        $this->event->update(['banner_name' => $name]);
++    }
++
++    /**
++     * Apaga do disco o arquivo do banner atual (o valor de banner_name não muda).
++     */
++    public function delete(): void
++    {
++        $name = $this->event->banner_name;
++
++        if ($name === null || $name === '') {
++            return;
++        }
++
++        $path = $this->storeDir() . basename($name);
++        if (is_file($path)) {
++            unlink($path);
++        }
++    }
++
++    /**
++     * move_uploaded_file só aceita arquivo que chegou por upload HTTP; os testes de unidade sobrescrevem.
++     */
++    protected function moveUploadedFile(string $from, string $to): bool
++    {
++        return move_uploaded_file($from, $to);
++    }
++
++    private function storeDir(): string
++    {
++        $path = (string) Constants::rootPath()->join('public' . self::BASE_DIR);
++
++        if (!is_dir($path)) {
++            mkdir($path, 0755, true);
++        }
++
++        return $path;
++    }
++
++    private function mimeType(string $path): ?string
++    {
++        if (!is_file($path)) {
++            return null;
++        }
++
++        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($path);
++
++        return is_string($mimeType) && isset(self::TYPES[$mimeType]) ? $mimeType : null;
++    }
++}
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..498c894 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -13,7 +13,8 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     ? '<div class="invalid-feedback' . $extra . '">' . htmlspecialchars($event->errors($field)) . '</div>'
+     : '';
+ ?>
+-<form action="<?= $action ?>" method="post" novalidate>
++<?php /* multipart: sem o enctype o navegador envia só o nome do arquivo e $_FILES chega vazio. */ ?>
++<form action="<?= $action ?>" method="post" enctype="multipart/form-data" novalidate>
+     <?php if ($isUpdate) : ?>
+         <input type="hidden" name="_method" value="PUT">
+     <?php endif; ?>
+@@ -88,6 +89,18 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <?= $feedback('capacity') ?>
+     </div>
+ 
++    <div class="mb-3">
++        <label for="event_banner" class="form-label">Imagem de capa</label>
++        <?php if ($event->banner()->url() !== null) : ?>
++            <img src="<?= htmlspecialchars($event->banner()->url()) ?>" alt="Imagem de capa atual"
++                class="d-block img-thumbnail mb-2 event-banner-current" style="max-height: 120px">
++        <?php endif; ?>
++        <input type="file" class="form-control<?= $invalid('banner') ?>" id="event_banner" name="event_banner"
++            accept="image/jpeg,image/png">
++        <div class="form-text">JPG ou PNG, até 2 MB. Na edição, deixe vazio para manter a imagem atual.</div>
++        <?= $feedback('banner') ?>
++    </div>
++
+     <button type="submit" class="btn btn-primary">Salvar</button>
+     <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..f281353 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -3,6 +3,11 @@ use App\Models\Event;
+ 
+ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
+ ?>
++<?php if ($event->banner()->url() !== null) : ?>
++    <img src="<?= htmlspecialchars($event->banner()->url()) ?>" alt="Imagem de capa do evento"
++        class="img-fluid rounded mb-4 event-banner">
++<?php endif; ?>
++
+ <dl class="row">
+     <dt class="col-sm-3">Título</dt>
+     <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..3f10ea7 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,8 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Imagem de capa (P21): nome gerado do arquivo em public/assets/uploads/events/; NULL = sem banner.
++    banner_name VARCHAR(255) NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/BannerUploadCest.php b/tests/Acceptance/admin/events/BannerUploadCest.php
+new file mode 100644
+index 0000000..80ab6a3
+--- /dev/null
++++ b/tests/Acceptance/admin/events/BannerUploadCest.php
+@@ -0,0 +1,102 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use Core\Constants\Constants;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Imagem de capa (banner) do Evento por upload. Os arquivos de envio ficam em tests/Support/Data/:
++ * banner.png é um PNG de verdade; banner-falso.png tem extensão .png, mas é texto.
++ */
++class BannerUploadCest extends BaseEventsCest
++{
++    public function _after(AcceptanceTester $page): void
++    {
++        // Apaga os arquivos que o upload gravou em public/assets/uploads/events/ antes de derrubar o banco.
++        foreach (Event::all() as $event) {
++            $event->banner()->delete();
++        }
++
++        $dir = (string) Constants::rootPath()->join('public/assets/uploads/events');
++        if (is_dir($dir) && count((array) scandir($dir)) === 2) {
++            rmdir($dir);
++        }
++
++        parent::_after($page);
++    }
++
++    public function createEventWithBanner(AcceptanceTester $page): void
++    {
++        $data = $this->validEventData(['title' => 'Evento com Capa']);
++
++        $page->wantTo('Cadastrar um Evento com imagem de capa');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $data);
++        $page->attachFile('#event_banner', 'banner.png');
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        $event = Event::findBy(['title' => 'Evento com Capa']);
++        Assert::assertNotNull($event);
++
++        // Nome gerado pelo servidor, nunca o do arquivo enviado.
++        $name = (string) $event->banner_name;
++        Assert::assertMatchesRegularExpression('/^[0-9a-f]{32}\.png$/', $name);
++        Assert::assertFileExists((string) Constants::rootPath()->join("public/assets/uploads/events/{$name}"));
++
++        $page->seeElement('img.event-banner', ['src' => "/assets/uploads/events/{$name}"]);
++        $page->waitForJS("return document.querySelector('img.event-banner').complete;", 5);
++        $width = $page->executeJS("return document.querySelector('img.event-banner').naturalWidth;");
++        Assert::assertSame(240, $width);
++    }
++
++    public function replaceBannerOnEdit(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Trocar a imagem de capa na edição sem perder os outros dados');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->dontSeeElement('img.event-banner-current');
++        $page->attachFile('#event_banner', 'banner.png');
++        $page->click('Salvar');
++        $page->see('Evento atualizado com sucesso!');
++
++        $first = (string) Event::findById((int) $event->id)?->banner_name;
++        Assert::assertNotSame('', $first);
++
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->seeElement('img.event-banner-current', ['src' => "/assets/uploads/events/{$first}"]);
++        $page->attachFile('#event_banner', 'banner.png');
++        $page->click('Salvar');
++        $page->see('Evento atualizado com sucesso!');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertNotSame($first, $stored->banner_name);
++        Assert::assertSame('Evento 02', $stored->title);
++        Assert::assertFileDoesNotExist((string) Constants::rootPath()->join("public/assets/uploads/events/{$first}"));
++    }
++
++    public function rejectFileThatIsNotAnImage(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Recusar arquivo de texto com extensão .png');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $this->fillEventForm($page, ['title' => 'Título que não deve ser salvo']);
++        $page->attachFile('#event_banner', 'banner-falso.png');
++        $page->click('Salvar');
++
++        $page->see('Existem dados incorretos! Por favor, verifique!');
++        $page->see('deve ser uma imagem JPG ou PNG!', '.invalid-feedback');
++        $page->seeElement('#event_banner.is-invalid');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertNull($stored->banner_name);
++        Assert::assertSame('Evento 02', $stored->title);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..889c011 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -32,7 +32,7 @@ class EventsControllerTest extends ControllerTestCase
+ 
+     public function tearDown(): void
+     {
+-        unset($_SESSION['flash']);
++        unset($_SESSION['flash'], $_FILES['event_banner']);
+         parent::tearDown();
+     }
+ 
+@@ -188,6 +188,74 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertDoesNotMatchRegularExpression('/id="event_audience_students"[^>]*checked/', $response);
+     }
+ 
++    /* ------------------- imagem de capa (banner) ------------------- */
++
++    public function test_form_is_multipart_with_banner_field(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('enctype="multipart/form-data"', $response);
++        $this->assertMatchesRegularExpression('/type="file"[^>]*id="event_banner"[^>]*name="event_banner"/', $response);
++    }
++
++    public function test_create_with_file_that_is_not_an_image_renders_form_and_saves_nothing(): void
++    {
++        $tmpFile = (string) tempnam(sys_get_temp_dir(), 'php');
++        file_put_contents($tmpFile, '<?php echo "não sou imagem";');
++        $_FILES['event_banner'] = [
++            'name' => 'capa.png', 'type' => 'image/png', 'tmp_name' => $tmpFile,
++            'error' => UPLOAD_ERR_OK, 'size' => filesize($tmpFile),
++        ];
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertMatchesRegularExpression('/id="event_banner"[^>]*is-invalid|is-invalid[^>]*id="event_banner"/', $response);
++        $this->assertStringContainsString('deve ser uma imagem JPG ou PNG!', $response);
++
++        unlink($tmpFile);
++    }
++
++    public function test_update_without_file_keeps_current_banner(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['banner_name' => 'atual.png']);
++        $_FILES['event_banner'] = ['name' => '', 'type' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0];
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Título Novo'])]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertNotNull($updated);
++        $this->assertSame('Título Novo', $updated->title);
++        $this->assertSame('atual.png', $updated->banner_name);
++    }
++
++    public function test_show_and_edit_render_banner_when_present(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['banner_name' => 'abc123.png']);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('src="/assets/uploads/events/abc123.png"', $show);
++        $this->assertStringContainsString('src="/assets/uploads/events/abc123.png"', $edit);
++    }
++
++    public function test_show_without_banner_renders_no_image(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringNotContainsString('event-banner', $response);
++    }
++
+     public function test_update_with_valid_data_changes_event(): void
+     {
+         $event = $this->createEvent();
+diff --git a/tests/Support/Data/banner-falso.png b/tests/Support/Data/banner-falso.png
+new file mode 100644
+index 0000000..a613a63
+--- /dev/null
++++ b/tests/Support/Data/banner-falso.png
+@@ -0,0 +1 @@
++Este arquivo tem extensão .png, mas é texto puro.
+diff --git a/tests/Support/Data/banner.png b/tests/Support/Data/banner.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..a18f9d8818a699373614c99c2ba61d0c26f3a62d
+GIT binary patch
+literal 345
+zcmW;Iy-NaN9Ki9%rVxZ^F(RqKt<mY=>{1^)AI;OG-G*prZs<Y5mqBPLxXnq+mkg@?
+zCZXA-DTv6w;3yDmw6DT_?t5>)-*7iY#|{OzgF=Xq%E%J^g}J`Q`6JThMPN_K#Od{?
+z{}yO%2qE7M<wjS>GpQ=~{3W`-y1%L$mw#IeZ6y4*p^!!%Ddb?I;J3X)WFT>jB(gYy
+z1Li&EJ?6dTe0M(iy2k)LJkBR3&&)m^Fa+;et68I2qgkU_qgkU_qnB&=eCMQc@m)j-
+zT;D#$V?Wp(fp%zzmT8$z>6BX3qGLLyHCm&KQG8|{R2pH|-n`?N36*x_Yx1o54|GkU
+A^#A|>
+
+literal 0
+HcmV?d00001
+
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..f5e1cc1 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -5,6 +5,7 @@ namespace Tests\Unit\Models\Events;
+ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
++use Core\Constants\Constants;
+ use PDOException;
+ use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\TestCase;
+@@ -681,4 +682,55 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- imagem de capa (banner) ------------------- */
++
++    public function test_invalid_banner_should_block_save_and_mark_banner_field(): void
++    {
++        $tmpFile = (string) tempnam(sys_get_temp_dir(), 'php');
++        file_put_contents($tmpFile, 'texto com extensão de imagem');
++
++        $event = new Event($this->params());
++        $event->attachBanner([
++            'name' => 'capa.png', 'type' => 'image/png', 'tmp_name' => $tmpFile,
++            'error' => UPLOAD_ERR_OK, 'size' => filesize($tmpFile),
++        ]);
++
++        $this->assertFalse($event->save());
++        $this->assertSame('deve ser uma imagem JPG ou PNG!', $event->errors('banner'));
++        $this->assertCount(0, Event::all());
++
++        unlink($tmpFile);
++    }
++
++    public function test_empty_file_field_should_keep_current_banner(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['banner_name' => 'atual.png']);
++
++        $stored = Event::findById($event->id);
++        $this->assertNotNull($stored);
++        $stored->title = 'Título novo';
++        $stored->attachBanner(['name' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0]);
++
++        $this->assertTrue($stored->save());
++        $this->assertSame('atual.png', Event::findById($event->id)?->banner_name);
++    }
++
++    public function test_safe_destroy_should_remove_banner_file(): void
++    {
++        $event = $this->createEvent();
++        $dir = (string) Constants::rootPath()->join('public/assets/uploads/events');
++        $createdDir = !is_dir($dir) && mkdir($dir, 0755, true);
++        $path = $dir . '/' . bin2hex(random_bytes(16)) . '.png';
++        file_put_contents($path, 'banner');
++        $event->update(['banner_name' => basename($path)]);
++
++        $this->assertTrue($event->safeDestroy());
++        $this->assertFileDoesNotExist($path);
++
++        if ($createdDir) {
++            rmdir($dir);
++        }
++    }
+ }
+diff --git a/tests/Unit/Services/EventBannerTest.php b/tests/Unit/Services/EventBannerTest.php
+new file mode 100644
+index 0000000..b848616
+--- /dev/null
++++ b/tests/Unit/Services/EventBannerTest.php
+@@ -0,0 +1,199 @@
++<?php
++
++namespace Tests\Unit\Services;
++
++use App\Models\Event;
++use App\Models\User;
++use App\Services\EventBanner;
++use Core\Constants\Constants;
++use RuntimeException;
++use Tests\TestCase;
++
++class EventBannerTest extends TestCase
++{
++    private Event $event;
++
++    /** @var array<int, string> arquivos temporários criados pelo teste */
++    private array $tmpFiles = [];
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++
++        $this->event = new Event([
++            'user_id' => $admin->id,
++            'title' => 'Semana Acadêmica',
++            'description' => 'Palestras e minicursos.',
++            'kind' => 'lecture',
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Auditório Central',
++            'capacity' => 10,
++        ]);
++        $this->event->save();
++    }
++
++    public function tearDown(): void
++    {
++        $this->event->banner()->delete();
++        foreach ($this->tmpFiles as $file) {
++            if (is_file($file)) {
++                unlink($file);
++            }
++        }
++        self::removeUploadDirIfEmpty();
++
++        parent::tearDown();
++    }
++
++    public static function removeUploadDirIfEmpty(): void
++    {
++        $dir = (string) Constants::rootPath()->join('public/assets/uploads/events');
++        if (is_dir($dir) && count((array) scandir($dir)) === 2) {
++            rmdir($dir);
++        }
++    }
++
++    public function test_url_is_null_without_banner(): void
++    {
++        $this->assertNull($this->event->banner()->url());
++    }
++
++    public function test_validate_accepts_png_detected_by_content(): void
++    {
++        $this->assertTrue($this->event->banner()->validate($this->upload($this->pngContent(), 'capa.png')));
++        $this->assertNull($this->event->errors('banner'));
++    }
++
++    public function test_validate_rejects_text_file_with_image_extension(): void
++    {
++        $file = $this->upload('não sou uma imagem', 'capa.png', 'image/png');
++
++        $this->assertFalse($this->event->banner()->validate($file));
++        $this->assertSame('deve ser uma imagem JPG ou PNG!', $this->event->errors('banner'));
++    }
++
++    public function test_validate_rejects_file_larger_than_max_size(): void
++    {
++        $content = $this->pngContent() . str_repeat('0', EventBanner::MAX_SIZE);
++
++        $this->assertFalse($this->event->banner()->validate($this->upload($content, 'capa.png')));
++        $this->assertSame('deve ter no máximo 2 MB!', $this->event->errors('banner'));
++    }
++
++    public function test_validate_rejects_file_over_php_upload_limit(): void
++    {
++        $file = ['name' => 'capa.png', 'tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE, 'size' => 0];
++
++        $this->assertFalse($this->event->banner()->validate($file));
++        $this->assertSame('deve ter no máximo 2 MB!', $this->event->errors('banner'));
++    }
++
++    public function test_validate_rejects_partial_upload(): void
++    {
++        $file = $this->upload($this->pngContent(), 'capa.png');
++        $file['error'] = UPLOAD_ERR_PARTIAL;
++
++        $this->assertFalse($this->event->banner()->validate($file));
++        $this->assertSame('não foi possível enviar o arquivo!', $this->event->errors('banner'));
++    }
++
++    public function test_store_saves_file_with_generated_name_and_updates_event(): void
++    {
++        $this->fakeBanner()->store($this->upload($this->pngContent(), '../../foto do cliente.jpg'));
++
++        $name = (string) $this->event->banner_name;
++        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}\.png$/', $name);
++        $this->assertSame('/assets/uploads/events/' . $name, $this->event->banner()->url());
++        $this->assertFileExists($this->storedPath($name));
++
++        $stored = Event::findById($this->event->id);
++        $this->assertNotNull($stored);
++        $this->assertSame($name, $stored->banner_name);
++    }
++
++    public function test_store_replaces_previous_banner_file(): void
++    {
++        $this->fakeBanner()->store($this->upload($this->pngContent(), 'primeira.png'));
++        $first = (string) $this->event->banner_name;
++
++        $this->fakeBanner()->store($this->upload($this->pngContent(), 'segunda.png'));
++        $second = (string) $this->event->banner_name;
++
++        $this->assertNotSame($first, $second);
++        $this->assertFileDoesNotExist($this->storedPath($first));
++        $this->assertFileExists($this->storedPath($second));
++    }
++
++    public function test_store_refuses_file_that_did_not_come_from_http_upload(): void
++    {
++        $this->expectException(RuntimeException::class);
++
++        // move_uploaded_file só move arquivos recebidos por POST; um caminho qualquer é recusado.
++        $this->event->banner()->store($this->upload($this->pngContent(), 'capa.png'));
++    }
++
++    public function test_delete_removes_file_from_disk(): void
++    {
++        $this->fakeBanner()->store($this->upload($this->pngContent(), 'capa.png'));
++        $path = $this->storedPath((string) $this->event->banner_name);
++
++        $this->event->banner()->delete();
++
++        $this->assertFileDoesNotExist($path);
++    }
++
++    /**
++     * Simula o $_FILES de um upload com o conteúdo informado.
++     *
++     * @return array<string, mixed>
++     */
++    private function upload(string $content, string $clientName, string $clientType = 'image/png'): array
++    {
++        $tmpFile = (string) tempnam(sys_get_temp_dir(), 'php');
++        file_put_contents($tmpFile, $content);
++        $this->tmpFiles[] = $tmpFile;
++
++        return [
++            'name' => $clientName,
++            'full_path' => $clientName,
++            'type' => $clientType,
++            'tmp_name' => $tmpFile,
++            'error' => UPLOAD_ERR_OK,
++            'size' => strlen($content),
++        ];
++    }
++
++    private function pngContent(): string
++    {
++        return (string) file_get_contents((string) Constants::rootPath()->join('tests/Support/Data/banner.png'));
++    }
++
++    private function storedPath(string $name): string
++    {
++        return (string) Constants::rootPath()->join('public/assets/uploads/events/' . $name);
++    }
++
++    /**
++     * EventBanner que move com rename(): fora de um POST real, move_uploaded_file sempre recusa.
++     */
++    private function fakeBanner(): EventBanner
++    {
++        return new class ($this->event) extends EventBanner {
++            protected function moveUploadedFile(string $from, string $to): bool
++            {
++                return rename($from, $to);
++            }
++        };
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
