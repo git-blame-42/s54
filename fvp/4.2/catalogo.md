@@ -2266,8 +2266,8 @@ Passos:
 1. Testes em `RequestTest`: `REQUEST_METHOD=GET` +
    `$_REQUEST['_method'] = 'DELETE'` -> `getMethod() === 'GET'`; `POST` +
    `$_POST['_method'] = 'DELETE'` -> `DELETE`; `POST` + `_method=GET` ->
-   `POST`. Teste HTTP (`ACC`): `GET /admin/events/1?_method=DELETE` com admin -> 200 do `show`, Evento
-   continua existindo.
+   `POST`. Teste HTTP (`ACC`): `GET /admin/events/1?_method=DELETE` com
+   admin -> 200 do `show`, Evento continua existindo.
 2. `Request.php:18`:
 
    ```php
