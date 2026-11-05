@@ -562,6 +562,9 @@ Prova: `EventTest`; no navegador, cadastrar o mesmo título duas vezes.
 
 Chance: média-alta. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m7-horario-do-evento` (forma B,
+`starts_at DATETIME`).
+
 Pedido típico: "o Evento precisa de horário de início (e de fim)". Duas
 formas: (A) colunas `starts_time TIME NOT NULL` e `ends_time TIME NULL`
 ao lado de `starts_on` (menor, recomendada); (B) trocar `starts_on DATE`
@@ -848,7 +851,8 @@ Passos:
    ```php
    private function validatesUserIsAdmin(): void
    {
-       $user = User::findById((int) $this->user_id);
+       $id = filter_var($this->user_id, FILTER_VALIDATE_INT);
+       $user = $id === false ? null : User::findById($id);
 
        if ($user === null || !$user->isAdmin()) {
            $this->addError('user_id', 'deve ser um administrador existente!');
@@ -868,14 +872,16 @@ Armadilhas:
   acrescente, ou o teste novo é o único a cobrir.
 - A FK (`SCH:35-36`) continua como última barreira; a validação evita
   o 500 antes.
-- `(int)` aqui é sobre um valor que o controller já controla
-  (`EC:53`), não entrada do form.
+- Nada de `(int)`: com M15 o `user_id` vem do form, e `(int) '1abc'`
+  vira 1. `filter_var(..., FILTER_VALIDATE_INT)` devolve `false`.
 
 Prova: `EventTest`; populate continua (todos com `$admin->id`).
 
 ### M12. Último editor gravado da sessão
 
 Chance: média-baixa. Tempo: 20-25 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m12-ultimo-editor`.
 
 Pedido típico: "registre quem fez a última alteração do Evento
 (`updated_by`) e mostre no detalhe; o valor vem do usuário logado, nunca
@@ -914,6 +920,8 @@ Prova: `EventsControllerTest`; no navegador, editar e ver o nome.
 ### M13. Montagem do Evento no model ou em um service
 
 Chance: média-baixa. Tempo: 10-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m13-fill-no-model`.
 
 Pedido típico: "tire a lógica de montar o Evento do controller
 (`fill`/`FIELDS`) e leve para o model ou para um service" (issues da
@@ -978,6 +986,8 @@ Prova: `EventTest` novo e `EventsControllerTest` inalterado.
 
 Chance: média-baixa. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m14-contador-visualizacoes`.
+
 Pedido típico: "conte quantas vezes cada Evento foi visto e mostre na
 listagem". Bom para explicar `update()` (grava sem validar, `MODEL:189-213`)
 contra `save()`.
@@ -995,7 +1005,22 @@ Passos:
 2. `SCH`: `views_count INT UNSIGNED NOT NULL DEFAULT 0`. `EV`:
    `'views_count'` em `$columns`, construtor com
    `if ($this->views_count === null) { $this->views_count = 0; }`.
-3. `EV` (atômico, no SQL):
+3. `EV`, com `update()` (o que o título pede):
+
+   ```php
+   public function registerView(): void
+   {
+       if ($this->newRecord()) {
+           return;
+       }
+
+       $this->update(['views_count' => (int) $this->views_count + 1]);
+   }
+   ```
+
+   `update()` já atualiza o atributo em memória (`MODEL:206-209`). Ele
+   lê, soma e grava: dois acessos ao mesmo tempo perdem um. Variante
+   atômica, no SQL:
 
    ```php
    public function registerView(): void
@@ -1013,8 +1038,6 @@ Passos:
    }
    ```
 
-   Variante didática com `update(['views_count' => $this->views_count + 1])`
-   (lê-modifica-grava; dois acessos simultâneos perdem um).
 4. `EC::show`: `$event->registerView();` antes do `render`. `IDX`:
    coluna "Visualizações".
 
@@ -1506,31 +1529,43 @@ equivalentes.
 
 Chance: média. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n8-ordenar-pelo-cabecalho`.
+
 Pedido típico: "clicar em Título ou Data ordena a listagem (crescente e
 decrescente), e a ordem se mantém ao paginar". Junta N3 (`ORDER BY` no
 `Paginator`) com N1 forma 2 (`queryParams`).
 
 Arquivos: `PAG:18-26` e `:124-128` (N3: `orderBy`), `MODEL:284-294`,
-`EC:16-27`, `IDX:11-16` (cabeçalhos), `PAGES:6,16,22` (links com
-`queryParams`, N1 forma 2), `ECT:39-57`, `ACT/ListEventsCest.php:19-33`
-(assume a ordem de `id`), `ACT/CreateSuccessfullyCest.php`.
+`EV` (lista fechada e cláusula), `EC:16-27`, `IDX:11-16` (cabeçalhos),
+`PAGES:6,16,22` (links com `queryParams`, N1 forma 2), `ECT:39-57`,
+`ACT/ListEventsCest.php:19-33` (o comentário supõe a ordem de `id`),
+`ACT/CreateSuccessfullyCest.php`.
 
 Passos:
 
 1. Testes em `ECT`: `params: ['sort' => 'title', 'dir' => 'desc']`
    ordena; `sort` fora da lista cai na ordem padrão; os links de página
    trazem `?sort=title&dir=desc`.
-2. `EC`: constantes `SORTS = ['starts_on', 'title']` e `DIRS = ['asc',
-   'desc']`, e:
+2. `EV` (validação e SQL no model):
 
    ```php
-   $sort = $request->getParam('sort');
-   $sort = is_string($sort) && in_array($sort, self::SORTS, true)
-       ? $sort
-       : 'starts_on';
+   public const SORTS = ['starts_on', 'title'];
+
+   /** @return array{0: string, 1: string} coluna e direção seguras */
+   public static function normalizeSort(mixed $sort, mixed $dir): array
+   {
+       $sort = is_string($sort) && in_array($sort, self::SORTS, true)
+           ? $sort
+           : 'starts_on';
+
+       return [$sort, $dir === 'desc' ? 'desc' : 'asc'];
+   }
    ```
 
-   idem `$dir`; `orderBy: "{$sort} {$dir}, id"` e
+   e `orderClause(string $sort, string $dir): string` devolvendo
+   `"{$sort} {$dir}, id"`. `EC::index`: `[$sort, $dir] =
+   Event::normalizeSort(...)` com os dois `getParam`;
+   `orderBy: Event::orderClause($sort, $dir)` e
    `queryParams: ['sort' => $sort, 'dir' => $dir]`.
 3. `IDX:11-16`: cabeçalhos viram links
    `route('admin.events.index', ['sort' => 'title', 'dir' => $next])`
@@ -1545,7 +1580,8 @@ Armadilhas:
 - `?sort[]=x` vem como array: `is_string` antes.
 - Desempate por `id`, senão títulos iguais trocam de página.
 - A ordem padrão muda de `id` para `starts_on`: `ListEventsCest:19-33`
-  e `CreateSuccessfullyCest` assumem `id` (ver N3).
+  continua passando (no seed a ordem de `id` é a de data), só o
+  comentário fica errado; `CreateSuccessfullyCest` assume `id` (N3).
 - Ordenação de texto segue a collation do MySQL (`utf8mb4_0900_ai_ci`,
   sem distinguir acentos nem maiúsculas); diga isso se perguntarem.
 
@@ -1555,6 +1591,8 @@ ordem mantida.
 ### N9. Filtro por período
 
 Chance: média. Tempo: 30-40 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/n9-filtro-por-periodo` (forma 2, paginada).
 
 Pedido típico: "filtrar os Eventos entre duas datas (de/até); data
 inválida mostra erro, não é ignorada em silêncio".
@@ -1590,11 +1628,14 @@ Passos (forma 1, sem paginação quando filtrado):
    }
    ```
 
-3. `EC::index`: leia `from`/`to` com `is_string`; valide cada um com
+3. `EV::periodError(mixed $from, mixed $to): ?string` (estático):
+   `null` se os dois vierem vazios ou válidos e em ordem; senão a
+   mensagem. Valida com `is_string` e
    `DateTimeImmutable::createFromFormat('!Y-m-d', $v)` + `format() === $v`
-   (como `VAL:140-153`); inválido -> `$error = 'Data inválida!'` e
-   listagem padrão; ambos válidos -> `Event::betweenDates(...)`,
-   `$paginator = null`. `from`, `to` e `error` sempre no `compact`.
+   (como `VAL:140-153`). `EC::index` só lê `from`/`to` e chama
+   `periodError`: com erro, mensagem e listagem padrão; ambos válidos ->
+   `Event::betweenDates(...)`, `$paginator = null`. `from`, `to` e
+   `error` sempre no `compact`.
 4. `IDX`: dois `<input type="date">` com os valores mantidos, botão
    "Filtrar", "Limpar"; mensagem de erro em vermelho; guarda do
    `$paginator` nulo (N1 forma 1).
@@ -1608,8 +1649,8 @@ Armadilhas:
 - Só um dos dois preenchido: decida (hoje em diante / até) e teste.
 - `BETWEEN` com `DATE` inclui as duas pontas; com `DATETIME` (M7 forma
   B) o `to` precisa de `23:59:59`.
-- A validação está no controller porque não há model para o filtro;
-  diga que é validação de **entrada**, não regra de negócio.
+- Validação no model (`periodError`), não no controller: é o que a
+  rubrica cobra, mesmo sendo a entrada de um filtro.
 - `$paginator` nulo na `IDX:40`: 500 se esquecer a guarda.
 
 Prova: testes; no navegador, filtrar o populate por duas semanas e
@@ -1761,6 +1802,8 @@ Prova: testes; a listagem continua igual no navegador.
 
 Chance: média. Tempo: 10-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n12-paginacao-primeira-ultima`.
+
 Pedido típico: "botões Primeira e Última e, no máximo, três números em
 volta da página atual" (o `Paginator` é item 2.6 da rubrica).
 
@@ -1774,8 +1817,8 @@ Passos:
 
 1. Testes: `PaginatorTest` (S5): com 7 páginas na página 4,
    `pagesWindow()` devolve `[3, 4, 5]`; na página 1, `[1, 2]`;
-   `lastPage() === 7`. `ECT`: a página 2 de 12 Eventos (5 por página)
-   mostra links "Primeira" e "Última".
+   `lastPage() === 7`. `ECT`: a página 2 de 21 Eventos (5 por página,
+   5 páginas) mostra "Primeira", "Última" e não mostra o link da 5.
 2. `PAG`:
 
    ```php
@@ -1818,11 +1861,13 @@ Armadilhas:
 - `lib/` fora do `phpstan`: anote `@return array<int, int>` mesmo assim.
 
 Prova: testes; no navegador com T1 (30 Eventos, 6 páginas), página 3
-mostra "Primeira 2 3 4 Última".
+mostra "Primeira Anterior 2 3 4 Próxima Última".
 
 ### N13. Filtro que o `where` não expressa: público-alvo ou "só com vagas"
 
 Chance: média-baixa. Tempo: 25-35 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/n13-filtro-find-in-set-vagas`.
 
 Pedido típico: "filtre os Eventos para Estudantes" (`audience` é um
 `SET`: igualdade não serve) ou "mostre só os que ainda têm vaga"
@@ -1882,7 +1927,7 @@ Armadilhas:
   concatene o valor do usuário.
 - Valor do filtro sempre por `bindValue`.
 
-Prova: testes; no populate, "Servidores" traz 7 Eventos e "só com
+Prova: testes; no populate, "Servidores" traz 6 Eventos e "só com
 vagas" tira o Evento 1.
 
 ### N14. Query Builder mínimo no core
@@ -2346,6 +2391,8 @@ redirecionado); no navegador, Evento 9 do populate (4 inscritos) com
 
 Chance: média-baixa. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o7-route-patch`.
+
 Pedido típico: "o framework só tem `get/post/put/delete`; acrescente
 `patch` e use numa alteração parcial (ex.: mudar só o status)".
 
@@ -2366,14 +2413,16 @@ Passos:
    /**
     * @param string $uri
     * @param mixed[] $action
+    * @return Route
     */
    public static function patch(string $uri, $action): Route
    {
-       $route = new Route('PATCH', $uri, $action[0], $action[1]);
-
-       return Router::getInstance()->addRoute($route);
+       return Router::getInstance()
+           ->addRoute(new Route('PATCH', $uri, $action[0], $action[1]));
    }
    ```
+
+   No arquivo, deixe numa linha só, como os vizinhos (`Route.php:111-144`).
 
 3. Uso:
 
@@ -2442,6 +2491,8 @@ Prova: `curl -i` com cookie de admin em `/admin/events/999999`.
 ### O9. `_method` só via POST
 
 Chance: média (falha real, 15 min). Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/o9-method-so-via-post`.
 
 Pedido típico: "GET nunca pode alterar dados". Hoje
 `GET /admin/events/16?_method=DELETE` cai no `destroy`: o `Request` lê
@@ -2721,7 +2772,8 @@ Armadilhas:
   `test_empty_event_should_have_error_in_every_field` (`EVT:86-99`)
   pode passar a listar `checkin_code`; ajuste a expectativa. Se
   preferir, gere no construtor (padrão `US:28-35`) e não em `save()`.
-- `exists()` (`MODEL:347`) usa `findBy`: funciona com uma condição.
+- `exists()` (`MODEL:347-350`) usa `where`: aceita uma ou mais
+  condições de igualdade.
 - Código **não** vai ao form nem ao `FIELDS`; se o professor quiser
   "regenerar", é uma ação `PUT /admin/events/{id}/checkin_code` (O1).
 - `ECT:101-112` e os `validParams()` não precisam mudar.
@@ -3615,6 +3667,8 @@ vez e acertar.
 
 Chance: média-alta. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p13-admin-inscreve-remove-participante`.
+
 Pedido típico: "no detalhe do Evento, o administrador escolhe um usuário
 e o inscreve; pode também remover uma inscrição". Aqui o `user_id` vem
 do form e por isso precisa ser **validado no model** (existe, é
@@ -3651,7 +3705,8 @@ Passos:
    ```php
    private function validatesUserIsParticipant(): void
    {
-       $user = User::findById((int) $this->user_id);
+       $id = filter_var($this->user_id, FILTER_VALIDATE_INT);
+       $user = $id === false ? null : User::findById($id);
 
        if ($user === null || $user->isAdmin()) {
            $this->addError('user_id', 'deve ser um participante existente!');
@@ -3691,6 +3746,8 @@ remover.
 
 Chance: média. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p14-comprovante-inscricao`.
+
 Pedido típico: "cada inscrição recebe um número de comprovante de 4
 dígitos (1000-9999), único dentro do Evento, mostrado ao Participante e
 ao admin". É P1 no nível da Inscrição.
@@ -3727,7 +3784,7 @@ Armadilhas:
 - Unicidade é **por Evento** (`event_id` + código), 9000 valores por
   Evento: o laço raramente repete; com `UNIQUE` composto o banco fecha a
   corrida.
-- `exists()` com duas condições usa `findBy` (`MODEL:335`): ok.
+- `exists()` com duas condições usa `where` (`MODEL:347-350`): ok.
 - Mostrar o código só a quem é dono da inscrição ou admin.
 - `BaseEventsCest`/`EnrollmentTest` criam Inscrições com `new
   Enrollment([...])->save()`: ganham código sozinhas.
@@ -3894,6 +3951,8 @@ acertar -> listagem sem o Evento.
 
 Chance: média. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p17-remover-em-cascata`.
+
 Pedido típico: "hoje Evento com inscritos não pode ser removido; permita,
 apagando as inscrições, mas só depois de confirmar". Fica melhor em cima
 de P16 (a confirmação); sem P16, use um parâmetro `force` vindo de um
@@ -3901,17 +3960,18 @@ segundo botão.
 
 Arquivos: `EV:151-173` (`safeDestroy` bloqueia), `SCH:49-50` (FK
 `ON DELETE RESTRICT`), `MODEL:215-231` (`destroy`),
-`core/Database/Database.php:10` (`getDatabaseConn`, uma conexão só: a
-transação envolve tudo), `EC:96-111`,
+`core/Database/Database.php:10-22` (`getDatabaseConn` abre um PDO novo
+a cada chamada), `EC:96-111`,
 `EVT:643-680` e `ECT:253-270` (hoje provam o bloqueio),
 `ACT/DeleteEventCest.php:30-48`.
 
 Passos:
 
 1. Testes: `EVT`: `forceDestroy()` apaga Evento e Inscrições; falha no
-   meio desfaz tudo. `ECT`: `destroy` sem confirmação em Evento com
-   inscritos continua bloqueando; com `force`/código, remove e o flash
-   diz quantas inscrições saíram.
+   meio desfaz tudo (difícil de provocar: se não testar, diga). `ECT`:
+   `destroy` sem confirmação em Evento com inscritos continua
+   bloqueando; com `force`/código, remove e o flash diz quantas
+   inscrições saíram (`enrollmentsCount()` antes de remover).
 2. `EV`:
 
    ```php
@@ -3921,14 +3981,18 @@ Passos:
        $pdo->beginTransaction();
 
        try {
-           $enrollments = Enrollment::where(['event_id' => $this->id]);
-           foreach ($enrollments as $enrollment) {
-               $enrollment->destroy();
+           $deletes = ['event_user' => 'event_id', 'events' => 'id'];
+           foreach ($deletes as $t => $c) {
+               $stmt = $pdo->prepare("DELETE FROM {$t} WHERE {$c} = :id");
+               $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+               $stmt->execute();
            }
-           $ok = $this->destroy();
+           if ($stmt->rowCount() !== 1) {
+               throw new \RuntimeException('evento não encontrado');
+           }
            $pdo->commit();
 
-           return $ok;
+           return true;
        } catch (\Throwable $e) {
            $pdo->rollBack();
            $this->addError(
@@ -3950,8 +4014,10 @@ Passos:
 
 Armadilhas:
 
-- Transação: `Model::destroy()` usa a mesma conexão singleton
-  (`Database.php:10`), então `beginTransaction` envolve os `DELETE`.
+- Transação: `getDatabaseConn()` cria um PDO novo a cada chamada
+  (`Database.php:10-22`). `Model::destroy()` e `Enrollment::destroy()`
+  rodam em outra conexão, **fora** da transação: os `DELETE` precisam
+  usar o mesmo `$pdo` do `beginTransaction`, como no passo 2.
   `migrate()` nos testes recria o schema com `foreign_key_checks` ok.
 - Não troque o padrão (`safeDestroy`) sem confirmação explícita: a
   rubrica e as issues cobram regra clara para excluir pai com filhos.
@@ -4291,10 +4357,12 @@ URL direta `/admin/events/16/edit` redireciona.
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/q3-acao-so-participante`.
+
 Pedido típico: "Administrador não pode se inscrever em Evento; só
 Participante" (sobre P2). Duas formas: middleware `participant` nas
 rotas de inscrição, ou regra no model (`EN::validates()` recusa admin,
-como P13 faz ao contrário).
+a mesma regra que P13 já valida para o `user_id`).
 
 Arquivos: `app/Middleware/Admin.php:10-28` (modelo; inverter a
 condição), `config/App.php:7-10` (aliases), `ROUTES:18-20` (grupo
@@ -4332,8 +4400,8 @@ Passos:
    `Route::middleware('participant')->group(function () { /* P2, P3, P4 */ });`.
 5. Forma model: em `EN::validates()`, `User::findById($this->user_id)`
    admin -> `addError('base', 'administradores não se inscrevem!')`.
-   Vale também para P13 (que então precisa de exceção ou do caminho
-   admin).
+   P13 continua funcionando: a regra recusa o usuário **inscrito**, não
+   quem faz a ação, e o admin inscreve Participantes.
 
 Armadilhas:
 
@@ -4353,6 +4421,9 @@ Prova: testes; no navegador, admin abre `/events/2` e tenta inscrever-se.
 ### Q4. Perfil Organizador com CRUD só dos próprios Eventos
 
 Chance: média. Tempo: 35-40 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/q4-perfil-organizador` (variante:
+área própria `/organizer/events`, onde o admin não entra).
 
 Pedido típico: "crie o perfil `organizer`: ele cadastra e gerencia só os
 Eventos dele; o admin continua vendo tudo" (A7 da 4.1 aplicado ao CRUD;
@@ -4407,6 +4478,8 @@ Eventos, sem link "Administração".
 
 Chance: média-baixa. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/q5-token-csrf`.
+
 Pedido típico: "proteja criar, editar e remover contra CSRF" (variante
 de A15 da 4.1, agora no CRUD). Faz par com O9.
 
@@ -4446,7 +4519,7 @@ Passos:
    ```
 
 3. `app/Middleware/VerifyCsrf.php`: em `POST/PUT/PATCH/DELETE`
-   (`$request->getMethod()`), se `!Csrf::check($request->getParam('_token'))`
+   (`$request->getMethod()`), se `!Csrf::check($_POST['_token'] ?? null)`
    -> flash `danger('Sessão expirada, tente de novo')` + redirect para
    `/` (padrão de `Admin.php:23-27`). Alias `'csrf'`.
 4. `ROUTES`: envolva os grupos `auth`/`admin` com
@@ -4460,15 +4533,18 @@ Armadilhas:
 - Ordem: o middleware do grupo de fora é anexado por último
   (`RouteWrapperMiddleware:21-23`) e roda por último; se o `csrf` for o
   grupo interno, roda antes do `auth` (funciona, mas um POST anônimo
-  recebe "sessão expirada" em vez de "faça login").
+  recebe "sessão expirada" em vez de "faça login"). Com o A17 da 4.1
+  aplicado (o grupo de fora roda primeiro), inverta: `csrf` como grupo
+  mais interno, senão o teste de `ACC:130-137` (POST sem sessão) recebe
+  a recusa do `csrf` em vez do redirect do `auth`.
 - `ECT` não passa pelo Router (`CTC:70-84`): não vê o middleware; a
   prova é por HTTP e por Cest.
 - `loggedClient` (`ACC:67-78`) posta `/login`: se o login exigir token,
   o helper precisa buscar a página antes (A15 da 4.1 descreve).
 - Token por sessão (não por requisição): abas múltiplas continuam
   funcionando.
-- Leia o token de `$_POST` (via `getParam`), nunca da query string; e
-  combine com O9.
+- Leia o token de `$_POST`. `getParam` lê `$_REQUEST`, que inclui a
+  query string (`Request.php:20,57-60`). Combine com O9.
 
 Prova: testes; `curl -X POST -b <cookie> localhost/admin/events` sem
 token é recusado.
@@ -4816,6 +4892,8 @@ Prova: testes; no navegador, remover um Evento da página 2 e ficar nela.
 
 Chance: média. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r8-erros-no-topo-do-form`.
+
 Pedido típico: "quando o cadastro falhar, mostre no topo quais campos
 estão errados" (item 1 da demonstração da rubrica). O core não devolve
 todos os erros: `errors()` sem índice retorna `null` (`MODEL:122-129`).
@@ -4870,8 +4948,10 @@ Passos:
 
 Armadilhas:
 
-- `errors('base')` (`safeDestroy`, P2) entra na lista com chave `base`:
-  trate o rótulo (`LABELS['base'] = ''`).
+- `errors('base')` só nasce em `safeDestroy` (`EV:151-173`), e o
+  `destroy` redireciona com flash: hoje não chega ao form. Só importa se
+  um fluxo novo re-renderizar o form com erro `base`; então trate o
+  rótulo (`LABELS['base'] = ''`).
 - Mensagens começam em minúscula e terminam em `!` ("não pode ser
   vazio!"): a concatenação "Título não pode ser vazio!" fica certa.
 - Rótulos duplicados entre `FORM` (labels) e a lista: tire de um só
@@ -4884,6 +4964,8 @@ Prova: teste; no navegador, enviar o form vazio e ver a lista.
 ### R9. Lista de presença imprimível com layout próprio
 
 Chance: média. Tempo: 20-30 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/r9-lista-de-presenca-print`.
 
 Pedido típico: "uma página para imprimir a lista de presença: inscritos
 com coluna para assinatura, sem navbar". Único cenário que usa
@@ -4899,7 +4981,8 @@ Arquivos: `CTRL:11` (`protected string $layout = 'application'`) e
 Passos:
 
 1. Testes: `ECT`: `attendance` lista os inscritos e **não** contém a
-   navbar ("Eventos do Câmpus" de `NAV:3`); `ACC`: rota em `eventRoutes()`
+   navbar (a classe `navbar` de `NAV`; o nome do site pode estar no
+   `<title>`); `ACC`: rota em `eventRoutes()`
    + admin 200.
 2. `app/views/layouts/print.phtml`: `<!DOCTYPE html>`, `<head>` com o CSS,
    `<main>` com `<h1><?= $title ?></h1>` e `require $view`; sem navbar
@@ -4930,6 +5013,8 @@ inscritos do populate e `Ctrl+P`.
 ### R10. "Salvar e cadastrar outro"
 
 Chance: média-baixa. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/r10-salvar-e-cadastrar-outro`.
 
 Pedido típico: "um segundo botão que salva e já abre um formulário em
 branco".
@@ -4978,6 +5063,8 @@ Prova: teste; navegador.
 
 Chance: média-baixa. Tempo: 20-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r11-anterior-proximo-no-show`.
+
 Pedido típico: "no detalhe, links para o Evento anterior e o próximo
 pela data".
 
@@ -5008,10 +5095,11 @@ Passos:
        $columns = implode(', ', static::$columns);
        $sql = "SELECT id, {$columns} FROM events "
            . "WHERE (starts_on {$op} :date "
-           . "OR (starts_on = :date AND id {$op} :id)) "
+           . "OR (starts_on = :same_date AND id {$op} :id)) "
            . "ORDER BY starts_on {$dir}, id {$dir} LIMIT 1";
        $stmt = Database::getDatabaseConn()->prepare($sql);
        $stmt->bindValue(':date', $this->starts_on);
+       $stmt->bindValue(':same_date', $this->starts_on);
        $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
        $stmt->execute();
        $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -5026,8 +5114,11 @@ Armadilhas:
 
 - `$op` e `$dir` são texto fixo do model (`'<'`/`'>'`, `'ASC'`/`'DESC'`),
   nunca entrada do usuário: diga isso ao interpolar.
-- Sem desempate por `id`, dois Eventos no mesmo dia se tornam um "laço"
-  (próximo do A é B e próximo do B é A? não: B não aparece).
+- Sem desempate por `id`, `starts_on >` pula os outros Eventos do mesmo
+  dia; com `>=`, a consulta devolve o próprio Evento ou alterna entre
+  dois.
+- Placeholder repetido (`:date` duas vezes) só funciona com prepares
+  emulados (o padrão do `pdo_mysql`); nomes distintos não dependem disso.
 - Nos extremos os métodos devolvem `null`: a view precisa testar.
 - `PDO::PARAM_INT` no `id`; `starts_on` como string `Y-m-d`.
 
