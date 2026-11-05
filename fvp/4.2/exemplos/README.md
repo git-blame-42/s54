@@ -51,6 +51,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M12. Último editor (`updated_by`) gravado da sessão no update
   `m12-ultimo-editor/`
   - feat: Record the last editor of an event
+- M13. Montagem do Evento (`fill`/`FIELDS`) sai do controller para o model
+  `m13-fill-no-model/`
+  - refactor: Move event form filling to the model
 - M14. Contador de visualizações com `Model::update()`
   `m14-contador-visualizacoes/`
   - feat: Count event views on the admin show page
@@ -87,6 +90,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N12. Paginação Primeira/Última + janela de 3 números
   `n12-paginacao-primeira-ultima/`
   - feat: Add first/last links and a three-page window to
+- N13. Filtro que `where` não expressa: público-alvo e "só com vagas"
+  `n13-filtro-find-in-set-vagas/`
+  - feat: Filter events by audience and available spots
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title
@@ -126,6 +132,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O5. Admin vê e lista só os próprios Eventos
   `o5-admin-lista-so-proprios/`
   - feat: List and manage only the logged admin events
+- O7. `Route::patch` no core, usado numa ação parcial (status)
+  `o7-route-patch/`
+  - feat: Add Event status with cancel and finish actions
+  - feat: Add Route::patch and use it for event cancel and
 - O9. `_method` só via POST (GET não pode remover Evento)
   `o9-method-so-via-post/`
   - fix: Accept _method override only from POST body
@@ -212,6 +222,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R10. "Salvar e cadastrar outro"
   `r10-salvar-e-cadastrar-outro/`
   - feat: Add save and new button to the event form
+- R11. Anterior/próximo Evento no show
+  `r11-anterior-proximo-no-show/`
+  - feat: Add previous and next event links to the show page
 - R2. Nome do criador no show/listagem (BelongsTo)
   `r2-nome-do-criador/`
   - feat: Show event creator name in listing and show
