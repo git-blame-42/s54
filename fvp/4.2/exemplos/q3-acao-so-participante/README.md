@@ -9,8 +9,8 @@ Chance: média-baixa. Tempo estimado: 20-30 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, Q3.
 
 Branch no clone: `fvp/q3-acao-so-participante`, empilhada sobre P2
-(`fvp/p2-inscricao-participante`, mesmos SHAs do exemplo do P2), que
-por sua vez está sobre O2. Base: `main` (`f31006b`) → O2 → P2 → Q3.
+(`fvp/p2-inscricao-participante`, mesmos SHAs do exemplo do P2), que por sua vez
+está sobre O2. Base: `main` (`f31006b`; no bundle `5dedab5`) → O2 → P2 → Q3.
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
