@@ -115,7 +115,7 @@ class Event extends Model
     }
 
     /**
-     * P6: cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,
+     * Cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,
      * acrescenta " (cópia)" ao título e marca a data para daqui a 7 dias. Inscrições não são
      * copiadas: ficam em event_user, e a cópia nasce sem nenhuma.
      */

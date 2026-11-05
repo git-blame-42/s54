@@ -13,8 +13,8 @@ feat: CRUD completo de Eventos"). O método testado é o de P6.
 
 | Commit    | Mensagem                                             |
 |-----------|------------------------------------------------------|
-| `267afc4` | (base, P6) `feat: Duplicate an Event from the listing` |
-| `1d021c4` | `test: Cover Event::duplicate() with unit tests`     |
+| `a6fc5c2` | (base, P6) `feat: Duplicate an Event from the listing` |
+| `7ecb9f0` | `test: Cover Event::duplicate() with unit tests`     |
 
 ## O que mudou
 
@@ -110,8 +110,8 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P6 no seu repositório: aplique o range inteiro
-  `5dedab5..1d021c4` (P6 + S3, dois commits, nessa ordem).
-- Com P6 já aplicado: aplique só o topo, `1d021c4`.
+  `5dedab5..7ecb9f0` (P6 + S3, dois commits, nessa ordem).
+- Com P6 já aplicado: aplique só o topo, `7ecb9f0`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -121,9 +121,9 @@ git remote add fvp-s3 \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/projeto
 git fetch fvp-s3 fvp/s3-teste-unitario-model
 # range (P6 + S3):
-git cherry-pick 5dedab5..1d021c4
+git cherry-pick 5dedab5..7ecb9f0
 # ou só o topo, se já tem P6:
-# git cherry-pick 1d021c4
+# git cherry-pick 7ecb9f0
 git remote remove fvp-s3
 ```
 
@@ -133,8 +133,8 @@ git remote remove fvp-s3
 git fetch \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/solucao.bundle \
     fvp/s3-teste-unitario-model:fvp-s3
-git cherry-pick 5dedab5..1d021c4
-# ou só o topo: git cherry-pick 1d021c4
+git cherry-pick 5dedab5..7ecb9f0
+# ou só o topo: git cherry-pick 7ecb9f0
 # opcional, limpa a ref
 git branch -D fvp-s3
 ```

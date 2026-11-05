@@ -1,4 +1,4 @@
-From 267afc40e703af39542920f7f9c73d1058f19deb Mon Sep 17 00:00:00 2001
+From a6fc5c2031dad280ed77dc7281fe9fce0643ed4e Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:20:23 -0300
 Subject: [PATCH 1/2] feat: Duplicate an Event from the listing
@@ -49,7 +49,7 @@ index ca4ada1..6a2da36 100644
       * Copia para o Evento só os campos do formulário (nunca user_id nem id).
       */
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..e0708f7 100644
+index ba66870..e29462f 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -114,6 +114,26 @@ class Event extends Model
@@ -57,7 +57,7 @@ index ba66870..e0708f7 100644
      }
  
 +    /**
-+     * P6: cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,
++     * Cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,
 +     * acrescenta " (cópia)" ao título e marca a data para daqui a 7 dias. Inscrições não são
 +     * copiadas: ficam em event_user, e a cópia nasce sem nenhuma.
 +     */
@@ -108,7 +108,7 @@ index 9ee0c90..838477d 100644
  });
 diff --git a/tests/Acceptance/admin/events/DuplicateEventCest.php b/tests/Acceptance/admin/events/DuplicateEventCest.php
 new file mode 100644
-index 0000000..de26b36
+index 0000000..5ea49ac
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/DuplicateEventCest.php
 @@ -0,0 +1,40 @@
@@ -121,7 +121,7 @@ index 0000000..de26b36
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P6: duplicar um Evento pela listagem abre a edição da cópia.
++ * Duplicar um Evento pela listagem abre a edição da cópia.
 + */
 +class DuplicateEventCest extends BaseEventsCest
 +{
@@ -198,14 +198,14 @@ index 4396d14..42618b0 100644
      {
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..7e0bd21 100644
+index bc62d1d..3b610ac 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -265,6 +265,58 @@ class EventsControllerTest extends ControllerTestCase
          );
      }
  
-+    /* ------------------- P6: duplicar ------------------- */
++    /* ------------------- duplicar ------------------- */
 +
 +    public function test_index_has_a_duplicate_button(): void
 +    {
@@ -264,7 +264,7 @@ index bc62d1d..7e0bd21 100644
 2.54.0 (Apple Git-157)
 
 
-From 1d021c49157a87a1cc825871b2ad4d7cb1ed200e Mon Sep 17 00:00:00 2001
+From 7ecb9f06d60816a4fb45731ac661a25b39bbcfa8 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:22:21 -0300
 Subject: [PATCH 2/2] test: Cover Event::duplicate() with unit tests
@@ -274,14 +274,14 @@ Subject: [PATCH 2/2] test: Cover Event::duplicate() with unit tests
  1 file changed, 93 insertions(+)
 
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..c24e3da 100644
+index f961b4c..c1d710b 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -490,6 +490,99 @@ class EventTest extends TestCase
          $this->assertEquals(3, $event->availableSpots());
      }
  
-+    /* ------------------- P6: duplicate ------------------- */
++    /* ------------------- duplicate ------------------- */
 +
 +    public function test_duplicate_should_return_a_new_unsaved_event(): void
 +    {

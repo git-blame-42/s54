@@ -490,7 +490,7 @@ class EventTest extends TestCase
         $this->assertEquals(3, $event->availableSpots());
     }
 
-    /* ------------------- P6: duplicate ------------------- */
+    /* ------------------- duplicate ------------------- */
 
     public function test_duplicate_should_return_a_new_unsaved_event(): void
     {
