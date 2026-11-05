@@ -130,6 +130,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P16. Remover Evento só com código de confirmação gerado no backend
   `p16-remover-com-codigo-confirmacao/`
   - feat: Require a confirmation code to remove an Event
+- P17. Remover Evento com inscrições em cascata, com confirmação
+  `p17-remover-em-cascata/`
+  - feat: Require a confirmation code to remove an Event
+  - feat: Remove an Event with its enrollments when forced
 - P2. Inscrição do Participante (`POST /events/{id}/enrollments`)
   `p2-inscricao-participante/`
   - feat: Add events listing and details for participants
