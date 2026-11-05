@@ -1,0 +1,623 @@
+From b88fb5b8de8f0b1ef50012124a3e2575c66da20e Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:50:19 -0300
+Subject: [PATCH] feat: Generate a unique slug for each event
+
+The slug comes from the title (StringUtils::slugify, numeric suffix until unique), is set in Event::save() on creation and never from the form. Authenticated users open an event at /events/{slug}.
+---
+ app/Controllers/EventsController.php          | 27 +++++++
+ app/Models/Event.php                          | 50 ++++++++++++
+ app/views/admin/events/index.phtml            |  6 +-
+ app/views/admin/events/show.phtml             |  5 ++
+ app/views/events/show.phtml                   | 29 +++++++
+ config/routes.php                             |  4 +
+ database/schema.sql                           |  2 +
+ lib/StringUtils.php                           | 22 ++++++
+ .../admin/events/ShowEventBySlugCest.php      | 41 ++++++++++
+ tests/Integration/Access/EventsAccessTest.php | 18 +++++
+ .../Admin/EventsControllerTest.php            | 40 ++++++++++
+ .../Controllers/EventsControllerTest.php      | 79 +++++++++++++++++++
+ tests/Unit/Lib/StringUtilsTest.php            | 26 ++++++
+ tests/Unit/Models/Events/EventTest.php        | 72 +++++++++++++++++
+ 14 files changed, 420 insertions(+), 1 deletion(-)
+ create mode 100644 app/Controllers/EventsController.php
+ create mode 100644 app/views/events/show.phtml
+ create mode 100644 tests/Acceptance/admin/events/ShowEventBySlugCest.php
+ create mode 100644 tests/Integration/Controllers/EventsControllerTest.php
+
+diff --git a/app/Controllers/EventsController.php b/app/Controllers/EventsController.php
+new file mode 100644
+index 0000000..89ebd4d
+--- /dev/null
++++ b/app/Controllers/EventsController.php
+@@ -0,0 +1,27 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++/**
++ * Detalhe do Evento pelo slug, para qualquer usuário autenticado (Participante ou Administrador).
++ */
++class EventsController extends Controller
++{
++    public function show(Request $request): void
++    {
++        $event = Event::findBySlug((string) $request->getParam('slug'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('dashboard.index'));
++            return;
++        }
++
++        $title = htmlspecialchars($event->title);
++        $this->render('events/show', compact('event', 'title'));
++    }
++}
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..ed05121 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\StringUtils;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -11,6 +12,7 @@ use PDOException;
+  * @property int $id
+  * @property int $user_id
+  * @property string $title
++ * @property string|null $slug gerado no save() a partir do título (nunca vem do formulário)
+  * @property string $description
+  * @property string $kind
+  * @property string $modality
+@@ -44,10 +46,14 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Tamanho máximo da base do slug, deixando espaço para o sufixo "-N" em VARCHAR(255). */
++    private const SLUG_MAX_LENGTH = 240;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+         'title',
++        'slug',
+         'description',
+         'kind',
+         'modality',
+@@ -57,9 +63,53 @@ class Event extends Model
+         'capacity',
+     ];
+ 
++    /**
++     * Na criação, gera o slug a partir do título antes de validar e gravar. Na edição o slug
++     * não muda (mesmo com título novo), para o endereço do Evento continuar valendo.
++     */
++    public function save(): bool
++    {
++        if ($this->newRecord() && ($this->slug === null || $this->slug === '')) {
++            $this->slug = self::uniqueSlug((string) $this->title);
++        }
++
++        return parent::save();
++    }
++
++    /**
++     * Slug do título que ainda não existe na tabela: "titulo", "titulo-2", "titulo-3"...
++     */
++    public static function uniqueSlug(string $title): string
++    {
++        $base = substr(StringUtils::slugify($title), 0, self::SLUG_MAX_LENGTH);
++        $base = rtrim($base, '-');
++        if ($base === '') {
++            $base = 'evento';
++        }
++
++        $slug = $base;
++        for ($suffix = 2; self::exists(['slug' => $slug]); $suffix++) {
++            $slug = "{$base}-{$suffix}";
++        }
++
++        return $slug;
++    }
++
++    public static function findBySlug(string $slug): ?Event
++    {
++        $event = self::findBy(['slug' => $slug]);
++
++        return $event instanceof Event ? $event : null;
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
++
++        // Registro novo ainda sem slug (isValid() antes do save()) não tem o que conferir.
++        if ($this->slug !== null && $this->slug !== '') {
++            Validations::uniqueness('slug', $this);
++        }
+         Validations::notEmpty('description', $this);
+         Validations::notEmpty('location', $this);
+ 
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..1797a64 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -19,7 +19,11 @@
+         <tbody>
+             <?php foreach ($events as $event) : ?>
+                 <tr>
+-                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td>
++                        <?= htmlspecialchars($event->title) ?>
++                        <br><a class="small" href="<?= route('events.show', ['slug' => $event->slug]) ?>">
++                            <?= htmlspecialchars((string) $event->slug) ?></a>
++                    </td>
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..f422c2d 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -7,6 +7,11 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dt class="col-sm-3">Título</dt>
+     <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
+ 
++    <dt class="col-sm-3">Endereço</dt>
++    <dd class="col-sm-9">
++        <a href="<?= route('events.show', ['slug' => $event->slug]) ?>"><?= route('events.show', ['slug' => $event->slug]) ?></a>
++    </dd>
++
+     <dt class="col-sm-3">Descrição</dt>
+     <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
+ 
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+new file mode 100644
+index 0000000..e6f5e43
+--- /dev/null
++++ b/app/views/events/show.phtml
+@@ -0,0 +1,29 @@
++<?php
++use App\Models\Event;
++
++$audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
++?>
++<dl class="row">
++    <dt class="col-sm-3">Descrição</dt>
++    <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
++
++    <dt class="col-sm-3">Tipo</dt>
++    <dd class="col-sm-9"><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></dd>
++
++    <dt class="col-sm-3">Modalidade</dt>
++    <dd class="col-sm-9"><?= Event::MODALITIES[$event->modality] ?? htmlspecialchars($event->modality) ?></dd>
++
++    <dt class="col-sm-3">Público-alvo</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars(implode(', ', $audience)) ?></dd>
++
++    <dt class="col-sm-3">Data</dt>
++    <dd class="col-sm-9"><?= date('d/m/Y', strtotime($event->starts_on)) ?></dd>
++
++    <dt class="col-sm-3">Local</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
++
++    <dt class="col-sm-3">Vagas disponíveis</dt>
++    <dd class="col-sm-9"><?= $event->availableSpots() ?> de <?= (int) $event->capacity ?></dd>
++</dl>
++
++<a class="btn btn-secondary" href="<?= route('dashboard.index') ?>">Voltar</a>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..222b33d 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
++use App\Controllers\EventsController;
+ use App\Controllers\HomeController;
+ use Core\Router\Route;
+ 
+@@ -18,6 +19,9 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Detalhe do Evento pelo slug (Participante e Administrador).
++    Route::get('/events/{slug}', [EventsController::class, 'show'])->name('events.show');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..0cfeecc 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -22,6 +22,7 @@ CREATE TABLE events (
+     id          INT AUTO_INCREMENT PRIMARY KEY,
+     user_id     INT NOT NULL,
+     title       VARCHAR(255) NOT NULL,
++    slug        VARCHAR(255) NOT NULL,
+     description TEXT NOT NULL,
+     kind        ENUM('lecture', 'workshop', 'short_course', 'academic_week') NOT NULL,
+     modality    ENUM('in_person', 'online', 'hybrid') NOT NULL DEFAULT 'in_person',
+@@ -34,6 +35,7 @@ CREATE TABLE events (
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
++    UNIQUE KEY uq_events_slug (slug),
+     INDEX index_events_on_starts_on (starts_on)
+ );
+ 
+diff --git a/lib/StringUtils.php b/lib/StringUtils.php
+index 2f88e03..cc8432f 100644
+--- a/lib/StringUtils.php
++++ b/lib/StringUtils.php
+@@ -24,4 +24,26 @@ class StringUtils
+     {
+         return ucfirst(self::lowerSnakeToCamelCase($string));
+     }
++
++    /** Letras acentuadas => equivalente sem acento (tabela fixa: não depende do locale do servidor). */
++    private const ACCENTS = [
++        'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a',
++        'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
++        'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
++        'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
++        'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
++        'ç' => 'c', 'ñ' => 'n', 'ý' => 'y', 'ÿ' => 'y',
++    ];
++
++    /**
++     * Texto => slug para URL: minúsculas, sem acentos, só [a-z0-9] separados por um hífen.
++     * Ex.: "Semana Acadêmica: Edição 2026!" => "semana-academica-edicao-2026". Pode devolver ''.
++     */
++    public static function slugify(string $text): string
++    {
++        $text = strtr(mb_strtolower($text, 'UTF-8'), self::ACCENTS);
++        $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?? '';
++
++        return trim($text, '-');
++    }
+ }
+diff --git a/tests/Acceptance/admin/events/ShowEventBySlugCest.php b/tests/Acceptance/admin/events/ShowEventBySlugCest.php
+new file mode 100644
+index 0000000..7678a6b
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ShowEventBySlugCest.php
+@@ -0,0 +1,41 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++class ShowEventBySlugCest extends BaseEventsCest
++{
++    public function openEventBySlugFromTheAdminShow(AcceptanceTester $page): void
++    {
++        $page->wantTo('Abrir o Evento pelo endereço com slug gerado a partir do título');
++        $page->amOnPage('/admin/events');
++        $page->seeLink('evento-01', '/events/evento-01');
++
++        $page->click('Ver', $this->rowOf('Evento 01'));
++        $page->seeLink('/events/evento-01');
++        $page->click('/events/evento-01');
++
++        $page->seeCurrentUrlEquals('/events/evento-01');
++        $page->see('Evento 01', 'h1');
++        $page->see('Sala 1');
++        $page->see('0 de 3');
++    }
++
++    public function repeatedTitleGetsSuffix(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastrar Evento com título repetido e receber slug com sufixo');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $this->validEventData(['title' => 'Evento 02']));
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        $page->seeLink('/events/evento-02-2');
++
++        $event = Event::findBySlug('evento-02-2');
++        Assert::assertNotNull($event);
++        Assert::assertSame('Evento 02', $event->title);
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..0fb38dc 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,24 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_event_by_slug_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->get('/events/palestra-de-acesso');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_participant_and_admin_should_open_the_event_by_slug(): void
++    {
++        foreach ([$this->participant, $this->admin] as $user) {
++            $response = $this->loggedClient($user)->get('/events/palestra-de-acesso');
++
++            $this->assertEquals(200, $response->getStatusCode(), $user->email);
++            $this->assertStringContainsString('Palestra de Acesso', (string) $response->getBody());
++        }
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..53c07f3 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -111,6 +111,46 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals($this->admin->id, $event->user_id);
+     }
+ 
++    public function test_create_generates_the_slug_and_ignores_the_one_sent_by_the_form(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => 'Oficina de Testes', 'slug' => 'forjado'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertInstanceOf(Event::class, $event);
++        $this->assertEquals('oficina-de-testes', $event->slug);
++    }
++
++    public function test_index_and_show_display_the_slug_link(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra com Endereço']);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('href="/events/palestra-com-endereco"', $index);
++        $this->assertStringContainsString('palestra-com-endereco', $index);
++        $this->assertStringContainsString('href="/events/palestra-com-endereco"', $show);
++    }
++
++    public function test_update_keeps_the_slug(): void
++    {
++        $event = $this->createEvent(['title' => 'Nome Antigo']);
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Nome Novo', 'slug' => 'outro'])]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertEquals('Nome Novo', $updated?->title);
++        $this->assertEquals('nome-antigo', $updated?->slug);
++    }
++
+     public function test_create_with_invalid_data_renders_form_with_errors_and_values(): void
+     {
+         $response = $this->post(
+diff --git a/tests/Integration/Controllers/EventsControllerTest.php b/tests/Integration/Controllers/EventsControllerTest.php
+new file mode 100644
+index 0000000..1a80906
+--- /dev/null
++++ b/tests/Integration/Controllers/EventsControllerTest.php
+@@ -0,0 +1,79 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class EventsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\EventsController';
++
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $admin = $this->createUser('Admin', 'admin@example.com', 'admin');
++        $this->event = new Event([
++            'user_id' => $admin->id,
++            'title' => 'Oficina de Acessibilidade Web',
++            'description' => 'HTML semântico e leitores de tela.',
++            'kind' => 'workshop',
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Laboratório B204',
++            'capacity' => 24,
++        ]);
++        $this->event->save();
++
++        Auth::login($this->createUser('Participante', 'participante@example.com', 'participant'));
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    public function test_show_by_slug_renders_the_event(): void
++    {
++        $response = $this->get(
++            action: 'show',
++            controllerName: self::CONTROLLER,
++            params: ['slug' => 'oficina-de-acessibilidade-web']
++        );
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Oficina de Acessibilidade Web\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Laboratório B204', $response);
++        $this->assertStringContainsString(date('d/m/Y', strtotime('+10 days')), $response);
++        $this->assertStringContainsString('24 de 24', $response);
++        $this->assertStringNotContainsString('/edit', $response);
++    }
++
++    public function test_show_with_unknown_slug_redirects_to_dashboard(): void
++    {
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['slug' => 'nao-existe']);
++
++        $this->assertSame('Location: /dashboard', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++}
+diff --git a/tests/Unit/Lib/StringUtilsTest.php b/tests/Unit/Lib/StringUtilsTest.php
+index 3cd8d5c..eb18190 100644
+--- a/tests/Unit/Lib/StringUtilsTest.php
++++ b/tests/Unit/Lib/StringUtilsTest.php
+@@ -27,4 +27,30 @@ class StringUtilsTest extends TestCase
+         $this->assertEquals('AnotherTestString', StringUtils::snakeToCamelCase('another_test_string'));
+         $this->assertEquals('Test', StringUtils::snakeToCamelCase('test'));
+     }
++
++    public function test_slugify_should_lowercase_and_join_words_with_hyphens(): void
++    {
++        $this->assertEquals('oficina-de-git', StringUtils::slugify('Oficina de Git'));
++        $this->assertEquals('oficina-de-git', StringUtils::slugify('  Oficina   de   Git  '));
++    }
++
++    public function test_slugify_should_remove_accents(): void
++    {
++        $this->assertEquals('semana-academica-de-informatica', StringUtils::slugify('Semana Acadêmica de Informática'));
++        $this->assertEquals('acao-cancao-pao-ja-voce', StringUtils::slugify('AÇÃO Canção Pão Já Você'));
++        $this->assertEquals('uber-curso-espanol', StringUtils::slugify('Über Curso Español'));
++    }
++
++    public function test_slugify_should_turn_symbols_into_single_hyphens(): void
++    {
++        $this->assertEquals('palestra-ia-no-ensino-2026', StringUtils::slugify('Palestra: IA no Ensino (2026)!'));
++        $this->assertEquals('c-php-sql', StringUtils::slugify('C++ / PHP & SQL'));
++        $this->assertEquals('a-b', StringUtils::slugify('---a___b---'));
++    }
++
++    public function test_slugify_should_return_empty_string_without_letters_or_digits(): void
++    {
++        $this->assertSame('', StringUtils::slugify('!!! ???'));
++        $this->assertSame('', StringUtils::slugify(''));
++    }
+ }
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..eb03017 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -385,6 +385,78 @@ class EventTest extends TestCase
+         $this->assertFalse(Event::exists(['title' => 'Outro']));
+     }
+ 
++    /* ------------------- slug ------------------- */
++
++    public function test_save_should_generate_the_slug_from_the_title(): void
++    {
++        $event = $this->createEvent(['title' => 'Semana Acadêmica: Edição 2026!']);
++
++        $this->assertEquals('semana-academica-edicao-2026', $event->slug);
++        $this->assertEquals('semana-academica-edicao-2026', Event::findById($event->id)?->slug);
++    }
++
++    public function test_repeated_titles_should_get_numeric_suffixes(): void
++    {
++        $first = $this->createEvent(['title' => 'Oficina de Git']);
++        $second = $this->createEvent(['title' => 'Oficina de Git']);
++        $third = $this->createEvent(['title' => 'OFICINA DE GIT!']);
++
++        $this->assertEquals('oficina-de-git', $first->slug);
++        $this->assertEquals('oficina-de-git-2', $second->slug);
++        $this->assertEquals('oficina-de-git-3', $third->slug);
++    }
++
++    public function test_title_without_letters_should_fall_back_to_evento(): void
++    {
++        $this->assertEquals('evento', $this->createEvent(['title' => '!!!'])->slug);
++        $this->assertEquals('evento-2', $this->createEvent(['title' => '???'])->slug);
++    }
++
++    public function test_long_title_should_keep_the_slug_within_the_column(): void
++    {
++        $first = $this->createEvent(['title' => str_repeat('a', 255)]);
++        $second = $this->createEvent(['title' => str_repeat('a', 255)]);
++
++        $this->assertSame(240, strlen((string) $first->slug));
++        $this->assertSame(str_repeat('a', 240) . '-2', $second->slug);
++    }
++
++    public function test_slug_should_not_change_when_the_title_is_edited(): void
++    {
++        $event = $this->createEvent(['title' => 'Título Original']);
++
++        $event->title = 'Título Novo';
++        $this->assertTrue($event->save());
++
++        $this->assertEquals('titulo-original', Event::findById($event->id)?->slug);
++    }
++
++    public function test_is_valid_before_save_should_not_require_the_slug(): void
++    {
++        $event = new Event($this->params());
++
++        $this->assertTrue($event->isValid());
++        $this->assertNull($event->errors('slug'));
++    }
++
++    public function test_repeated_slug_should_be_invalid(): void
++    {
++        $this->createEvent(['title' => 'Palestra Única']);
++
++        $event = new Event($this->params(['title' => 'Outro Título', 'slug' => 'palestra-unica']));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('já existe um registro com esse dado', $event->errors('slug'));
++    }
++
++    public function test_find_by_slug(): void
++    {
++        $event = $this->createEvent(['title' => 'Busca por Slug']);
++
++        $this->assertEquals($event->id, Event::findBySlug('busca-por-slug')?->id);
++        $this->assertNull(Event::findBySlug('nao-existe'));
++    }
++
+     /* ------------------- paginate ------------------- */
+ 
+     public function test_paginate_should_return_five_events_per_page(): void
+-- 
+2.54.0 (Apple Git-157)
+
