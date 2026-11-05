@@ -8,8 +8,8 @@ Chance: alta. Tempo estimado: 10-15 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, S3.
 
 Branch no clone: `fvp/s3-teste-unitario-model`, empilhada sobre P6
-(`fvp/p6-duplicar-evento`), que parte de `main` (`f31006b`, "[E4.2]
-feat: CRUD completo de Eventos"). O método testado é o de P6.
+(`fvp/p6-duplicar-evento`), que parte de `main` (`f31006b` do público; no bundle
+`5dedab5`, ver README raiz). O método testado é o de P6.
 
 | Commit    | Mensagem                                             |
 |-----------|------------------------------------------------------|
