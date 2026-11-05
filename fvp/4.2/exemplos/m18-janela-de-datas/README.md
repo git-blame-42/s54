@@ -1,8 +1,8 @@
 # M18. Janela de datas: antecedência mínima e limite máximo
 
 Pedido, como o professor faria na hora: "Evento tem que ser cadastrado
-com pelo menos 3 dias de antecedência e no máximo 1 ano à frente. Hoje
-eu consigo cadastrar para 31/12/9999. Mude a validação do framework e
+com pelo menos 3 dias de antecedência e no máximo 365 dias à frente.
+Hoje eu consigo cadastrar para 31/12/9999. Mude a validação do framework e
 escreva os testes."
 
 Chance: média-alta. Tempo estimado: 15-25 min. Catálogo:
@@ -37,9 +37,10 @@ maximum limit`.
   `min` e `max` (hoje + 3 e hoje + 365) e um `form-text` "De 3 a 365
   dias a partir de hoje.", depois do `invalid-feedback`.
 - Testes:
-  - `NumberAndDateValidationsTest`: 5 testes novos com `$now` fixo
-    (2026-11-05): sem janela aceita 9999-12-31; limites +2/+3 e
-    +365/+366; data passada mantém a mensagem de passado; singular.
+  - `NumberAndDateValidationsTest`: 5 testes novos. Um sem `$now`
+    (sem janela, aceita 9999-12-31) e quatro com `$now` fixo
+    (2026-11-05): limites +2/+3 e +365/+366; data passada mantém a
+    mensagem de passado; singular.
   - `EventTest`: `test_starts_on_today_should_be_valid` saiu (hoje
     deixou de ser válido) e entraram 6 testes: antecedência, dentro da
     janela, depois do limite (inclui 9999-12-31), offsets do populate
@@ -183,6 +184,14 @@ Depois de aplicar: `./run db:populate` e os testes de novo.
 - Limite inclusivo nas duas pontas: +3 e +365 valem; +2 e +366 não.
   Compare com `$today->modify("+N days")`, não com `strtotime` + 86400
   segundos.
+- "1 ano" não é "365 dias". Se o professor pedir "no máximo 1 ano à
+  frente", `modify('+1 year')` dá a mesma data no ano seguinte: a
+  janela tem 366 dias quando passa por um 29 de fevereiro, e o limite
+  +365 recusaria o último dia. E `modify('+1 year')` a partir de
+  29/02 cai em 01/03 (não existe 29/02 no ano seguinte). Escolha um
+  dos dois e diga qual: aqui ficou `$maxDays` em dias (365); para
+  "1 ano" de calendário, troque o parâmetro por um `modify` e teste
+  com `$now` em 29/02/2028.
 - `min`/`max` no input sem `novalidate` no form travariam o envio no
   navegador (e os Cests que testam data inválida), e na edição de um
   Evento já próximo o seletor não deixaria salvar.
