@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * Q1: só o Administrador que criou o Evento edita e remove. Os Eventos da base são do
+ * Só o Administrador que criou o Evento edita e remove. Os Eventos da base são do
  * admin@example.com; aqui o login é trocado para um segundo Administrador.
  */
 class OwnerOnlyCest extends BaseEventsCest

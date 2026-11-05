@@ -1,4 +1,4 @@
-From d72e3eb7b2ea145cea5dcc93c6a41f99f8b92d51 Mon Sep 17 00:00:00 2001
+From 0f8ee0193eb90fd4aedd3bc0354f6cf009400525 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:00:58 -0300
 Subject: [PATCH] feat: Restrict event edit and removal to its owner
@@ -105,14 +105,14 @@ index 6cab74e..1bc1102 100644
 +<?php endif; ?>
  <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
 diff --git a/database/Populate/populate.php b/database/Populate/populate.php
-index e383040..af3e941 100644
+index e383040..57706c9 100644
 --- a/database/Populate/populate.php
 +++ b/database/Populate/populate.php
 @@ -28,6 +28,19 @@ $user->save();
  
  echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
  
-+// Q1: segundo Administrador, dono dos dois últimos Eventos. Logado como admin@, esses dois aparecem
++// Segundo Administrador, dono dos dois últimos Eventos. Logado como admin@, esses dois aparecem
 +// sem Editar/Remover; logado como admin2@, só eles têm os botões.
 +$otherAdmin = new User([
 +    'name' => 'Outra Administradora',
@@ -152,7 +152,7 @@ index e383040..af3e941 100644
  // O Evento 0 tem capacity 3 e três Inscrições (lotado): serve de caso para P02 (capacity >= Inscrições).
 diff --git a/tests/Acceptance/admin/events/OwnerOnlyCest.php b/tests/Acceptance/admin/events/OwnerOnlyCest.php
 new file mode 100644
-index 0000000..f5ff7ec
+index 0000000..2afb932
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/OwnerOnlyCest.php
 @@ -0,0 +1,68 @@
@@ -165,7 +165,7 @@ index 0000000..f5ff7ec
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * Q1: só o Administrador que criou o Evento edita e remove. Os Eventos da base são do
++ * Só o Administrador que criou o Evento edita e remove. Os Eventos da base são do
 + * admin@example.com; aqui o login é trocado para um segundo Administrador.
 + */
 +class OwnerOnlyCest extends BaseEventsCest

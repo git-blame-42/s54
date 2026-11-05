@@ -12,7 +12,7 @@ Branch no clone: `fvp/q1-so-dono-edita-remove`, a partir de `main`
 
 | Commit    | Mensagem                                           |
 |-----------|----------------------------------------------------|
-| `d72e3eb` | `feat: Restrict event edit and removal to its owner` |
+| `0f8ee01` | `feat: Restrict event edit and removal to its owner` |
 
 ## O que mudou
 
@@ -169,7 +169,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-q1 \
     s50/fvp/4.2/exemplos/q1-so-dono-edita-remove/projeto
 git fetch fvp-q1 fvp/q1-so-dono-edita-remove
-git cherry-pick d72e3eb
+git cherry-pick 0f8ee01
 git remote remove fvp-q1
 ```
 
@@ -180,7 +180,7 @@ git fetch \
     s50/fvp/4.2/exemplos/q1-so-dono-edita-remove/solucao.bundle \
     fvp/q1-so-dono-edita-remove:fvp-q1
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick d72e3eb
+git cherry-pick 0f8ee01
 # opcional, limpa a ref
 git branch -D fvp-q1
 ```

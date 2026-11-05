@@ -28,7 +28,7 @@ $user->save();
 
 echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
 
-// Q1: segundo Administrador, dono dos dois últimos Eventos. Logado como admin@, esses dois aparecem
+// Segundo Administrador, dono dos dois últimos Eventos. Logado como admin@, esses dois aparecem
 // sem Editar/Remover; logado como admin2@, só eles têm os botões.
 $otherAdmin = new User([
     'name' => 'Outra Administradora',
