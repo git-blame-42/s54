@@ -331,6 +331,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - T2. `phpcs`, `phpstan` e CI verdes
   `t2-phpcs-phpstan-verdes/`
   - (sem código; só README)
+- T3. README e wiki da feature nova
+  `t3-wiki-readme-feature/`
+  - (sem código; só README)
 - T4. Itens por página e capacidade máxima no `.env`
   `t4-env-per-page/`
   - feat: Read events per page and max capacity from .env
