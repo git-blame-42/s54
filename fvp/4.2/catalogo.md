@@ -126,6 +126,13 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M14 | Contador de visualizações com `update()` | média-baixa | 15-20 min |
 | M15 | Escolher o responsável entre os admins | média-baixa | 20-30 min |
 | M16 | Gancho `beforeValidation` no core (espaços) | baixa | 15-20 min |
+| M17 | Campo sim/não por checkbox (certificado) | média-alta | 25-35 min |
+| M18 | Janela de datas: antecedência e limite | média-alta | 15-25 min |
+| M19 | "Nenhuma alteração" ao salvar sem mudar | média | 15-20 min |
+| M20 | Preço em reais com vírgula | média | 25-35 min |
+| M21 | Vagas ilimitadas (`capacity` NULL) | média-baixa | 20-30 min |
+| M22 | No máximo N Eventos por dia | média-baixa | 20-25 min |
+| M23 | Data digitada como dd/mm/aaaa | baixa | 20-25 min |
 | N1 | Filtro por tipo com `where` na paginação | alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
@@ -173,11 +180,13 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P19 | Remoção em lote | baixa | 25-35 min |
 | P20 | Exportar Evento em iCal (`.ics`) | baixa | 20-25 min |
 | P21 | Imagem de capa do Evento (upload) | baixa | 35-40 min |
+| P22 | Adiar o Evento uma semana com um botão | média-baixa | 20-30 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
 | Q3 | Ação só para Participante | média-baixa | 20-30 min |
 | Q4 | Perfil Organizador com CRUD dos próprios Eventos | média | 35-40 min |
 | Q5 | Token CSRF nos formulários de Evento | média-baixa | 25-35 min |
+| Q6 | Revisar escape e testar XSS | média-baixa | 15-20 min |
 | R1 | Flash: texto, título do Evento, `warning` | média | 10-15 min |
 | R2 | Nome do criador no `show` e na listagem | média-alta | 10-15 min |
 | R3 | Formatação na view com helper num só lugar | média | 10-15 min |
@@ -189,6 +198,9 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | R9 | Lista de presença imprimível com layout próprio | média | 20-30 min |
 | R10 | "Salvar e cadastrar outro" | média-baixa | 10-15 min |
 | R11 | Evento anterior e próximo no detalhe | média-baixa | 20-25 min |
+| R12 | Tela reflete as regras do model | média | 10-20 min |
+| R13 | Textos de vagas com concordância | média-baixa | 5-10 min |
+| R14 | Título da aba com o nome do Evento | baixa-média | 10-15 min |
 | S1 | Teste de aceitação da modificação | alta | 20-30 min |
 | S2 | Teste de acesso por HTTP da rota nova | alta | 15-20 min |
 | S3 | Teste unitário do método novo do model | alta | 10-15 min |
@@ -207,7 +219,75 @@ infra. A–H são da 4.1. Os cenários M7+, N7+, O5+, P13+, Q3+, R5+, S5 e
 T3 vieram de uma análise de lacunas (05/11) cruzada com um crítico
 independente, depois de os 40 primeiros terem exemplo pronto.
 
-## 5. Cenários
+## 5. Como o professor pede -> cenário
+
+Frases típicas do enunciado e o cenário que as cobre. Com dois IDs, o
+primeiro é o principal.
+
+| Como o professor pede | Cenário |
+|---|---|
+| "Acrescente a carga horária ao Evento" | M1, T1 |
+| "Marque se o Evento emite certificado (sim/não)" | M17 |
+| "Evento pago: aceite 10,50 e mostre R$ 10,50" | M20 |
+| "Título até 100 caracteres; vagas até 500" | M2 |
+| "Descrição com no mínimo 10 caracteres" | M2 |
+| "Não deixe cadastrar no passado" | já na base (`EV:88-99`) |
+| "3 dias de antecedência; no máximo 1 ano à frente" | M18 |
+| "Quero digitar a data como dd/mm/aaaa" | M23 |
+| "Data de término, que não pode ser antes do início" | M4 |
+| "O Evento precisa de horário" | M7 |
+| "Acrescente o tipo Seminário" | M3 |
+| "Online não precisa de local" ou "precisa de link" | M5 |
+| "Online não tem limite de vagas" | M21 |
+| "Dois Eventos com o mesmo título na mesma data, não" | M6 |
+| "Mesmo auditório no mesmo dia, não" | M6 |
+| "No máximo 3 Eventos no mesmo dia" | M22 |
+| "Depois de haver inscritos, a data não muda mais" | M10 |
+| "Salvei sem mexer e disse que atualizou" | M19 |
+| "Escolha qual administrador é o responsável" | M15, M11 |
+| "Mais próximos primeiro" | N3 |
+| "Clicar em Título ou Data ordena a listagem" | N8 |
+| "Filtre por tipo sem perder o filtro na paginação" | N1 |
+| "Busca pelo nome" | N2 |
+| "Esconda os passados" ou "uma aba de passados" | N5 |
+| "Só os do mês" ou "entre duas datas" | N9 |
+| "Só os que ainda têm vaga" ou "só para Estudantes" | N13 |
+| "Mostre 10 por página" | N4 |
+| "`/admin/events/page/999` mostra lixo" | N10 |
+| "Mostre Lotado" ou "quantos ainda cabem" | N6 |
+| "'1 disponíveis' está errado" | R13 |
+| "Uma consulta por linha: crie `count()` no framework" | N11 |
+| "Uma página só com os lotados" | O1 |
+| "Evento inexistente responde 404, não 302" | O8 |
+| "GET nunca pode remover nada" | O9 |
+| "Baixar os Eventos em CSV" | P8 |
+| "O Participante precisa ver os Eventos" | O2 |
+| "Participante se inscreve se houver vaga" | P2 |
+| "Participante cancela a própria inscrição" | P3 |
+| "Participante vê só os Eventos dele" | P7, O2 |
+| "Quem está inscrito? Mostre no detalhe" | O3 |
+| "Admin inscreve ou tira alguém do Evento" | P13 |
+| "Código de 4 dígitos para confirmar presença" | P1, P4 |
+| "Cancelar ou encerrar o Evento" | P5 |
+| "Adiar uma semana com um botão" | P22 |
+| "Copiar o Evento para o mês que vem" | P6 |
+| "Remover só depois de digitar um código" | P16 |
+| "Só quem criou edita e remove" | Q1, O5 |
+| "Evento passado não pode ser alterado" | Q2 |
+| "Admin não se inscreve; só Participante" | Q3 |
+| "Ponha `<script>` no título; escape tudo" | Q6 |
+| "Com inscritos, nem mostre o Remover" | R12 |
+| "Avise antes de apagar" | R4 |
+| "Remover também no detalhe" | R6 |
+| "Mostre quando o Evento foi cadastrado" | R5 |
+| "Mostre o título do Evento no flash" | R1 |
+| "Voltar à mesma página depois de remover" | R7 |
+| "A aba do navegador deveria mostrar o Evento" | R14 |
+| "Escreva o teste de aceitação disso" | S1 |
+| "Testes com negativo, texto e sem alteração" | S4 |
+| "Atualize o populate" ou "um segundo admin" | T1 |
+
+## 6. Cenários
 
 ### M1. Campo novo em `events` com validação
 
@@ -1188,6 +1268,745 @@ Armadilhas:
   volta com o valor já aparado (bom, mas saiba explicar).
 
 Prova: `EVT`; no navegador, título "   " mostra "não pode ser vazio!".
+
+### M17. Campo sim/não por checkbox (certificado)
+
+Chance: média-alta. Tempo: 25-35 min.
+
+Pedido típico: "marque se o Evento emite certificado" ou "campo sim/não
+no formulário". Hoje não há coluna booleana. O erro clássico: checkbox
+desmarcado não vai no POST, o `fill` grava `null` (`EC:124`), o
+`save()` faz o bind de todas as colunas (`MODEL:153-155`) e o MySQL
+recusa: `1048 Column cannot be null` -> 500.
+
+Arquivos: `SCH:31` (coluna nova depois de `capacity`), `EV:48-58`
+(`$columns`), `EV:60-82` (`validates`), `US:28-35` (padrão no
+construtor, molde), `EC:14` (`FIELDS`), `EC:123-126` (`?? null` e
+`(string)`), `VAL:34-44` (`inclusion` com `in_array` estrito,
+`VAL:38`), `FORM:58-68` (checkboxes de público-alvo, molde),
+`FORM:84-89`, `SHOW:28-32`, `POP:133-149`, `ECT:272-284`
+(`validParams`), `ACT/BaseEventsCest.php:122-155` (`fillEventForm`).
+
+Passos:
+
+1. Testes. `EVT`: `new Event($this->params())` sem `certificate` ->
+   válido e grava `0`; `'1'` -> `findById` devolve `1` (int); `'2'`,
+   `''`, `null` -> `não é uma opção válida!`; Evento lido do banco com
+   `0` e salvo de novo -> válido. `ECT`: create com `'1'` ->
+   `assertSame(1, $event->certificate)`; update de `1` para `'0'` ->
+   `0`; edit de Evento com `1` ->
+   `/id="event_certificate"[^>]*checked/`. Cest: desmarcar no editar,
+   salvar e ver "Não" no `show`.
+2. `SCH:31`, depois de `capacity`:
+
+   ```php
+   certificate TINYINT(1) NOT NULL DEFAULT 0,
+   ```
+
+3. `Event`: `'certificate'` em `$columns` (`EV:48-58`), padrão no
+   construtor e validação:
+
+   ```php
+   /** @param array<string, mixed> $params */
+   public function __construct($params = [])
+   {
+       parent::__construct($params);
+
+       if ($this->certificate === null) {
+           $this->certificate = 0;
+       }
+   }
+
+   // em validates(): o banco devolve int, o form devolve string
+   Validations::inclusion('certificate', $this, [0, 1, '0', '1']);
+
+   public function hasCertificate(): bool
+   {
+       return in_array($this->certificate, [1, '1'], true);
+   }
+   ```
+
+4. `EC:14`: `'certificate'` em `FIELDS`. O `fill` não muda.
+5. `FORM`, novo bloco antes de `Vagas` (hidden **antes** do checkbox):
+
+   ```php
+   <div class="mb-3 form-check">
+       <input type="hidden" name="event[certificate]" value="0">
+       <input type="checkbox"
+           class="form-check-input<?= $invalid('certificate') ?>"
+           id="event_certificate" name="event[certificate]" value="1"
+           <?= $event->hasCertificate() ? 'checked' : '' ?>>
+       <label class="form-check-label" for="event_certificate">
+           Emite certificado
+       </label>
+       <?= $feedback('certificate') ?>
+   </div>
+   ```
+
+6. `SHOW`, depois de `SHOW:32`: `<dt>Certificado</dt>` e
+   `<dd><?= $event->hasCertificate() ? 'Sim' : 'Não' ?></dd>`.
+7. `ECT:272-284`: `'certificate' => '0'` em `validParams`.
+   `BaseEventsCest`: chave `certificate` no `fillEventForm` com
+   `checkOption`/`uncheckOption('#event_certificate')`.
+
+Armadilhas:
+
+- Sem o hidden, desmarcar no editar nunca grava `0`: a chave some do
+  POST, o `fill` põe `null` e o Evento vira inválido ou dá 500.
+- Ordem: o PHP fica com o **último** valor de um nome repetido. Hidden
+  depois do checkbox = sempre `0`.
+- O `DEFAULT 0` do schema não é usado: `save()` grava todas as colunas
+  (`MODEL:139-187`). Sem o padrão no construtor, `POP:134-143` cria
+  Eventos com `null` e lança `RuntimeException` (`POP:145-146`); o
+  mesmo vale para `ECT:289-300` e `ACC:30-40`.
+- `TINYINT` volta do PDO como **int** (`1`, não `'1'`; PHP 8.3 com
+  `pdo_mysql`, conferido). `inclusion(['0', '1'])` é estrito
+  (`VAL:38`): todo Evento lido e salvo de novo reprova, por exemplo
+  `EVT:511-524` (Evento passado editado). Por isso a lista tem int e
+  string.
+- `ECT:85-112` posta `validParams()` sem `certificate`: sem o passo 7
+  o `fill` põe `null` e os testes de create falham.
+- `checked` com `$event->certificate == 1` funciona, mas o professor
+  cobra comparação estrita: use o método do model.
+- Não converta no controller (`(bool)`, `?? '0'`): `true` não está na
+  lista e `'abc'` viraria `true`. A regra fica no model.
+
+Prova: `EVT` e `ECT`; no navegador, criar marcado, editar, desmarcar,
+salvar e ver "Não" no `show`.
+
+### M18. Janela de datas: antecedência mínima e limite máximo
+
+Chance: média-alta. Tempo: 15-25 min.
+
+Pedido típico: "o Evento precisa de 3 dias de antecedência" ou "não
+aceite data a mais de 1 ano". Hoje só existe "não passada"
+(`VAL:116-138`, chamada em `EV:98`): hoje é aceito e `9999-12-31`
+também (`parseDate`, `VAL:140-153`, aceita qualquer ano de 4 dígitos).
+
+Arquivos: `VAL:116-138` (`notPastDate`, molde com `$now`),
+`VAL:129-130` (cálculo de "hoje" no fuso padrão), `EV:75-77`,
+`EV:88-99` (regra só no create ou quando a data muda), `FORM:72`,
+`FORM:16` (`novalidate`),
+`tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php:136-154`
+(teste com `$now` fixo), `EVT:220-233`, `EVT:538-547`.
+
+Passos:
+
+1. Testes. `NumberAndDateValidationsTest` com `$now` fixo em
+   `2026-11-05 10:00`, mínimo 3 e máximo 365: `2026-11-07` recusa,
+   `2026-11-08` aceita, `2027-11-05` aceita, `2027-11-06` recusa,
+   `9999-12-31` recusa. `EVT`: hoje -> `deve ter ao menos 3 dias de
+   antecedência!`; `+3 days` válido; `+366 days` inválido; ontem
+   continua `não pode estar no passado!`; Evento passado editado sem
+   mudar a data continua válido (`EVT:511-524`).
+2. `Validations`, ao lado de `notPastDate`:
+
+   ```php
+   /**
+    * A data deve ficar entre hoje + $minDays e hoje + $maxDays
+    * (os extremos valem). $now fixa "hoje" nos testes.
+    */
+   public static function dateWithinDays(
+       $attribute,
+       $obj,
+       int $minDays,
+       int $maxDays,
+       string $format = 'Y-m-d',
+       ?\DateTimeImmutable $now = null
+   ) {
+       $date = self::parseDate($obj->$attribute, $format);
+       if ($date === null) {
+           $obj->addError($attribute, 'não é uma data válida!');
+           return false;
+       }
+
+       $timezone = new \DateTimeZone(date_default_timezone_get());
+       $today = ($now ?? new \DateTimeImmutable())
+           ->setTimezone($timezone)
+           ->setTime(0, 0);
+
+       if ($date < $today->modify("+{$minDays} days")) {
+           $obj->addError(
+               $attribute,
+               "deve ter ao menos {$minDays} dias de antecedência!"
+           );
+           return false;
+       }
+
+       if ($date > $today->modify("+{$maxDays} days")) {
+           $obj->addError(
+               $attribute,
+               "não pode passar de {$maxDays} dias a partir de hoje!"
+           );
+           return false;
+       }
+
+       return true;
+   }
+   ```
+
+3. `Event`: constantes e troca de `EV:98`:
+
+   ```php
+   public const MIN_DAYS_AHEAD = 3;
+   public const MAX_DAYS_AHEAD = 365;
+
+   // EV:98, no lugar da chamada única
+   Validations::notPastDate('starts_on', $this) &&
+       Validations::dateWithinDays(
+           'starts_on',
+           $this,
+           self::MIN_DAYS_AHEAD,
+           self::MAX_DAYS_AHEAD
+       );
+   ```
+
+4. `FORM:72` (opcional): `min`/`max` calculados a partir das
+   constantes. Só ajuda o seletor do navegador.
+5. Ajuste os testes que usam datas fora da janela (armadilhas).
+
+Armadilhas:
+
+- `EVT:228-233` (hoje é válido) passa a falhar: troque por `+3 days`
+  e acrescente `+2 days` inválido.
+- `ACT/BaseEventsCest.php:171` usa `+1 day` em `validEventData`:
+  `CreateSuccessfullyCest` quebra com mínimo maior que 1.
+- `EVT:541` usa `+5 days` e `ECT:280`/`ACC:150` usam `+10 days`:
+  mínimo acima disso quebra esses testes.
+- Populate: datas de `+14` (`POP:53`) a `+82` dias (`POP:128`), via
+  `POP:140`. Mínimo acima de 14 ou máximo abaixo de 82 lança
+  `RuntimeException` (`POP:145-146`).
+- `ACT/UpdateSuccessfullyCest.php:19` usa `+90 days`: máximo abaixo
+  de 90 quebra o Cest. 365 cobre tudo.
+- Chame `notPastDate` antes: assim data passada mantém a mensagem
+  `não pode estar no passado!`, conferida em `EVT:225`, `EVT:534`,
+  `EVT:556`, `EVT:564`, `ACT/CreateWithInvalidDataCest.php:54` e
+  `ACT/UpdateWithInvalidDataCest.php:39`.
+- A janela fica dentro de `EV:88-99`: só vale no create ou quando a
+  data muda. Fora dali, um Evento daqui a 2 dias não pode mais ter a
+  descrição corrigida.
+- "1 ano" não é 365 dias em ano bissexto. Se o professor disser
+  "1 ano", use `modify('+1 year')` e teste o dia exato.
+- `min`/`max` no HTML não barram nada: o form tem `novalidate`
+  (`FORM:16`). A regra vale no model.
+- O `$now` serve ao teste unitário da `Validations`; no `Event` use
+  datas relativas (`date('Y-m-d', strtotime('+3 days'))`).
+
+Prova: `NumberAndDateValidationsTest`, `EVT`, `ECT` e Cests; no
+navegador, data de amanhã mostra a mensagem de antecedência e
+`9999-12-31` mostra a do limite.
+
+### M19. "Nenhuma alteração" ao salvar sem mudar nada
+
+Chance: média. Tempo: 15-20 min.
+
+Pedido típico: "salvei sem mexer em nada e apareceu 'atualizado com
+sucesso'". Hoje o `update` chama `save()` direto (`EC:84-88`), que
+roda o `UPDATE` com todas as colunas (`MODEL:160-180`) e devolve
+`true` mesmo sem mudança; o flash diz "Evento atualizado com
+sucesso!" (`EC:87`).
+
+Arquivos: `EC:77-94` (`update`), `EV:88-99` (molde: compara com o
+original de `findById`), `FLASH:7-15` (só `success` e `danger`),
+`FLASH:25-28`, `app/views/layouts/_flash_message.phtml:2`
+(`alert-<?= $type ?>`), `tests/Unit/Lib/FlashMessageTest.php:10-26`,
+`ECT:191-207`, `ECT:272-300` (`validParams`, `createEvent`),
+`MODEL:189-213`.
+
+Passos:
+
+1. Testes. `FlashMessageTest`: `test_warning` copiando
+   `test_danger`. `EVT`: Evento lido do banco sem mudança ->
+   `hasChanges()` falso; `capacity` `'20'` contra `20` do banco ->
+   falso; público-alvo em outra ordem -> falso; título novo ->
+   verdadeiro; Evento novo -> verdadeiro. `ECT`: `createEvent()` e
+   `put` com `validParams()` igual -> `Location` do `show`,
+   `$_SESSION['flash']['warning']` com o texto e sem chave `success`;
+   mudar só o público-alvo -> `success`.
+2. `FLASH`, ao lado de `danger`:
+
+   ```php
+   public static function warning(string $value): void
+   {
+       self::message('warning', $value);
+   }
+   ```
+
+3. `Event`:
+
+   ```php
+   /** Verdadeiro se algum campo difere do que está no banco. */
+   public function hasChanges(): bool
+   {
+       $original = $this->newRecord()
+           ? null
+           : self::findById($this->id);
+       if ($original === null) {
+           return true;
+       }
+
+       foreach (self::$columns as $column) {
+           if ($column === 'audience') {
+               continue;
+           }
+           // o banco devolve int; o form, string
+           if ((string) $original->$column !== (string) $this->$column) {
+               return true;
+           }
+       }
+
+       $before = $original->audienceList();
+       $after = $this->audienceList();
+       sort($before);
+       sort($after);
+
+       return $before !== $after;
+   }
+   ```
+
+4. `EC:84`, depois do `fill`:
+
+   ```php
+   $this->fill($event, $request);
+
+   if (!$event->hasChanges()) {
+       FlashMessage::warning('Nenhuma alteração foi feita.');
+       $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+       return;
+   }
+   ```
+
+   O resto do `update` não muda.
+
+Armadilhas:
+
+- `capacity` volta do PDO como int (`20`) e do form como `'20'`: com
+  `!==` sem `(string)` todo save "tem alteração". O `(string)` aqui só
+  compara; não grava nada.
+- O SET volta do banco na ordem da definição (`SCH:28`);
+  `setAudienceList` guarda a ordem recebida (`EV:198-206`).
+  `'staff,students'` contra `'students,staff'` é o mesmo público:
+  ordene antes de comparar.
+- Não use `rowCount` para isso: `save()` sempre devolve `true`
+  (`MODEL:181`) e mudar o core para devolver `false` sem mudança faz
+  o controller mostrar "Existem dados incorretos!". O
+  `Model::update()` já devolve `false` sem mudança (`MODEL:212`), mas
+  não valida.
+- `return` depois do `redirectTo`, senão o `save()` roda mesmo assim.
+- `FlashMessage` guarda um texto por tipo (`FLASH:27`). `warning`
+  vira `alert-warning` sem mudar o partial. Usar `success` com outro
+  texto também passa, mas fica verde; `danger` fica vermelho e não é
+  erro.
+- Uma consulta a mais (`findById`, PDO novo) a cada update. Aceitável;
+  diga se o professor perguntar.
+- `updated_at` já não muda quando nada muda: o MySQL só aplica o
+  `ON UPDATE` se algum valor mudar. O problema era só o flash.
+- Testes existentes continuam verdes: todo update de `ECT` e dos Cests
+  muda ao menos um campo (`ECT:198`, `ECT:216`, `ECT:235`,
+  `ACT/UpdateSuccessfullyCest.php:68,84`).
+
+Prova: `FlashMessageTest`, `EVT`, `ECT`; no navegador, abrir Editar,
+clicar Salvar sem mexer e ver o alerta amarelo no `show`.
+
+### M20. Preço em reais com vírgula, "Gratuito" se 0
+
+Chance: média. Tempo: 25-35 min.
+
+Pedido típico: "o Evento pode ser pago: aceite 10,50 e mostre
+R$ 10,50; se for 0, mostre Gratuito". Hoje não há coluna de preço.
+O erro comum: `(float) '10,50'` dá `10.0` (perde os centavos sem
+aviso), e gravar `'10,50'` direto num `DECIMAL` dá
+`1366 Incorrect decimal value` -> 500.
+
+Arquivos: `SCH:31` (coluna nova), `EV:48-58`, `EV:60-82`, `US:28-35`
+(padrão no construtor), `VAL:78-94` (`integerMin`, molde de validação
+numérica), `EC:14`, `EC:123-126`, `FORM:84-89`, `SHOW:28-32`,
+`IDX:15,26`, `ECT:272-284`, catálogo R3 (helper de formatação).
+
+Passos:
+
+1. Testes. `EVT`: `'10,50'` válido e `findById` devolve `'10.50'`;
+   `'10'` -> `'10.00'`; `'999999,99'` válido; `'1000000'`, `'1e3'`,
+   `'-5'`, `'10,555'`, `'1.234,56'`, `'abc'` -> erro; `''` ->
+   `não pode ser vazio!`. `formattedPrice()`: `'0.00'` -> `Gratuito`;
+   `'1234.5'` -> `R$ 1.234,50`. `ECT`: create com `'price' => '25,90'`
+   -> `show` contém `R$ 25,90`; edit mostra `value="25,90"`.
+2. `SCH`, depois de `capacity`:
+
+   ```php
+   price DECIMAL(8,2) NOT NULL DEFAULT 0,
+   ```
+
+3. `Validations`:
+
+   ```php
+   /**
+    * Valor em reais: até $digits dígitos inteiros e até 2 decimais,
+    * com vírgula ou ponto ("10", "10,5", "1234.56").
+    */
+   public static function money($attribute, $obj, int $digits = 6)
+   {
+       $value = $obj->$attribute;
+       $pattern = '/^\d{1,' . $digits . '}([.,]\d{1,2})?$/';
+
+       if (!is_string($value) || preg_match($pattern, $value) !== 1) {
+           $obj->addError($attribute, 'deve ser um valor como 10,50!');
+           return false;
+       }
+
+       return true;
+   }
+   ```
+
+4. `Event`: `'price'` em `$columns`; no construtor,
+   `if ($this->price === null) { $this->price = '0.00'; }`; em
+   `validates()` e os helpers:
+
+   ```php
+   if (
+       Validations::notEmpty('price', $this) &&
+       Validations::money('price', $this)
+   ) {
+       // formato do MySQL: ponto decimal
+       $this->price = str_replace(',', '.', $this->price);
+   }
+
+   public function formattedPrice(): string
+   {
+       $price = (float) $this->price;
+       if ($price === 0.0) {
+           return 'Gratuito';
+       }
+
+       return 'R$ ' . number_format($price, 2, ',', '.');
+   }
+
+   public function priceForInput(): string
+   {
+       return str_replace('.', ',', (string) $this->price);
+   }
+   ```
+
+5. `EC:14`: `'price'` em `FIELDS`. `FORM`, bloco novo:
+   `type="text" inputmode="decimal" id="event_price"
+   name="event[price]"`, `value` com
+   `htmlspecialchars($event->priceForInput())`.
+6. `SHOW`: `<dt>Preço</dt>` com
+   `htmlspecialchars($event->formattedPrice())`. `IDX`: coluna nova
+   (opcional).
+7. `ECT:272-284`: `'price' => '0'` em `validParams`.
+
+Armadilhas:
+
+- `FILTER_VALIDATE_FLOAT` e `is_numeric` aceitam `'1e3'` (vira
+  `1000.00` no banco). Use a regex.
+- Mais de 2 decimais: o MySQL arredonda sem erro (`'10.555'` grava
+  `10.56`). A regex barra.
+- `'1000000'` estoura o `DECIMAL(8,2)`: `1264 Out of range` -> 500
+  (MySQL estrito, conferido). `\d{1,6}` fecha o limite em
+  `999999,99`.
+- Nada de `(float)` no controller nem no model antes de validar:
+  `(float) '10,50'` é `10.0`. O `(float)` do `formattedPrice` só
+  formata um valor já validado.
+- `DECIMAL` volta do PDO como string (`'10.50'`): compare com
+  `assertSame('10.50', ...)`, nunca `10.5`.
+- `type="number"` mostra vírgula em navegador pt-BR, mas com
+  `novalidate` (`FORM:16`) um valor que o navegador não entende vai
+  vazio. Prefira `type="text"` com `inputmode="decimal"`.
+- `save()` grava todas as colunas (`MODEL:139-187`): sem o padrão no
+  construtor, `POP:134-143`, `ACC:30-40` e `ECT:289-300` gravam
+  `null` e falham.
+- `ECT:85-112` posta `validParams()`: sem `price` o `fill` põe
+  `null` (`EC:124`) e o create reprova.
+- A normalização dentro de `validates()` altera o objeto. Diga isso;
+  a alternativa limpa é o gancho do M16.
+
+Prova: `EVT` e `ECT`; no navegador, cadastrar com `10,5`, ver
+`R$ 10,50` no `show`, editar para `0` e ver `Gratuito`.
+
+### M21. Vagas ilimitadas (`capacity` NULL)
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "Evento online não tem limite de vagas". Hoje
+`capacity` é obrigatório (`EV:79`, `SCH:31` `NOT NULL`). Se só tirar
+o `notEmpty`, o campo vazio vira `''` no `fill` (`EC:125`) e o MySQL
+recusa `''` num `INT` (`1366 Incorrect integer value`) -> 500.
+
+Arquivos: `SCH:31` (`capacity INT NOT NULL`), `SCH:34`
+(`CHECK (capacity >= 1)`, aceita NULL), `EV:20` (PHPDoc), `EV:79-81`,
+`EV:104-115` (`validatesCapacityAgainstEnrollments`, `(int)` em
+`EV:112`), `EV:137-140` (`availableSpots`, `(int)` em `EV:139`),
+`IDX:26`, `SHOW:30-31`, `FORM:84-89`, `POP:58`, `EVT:86-123`,
+`ACT/CreateWithInvalidDataCest.php:23-25`.
+
+Passos:
+
+1. Testes. `EVT`: `capacity` `''` -> válido, `save()` e `findById`
+   devolve `null`; `availableSpots()` -> `null`, mesmo com Inscrições;
+   `'0'` continua `deve ser maior ou igual a 1!`; de ilimitado para
+   `2` com 3 Inscrições -> `não pode ser menor que o total de
+   inscrições (3)!`; de `5` para `''` com Inscrições -> válido.
+   `ECT`: create com `'capacity' => ''` -> `show` sem `disponíveis`
+   e com `sem limite`.
+2. `SCH:31`: `capacity INT NULL,`. O `CHECK` de `SCH:34` fica.
+3. `Event` (`EV:20` vira `int|string|null`):
+
+   ```php
+   public function hasUnlimitedCapacity(): bool
+   {
+       return $this->capacity === null || $this->capacity === '';
+   }
+
+   public function save(): bool
+   {
+       if ($this->capacity === '') {
+           $this->capacity = null; // '' num INT estrito: erro 1366
+       }
+
+       return parent::save();
+   }
+
+   // EV:79-81
+   if (
+       !$this->hasUnlimitedCapacity() &&
+       Validations::integerMin('capacity', $this, 1)
+   ) {
+       $this->validatesCapacityAgainstEnrollments();
+   }
+
+   /** Vagas restantes; null quando não há limite. */
+   public function availableSpots(): ?int
+   {
+       if ($this->hasUnlimitedCapacity()) {
+           return null;
+       }
+
+       return max(0, (int) $this->capacity - $this->enrollmentsCount());
+   }
+
+   public function capacityLabel(): string
+   {
+       return $this->hasUnlimitedCapacity()
+           ? 'sem limite'
+           : (string) $this->capacity;
+   }
+   ```
+
+4. Views: `IDX:26` e `SHOW:30` trocam `(int) $event->capacity` por
+   `htmlspecialchars($event->capacityLabel())`; `SHOW:31` só mostra
+   `(N disponíveis)` quando `availableSpots() !== null`. `FORM:85`:
+   rótulo "Vagas (em branco = sem limite)".
+5. `POP:58`: o Evento online pode ganhar `null` para aparecer na
+   demonstração.
+6. Variante "só online pode ser ilimitado": no `validates`, se
+   `modality !== 'online'` mantenha o `notEmpty` (catálogo M5).
+
+Armadilhas:
+
+- `(int) null` é `0`: sem trocar `EV:139`, `IDX:26` e `SHOW:30` a tela
+  mostra `1/0` e `(0 disponíveis)`, e um badge de lotado (N6) acende.
+- `availableSpots()` passa a devolver `?int`: em N6 use
+  `=== 0`, nunca `!$event->availableSpots()` (`null` também é falso).
+- Sem a guarda em `EV:79-81`, `validatesCapacityAgainstEnrollments`
+  faz `(int) null < $enrolled` (`EV:112`) e recusa todo Evento
+  ilimitado com Inscrições.
+- Testes que mudam: `EVT:93` (Evento vazio esperava erro em
+  `capacity`), `EVT:111` (caso `capacity` do provider de obrigatórios)
+  e `ACT/CreateWithInvalidDataCest.php:23-25` (form vazio esperava
+  `não pode ser vazio!` em `capacity`). Tire `capacity` dessas listas.
+- Campo vazio virar "sem limite" é uma regra: deixe escrito no rótulo.
+  Se o professor achar implícito demais, use um checkbox "Sem limite"
+  com hidden (M17).
+- O `CHECK (capacity >= 1)` aceita NULL (no SQL, NULL não reprova
+  `CHECK`): não precisa mexer em `SCH:34`.
+
+Prova: `EVT`, `ECT` e Cests; no navegador, cadastrar com Vagas em
+branco e ver `sem limite` na listagem e no `show`.
+
+### M22. No máximo N Eventos por dia
+
+Chance: média-baixa. Tempo: 20-25 min.
+
+Pedido típico: "no máximo 3 Eventos no mesmo dia". Hoje não há limite:
+qualquer quantidade de Eventos na mesma data passa (`EV:75-77` só
+olha formato e passado).
+
+Arquivos: `EV:60-82` (`validates`), `EV:75-77`, `EV:88-99` (molde:
+regra só no create ou quando a data muda), `MODEL:300-330` (`where`,
+só igualdade), `ECT:39-57`, `ECT:289-300` (`createEvent` ignora o
+retorno de `save()`), `EVT:49-53` (`params` com `+30 days`),
+`EVT:390-429` (paginação), catálogo M6 (variante local + data) e N11
+(`count`).
+
+Passos:
+
+1. Testes. `EVT`: três Eventos no mesmo dia salvam; o quarto ->
+   `já há 3 eventos nesta data!` em `starts_on`; outro dia -> válido;
+   editar o título de um dos três -> válido (não conta a si mesmo);
+   mover um Evento de outro dia para o dia cheio -> inválido. `ECT`:
+   create no dia cheio -> form com o erro e `Event::all()` com 3.
+2. `Event`:
+
+   ```php
+   private const MAX_EVENTS_PER_DAY = 3;
+
+   private function validatesEventsPerDay(): void
+   {
+       $others = array_filter(
+           self::where(['starts_on' => $this->starts_on]),
+           fn(Event $other) => $other->id !== $this->id
+       );
+
+       if (count($others) >= self::MAX_EVENTS_PER_DAY) {
+           $max = self::MAX_EVENTS_PER_DAY;
+           $this->addError('starts_on', "já há {$max} eventos nesta data!");
+       }
+   }
+   ```
+
+3. `EV:75-77` vira:
+
+   ```php
+   if (
+       Validations::notEmpty('starts_on', $this) &&
+       Validations::validDate('starts_on', $this)
+   ) {
+       $this->validatesStartsOnNotPast();
+
+       if ($this->errors('starts_on') === null) {
+           $this->validatesEventsPerDay();
+       }
+   }
+   ```
+
+4. Ajuste os testes que criam vários Eventos na mesma data
+   (armadilhas): data variando no laço, por exemplo
+   `'starts_on' => date('Y-m-d', strtotime('+' . (10 + $i) . ' days'))`.
+
+Armadilhas:
+
+- Sem excluir o próprio `id`, editar a descrição de um dos três
+  Eventos do dia reprova (ele conta a si mesmo).
+- `ECT:41-43` cria 7 Eventos com a mesma data (`ECT:280`). O
+  `createEvent` ignora o `false` do `save()` (`ECT:297`): só 3 entram
+  e o teste falha mais adiante ("Evento 5" não aparece), longe da
+  causa.
+- `EVT:392-394` (12 Eventos) e `EVT:417-419` (7) usam a data de
+  `params()`: o `createEvent` do `EVT` faz `assertTrue($event->save())`
+  (`EVT:62`) e falha no quarto. Com N = 2 também quebram `EVT:368-370`
+  e `EVT:454-456` (três Eventos cada).
+- `addError` guarda um texto por campo (`MODEL:131-134`): rode a regra
+  só se `starts_on` não tiver erro, senão ela apaga
+  `não pode estar no passado!`.
+- Se o limite baixar com Eventos já gravados, um dia com 4 deixa todos
+  ineditáveis. Para evitar, rode a regra só no create ou quando a data
+  muda, como em `EV:90-96`.
+- Populate e Cests não quebram: as 16 datas de `POP:49-130` e de
+  `ACT/BaseEventsCest.php:70` são todas diferentes.
+- `count(where(...))` traz as linhas inteiras; com N11 vira
+  `SELECT COUNT(*)`. A consulta fica no model, nunca no controller.
+- Dois cadastros simultâneos podem passar do limite (sem trava). Só
+  comente se perguntarem.
+
+Prova: `EVT` e `ECT`; no navegador, cadastrar o quarto Evento na mesma
+data e ver o erro no campo Data.
+
+### M23. Data digitada como dd/mm/aaaa
+
+Chance: baixa. Tempo: 20-25 min.
+
+Pedido típico: "quero digitar a data como dd/mm/aaaa". Hoje o campo é
+`type="date"` (`FORM:72`): o navegador em pt-BR já **mostra**
+dd/mm/aaaa, mas sempre **envia** `Y-m-d`. Pergunte se isso basta. Se
+o pedido for campo de texto, `05/03/2027` chega como veio e reprova
+em `validDate` (`EV:76`, formato `Y-m-d` em `VAL:99`); gravado direto,
+o MySQL recusa (`1292 Incorrect date value`) -> 500.
+
+Arquivos: `FORM:70-75`, `EV:75-77`, `EV:88-99` (`EV:93` compara o
+original `Y-m-d` com o novo valor), `VAL:99-107` e `VAL:140-153`
+(`validDate`/`parseDate` com `$format`), `MODEL:153-155` (bind),
+`IDX:24` e `SHOW:23` (exibem com `date('d/m/Y', strtotime(...))`),
+`POP:140` (`Y-m-d`), `EVT:210-218`, `ECT:80`,
+`ACT/BaseEventsCest.php:148-153`,
+`ACT/UpdateSuccessfullyCest.php:37`.
+
+Passos:
+
+1. Testes. `EVT`: `'05/03/2031'` -> válido e `findById` devolve
+   `'2031-03-05'`; `'2031-03-05'` continua válido; `'31/02/2031'`,
+   `'5/3/2031'`, `'05/03/31'` -> `não é uma data válida!`; Evento
+   passado editado sem mudar a data, com ela vinda como dd/mm/aaaa ->
+   válido. `ECT`: edit mostra `value="05/03/2031"`; create com
+   `'starts_on' => '05/03/2031'` grava `2031-03-05`.
+2. `Event`:
+
+   ```php
+   /**
+    * Aceita dd/mm/aaaa e guarda Y-m-d (formato do DATE). Valor que
+    * não casa fica como veio, para a validação recusar.
+    */
+   private function normalizeStartsOn(): void
+   {
+       if (!is_string($this->starts_on)) {
+           return;
+       }
+
+       $date = \DateTimeImmutable::createFromFormat(
+           '!d/m/Y',
+           $this->starts_on
+       );
+       if ($date !== false && $date->format('d/m/Y') === $this->starts_on) {
+           $this->starts_on = $date->format('Y-m-d');
+       }
+   }
+
+   /** Data para o campo do form: dd/mm/aaaa quando já é Y-m-d. */
+   public function startsOnForInput(): string
+   {
+       $value = (string) $this->starts_on;
+       $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+       return $date !== false && $date->format('Y-m-d') === $value
+           ? $date->format('d/m/Y')
+           : $value;
+   }
+   ```
+
+3. `validates()`: `$this->normalizeStartsOn();` na primeira linha,
+   antes de `EV:75`.
+4. `FORM:72-73`: `type="text" placeholder="dd/mm/aaaa"
+   inputmode="numeric"` e `value` com
+   `htmlspecialchars($event->startsOnForInput())`.
+5. Ajuste os testes que mudam (armadilhas).
+
+Armadilhas:
+
+- Converta **antes** da validação. Se a conversão vier depois,
+  `EV:93` compara `'2026-10-01'` com `'01/10/2026'`, acha que a data
+  mudou e um Evento passado não pode mais ter a descrição corrigida
+  (`não pode estar no passado!`).
+- Continue aceitando `Y-m-d`: o populate monta `Y-m-d` (`POP:140`) e o
+  Cest preenche o campo com valor ISO por JS
+  (`ACT/BaseEventsCest.php:148-153`).
+- `strtotime('05/03/2027')` lê no formato americano e dá
+  `2027-05-03`. Nunca passe dd/mm/aaaa para `strtotime`; `IDX:24` e
+  `SHOW:23` funcionam porque recebem o valor do banco.
+- O retorno de formato (`format(...) === valor`) recusa `31/02` e
+  `5/3/2031`. Se o professor quiser aceitar sem zero à esquerda, use
+  `'!j/n/Y'` e compare com `format('j/n/Y')`.
+- Testes que mudam: `EVT:212` tem `'30/12/2030'` na lista de datas
+  inválidas (agora é válida; troque por `'31/02/2030'`); `ECT:80`
+  confere `type="date"`; `ACT/UpdateSuccessfullyCest.php:37` espera
+  o campo em `Y-m-d`.
+- A conversão dentro de `validates()` altera o objeto. Funciona porque
+  `save()` valida antes do bind (`MODEL:141`); o lugar mais limpo é o
+  gancho do M16.
+- Com `type="text"` o seletor de calendário some. Máscara, se pedirem,
+  em `public/assets/js/`, nunca na view.
+
+Prova: `EVT` e `ECT`; no navegador, digitar `05/03/2027`, salvar, ver
+`05/03/2027` no `show` e no campo ao editar.
 
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
@@ -4299,6 +5118,183 @@ Armadilhas:
 
 Prova: testes; no navegador, enviar uma imagem e vê-la no `show`.
 
+### P22. Adiar o Evento uma semana com um botão
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "um botão 'Adiar uma semana' no detalhe do Evento".
+Variante: "adiar N dias". Hoje não há ação para isso: só o `update`
+inteiro (`EC:77-94`) muda `starts_on`, e a regra de data no passado
+(`EV:88-99`) só é cobrada quando a data muda.
+
+Arquivos: `EV:75-77` (`starts_on` validado), `EV:88-99`
+(`validatesStartsOnNotPast`: compara com o original por `findById`,
+`:91-93`), `EV:104-115` (capacidade x Inscrições, roda em todo `save()`),
+`EV:155-158` (guarda de `newRecord()` no `safeDestroy`, modelo),
+`MODEL:143-159` (`save()` faz `INSERT` se `newRecord()`),
+`MODEL:189-213` (`update()` não valida), `ROUTES:33-35`, `EC:96-111`
+(ação curta com flash, modelo), `EC:132-141` (`findEvent`,
+`eventNotFound`), `SHOW:35-36`, `EVT:499-509` (`createPastEvent`),
+`EVT:538-547` (Evento passado aceita data futura), `ECT:242-251`,
+`ACC:81-110`, `core/Router/Route.php:84-86`.
+
+Passos:
+
+1. Testes. `EVT`: Evento em +30 dias, `postpone()` -> `true` e
+   `findById` mostra +37 dias; com 2 Inscrições (`enroll`, `EVT:67-74`)
+   a capacidade e `enrollmentsCount()` não mudam; `createPastEvent()`
+   (-10 dias) -> `false`, erro `'não pode estar no passado!'` em
+   `starts_on` e banco intacto; `postpone(0)` -> `false`;
+   `(new Event($this->params()))->postpone()` -> `false` e
+   `Event::all()` vazio. `ECT`: `put('postpone', ...)` com `id` ->
+   `Location: /admin/events/{id}` e flash com a data nova; `id` 9999 ->
+   `Location: /admin/events` e `'Evento não encontrado!'`; Evento
+   passado (`$event->update(['starts_on' => ...])` antes) -> `danger` e
+   data igual. `ACC`: a rota nas duas listas (passo 6).
+
+   ```php
+   public function test_postpone_should_reject_a_still_past_date(): void
+   {
+       $event = $this->createPastEvent();
+       $original = $event->starts_on;
+
+       $this->assertFalse($event->postpone());
+       $this->assertEquals(
+           'não pode estar no passado!',
+           $event->errors('starts_on')
+       );
+       $this->assertEquals(
+           $original,
+           Event::findById($event->id)->starts_on
+       );
+   }
+   ```
+
+2. `EV` (importe `DateTimeImmutable` junto de `EV:5-8`):
+
+   ```php
+   public const POSTPONE_DAYS = 7;
+
+   /**
+    * Adia o Evento e grava com save(): a data nova passa pelas
+    * validações de sempre (não pode ficar no passado).
+    * A capacidade não muda.
+    */
+   public function postpone(int $days = self::POSTPONE_DAYS): bool
+   {
+       if ($this->newRecord()) {
+           $this->addError('base', 'o evento não existe!');
+           return false;
+       }
+
+       if ($days < 1) {
+           $this->addError('base', 'adie pelo menos 1 dia!');
+           return false;
+       }
+
+       $original = $this->starts_on;
+       $date = DateTimeImmutable::createFromFormat('!Y-m-d', $original);
+       if ($date === false) {
+           $this->addError('starts_on', 'não é uma data válida!');
+           return false;
+       }
+
+       $this->starts_on = $date->modify("+{$days} days")
+           ->format('Y-m-d');
+       if ($this->save()) {
+           return true;
+       }
+
+       $this->starts_on = $original;
+
+       return false;
+   }
+   ```
+
+3. `ROUTES`, depois de `update` (`:33`):
+
+   ```php
+   Route::put(
+       '/admin/events/{id}/postpone',
+       [AdminEventsController::class, 'postpone']
+   )->name('admin.events.postpone');
+   ```
+
+4. `EC`:
+
+   ```php
+   public function postpone(Request $request): void
+   {
+       $event = $this->findEvent($request);
+       if ($event === null) {
+           $this->eventNotFound();
+           return;
+       }
+
+       if ($event->postpone()) {
+           $date = date('d/m/Y', strtotime($event->starts_on));
+           FlashMessage::success("Evento adiado para {$date}!");
+       } else {
+           $reason = $event->errors('starts_on')
+               ?? $event->errors('base') ?? 'dados inválidos!';
+           FlashMessage::danger("Não foi possível adiar: {$reason}");
+       }
+
+       $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+   }
+   ```
+
+5. `SHOW:35`, ao lado do Editar:
+
+   ```php
+   <form class="d-inline" method="post"
+       action="<?= route('admin.events.postpone', ['id' => $event->id]) ?>">
+       <input type="hidden" name="_method" value="PUT">
+       <button type="submit" class="btn btn-outline-warning">
+           Adiar uma semana
+       </button>
+   </form>
+   ```
+
+6. `ACC`: `'admin.events.postpone' => ['PUT', '/admin/events/1/postpone']`
+   em `eventRoutes()` (`:85-97`) e em `methodOverrideRoutes()`
+   (`:104-110`); o comentário "As 8 rotas" (`:81`) passa a 9.
+
+Armadilhas:
+
+- Num Evento novo, `save()` faria `INSERT` (`MODEL:143-159`): adiar
+  criaria um Evento. Por isso a guarda de `newRecord()`, como em
+  `EV:155-158`.
+- `update(['starts_on' => ...])` não valida (`MODEL:189`) e gravaria
+  data no passado. Use `save()`.
+- Some os dias a partir de `starts_on`, não de hoje:
+  `strtotime('+7 days')` (como em P6) dá "hoje + 7".
+- Evento passado: -10 dias + 7 = -3, recusado; -3 dias + 7 = +4,
+  aceito (coerente com `EVT:538-547`). Se o professor quiser "passado
+  não adia", ponha no início de `postpone()` um teste de
+  `starts_on < date('Y-m-d')` com erro em `base`, e um teste para o caso
+  de -3 dias.
+- `save()` roda `validates()` inteiro: um Evento com capacidade abaixo
+  das Inscrições (gravada por `update()`) não adia. Mesma armadilha
+  de P5.
+- Se o `save()` falhar, devolva a data original ao objeto; senão quem
+  usar o objeto depois vê uma data que não foi gravada.
+- Nunca por link (`<a href=".../postpone">`): GET não altera dados (O9).
+  Form POST + `_method=PUT`; com O7, `Route::patch` e `_method=PATCH`.
+- Rota com `{id}` e sufixo não disputa com `/admin/events/{id}`: o
+  `Route` compara o número de segmentos (`Route.php:84-86`). Só uma rota
+  GET fixa sem `{id}` precisa vir antes de `ROUTES:31`.
+- `ECT` não passa pelo `Router` (`CTC:70-84`): rota ou verbo errado só
+  aparece no `ACC`.
+- Prazo digitado ("adiar N dias"): passe o valor cru para o model e
+  valide lá com `filter_var($days, FILTER_VALIDATE_INT,`
+  `['options' => ['min_range' => 1, 'max_range' => 365]])`; nunca
+  `(int)` no controller (texto vira 0).
+- Com P5, Evento cancelado não adia (`isCanceled()` no início).
+
+Prova: `EVT`, `ECT`, `ACC`; no navegador, "Adiar uma semana" no Evento
+16 mostra o flash com a data nova e o detalhe 7 dias depois.
+
 ### Q1. Só o dono edita e remove
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -4616,6 +5612,114 @@ Armadilhas:
 
 Prova: testes; `curl -X POST -b <cookie> localhost/admin/events` sem
 token é recusado.
+
+### Q6. Revisar escape e testar XSS
+
+Chance: média-baixa. Tempo: 15-20 min.
+
+Pedido típico: "ponha `<script>alert(1)</script>` no título e mostre
+que nada executa" ou "revise o escape de todas as telas". Hoje os
+campos do Evento já saem escapados (`IDX:22,25`, `SHOW:8,11,20,26`,
+`FORM:24,31,73,80,87`), mas o resto não: `NAV:23` imprime o e-mail cru,
+os dois painéis imprimem o nome cru, o partial de flash imprime tipo e
+texto crus, e o título da página é escapado no controller (`EC:37`) em
+vez de no layout (`LAYOUT:26`).
+
+Arquivos: `NAV:23`, `app/views/admin/dashboard/index.phtml:1`,
+`app/views/dashboard/index.phtml:1`,
+`app/views/layouts/_flash_message.phtml:2-3` (e `:6`, short tag
+`<? endforeach; ?>`), `LAYOUT:26`, `EC:37` (o único `$title` escapado;
+os outros controllers passam texto fixo), `FORM:12-14` (`$feedback` já
+escapa o erro), `US:37-47` (nome e e-mail sem validação de formato),
+`ECT:17-31` (`setUp` com admin logado), `ECT:151-161`, `ECT:171-189`,
+`tests/Integration/Controllers/HomeControllerTest.php` (molde de teste
+de controller fora do admin),
+`tests/Acceptance/admin/AdminDashboardCest.php:55`.
+
+Passos:
+
+1. Testes em `ECT`:
+   - título `<b>x</b>` em `index`, `show` e `edit`: a resposta contém
+     `&lt;b&gt;x&lt;/b&gt;` e não contém `<b>x</b>` nem `&amp;lt;`
+     (escape duplo). Hoje passa: é a rede para o passo 3;
+   - `$this->admin->update(['email' => '<i>a</i>@example.com'])` antes
+     do `get('index')`: espera `&lt;i&gt;a&lt;/i&gt;@example.com` (hoje
+     falha, `NAV:23`); `Auth::user()` relê o usuário do banco;
+   - `FlashMessage::danger('<b>x</b>')` antes do `get('index')`: espera
+     o texto escapado (hoje falha);
+   - painéis: teste novo com `ControllerTestCase` para
+     `App\Controllers\DashboardController` e
+     `App\Controllers\Admin\DashboardController`, com um usuário de nome
+     `<b>Ana</b>` logado por `Auth::login` (hoje falha).
+
+   ```php
+   public function test_event_title_is_escaped_once(): void
+   {
+       $event = $this->createEvent(['title' => '<b>x</b>']);
+       $pages = [
+           'index' => [],
+           'show' => ['id' => $event->id],
+           'edit' => ['id' => $event->id],
+       ];
+
+       foreach ($pages as $action => $params) {
+           $html = $this->get(
+               action: $action,
+               controllerName: self::CONTROLLER,
+               params: $params
+           );
+           $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;', $html);
+           $this->assertStringNotContainsString('<b>x</b>', $html);
+           $this->assertStringNotContainsString('&amp;lt;', $html);
+       }
+   }
+   ```
+
+2. Views. `NAV:23`:
+
+   ```php
+   <?= htmlspecialchars($this->currentUser()->email) ?>
+   ```
+
+   Nos dois painéis, `htmlspecialchars($this->currentUser()->name)`. No
+   partial de flash:
+
+   ```php
+   <div class="alert alert-<?= htmlspecialchars($type) ?> alert-dismissible"
+       role="alert">
+       <div><?= htmlspecialchars($msg) ?></div>
+   ```
+
+   e `:6` vira `<?php endforeach; ?>`.
+3. Título: `EC:37` vira `$title = $event->title;` e `LAYOUT:26` vira
+   `<?= htmlspecialchars($title) ?>`. Escape na saída, uma vez.
+
+Armadilhas:
+
+- Escape duplo: mudar `LAYOUT:26` sem tirar o `htmlspecialchars` de
+  `EC:37` mostra `&lt;b&gt;` literal no `<h1>` do show. A asserção com
+  `&amp;lt;` pega.
+- Escape na saída, nunca na entrada: `htmlspecialchars` no `fill`
+  (`EC:116-130`) ou no model grava `&lt;` no banco, aumenta o tamanho
+  (`VARCHAR(255)`) e o form de edição mostra `&amp;lt;`.
+- Depois do passo 2, flash com HTML de propósito (negrito) vira texto.
+  Hoje nenhum flash tem HTML (`EC:56-139`, `app/Middleware/*.php`).
+- PHP 8.1+ já usa `ENT_QUOTES | ENT_SUBSTITUTE` por padrão: aspas
+  simples em atributo também saem escapadas; não precisa passar flags.
+- Rótulos de `Event::KINDS`/`MODALITIES` (`IDX:23`, `SHOW:14,17`,
+  `FORM:40,52`) são constantes do código e não precisam de escape; o
+  valor cru do banco, no `??`, já é escapado.
+- `nl2br(htmlspecialchars(...))` nessa ordem (`SHOW:11`); invertido, o
+  `<br>` vira texto.
+- A short tag do flash (`:6`) só funciona porque a imagem não tem
+  `php.ini` e o padrão do PHP é `short_open_tag=On`; com
+  `php.ini-production` a view quebra. Troque por `<?php`.
+- `AdminDashboardCest.php:55` confere `Olá, Admin!`: nome sem caractere
+  especial não muda.
+
+Prova: `ECT` e os testes dos painéis; no navegador, Evento com título
+`<script>alert(1)</script>` aparece literal na listagem, no detalhe
+(`<h1>` e corpo) e no form.
 
 ### R1. Flash: texto, título do Evento, tipo `warning`
 
@@ -5221,6 +6325,258 @@ Armadilhas:
 
 Prova: testes; no navegador, navegar do Evento 1 ao 16 pelos links.
 
+### R12. Tela reflete as regras do model
+
+Chance: média. Tempo: 10-20 min.
+
+Pedido típico: "se o Evento tem inscritos, nem mostre o Remover" ou "o
+campo Vagas deveria dizer o mínimo aceito". Hoje a listagem mostra
+Remover em toda linha (`IDX:30-33`) e o clique só falha depois, no
+`safeDestroy` (`EV:160-164`); `hasEnrollments()` (`EV:142-145`) não é
+usado em nenhuma view. O campo Vagas tem `min="1"` fixo (`FORM:87`),
+mesmo com 3 inscritos.
+
+Arquivos: `EV:104-115` (capacidade >= Inscrições), `EV:125-145`
+(`enrollmentsCount`, `hasEnrollments`), `EV:151-173` (`safeDestroy`: a
+regra continua aqui), `IDX:26-34`, `FORM:84-89` (`novalidate` em
+`FORM:16`), `SHOW:35-36`, `ECT:253-266` (servidor recusa remover com
+Inscrição), `ECT:302-313` (`enroll`), `EVT:67-74`,
+`ACT/DeleteEventCest.php:30-48`, `ACT/ListEventsCest.php:30-32`,
+`ACT/UpdateWithInvalidDataCest.php:69-77`,
+`core/Database/Database.php:10-21`.
+
+Passos:
+
+1. Testes. `EVT`: `isRemovable()` falso para Evento novo, verdadeiro
+   para salvo sem Inscrições, falso depois de `enroll($event, 1)`;
+   `minCapacity()` é 1 sem Inscrições e 3 com 3. `ECT`: dois Eventos,
+   um com `enroll`; no `index`, `action="/admin/events/{$free->id}"`
+   aparece e o do outro não (o link Ver usa `href`, não `action`);
+   `edit` de Evento com 2 Inscrições contém `min="2"`; `new` contém
+   `min="1"`. `ECT:253-266` continua: o `DELETE` direto segue barrado.
+2. `EV`, depois de `hasEnrollments()`:
+
+   ```php
+   /** Mesma regra de safeDestroy(): salvo e sem Inscrições. */
+   public function isRemovable(): bool
+   {
+       return !$this->newRecord() && !$this->hasEnrollments();
+   }
+
+   /** Menor capacidade aceita na edição (EV:104-115). */
+   public function minCapacity(): int
+   {
+       return max(1, $this->enrollmentsCount());
+   }
+   ```
+
+3. `IDX:30-33`:
+
+   ```php
+   <?php if ($event->isRemovable()) : ?>
+       <form class="d-inline" method="post"
+           action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>">
+           <input type="hidden" name="_method" value="DELETE">
+           <button type="submit" class="btn btn-sm btn-outline-danger">
+               Remover
+           </button>
+       </form>
+   <?php else : ?>
+       <span class="small text-body-secondary">Com inscrições</span>
+   <?php endif; ?>
+   ```
+
+4. `FORM:84-89`:
+
+   ```php
+   <?php $minCapacity = $event->minCapacity(); ?>
+   <input type="number" class="form-control<?= $invalid('capacity') ?>"
+       id="event_capacity" name="event[capacity]"
+       min="<?= $minCapacity ?>"
+       value="<?= htmlspecialchars((string) $event->capacity) ?>">
+   <?= $feedback('capacity') ?>
+   <?php if ($event->hasEnrollments()) : ?>
+       <div class="form-text">
+           Mínimo: <?= $minCapacity ?> (total de inscrições).
+       </div>
+   <?php endif; ?>
+   ```
+
+5. Cests. `DeleteEventCest.php:38-41`, no lugar do clique:
+
+   ```php
+   $page->dontSeeElement(
+       $this->rowOf('Evento 01') . "//button[contains(., 'Remover')]"
+   );
+   $page->see('Com inscrições', $this->rowOf('Evento 01'));
+   ```
+
+   `ListEventsCest.php:32`:
+
+   ```php
+   $this->assertContains(
+       $event->hasEnrollments() ? 'Com inscrições' : 'Remover',
+       $row
+   );
+   ```
+
+Armadilhas:
+
+- A regra continua em `safeDestroy()` (`EV:151-173`): esconder o botão
+  é só visual. Um `DELETE` forjado ainda chega ao servidor, e
+  `ECT:253-266` prova que ele recusa.
+- `DeleteEventCest.php:38` clica Remover no Evento 01 (3 Inscrições):
+  sem o botão, o clique falha. A recusa do servidor fica no `ECT`.
+- `ListEventsCest.php:32` confere `Remover` em toda linha da página 1;
+  os Eventos 01 e 03 têm Inscrições (`BaseEventsCest.php:99-105`).
+  Alternativa: botão `disabled` com o texto Remover mantém esse Cest
+  verde, mas `DeleteEventCest.php:38-41` quebra igual (o clique não
+  envia nada).
+- `novalidate` (`FORM:16`): o `min` só ajuda as setas do campo e o
+  leitor de tela; quem barra é o model (`EV:104-115`).
+  `UpdateWithInvalidDataCest.php:71-76` digita 2 com 3 inscritos e
+  espera o erro do servidor: não tire o `novalidate`.
+- N+1: `IDX:26` já conta Inscrições por linha; `isRemovable()` faz mais
+  uma contagem por linha, cada uma com PDO novo
+  (`core/Database/Database.php:10-21`). Com 5 linhas é aceitável; diga
+  isso e cite N11.
+- Decisão no model (`isRemovable()`), não `enrollmentsCount() === 0` na
+  view: é a mesma regra do `safeDestroy`, num lugar só.
+- Com R6 (Remover no show), use o mesmo `isRemovable()` em
+  `SHOW:35-36`.
+
+Prova: testes; no navegador, a página 1 não mostra Remover nos Eventos
+1 a 4 do populate, e o Editar do Evento 1 mostra "Mínimo: 3".
+
+### R13. Textos de vagas com concordância
+
+Chance: média-baixa. Tempo: 5-10 min.
+
+Pedido típico: "'1 disponíveis' está errado" ou "a coluna Vagas mostra
+'1/10': são vagas ou inscritos?". Hoje `SHOW:30-31` imprime
+`1/4 (3 disponíveis)`; com 1 vaga sai `(1 disponíveis)` e com 0,
+`(0 disponíveis)`. `IDX:15` chama a coluna de "Vagas", mas `IDX:26`
+mostra inscritos/capacidade.
+
+Arquivos: `EV:125-132` (`enrollmentsCount`), `EV:134-140`
+(`availableSpots`, com `max(0, ...)`), `SHOW:28-32`, `IDX:15,26`,
+`ECT:59-68` (`'1/10'` em `:67`), `ECT:151-161` (`'1/4'` em `:159`),
+`ACT/ListEventsCest.php:35-38` (`3/3`, `0/22`, `1/23`), `EVT:67-74`
+(`enroll`), `EVT:483-491`, `MODEL:189` (`update()` não valida).
+
+Passos:
+
+1. Testes. `EVT`: capacidade 3 sem Inscrições ->
+   `'3 vagas disponíveis'`; com 2 -> `'1 vaga disponível'`; com 3 ->
+   `'Lotado'`. Borda: capacidade abaixo das Inscrições gravada por
+   `update(['capacity' => 1])` (não valida) também dá `'Lotado'`, nunca
+   número negativo. `ECT`: copie `:151-161` com capacidade 2 e um
+   `enroll`; espere `'1 vaga disponível'` e nenhum `'disponíveis'`.
+2. `EV`, depois de `availableSpots()`:
+
+   ```php
+   /** Vagas restantes em texto, com concordância. */
+   public function availableSpotsLabel(): string
+   {
+       $spots = $this->availableSpots();
+
+       return match ($spots) {
+           0 => 'Lotado',
+           1 => '1 vaga disponível',
+           default => "{$spots} vagas disponíveis",
+       };
+   }
+   ```
+
+3. `SHOW:31`: `(<?= $event->availableSpotsLabel() ?>)`.
+4. `IDX:15` e `SHOW:28`: `Inscritos/Vagas`. O corpo `1/10` fica igual.
+
+Armadilhas:
+
+- Mudar o formato `x/y` (para "1 de 10", por exemplo) quebra `ECT:67`,
+  `ECT:159` e `ListEventsCest.php:36-38`. Troque só o cabeçalho, ou
+  atualize os três na mesma mudança.
+- Texto montado no model (ou helper, R3), uma vez. `if` de plural
+  repetido em duas views é o que o professor cobra.
+- `match` compara com `===`: `availableSpots()` devolve `int`
+  (`EV:137-140`), então `0` e `1` casam. O `capacity` string do PDO já
+  passou por `(int)` em `EV:139`.
+- `availableSpotsLabel()` troca a chamada de `availableSpots()` em
+  `SHOW:31`: o número de consultas do show não muda.
+- Com N6 (badge "Lotado" na listagem), use o mesmo texto ou o mesmo
+  `availableSpots() === 0`.
+- A remoção barrada também tem plural fixo: "com inscrições (1)"
+  (`EV:162`). Mudar esse texto quebra `ECT:263` e
+  `DeleteEventCest.php:41`.
+
+Prova: testes; no navegador, o Evento 1 (3/3) mostra "Lotado" no
+detalhe; o Evento 3 com capacidade 2 mostra "1 vaga disponível".
+
+### R14. Título da aba com o nome do Evento
+
+Chance: baixa-média. Tempo: 10-15 min.
+
+Pedido típico: "a aba do navegador deveria mostrar o nome do Evento".
+Hoje toda página tem `<title>Eventos do Câmpus</title>` fixo
+(`LAYOUT:6`); o `$title` que cada action passa (`EC:25,37,45,73`) só vai
+para o `<h1>` (`LAYOUT:26`). O layout começa em `<html>`, sem
+`<!DOCTYPE html>` (`LAYOUT:1`): o navegador renderiza em modo quirks.
+
+Arquivos: `LAYOUT:1-6`, `LAYOUT:24-28`, `EC:37` (`htmlspecialchars` no
+controller), `EC:73,91` ("Editar Evento"), `EC:74,92` (`compact`),
+`CTRL:32-38` (`render` faz `extract`: o layout vê `$title`),
+`app/Controllers/HomeController.php:11` e os outros controllers
+(`$title` fixo), `ECT:48,74,129,181,220` e
+`tests/Integration/Controllers/HomeControllerTest.php:14` (regex do
+`<h1>`), `ACT/ListEventsCest.php:55-57`,
+`ACT/CreateSuccessfullyCest.php:29`, `ACT/UpdateSuccessfullyCest.php:46`
+(título do Evento no `h1`).
+
+Passos:
+
+1. Testes em `ECT`: `show` de `'Palestra Final'` contém
+   `<title>Palestra Final | Eventos do Câmpus</title>`; `index` contém
+   `<title>Eventos | Eventos do Câmpus</title>`. Borda: título
+   `A & <b>B</b>` sai como `A &amp; &lt;b&gt;B&lt;/b&gt;` no `<title>` e
+   no `<h1>`, sem `&amp;amp;`. Cest: depois do clique em Ver
+   (`ListEventsCest.php:55-57`), `$page->seeInTitle('Evento 01');`.
+2. `LAYOUT`:
+
+   ```php
+   <!DOCTYPE html>
+   <html lang="pt-br">
+   ...
+   <title><?= htmlspecialchars($title) ?> | Eventos do Câmpus</title>
+   ```
+
+   e `LAYOUT:26`: `<?= htmlspecialchars($title) ?>`.
+3. `EC:37`: `$title = $event->title;` (cru; o layout escapa).
+4. Opcional, nome também na aba do editar sem mudar o `<h1>`:
+   `$pageTitle = "Editar: {$event->title}";` no `compact` de `EC:74` e
+   `EC:92`, e no layout `htmlspecialchars($pageTitle ?? $title)`.
+
+Armadilhas:
+
+- Escape duplo: com o layout escapando e `EC:37` ainda escapando,
+  `A & B` aparece na aba como `A &amp; B`. Escape uma vez, no layout.
+- Os testes do `<h1>` (`ECT:48,74,129,181,220`) usam `\s*` em volta do
+  texto: mantenha o `<h1>` de `LAYOUT:25-27` e troque só o `echo`.
+  Títulos sem caractere especial saem iguais.
+- O `<title>` muda em todas as páginas ("Home Page | Eventos do
+  Câmpus"). Nenhum teste confere `<title>` hoje.
+- `$title` faltando num `render` agora quebra em dois lugares do layout
+  (500).
+- `<!DOCTYPE html>` tira o modo quirks, que o Bootstrap 5 não suporta.
+  Rode os Cests: espaçamentos podem mudar um pouco
+  (`BaseEventsCest.php:44-45` usa janela 1280x2400).
+- `$pageTitle` só em edit e update: sem o `??` no layout, as outras
+  páginas dão warning -> 500. Depois de um update inválido,
+  `$event->title` é o texto digitado (pode estar vazio).
+- Q6 mexe nas mesmas linhas (`EC:37`, `LAYOUT:26`): faça uma vez só.
+
+Prova: `ECT` e o Cest; no navegador, o detalhe do Evento 1 mostra o
+nome na aba e a listagem mostra "Eventos | Eventos do Câmpus".
+
 ### S1. Teste de aceitação da modificação
 
 Chance: alta. Tempo: 20-30 min.
@@ -5473,40 +6829,6 @@ Armadilhas:
 
 Prova: os testes passam; quebre `entriesInfo()` e veja falhar.
 
-### T3. README e wiki da feature nova
-
-Chance: média-baixa. Tempo: 10 min.
-
-Pedido típico: "documente a rota nova no README/wiki do projeto" (a
-rubrica cobra wiki com descrição da entrega e link da PR; o professor
-costuma pedir que a mudança apareça na documentação).
-
-Arquivos: `README.md` do projeto (seções de funcionalidades/rotas e de
-como testar), `wiki/` do repositório (cópia das páginas: `Home.md`,
-`Descrição-do-Projeto.md`, `_Sidebar.md`), a página da entrega 4.2 na
-wiki oficial (`<repo>.wiki`), `.github/pull_request_template.md`.
-
-Passos:
-
-1. README: linha na lista de rotas (`GET /admin/events/full`,
-   `admin.events.full`, quem acessa) e comando de teste
-   (`./run test tests/Integration/...`).
-2. Wiki da entrega: seção "Alterações da FVP" com o pedido, a solução
-   em 3 linhas e o link do commit/PR.
-3. Commit `docs: Document the full events page` separado do `feat:`.
-
-Armadilhas:
-
-- Documentação em pt-BR; identificadores e rotas como estão no código.
-- Não invente endpoints que não existem; copie os nomes de
-  `config/routes.php`.
-- Wiki é outro repositório (`.wiki.git`): o commit no projeto não a
-  atualiza; a cópia em `wiki/` dentro do repo é só espelho.
-- Não cite credenciais além das do populate (`123456`, já públicas).
-
-Prova: `README.md` renderizado no GitHub com a rota; página da wiki
-atualizada.
-
 ### T1. Populate: campo novo, mais Eventos, segundo admin
 
 Chance: alta (sempre junto de M1, M3, P1, P5). Tempo: 5-10 min.
@@ -5584,6 +6906,40 @@ Armadilhas:
 - Linha > 130 colunas: `phpcs` falha; quebre.
 - Código comentado e `use` sem uso: `phpcs` não pega tudo; revise.
 
+### T3. README e wiki da feature nova
+
+Chance: média-baixa. Tempo: 10 min.
+
+Pedido típico: "documente a rota nova no README/wiki do projeto" (a
+rubrica cobra wiki com descrição da entrega e link da PR; o professor
+costuma pedir que a mudança apareça na documentação).
+
+Arquivos: `README.md` do projeto (seções de funcionalidades/rotas e de
+como testar), `wiki/` do repositório (cópia das páginas: `Home.md`,
+`Descrição-do-Projeto.md`, `_Sidebar.md`), a página da entrega 4.2 na
+wiki oficial (`<repo>.wiki`), `.github/pull_request_template.md`.
+
+Passos:
+
+1. README: linha na lista de rotas (`GET /admin/events/full`,
+   `admin.events.full`, quem acessa) e comando de teste
+   (`./run test tests/Integration/...`).
+2. Wiki da entrega: seção "Alterações da FVP" com o pedido, a solução
+   em 3 linhas e o link do commit/PR.
+3. Commit `docs: Document the full events page` separado do `feat:`.
+
+Armadilhas:
+
+- Documentação em pt-BR; identificadores e rotas como estão no código.
+- Não invente endpoints que não existem; copie os nomes de
+  `config/routes.php`.
+- Wiki é outro repositório (`.wiki.git`): o commit no projeto não a
+  atualiza; a cópia em `wiki/` dentro do repo é só espelho.
+- Não cite credenciais além das do populate (`123456`, já públicas).
+
+Prova: `README.md` renderizado no GitHub com a rota; página da wiki
+atualizada.
+
 ### T4. Itens por página e capacidade máxima no `.env`
 
 Chance: média-baixa. Tempo: 15-20 min.
@@ -5650,7 +7006,7 @@ Prova: testes; trocar `EVENTS_PER_PAGE=3` no `.env` e ver 3 por página
 no navegador, sem reiniciar o contêiner (o `.env` é lido a cada
 requisição).
 
-## 6. Armadilhas gerais do CRUD de Eventos
+## 7. Armadilhas gerais do CRUD de Eventos
 
 - `Model::save()` grava **todas** as colunas de `$columns`
   (`MODEL:139-187`): coluna sem valor vai como `NULL`, o `DEFAULT` do
@@ -5698,7 +7054,7 @@ requisição).
   return*; nomes `index/new/create/show/edit/update/destroy`.
 - CSS e JS em `public/assets/`, nunca na view.
 
-## 7. Fontes
+## 8. Fontes
 
 - Rubrica da 4.2 (`4.2 - CRUD`, itens avaliados 2026-2) e
   `docs/grading-path.md` §4.2.
