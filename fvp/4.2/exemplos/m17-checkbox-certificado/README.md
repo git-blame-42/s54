@@ -20,7 +20,8 @@ Branch no clone: `fvp/m17-checkbox-certificado`, a partir de `main`
   depois de `capacity` em `events`.
 - `app/Models/Event.php`:
   - `'has_certificate'` em `$columns` e `@property int|string|null`.
-  - No fim de `validates()`: `normalizeHasCertificate()` e depois
+  - `normalizeHasCertificate()` antes do `inclusion()`, no fim de
+    `validates()`; depois,
     `Validations::inclusion('has_certificate', $this, ['0', '1'])`.
   - `normalizeHasCertificate()` (privado): nulo ou vazio vira `'0'`;
     int (o que o banco devolve) vira `'0'`/`'1'`. Outros valores
@@ -78,9 +79,9 @@ Branch no clone: `fvp/m17-checkbox-certificado`, a partir de `main`
   `['0', '1']` ao salvar de novo. Por isso o model converte para string
   antes de validar, e a view usa `hasCertificate()` (cast) em vez de
   `$event->has_certificate === '1'`.
-- A normalização fica no início da regra, dentro de `validates()`: é
-  chamado por `isValid()` e por `save()`, então vale para criar,
-  editar e para qualquer código que salve um Evento.
+- A normalização fica antes do `inclusion()`, no fim de `validates()`:
+  esse método é chamado por `isValid()` e por `save()`, então vale para
+  criar, editar e para qualquer código que salve um Evento.
 - Valores estranhos não viram `0` em silêncio: só nulo e vazio são
   tratados como desmarcado; o resto o `inclusion()` recusa.
 - Controller continua fino: só a chave nova em `FIELDS`, sem `(int)` e
