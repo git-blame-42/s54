@@ -123,6 +123,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O5. Admin vê e lista só os próprios Eventos
   `o5-admin-lista-so-proprios/`
   - feat: List and manage only the logged admin events
+- O9. `_method` só via POST (GET não pode remover Evento)
+  `o9-method-so-via-post/`
+  - fix: Accept _method override only from POST body
 - P1. Código de check-in aleatório (1000–9999) por Evento
   `p1-codigo-checkin-aleatorio/`
   - feat: Generate a random check-in code for each Event
