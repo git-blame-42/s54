@@ -312,8 +312,9 @@ configuração. Feche o IDE antes de rodar. Faz:
   "already installed". Sem rede, ou sem versão compatível no
   marketplace, avisa e segue.
 
-O que vai na configuração (derivada da do Mac do professor, sem
-licença, contas, caminhos pessoais, IA nem plugins fora da lista):
+O que vai na configuração (derivada de uma configuração de uso real
+no macOS, sem licença, contas, caminhos pessoais, IA nem plugins fora
+da lista):
 
 - keymap `TSI34D` (`keymaps/TSI34D.xml`, pai `Default for GNOME`,
   ativado em `options/linux/keymap.xml`): os atalhos do plugin IJKL que
@@ -389,6 +390,12 @@ de configuração, se o script o criou: o login e os ajustes feitos no
 IDE depois saem junto), o cache do IDE e `~/.java` criados pela
 execução do `installPlugins` e a fonte, se a instalou. O estado fica
 em `1-config-intellij.state` (o `common.sh` tira só o `12-`).
+
+Não testado com GUI: a VM de teste não tem tela. Foram conferidos a
+cópia dos arquivos, os XML, os plugins instalados, o code style (pelo
+formatador do IDE em linha de comando) e o `-z`. O efeito visual do
+keymap, do tema, dos templates e das opções de projeto falta ver com
+o IDE aberto no Ubuntu.
 
 ### 13-setup-docker-rootless.sh
 
