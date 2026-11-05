@@ -13,7 +13,8 @@ problem-track sem as funcionalidades de exemplo. O `core/` dos dois é
 idêntico, byte a byte, ao do projeto da equipe.
 
 Tudo aqui foi conferido contra o código: problem-track `8130d35`,
-template `d280222` e o projeto da equipe na Entrega 4.1 (`86c81ca`).
+template `d280222` e o projeto da equipe nas Entregas 4.1 (`86c81ca`)
+e 4.2 (`f31006b`).
 Quando o texto diz "nosso projeto", fala do projeto da equipe
 (Eventos do Câmpus), não do framework.
 

@@ -286,3 +286,6 @@ Referências de livro para cada um: seção 10 do `framework-completo.md`.
 3. Siga uma requisição no código: rota, middleware, controller,
    model, view.
 4. Faça um item do `fvp-possiveis-modificacoes.md`, com teste.
+5. Para a 4.2, a seção 12 do `framework-completo.md` dá arquivo:linha
+   de cada item da rubrica (where, Validations, Paginator, rotas
+   RESTful) no commit `f31006b` do nosso projeto.

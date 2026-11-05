@@ -6,7 +6,7 @@ o resto. Leia antes o `framework-resumo.md`: ele define os termos.
 
 Fonte: https://github.com/SI-DABE/problem-track (aplicação de
 referência; o `core/` dela é o framework). Os exemplos vêm do nosso
-projeto (Eventos do Câmpus, Entrega 4.1) e do problem-track (CRUD,
+projeto (Eventos do Câmpus, Entregas 4.1 e 4.2) e do problem-track (CRUD,
 upload, NxN, Ajax). Tudo foi conferido contra o código.
 
 Por que importa: no FVP cada membro, sozinho, recebe uma alteração
@@ -26,6 +26,7 @@ Sumário
  9. Armadilhas verificadas no código
 10. Padrões de projeto, com livro
 11. Template, problem-track e nosso projeto
+12. Rubrica 4.2: onde está cada item no código
 
 ## 1. O que o framework é
 
@@ -433,8 +434,11 @@ Validação: `isValid()` zera `$errors`, chama `validates()`, e cada
 `Validations::*` chama `$obj->addError('campo', 'mensagem')`. Na view:
 `errors('campo')`, `hasErrors()`. Prontas em `lib/Validations.php`:
 `notEmpty`, `passwordConfirmation`, `uniqueness` (campo ou lista de
-campos; ignora o próprio registro se o valor não mudou). Regra nova =
-método estático novo nessa classe, mesmo contrato.
+campos; ignora o próprio registro se o valor não mudou) e, desde a
+4.2, as nossas: `inclusion` (valor numa lista), `inclusionOfAll`
+(todos os valores numa lista; SET do MySQL), `integerMin`,
+`validDate` e `notPastDate`. Regra nova = método estático novo nessa
+classe, mesmo contrato. Linhas na seção 12.
 
 Relacionamentos: um método com tipo de retorno `BelongsTo`, `HasMany`
 ou `BelongsToMany` vira propriedade mágica em snake_case.
@@ -807,3 +811,87 @@ Conferido por diff em 2026-10-15.
 - Infra idêntica à do problem-track (`run`, `Dockerfile`, nginx,
   CI). Diferenças: nome do banco de teste (`eventos_test`) e o passo
   de testes de integração do CI, que no nosso tolera pasta vazia.
+
+## 12. Rubrica 4.2: onde está cada item no código
+
+Referências `arquivo:linha` do nosso projeto no commit `f31006b` do
+main público (`[E4.2] feat: CRUD completo de Eventos`). O `core/` é o
+mesmo do problem-track e do template, então as linhas de `Model.php`
+e de `Route.php` valem nos três. Abra com `git show f31006b:arquivo`
+ou `sed -n 'A,Bp' arquivo` no clone.
+
+Rotas RESTful e paginação (`config/routes.php`):
+
+- index     GET    /admin/events              :26
+- paginate  GET    /admin/events/page/{page}  :27-28  (mesma ação index)
+- new       GET    /admin/events/new          :29  (antes de `{id}`)
+- create    POST   /admin/events              :30
+- show      GET    /admin/events/{id}         :31
+- edit      GET    /admin/events/{id}/edit    :32
+- update    PUT    /admin/events/{id}         :33
+- destroy   DELETE /admin/events/{id}         :34-35
+- Grupo `auth` :18, grupo `admin` :22; nomes `admin.events.<ação>`.
+- `Route::get/post/put/delete`: `core/Router/Route.php:111-145`;
+  casamento de URI com `{param}`: `Route.php:77`; grupos:
+  `Route::middleware` :146. PUT/DELETE chegam como POST com
+  `_method` (`app/views/admin/events/_form.phtml:18`, `index.phtml:31`).
+
+Controller (`app/Controllers/Admin/EventsController.php`):
+
+- index :16 (chama `Event::paginate` :18-22 com `page`, `per_page` e
+  `route: 'admin.events.paginate'`), show :29, new :41, create :49
+  (`save()` :55), edit :65, update :77 (`save()` :86), destroy :96
+  (`safeDestroy()` :104). Busca por id em `findEvent` :132-135.
+- Só os campos do formulário entram no model: `fill` :116-130
+  (`user_id` vem de `currentUser()` :53, nunca do form).
+- `$request->getParam()`: `core/Http/Request.php:57`.
+
+Model e Active Record (`core/Database/ActiveRecord/Model.php`):
+
+- `save()` :139 (valida :141; INSERT :143-159; UPDATE :160-180).
+- `update()` :189 (sem validar), `destroy()` :215.
+- `findById()` :233, `all()` :261, `paginate()` :284 (devolve
+  `Lib\Paginator`), `where()` :300 (igualdade e AND, :309-313),
+  `findBy()` :335, `exists()` :347.
+- Nosso model: `app/Models/Event.php` (`$table` :47, `$columns`
+  :48-58, `validates()` :60-82). Uso de `where`: `Event.php:131`
+  (`Enrollment::where(['event_id' => ...])`, conta inscrições).
+
+Validações (`lib/Validations.php`):
+
+- `notEmpty` :9, `passwordConfirmation` :19, `inclusion` :34,
+  `inclusionOfAll` :52, `integerMin` :78, `validDate` :99,
+  `notPastDate` :116, `uniqueness` :155.
+- Chamadas no `Event::validates()` :62-81; regras só do Event: data
+  no passado só se `starts_on` mudou :88-99, capacidade não menor
+  que as inscrições :104-115.
+- Na view, erro por campo: `_form.phtml:11-13` (`$event->errors()`).
+
+Paginação (`lib/Paginator.php`):
+
+- Construtor :18-29 (class, page, per_page, table, attributes,
+  conditions, route). COUNT em `loadTotals` :104; LIMIT/OFFSET em
+  `loadRegisters` :117-146.
+- `registers()` :88, `renderPagesNavigation()` :93 (inclui
+  `app/views/paginator/_pages.phtml`), `getRouteName()` :99
+  (`<tabela>.paginate` se não passou `route:`), `entriesInfo()` :81,
+  `totalOfPages()` :51, `hasPreviousPage()` :66, `hasNextPage()` :71.
+- Na view: `app/views/admin/events/index.phtml:40`.
+
+Views (`app/views/admin/events/`): `index.phtml` (links por nome de
+rota :2 e :28-29, form DELETE :30-31), `show.phtml`, `new.phtml:2` e
+`edit.phtml:2` (só definem `$action` e incluem `_form.phtml`).
+
+Testes:
+
+- `tests/Unit/Models/Events/EventTest.php`: validações :78-235,
+  `save` :302 e :325, `findById` :310 e :320, `update` :349,
+  `destroy` :358, `where` :366, `findBy`/`exists` :378.
+- `tests/Integration/Controllers/Admin/EventsControllerTest.php`:
+  uma ou mais por ação, :39-253 (paginação de 5 por página :39).
+- `tests/Integration/Access/EventsAccessTest.php`: acesso por perfil
+  e com `_method`, :113-175.
+- `tests/Acceptance/admin/events/*Cest.php`: criar, editar, listar,
+  paginar, remover.
+
+Banco: `database/schema.sql:21` (`events`), :43 (`event_user`).
