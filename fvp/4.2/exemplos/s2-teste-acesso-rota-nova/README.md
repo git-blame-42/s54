@@ -13,12 +13,12 @@ Branch no clone: `fvp/s2-teste-acesso-rota-nova`, empilhada sobre
 
 | Commit    | Mensagem                                          |
 |-----------|---------------------------------------------------|
-| `e096227` | `feat: List full events in admin area` (base, O1) |
-| `d1a9213` | `test: Cover full events route access over HTTP`  |
+| `229fa79` | `feat: List full events in admin area` (base, O1) |
+| `ae762aa` | `test: Cover full events route access over HTTP`  |
 
 ## O que mudou
 
-Só o segundo commit (`d1a9213`), 1 arquivo:
+Só o segundo commit (`ae762aa`), 1 arquivo:
 `tests/Integration/Access/EventsAccessTest.php`.
 
 - `eventRoutes()` ganha `'admin.events.full' => ['GET',
@@ -113,9 +113,9 @@ commits novos (SHAs diferentes); preserva conteúdo e mensagem.
 
 Primeiro decida: o alvo já tem a rota do O1?
 
-- Não tem: aplique os dois commits (`e096227` e `d1a9213`) ou o
+- Não tem: aplique os dois commits (`229fa79` e `ae762aa`) ou o
   intervalo `main..fvp/s2-teste-acesso-rota-nova`.
-- Já tem (aplicou o O1 antes): aplique só o topo, `d1a9213`.
+- Já tem (aplicou o O1 antes): aplique só o topo, `ae762aa`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -126,7 +126,7 @@ git fetch fvp-s2 main fvp/s2-teste-acesso-rota-nova
 # alvo sem O1: os dois, por intervalo
 git cherry-pick fvp-s2/main..fvp-s2/fvp/s2-teste-acesso-rota-nova
 # alvo que já tem O1: só o topo
-git cherry-pick d1a9213
+git cherry-pick ae762aa
 git remote remove fvp-s2
 ```
 
@@ -136,9 +136,9 @@ git remote remove fvp-s2
 git fetch <caminho>/solucao.bundle \
     fvp/s2-teste-acesso-rota-nova:fvp-s2
 # alvo sem O1
-git cherry-pick e096227 d1a9213
+git cherry-pick 229fa79 ae762aa
 # alvo que já tem O1
-git cherry-pick d1a9213
+git cherry-pick ae762aa
 # opcional, limpa a ref
 git branch -D fvp-s2
 ```
