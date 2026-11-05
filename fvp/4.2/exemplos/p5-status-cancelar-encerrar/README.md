@@ -13,7 +13,7 @@ Branch no clone: `fvp/p5-status-cancelar-encerrar`, a partir de `main`
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
-| `56398d1` | `feat: Add Event status with cancel and finish actions`  |
+| `8c64e03` | `feat: Add Event status with cancel and finish actions`  |
 
 ## O que mudou
 
@@ -134,7 +134,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p5 \
     s50/fvp/4.2/exemplos/p5-status-cancelar-encerrar/projeto
 git fetch fvp-p5 fvp/p5-status-cancelar-encerrar
-git cherry-pick 56398d1
+git cherry-pick 8c64e03
 git remote remove fvp-p5
 ```
 
@@ -144,7 +144,7 @@ git remote remove fvp-p5
 git fetch \
     s50/fvp/4.2/exemplos/p5-status-cancelar-encerrar/solucao.bundle \
     fvp/p5-status-cancelar-encerrar:fvp-p5
-git cherry-pick 56398d1
+git cherry-pick 8c64e03
 # opcional, limpa a ref
 git branch -D fvp-p5
 ```

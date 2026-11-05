@@ -265,7 +265,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- P5: status ------------------- */
+    /* ------------------- status ------------------- */
 
     public function test_index_and_show_display_the_status_badge(): void
     {

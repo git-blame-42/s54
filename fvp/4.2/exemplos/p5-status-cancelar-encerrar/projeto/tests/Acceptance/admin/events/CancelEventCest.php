@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * P5: situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
+ * Situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
  */
 class CancelEventCest extends BaseEventsCest
 {
