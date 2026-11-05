@@ -1,4 +1,4 @@
-From 23df0bc69e14ef1eec888678b524655d7f0c4dc4 Mon Sep 17 00:00:00 2001
+From b36ba31216ea3e0d650b0b01e5073e9670884d29 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:48:59 -0300
 Subject: [PATCH] feat: Show event summary on the admin dashboard
@@ -420,7 +420,7 @@ index dab557d..7c8bb43 100644
 +    }
  }
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..296983b 100644
+index f961b4c..2cfb09a 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -681,4 +681,46 @@ class EventTest extends TestCase
@@ -428,7 +428,7 @@ index f961b4c..296983b 100644
          $event->destroy();
      }
 +
-+    /* ------------------- Painel (N7) ------------------- */
++    /* ------------------- Painel administrativo ------------------- */
 +
 +    public function test_count_by_kind_should_group_events_by_kind_with_zeros(): void
 +    {

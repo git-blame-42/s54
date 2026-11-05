@@ -12,7 +12,7 @@ Branch no clone: `fvp/n7-painel-resumo`, a partir de `main`
 
 | Commit    | Mensagem                                          |
 |-----------|---------------------------------------------------|
-| `23df0bc` | `feat: Show event summary on the admin dashboard` |
+| `b36ba31` | `feat: Show event summary on the admin dashboard` |
 
 ## O que mudou
 
@@ -150,7 +150,7 @@ deste cenário no s50: `s50/fvp/4.2/exemplos/n7-painel-resumo`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-n7 s50/fvp/4.2/exemplos/n7-painel-resumo/projeto
 git fetch fvp-n7 fvp/n7-painel-resumo
-git cherry-pick 23df0bc
+git cherry-pick b36ba31
 git remote remove fvp-n7
 ```
 
@@ -160,7 +160,7 @@ git remote remove fvp-n7
 git fetch s50/fvp/4.2/exemplos/n7-painel-resumo/solucao.bundle \
     fvp/n7-painel-resumo:fvp-n7
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 23df0bc
+git cherry-pick b36ba31
 # opcional, limpa a ref
 git branch -D fvp-n7
 ```

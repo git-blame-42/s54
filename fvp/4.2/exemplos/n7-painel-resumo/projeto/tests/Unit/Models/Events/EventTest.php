@@ -682,7 +682,7 @@ class EventTest extends TestCase
         $event->destroy();
     }
 
-    /* ------------------- Painel (N7) ------------------- */
+    /* ------------------- Painel administrativo ------------------- */
 
     public function test_count_by_kind_should_group_events_by_kind_with_zeros(): void
     {
