@@ -26,6 +26,10 @@ $this->method = $_REQUEST['_method'] ?? $_SERVER['REQUEST_METHOD'];
 
 ```
 # no clone (sem porta no host), de dentro do contêiner web
+# login do admin; o cookie fica em /tmp/c dentro do contêiner web
+docker compose exec -T web curl -s -c /tmp/c -o /dev/null \
+    -d 'user[email]=admin@example.com&user[password]=123456' \
+    http://localhost/login
 docker compose exec -T web curl -s -b /tmp/c \
     -o /dev/null -w '%{http_code}\n' \
     'http://localhost/admin/events/16?_method=DELETE'
@@ -107,9 +111,13 @@ Resultado obtido: Unit 165, Integration 49, Acceptance 23 (base:
 `core/`). Schema não mudou. Sem a correção, 3 testes unit e 3 de
 acesso novos falham (conferido com `git stash` do `Request.php`).
 
-No terminal, admin logado (cookie em `/tmp/c`, ver briefing):
+No terminal, com o stack de pé e o banco populado:
 
 ```
+# login do admin; o cookie fica em /tmp/c dentro do contêiner web
+docker compose exec -T web curl -s -c /tmp/c -o /dev/null \
+    -d 'user[email]=admin@example.com&user[password]=123456' \
+    http://localhost/login
 docker compose exec -T web curl -s -b /tmp/c \
     -o /dev/null -w '%{http_code}\n' \
     'http://localhost/admin/events/16?_method=DELETE'
@@ -124,8 +132,8 @@ No navegador, o botão "Remover" da listagem continua funcionando.
 
 ## Relação com outros cenários
 
-- Token CSRF nos formulários (F6 da lista de lacunas, variante de
-  A15 da 4.1): complementa este. Aqui o GET deixa de alterar dados;
+- Q5 (token CSRF nos formulários de Evento, variante de A15 da 4.1):
+  complementa este. Aqui o GET deixa de alterar dados;
   o token protege os POST. Os dois juntos fecham o CSRF.
 - R4 (confirmação JS antes de remover): é só interface; não protege
   contra o GET com `_method`. Este cenário é a correção de verdade.
