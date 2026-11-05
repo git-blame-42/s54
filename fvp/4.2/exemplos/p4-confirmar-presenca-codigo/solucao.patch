@@ -1,0 +1,2071 @@
+From 9d7c82fb2d86089b6b624d4c093f7f86f071560f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:00:17 -0300
+Subject: [PATCH 1/4] feat: Add events listing and details for participants
+
+---
+ app/Controllers/EventsController.php          |  42 ++++++
+ app/views/events/index.phtml                  |  32 +++++
+ app/views/events/show.phtml                   |  35 +++++
+ app/views/layouts/_navbar.phtml               |   4 +
+ config/routes.php                             |   6 +
+ .../events/BaseParticipantEventsCest.php      |  22 +++
+ .../events/ParticipantListEventsCest.php      |  58 ++++++++
+ .../Access/ParticipantEventsAccessTest.php    | 131 ++++++++++++++++++
+ .../Controllers/EventsControllerTest.php      | 126 +++++++++++++++++
+ 9 files changed, 456 insertions(+)
+ create mode 100644 app/Controllers/EventsController.php
+ create mode 100644 app/views/events/index.phtml
+ create mode 100644 app/views/events/show.phtml
+ create mode 100644 tests/Acceptance/events/BaseParticipantEventsCest.php
+ create mode 100644 tests/Acceptance/events/ParticipantListEventsCest.php
+ create mode 100644 tests/Integration/Access/ParticipantEventsAccessTest.php
+ create mode 100644 tests/Integration/Controllers/EventsControllerTest.php
+
+diff --git a/app/Controllers/EventsController.php b/app/Controllers/EventsController.php
+new file mode 100644
+index 0000000..73c73ab
+--- /dev/null
++++ b/app/Controllers/EventsController.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++/**
++ * Eventos na área do usuário (Participante): só listagem e detalhe, sem ações de administração.
++ */
++class EventsController extends Controller
++{
++    private const PER_PAGE = 5;
++
++    public function index(Request $request): void
++    {
++        $paginator = Event::paginate(
++            page: max(1, (int) $request->getParam('page', 1)),
++            per_page: self::PER_PAGE,
++            route: 'events.paginate'
++        );
++        $events = $paginator->registers();
++
++        $title = 'Eventos';
++        $this->render('events/index', compact('events', 'paginator', 'title'));
++    }
++
++    public function show(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('events.index'));
++            return;
++        }
++
++        $title = htmlspecialchars($event->title);
++        $this->render('events/show', compact('event', 'title'));
++    }
++}
+diff --git a/app/views/events/index.phtml b/app/views/events/index.phtml
+new file mode 100644
+index 0000000..ed62859
+--- /dev/null
++++ b/app/views/events/index.phtml
+@@ -0,0 +1,32 @@
++<?php if (empty($events)) : ?>
++    <p>Nenhum evento cadastrado.</p>
++<?php else : ?>
++    <table class="table table-striped align-middle">
++        <thead>
++            <tr>
++                <th>Título</th>
++                <th>Tipo</th>
++                <th>Data</th>
++                <th>Local</th>
++                <th>Vagas</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($events as $event) : ?>
++                <tr>
++                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                    <td><?= htmlspecialchars($event->location) ?></td>
++                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td>
++                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
++                    </td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++
++    <?php $paginator->renderPagesNavigation(); ?>
++<?php endif; ?>
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+new file mode 100644
+index 0000000..66ed5ba
+--- /dev/null
++++ b/app/views/events/show.phtml
+@@ -0,0 +1,35 @@
++<?php
++use App\Models\Event;
++
++$audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
++?>
++<dl class="row">
++    <dt class="col-sm-3">Título</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
++
++    <dt class="col-sm-3">Descrição</dt>
++    <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
++
++    <dt class="col-sm-3">Tipo</dt>
++    <dd class="col-sm-9"><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></dd>
++
++    <dt class="col-sm-3">Modalidade</dt>
++    <dd class="col-sm-9"><?= Event::MODALITIES[$event->modality] ?? htmlspecialchars($event->modality) ?></dd>
++
++    <dt class="col-sm-3">Público-alvo</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars(implode(', ', $audience)) ?></dd>
++
++    <dt class="col-sm-3">Data</dt>
++    <dd class="col-sm-9"><?= date('d/m/Y', strtotime($event->starts_on)) ?></dd>
++
++    <dt class="col-sm-3">Local</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
++
++    <dt class="col-sm-3">Vagas</dt>
++    <dd class="col-sm-9">
++        <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
++        (<?= $event->availableSpots() ?> disponíveis)
++    </dd>
++</dl>
++
++<a class="btn btn-secondary" href="<?= route('events.index') ?>">Voltar</a>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index 12172e5..c2e8d13 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -17,6 +17,10 @@
+                     <li class="nav-item">
+                         <a class="nav-link" href="<?= route('admin.events.index') ?>">Eventos</a>
+                     </li>
++                <?php else : ?>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('events.index') ?>">Eventos</a>
++                    </li>
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..4f5d199 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
++use App\Controllers\EventsController;
+ use App\Controllers\HomeController;
+ use Core\Router\Route;
+ 
+@@ -18,6 +19,11 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Eventos do Participante (só leitura). 'page' vem antes de '{id}'.
++    Route::get('/events', [EventsController::class, 'index'])->name('events.index');
++    Route::get('/events/page/{page}', [EventsController::class, 'index'])->name('events.paginate');
++    Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/tests/Acceptance/events/BaseParticipantEventsCest.php b/tests/Acceptance/events/BaseParticipantEventsCest.php
+new file mode 100644
+index 0000000..10dbaa0
+--- /dev/null
++++ b/tests/Acceptance/events/BaseParticipantEventsCest.php
+@@ -0,0 +1,22 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use Tests\Acceptance\admin\events\BaseEventsCest;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Base dos cenários da área do Participante (/events): mesmos dados de BaseEventsCest (16 Eventos,
++ * Evento 01 lotado 3/3, Evento 03 com uma Inscrição do Participante 1), mas a sessão é do
++ * Participante 1 (participante1@example.com) em vez do Administrador.
++ */
++class BaseParticipantEventsCest extends BaseEventsCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++
++        $page->amOnPage('/logout');
++        $page->login($this->participants[1]->email, self::PASSWORD);
++    }
++}
+diff --git a/tests/Acceptance/events/ParticipantListEventsCest.php b/tests/Acceptance/events/ParticipantListEventsCest.php
+new file mode 100644
+index 0000000..8a3573f
+--- /dev/null
++++ b/tests/Acceptance/events/ParticipantListEventsCest.php
+@@ -0,0 +1,58 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use Tests\Support\AcceptanceTester;
++
++class ParticipantListEventsCest extends BaseParticipantEventsCest
++{
++    public function listEventsFromNavbarWithoutAdminActions(AcceptanceTester $page): void
++    {
++        $page->wantTo('Listagem de Eventos para o Participante');
++        $page->amOnPage('/dashboard');
++        $page->click('Eventos', 'nav');
++
++        $page->seeCurrentUrlEquals('/events');
++        $page->see('Eventos', 'h1');
++        $page->see('Evento 01', 'table');
++        $page->see('3/3', $this->rowOf('Evento 01'));
++        $page->dontSee('Evento 06', 'table');
++        $page->see('Mostrando 1 - 5 de 16');
++        $page->dontSee('Novo Evento');
++        $page->dontSee('Editar');
++        $page->dontSee('Remover');
++        $page->dontSee('Administração', 'nav');
++
++        $page->click('2', '.pagination');
++        $page->seeCurrentUrlEquals('/events/page/2');
++        $page->see('Evento 06', 'table');
++        $page->dontSee('Evento 01', 'table');
++    }
++
++    public function showEventDetails(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Detalhe do Evento para o Participante');
++        $page->amOnPage('/events');
++        $page->click('Ver', $this->rowOf('Evento 02'));
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('Evento 02', 'h1');
++        $page->see('Descrição do Evento 02.');
++        $page->see('Sala 2');
++        $page->see('0/22');
++        $page->dontSee('Editar');
++
++        $page->click('Voltar');
++        $page->seeCurrentUrlEquals('/events');
++    }
++
++    public function adminAreaStaysBlocked(AcceptanceTester $page): void
++    {
++        $page->wantTo('Participante continua sem acesso à listagem administrativa');
++        $page->amOnPage('/admin/events');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++    }
++}
+diff --git a/tests/Integration/Access/ParticipantEventsAccessTest.php b/tests/Integration/Access/ParticipantEventsAccessTest.php
+new file mode 100644
+index 0000000..2143c18
+--- /dev/null
++++ b/tests/Integration/Access/ParticipantEventsAccessTest.php
+@@ -0,0 +1,131 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use App\Models\Event;
++use App\Models\User;
++use GuzzleHttp\Client;
++use PHPUnit\Framework\Attributes\DataProvider;
++use Tests\TestCase;
++
++/**
++ * Rotas events.* (área do usuário): qualquer usuário autenticado acessa; sem sessão vai para /login.
++ */
++class ParticipantEventsAccessTest extends TestCase
++{
++    private const PASSWORD = '123456';
++
++    private User $admin;
++    private User $participant;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++
++        $this->event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Palestra de Acesso',
++            'description' => 'Evento usado nos testes de acesso.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Microsoft Teams',
++            'capacity' => 10,
++        ]);
++        $this->event->save();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => self::PASSWORD,
++            'password_confirmation' => self::PASSWORD,
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function newClient(): Client
++    {
++        return new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080',
++            'cookies' => true,
++        ]);
++    }
++
++    private function loggedClient(User $user): Client
++    {
++        $client = $this->newClient();
++        $response = $client->post('/login', [
++            'form_params' => ['user' => ['email' => $user->email, 'password' => self::PASSWORD]],
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++
++        return $client;
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function participantRoutes(): array
++    {
++        return [
++            'events.index' => ['/events'],
++            'events.paginate' => ['/events/page/1'],
++            'events.show' => ['/events/1'],
++        ];
++    }
++
++    #[DataProvider('participantRoutes')]
++    public function test_events_route_should_redirect_to_login_without_session(string $uri): void
++    {
++        $response = $this->newClient()->get($uri);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    #[DataProvider('participantRoutes')]
++    public function test_participant_should_access_events_route(string $uri): void
++    {
++        $response = $this->loggedClient($this->participant)->get($uri);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Palestra de Acesso', (string) $response->getBody());
++    }
++
++    public function test_admin_should_also_access_participant_events(): void
++    {
++        $response = $this->loggedClient($this->admin)->get('/events');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Palestra de Acesso', (string) $response->getBody());
++    }
++
++    public function test_navbar_should_link_participant_to_events(): void
++    {
++        $body = (string) $this->loggedClient($this->participant)->get('/dashboard')->getBody();
++
++        $this->assertStringContainsString('href="/events"', $body);
++        $this->assertStringNotContainsString('href="/admin/events"', $body);
++    }
++
++    public function test_unknown_event_should_redirect_participant_to_events(): void
++    {
++        $response = $this->loggedClient($this->participant)->get('/events/999999');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/events', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/EventsControllerTest.php b/tests/Integration/Controllers/EventsControllerTest.php
+new file mode 100644
+index 0000000..8daf526
+--- /dev/null
++++ b/tests/Integration/Controllers/EventsControllerTest.php
+@@ -0,0 +1,126 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++/**
++ * Eventos na área do Participante (/events): listagem paginada e detalhe, sem ações de administração.
++ */
++class EventsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\EventsController';
++
++    private User $admin;
++    private User $participant;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++        Auth::login($this->participant);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    public function test_index_lists_five_events_per_page_without_admin_actions(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Eventos\s*<\/h1>/', $page1);
++        $this->assertStringContainsString('Evento 1', $page1);
++        $this->assertStringContainsString('Evento 5', $page1);
++        $this->assertStringNotContainsString('Evento 6', $page1);
++        $this->assertStringContainsString('href="/events/page/2"', $page1);
++        $this->assertStringContainsString('Evento 6', $page2);
++        $this->assertStringNotContainsString('Evento 5', $page2);
++
++        $this->assertStringNotContainsString('Novo Evento', $page1);
++        $this->assertStringNotContainsString('Editar', $page1);
++        $this->assertStringNotContainsString('Remover', $page1);
++        $this->assertStringNotContainsString('/admin/events', $page1);
++    }
++
++    public function test_index_shows_enrollments_over_capacity_and_link_to_show(): void
++    {
++        $event = $this->createEvent(['capacity' => 10]);
++        (new Enrollment(['event_id' => $event->id, 'user_id' => $this->participant->id]))->save();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('1/10', $response);
++        $this->assertStringContainsString("href=\"/events/{$event->id}\"", $response);
++    }
++
++    public function test_show_renders_event_without_admin_actions(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra Final', 'capacity' => 4]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Palestra Final\s*<\/h1>/', $response);
++        $this->assertStringContainsString('0/4', $response);
++        $this->assertStringContainsString('(4 disponíveis)', $response);
++        $this->assertStringContainsString('href="/events"', $response);
++        $this->assertStringNotContainsString('Editar', $response);
++        $this->assertStringNotContainsString('/admin/events', $response);
++    }
++
++    public function test_show_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createEvent(array $overrides = []): Event
++    {
++        $event = new Event(array_merge([
++            'user_id' => $this->admin->id,
++            'title' => 'Oficina de PHP',
++            'description' => 'Oficina prática.',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Laboratório B203',
++            'capacity' => 20,
++        ], $overrides));
++        $event->save();
++
++        return $event;
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 95e5e82e78d091816ae82f00e743579e89f82902 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:07:18 -0300
+Subject: [PATCH 2/4] feat: Allow participants to enroll in events
+
+---
+ app/Controllers/EnrollmentsController.php     |  35 +++++
+ app/Models/Enrollment.php                     |  33 +++++
+ app/Models/User.php                           |  17 +++
+ app/views/events/show.phtml                   |  10 ++
+ config/routes.php                             |   5 +
+ .../events/BaseParticipantEventsCest.php      |  14 ++
+ .../events/ParticipantEnrollCest.php          |  56 ++++++++
+ .../Access/ParticipantEventsAccessTest.php    |  19 +++
+ .../Controllers/EnrollmentsControllerTest.php | 136 ++++++++++++++++++
+ .../Controllers/EventsControllerTest.php      |  35 +++++
+ tests/Unit/Models/Events/EnrollmentTest.php   |  67 ++++++++-
+ tests/Unit/Models/Users/UserTest.php          |  25 ++++
+ 12 files changed, 451 insertions(+), 1 deletion(-)
+ create mode 100644 app/Controllers/EnrollmentsController.php
+ create mode 100644 tests/Acceptance/events/ParticipantEnrollCest.php
+ create mode 100644 tests/Integration/Controllers/EnrollmentsControllerTest.php
+
+diff --git a/app/Controllers/EnrollmentsController.php b/app/Controllers/EnrollmentsController.php
+new file mode 100644
+index 0000000..bf577d9
+--- /dev/null
++++ b/app/Controllers/EnrollmentsController.php
+@@ -0,0 +1,35 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++/**
++ * Inscrição do usuário logado em um Evento (área do Participante).
++ */
++class EnrollmentsController extends Controller
++{
++    public function create(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('events.index'));
++            return;
++        }
++
++        $enrollment = new Enrollment(['event_id' => $event->id, 'user_id' => $this->currentUser()?->id]);
++
++        if ($enrollment->save()) {
++            FlashMessage::success('Inscrição realizada com sucesso!');
++        } else {
++            FlashMessage::danger($enrollment->errors('base') ?? 'Não foi possível realizar a inscrição!');
++        }
++
++        $this->redirectTo(route('events.show', ['id' => $event->id]));
++    }
++}
+diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
+index 3afd7c5..640846a 100644
+--- a/app/Models/Enrollment.php
++++ b/app/Models/Enrollment.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
+ 
+ /**
+  * Inscrição de um Participante em um Evento (tabela pivô event_user).
+@@ -17,6 +18,38 @@ class Enrollment extends Model
+     protected static string $table = 'event_user';
+     protected static array $columns = ['event_id', 'user_id'];
+ 
++    public function validates(): void
++    {
++        if (!Validations::notEmpty('event_id', $this) || !Validations::notEmpty('user_id', $this)) {
++            return;
++        }
++
++        if (!Validations::uniqueness(['event_id', 'user_id'], $this)) {
++            $this->addError('base', 'você já está inscrito neste evento!');
++            return;
++        }
++
++        $this->validatesAvailableSpots();
++    }
++
++    /**
++     * Só ao criar: o Evento precisa existir e ter vaga (availableSpots() > 0).
++     */
++    private function validatesAvailableSpots(): void
++    {
++        if (!$this->newRecord()) {
++            return;
++        }
++
++        $event = Event::findById((int) $this->event_id);
++
++        if ($event === null) {
++            $this->addError('event_id', 'evento não encontrado!');
++        } elseif ($event->availableSpots() <= 0) {
++            $this->addError('base', 'não há vagas neste evento!');
++        }
++    }
++
+     public function event(): BelongsTo
+     {
+         return $this->belongsTo(Event::class, 'event_id');
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ed68286..ba7a0df 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -54,6 +54,23 @@ class User extends Model
+         return $this->hasMany(Event::class, 'user_id');
+     }
+ 
++    /**
++     * Inscrições deste usuário (Participante) em Eventos.
++     */
++    public function enrollments(): HasMany
++    {
++        return $this->hasMany(Enrollment::class, 'user_id');
++    }
++
++    public function isEnrolledIn(Event $event): bool
++    {
++        if ($this->newRecord() || $event->newRecord()) {
++            return false;
++        }
++
++        return Enrollment::exists(['event_id' => $event->id, 'user_id' => $this->id]);
++    }
++
+     public function authenticate(string $password): bool
+     {
+         if ($this->encrypted_password == null) {
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+index 66ed5ba..da39cb1 100644
+--- a/app/views/events/show.phtml
++++ b/app/views/events/show.phtml
+@@ -29,7 +29,17 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dd class="col-sm-9">
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
++        <?php if ($event->availableSpots() === 0) : ?>
++            <span class="badge text-bg-danger">Lotado</span>
++        <?php endif; ?>
+     </dd>
+ </dl>
+ 
++<?php if ($this->currentUser()?->isEnrolledIn($event)) : ?>
++    <p class="text-success">Você está inscrito neste evento.</p>
++<?php else : ?>
++    <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
++        <button type="submit" class="btn btn-primary">Inscrever-se</button>
++    </form>
++<?php endif; ?>
+ <a class="btn btn-secondary" href="<?= route('events.index') ?>">Voltar</a>
+diff --git a/config/routes.php b/config/routes.php
+index 4f5d199..ed13ab3 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
++use App\Controllers\EnrollmentsController;
+ use App\Controllers\EventsController;
+ use App\Controllers\HomeController;
+ use Core\Router\Route;
+@@ -24,6 +25,10 @@ Route::middleware('auth')->group(function () {
+     Route::get('/events/page/{page}', [EventsController::class, 'index'])->name('events.paginate');
+     Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
+ 
++    // Inscrição do usuário logado no Evento.
++    Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])
++        ->name('events.enrollments.create');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/tests/Acceptance/events/BaseParticipantEventsCest.php b/tests/Acceptance/events/BaseParticipantEventsCest.php
+index 10dbaa0..a502f69 100644
+--- a/tests/Acceptance/events/BaseParticipantEventsCest.php
++++ b/tests/Acceptance/events/BaseParticipantEventsCest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Tests\Acceptance\events;
+ 
++use App\Models\User;
+ use Tests\Acceptance\admin\events\BaseEventsCest;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -19,4 +20,17 @@ class BaseParticipantEventsCest extends BaseEventsCest
+         $page->amOnPage('/logout');
+         $page->login($this->participants[1]->email, self::PASSWORD);
+     }
++
++    /**
++     * Troca a sessão para um Participante novo, sem nenhuma Inscrição.
++     */
++    protected function loginAsNewParticipant(AcceptanceTester $page, string $email): User
++    {
++        $user = $this->createUser('Participante Novo', $email, 'participant');
++
++        $page->amOnPage('/logout');
++        $page->login($email, self::PASSWORD);
++
++        return $user;
++    }
+ }
+diff --git a/tests/Acceptance/events/ParticipantEnrollCest.php b/tests/Acceptance/events/ParticipantEnrollCest.php
+new file mode 100644
+index 0000000..6342a7f
+--- /dev/null
++++ b/tests/Acceptance/events/ParticipantEnrollCest.php
+@@ -0,0 +1,56 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use App\Models\Enrollment;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++class ParticipantEnrollCest extends BaseParticipantEventsCest
++{
++    public function enrollInEventWithSpots(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Inscrição do Participante em Evento com vagas');
++        $page->amOnPage("/events/{$event->id}");
++        $page->see('0/22');
++
++        $page->click('Inscrever-se');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('Inscrição realizada com sucesso!');
++        $page->see('1/22');
++        $page->see('Você está inscrito neste evento.');
++        $page->dontSee('Inscrever-se');
++        Assert::assertTrue($this->participants[1]->isEnrolledIn($event));
++    }
++
++    public function alreadyEnrolledParticipantSeesNoButton(AcceptanceTester $page): void
++    {
++        $page->wantTo('Participante já inscrito não vê o botão de inscrição');
++        $page->amOnPage("/events/{$this->events[3]->id}");
++
++        $page->see('Você está inscrito neste evento.');
++        $page->dontSee('Inscrever-se');
++    }
++
++    public function enrollInFullEventIsRejected(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++        $user = $this->loginAsNewParticipant($page, 'novo@example.com');
++
++        $page->wantTo('Inscrição recusada em Evento lotado');
++        $page->amOnPage("/events/{$event->id}");
++        $page->see('3/3');
++        $page->see('Lotado');
++
++        $page->click('Inscrever-se');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('não há vagas neste evento!');
++        $page->see('3/3');
++        Assert::assertFalse($user->isEnrolledIn($event));
++        Assert::assertCount(3, Enrollment::where(['event_id' => $event->id]));
++    }
++}
+diff --git a/tests/Integration/Access/ParticipantEventsAccessTest.php b/tests/Integration/Access/ParticipantEventsAccessTest.php
+index 2143c18..e606ad3 100644
+--- a/tests/Integration/Access/ParticipantEventsAccessTest.php
++++ b/tests/Integration/Access/ParticipantEventsAccessTest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Tests\Integration\Access;
+ 
++use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use GuzzleHttp\Client;
+@@ -128,4 +129,22 @@ class ParticipantEventsAccessTest extends TestCase
+         $this->assertEquals(302, $response->getStatusCode());
+         $this->assertEquals('/events', $response->getHeaderLine('Location'));
+     }
++
++    public function test_enroll_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->post("/events/{$this->event->id}/enrollments");
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++        $this->assertCount(0, Enrollment::all());
++    }
++
++    public function test_participant_should_enroll_and_return_to_the_event(): void
++    {
++        $response = $this->loggedClient($this->participant)->post("/events/{$this->event->id}/enrollments");
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/events/{$this->event->id}", $response->getHeaderLine('Location'));
++        $this->assertTrue($this->participant->isEnrolledIn($this->event));
++    }
+ }
+diff --git a/tests/Integration/Controllers/EnrollmentsControllerTest.php b/tests/Integration/Controllers/EnrollmentsControllerTest.php
+new file mode 100644
+index 0000000..8a5a68d
+--- /dev/null
++++ b/tests/Integration/Controllers/EnrollmentsControllerTest.php
+@@ -0,0 +1,136 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++/**
++ * Inscrição do Participante logado (POST /events/{id}/enrollments).
++ */
++class EnrollmentsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\EnrollmentsController';
++
++    private User $admin;
++    private User $participant;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++        Auth::login($this->participant);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    public function test_create_enrolls_the_logged_user(): void
++    {
++        $event = $this->createEvent(['capacity' => 2]);
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals('Inscrição realizada com sucesso!', $_SESSION['flash']['success']);
++        $this->assertTrue($this->participant->isEnrolledIn($event));
++        $this->assertSame(1, $event->availableSpots());
++    }
++
++    public function test_create_ignores_user_id_sent_by_the_form(): void
++    {
++        $event = $this->createEvent();
++
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'user_id' => $this->admin->id]
++        );
++
++        $this->assertTrue($this->participant->isEnrolledIn($event));
++        $this->assertFalse($this->admin->isEnrolledIn($event));
++    }
++
++    public function test_create_twice_keeps_a_single_enrollment(): void
++    {
++        $event = $this->createEvent();
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals(
++            'você já está inscrito neste evento!',
++            $_SESSION['flash']['danger']
++        );
++        $this->assertCount(1, Enrollment::where(['event_id' => $event->id]));
++    }
++
++    public function test_create_in_a_full_event_is_rejected(): void
++    {
++        $event = $this->createEvent(['capacity' => 1]);
++        $other = $this->createUser('Outro', 'outro@example.com', 'participant');
++        (new Enrollment(['event_id' => $event->id, 'user_id' => $other->id]))->save();
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals(
++            'não há vagas neste evento!',
++            $_SESSION['flash']['danger']
++        );
++        $this->assertFalse($this->participant->isEnrolledIn($event));
++    }
++
++    public function test_create_with_unknown_event_redirects_to_index(): void
++    {
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++        $this->assertCount(0, Enrollment::all());
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createEvent(array $overrides = []): Event
++    {
++        $event = new Event(array_merge([
++            'user_id' => $this->admin->id,
++            'title' => 'Oficina de PHP',
++            'description' => 'Oficina prática.',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Laboratório B203',
++            'capacity' => 20,
++        ], $overrides));
++        $event->save();
++
++        return $event;
++    }
++}
+diff --git a/tests/Integration/Controllers/EventsControllerTest.php b/tests/Integration/Controllers/EventsControllerTest.php
+index 8daf526..0bcb3f4 100644
+--- a/tests/Integration/Controllers/EventsControllerTest.php
++++ b/tests/Integration/Controllers/EventsControllerTest.php
+@@ -81,6 +81,41 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('/admin/events', $response);
+     }
+ 
++    public function test_show_offers_enroll_button_when_not_enrolled(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString("action=\"/events/{$event->id}/enrollments\"", $response);
++        $this->assertStringContainsString('Inscrever-se', $response);
++        $this->assertStringNotContainsString('Você está inscrito neste evento.', $response);
++    }
++
++    public function test_show_tells_when_already_enrolled(): void
++    {
++        $event = $this->createEvent();
++        (new Enrollment(['event_id' => $event->id, 'user_id' => $this->participant->id]))->save();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Você está inscrito neste evento.', $response);
++        $this->assertStringNotContainsString('Inscrever-se', $response);
++    }
++
++    public function test_show_marks_full_event(): void
++    {
++        $full = $this->createEvent(['capacity' => 1]);
++        (new Enrollment(['event_id' => $full->id, 'user_id' => $this->admin->id]))->save();
++        $open = $this->createEvent(['capacity' => 2]);
++
++        $fullPage = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $full->id]);
++        $openPage = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $open->id]);
++
++        $this->assertStringContainsString('Lotado', $fullPage);
++        $this->assertStringNotContainsString('Lotado', $openPage);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..8fe4a60 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -68,12 +68,77 @@ class EnrollmentTest extends TestCase
+     }
+ 
+     public function test_the_same_participant_cannot_enroll_twice_in_an_event(): void
++    {
++        $params = ['event_id' => $this->event->id, 'user_id' => $this->participant->id];
++        $this->assertTrue((new Enrollment($params))->save());
++
++        $duplicate = new Enrollment($params);
++
++        $this->assertFalse($duplicate->save());
++        $this->assertEquals('você já está inscrito neste evento!', $duplicate->errors('base'));
++        $this->assertCount(1, Enrollment::all());
++    }
++
++    public function test_the_unique_index_still_blocks_duplicates_without_validation(): void
+     {
+         $params = ['event_id' => $this->event->id, 'user_id' => $this->participant->id];
+         (new Enrollment($params))->save();
+ 
+         $this->expectException(PDOException::class);
+ 
+-        (new Enrollment($params))->save();
++        $duplicate = new class ($params) extends Enrollment {
++            public function validates(): void
++            {
++            }
++        };
++        $duplicate->save();
++    }
++
++    public function test_enrollment_is_rejected_when_the_event_is_full(): void
++    {
++        $this->event->update(['capacity' => 1]);
++        $other = $this->createParticipant('outro@example.com');
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $other->id]))->save();
++
++        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
++
++        $this->assertFalse($enrollment->save());
++        $this->assertEquals('não há vagas neste evento!', $enrollment->errors('base'));
++        $this->assertCount(1, Enrollment::all());
++    }
++
++    public function test_enrollment_takes_the_last_available_spot(): void
++    {
++        $this->event->update(['capacity' => 1]);
++
++        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
++
++        $this->assertTrue($enrollment->save());
++        $this->assertSame(0, $this->event->availableSpots());
++    }
++
++    public function test_enrollment_requires_an_existing_event_and_a_user(): void
++    {
++        $unknownEvent = new Enrollment(['event_id' => 9999, 'user_id' => $this->participant->id]);
++        $withoutUser = new Enrollment(['event_id' => $this->event->id, 'user_id' => null]);
++
++        $this->assertFalse($unknownEvent->save());
++        $this->assertEquals('evento não encontrado!', $unknownEvent->errors('event_id'));
++        $this->assertFalse($withoutUser->save());
++        $this->assertNotNull($withoutUser->errors('user_id'));
++        $this->assertCount(0, Enrollment::all());
++    }
++
++    private function createParticipant(string $email): User
++    {
++        $user = new User([
++            'name' => 'Outro Participante',
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]);
++        $user->save();
++
++        return $user;
+     }
+ }
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..2d7f66a 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -2,6 +2,8 @@
+ 
+ namespace Tests\Unit\Models\Users;
+ 
++use App\Models\Enrollment;
++use App\Models\Event;
+ use App\Models\User;
+ use Tests\TestCase;
+ 
+@@ -165,4 +167,27 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    public function test_enrollments_and_is_enrolled_in_should_reflect_the_user_enrollments(): void
++    {
++        $event = new Event([
++            'user_id' => $this->user->id,
++            'title' => 'Oficina',
++            'description' => 'Descrição',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => 5,
++        ]);
++        $event->save();
++        (new Enrollment(['event_id' => $event->id, 'user_id' => $this->user2->id]))->save();
++
++        $this->assertCount(1, $this->user2->enrollments()->get());
++        $this->assertCount(0, $this->user->enrollments()->get());
++        $this->assertTrue($this->user2->isEnrolledIn($event));
++        $this->assertFalse($this->user->isEnrolledIn($event));
++        $this->assertFalse($this->user2->isEnrolledIn(new Event()));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From d6f79fcbb8e8c30bdf65bec88cd3d41993dcd7ab Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:01:20 -0300
+Subject: [PATCH 3/4] feat: Generate a random check-in code for each Event
+
+Adds events.checkin_code (1000-9999, unique). Event::save() fills it with Event::newCheckinCode() when a new record has no code, so it never comes from the form and never changes on update. Shown in the listing and in the show page.
+---
+ app/Models/Event.php                          | 55 +++++++++++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 +
+ database/schema.sql                           |  3 +
+ .../admin/events/CreateSuccessfullyCest.php   |  5 +
+ .../Admin/EventsControllerTest.php            | 51 +++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 91 +++++++++++++++++++
+ 7 files changed, 210 insertions(+)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..5599881 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string|null $checkin_code gerado por save() via newCheckinCode(), nunca pelo formulário
+  */
+ class Event extends Model
+ {
+@@ -44,6 +45,10 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Faixa do código de check-in. */
++    public const CHECKIN_CODE_MIN = 1000;
++    public const CHECKIN_CODE_MAX = 9999;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -55,6 +60,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'checkin_code',
+     ];
+ 
+     public function validates(): void
+@@ -79,6 +85,55 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        // Evento novo sem código é válido: o save() gera o código antes de gravar.
++        if (!$this->newRecord() || !$this->isCheckinCodeBlank()) {
++            Validations::notEmpty('checkin_code', $this) &&
++                Validations::integerMin('checkin_code', $this, self::CHECKIN_CODE_MIN) &&
++                $this->validatesCheckinCodeMax() &&
++                Validations::uniqueness('checkin_code', $this);
++        }
++    }
++
++    /**
++     * Ao criar o Evento, gera o código de check-in se ele ainda não foi definido.
++     * Na edição o código nunca muda.
++     */
++    public function save(): bool
++    {
++        if ($this->newRecord() && $this->isCheckinCodeBlank()) {
++            $this->checkin_code = self::newCheckinCode();
++        }
++
++        return parent::save();
++    }
++
++    /**
++     * Sorteia um código de check-in na faixa 1000–9999 que nenhum outro Evento usa.
++     * Repete o sorteio enquanto o código já existir no banco.
++     */
++    public static function newCheckinCode(): int
++    {
++        do {
++            $code = random_int(self::CHECKIN_CODE_MIN, self::CHECKIN_CODE_MAX);
++        } while (self::exists(['checkin_code' => $code]));
++
++        return $code;
++    }
++
++    private function isCheckinCodeBlank(): bool
++    {
++        return $this->checkin_code === null || $this->checkin_code === '';
++    }
++
++    private function validatesCheckinCodeMax(): bool
++    {
++        if ((int) $this->checkin_code > self::CHECKIN_CODE_MAX) {
++            $this->addError('checkin_code', 'deve ser menor ou igual a ' . self::CHECKIN_CODE_MAX . '!');
++            return false;
++        }
++
++        return true;
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..036bc8e 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Código</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= (int) $event->checkin_code ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..2dcfeca 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Código de check-in</dt>
++    <dd class="col-sm-9" id="event_checkin_code"><?= (int) $event->checkin_code ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..7b34c96 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,9 +29,12 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Código de check-in (1000 a 9999), gerado pelo Event::save() no cadastro; nunca vem do formulário.
++    checkin_code SMALLINT UNSIGNED NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
++    UNIQUE KEY uq_events_checkin_code (checkin_code),
+     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
+     INDEX index_events_on_starts_on (starts_on)
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..f8bf995 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -28,6 +28,9 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see('Evento cadastrado com sucesso!');
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
++        // P1: o código de check-in foi gerado pelo sistema e aparece no show.
++        $page->see('Código de check-in');
++        $page->see((string) $event->checkin_code, '#event_checkin_code');
+ 
+         // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+         $page->amOnPage('/admin/events/page/4');
+@@ -44,5 +47,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertSame($data['location'], $event->location);
+         Assert::assertEquals(40, $event->capacity);
+         Assert::assertSame(0, $event->enrollmentsCount());
++        Assert::assertGreaterThanOrEqual(Event::CHECKIN_CODE_MIN, (int) $event->checkin_code);
++        Assert::assertLessThanOrEqual(Event::CHECKIN_CODE_MAX, (int) $event->checkin_code);
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..c6f2d37 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -111,6 +111,57 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals($this->admin->id, $event->user_id);
+     }
+ 
++    public function test_create_generates_the_checkin_code(): void
++    {
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++        $this->assertLessThanOrEqual(9999, $event->checkin_code);
++    }
++
++    public function test_create_ignores_checkin_code_sent_by_the_form(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['checkin_code' => '1'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertNotEquals(1, $event->checkin_code);
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++    }
++
++    public function test_update_does_not_change_the_checkin_code(): void
++    {
++        $event = $this->createEvent();
++        $code = $event->checkin_code;
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['checkin_code' => '1234'])]
++        );
++
++        $this->assertEquals($code, Event::findById($event->id)->checkin_code);
++    }
++
++    public function test_index_and_show_display_the_checkin_code(): void
++    {
++        $event = $this->createEvent();
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('<th>Código</th>', $index);
++        $this->assertStringContainsString("<td>{$event->checkin_code}</td>", $index);
++        $this->assertStringContainsString('Código de check-in', $show);
++        $this->assertStringContainsString(">{$event->checkin_code}</dd>", $show);
++    }
++
+     public function test_create_with_invalid_data_renders_form_with_errors_and_values(): void
+     {
+         $response = $this->post(
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..11cd9ab 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -297,6 +297,97 @@ class EventTest extends TestCase
+         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
+     }
+ 
++    /* ------------------- código de check-in ------------------- */
++
++    public function test_new_checkin_code_should_be_between_1000_and_9999(): void
++    {
++        for ($i = 0; $i < 200; $i++) {
++            $code = Event::newCheckinCode();
++
++            $this->assertGreaterThanOrEqual(1000, $code);
++            $this->assertLessThanOrEqual(9999, $code);
++        }
++    }
++
++    public function test_new_checkin_code_should_not_return_a_code_in_use(): void
++    {
++        $codes = [];
++        for ($i = 1; $i <= 20; $i++) {
++            $codes[] = (int) $this->createEvent(['title' => "Evento {$i}"])->checkin_code;
++        }
++
++        $this->assertCount(20, array_unique($codes));
++        for ($i = 0; $i < 200; $i++) {
++            $this->assertNotContains(Event::newCheckinCode(), $codes);
++        }
++    }
++
++    public function test_save_should_generate_the_checkin_code_of_a_new_event(): void
++    {
++        $event = new Event($this->params());
++        $this->assertNull($event->checkin_code);
++        $this->assertTrue($event->isValid());
++
++        $this->assertTrue($event->save());
++
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++        $this->assertLessThanOrEqual(9999, $event->checkin_code);
++        $this->assertEquals($event->checkin_code, Event::findById($event->id)->checkin_code);
++        $this->assertCount(1, Event::where(['checkin_code' => $event->checkin_code]));
++    }
++
++    public function test_existing_event_with_blank_checkin_code_should_be_invalid(): void
++    {
++        $event = $this->createEvent();
++
++        $event->checkin_code = '';
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser vazio!', $event->errors('checkin_code'));
++    }
++
++    public function test_checkin_code_should_be_unique(): void
++    {
++        $existing = $this->createEvent();
++
++        $event = new Event($this->params(['title' => 'Outro', 'checkin_code' => $existing->checkin_code]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('já existe um registro com esse dado', $event->errors('checkin_code'));
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_checkin_code_outside_the_range_should_be_invalid(): void
++    {
++        $messages = [
++            '999' => 'deve ser maior ou igual a 1000!',
++            '10000' => 'deve ser menor ou igual a 9999!',
++            'abcd' => 'deve ser um número inteiro!',
++        ];
++
++        foreach ($messages as $code => $message) {
++            $event = new Event($this->params(['checkin_code' => (string) $code]));
++
++            $this->assertFalse($event->isValid(), (string) $code);
++            $this->assertEquals($message, $event->errors('checkin_code'), (string) $code);
++        }
++
++        $this->assertTrue((new Event($this->params(['checkin_code' => 1000])))->isValid());
++        $this->assertTrue((new Event($this->params(['checkin_code' => 9999])))->isValid());
++    }
++
++    public function test_existing_event_should_keep_its_checkin_code_when_updated(): void
++    {
++        $event = $this->createEvent();
++        $code = $event->checkin_code;
++
++        $event->title = 'Título novo';
++
++        $this->assertTrue($event->save());
++        $this->assertEquals($code, Event::findById($event->id)->checkin_code);
++    }
++
+     /* ------------------- save / update / destroy / busca ------------------- */
+ 
+     public function test_save_should_create_the_event(): void
+-- 
+2.54.0 (Apple Git-157)
+
+
+From cac1915cbe891c67799543b1c2234e50181662f0 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:24:58 -0300
+Subject: [PATCH 4/4] feat: Confirm event presence with the check-in code
+
+Enrolled participants send the event check-in code to POST /events/{id}/checkin. Enrollment::confirm() compares it with the event checkin_code and stores confirmed_at (new nullable column in event_user); a wrong or malformed code gets a generic error. The admin show page displays confirmed/enrolled.
+---
+ app/Controllers/EnrollmentsController.php     | 28 ++++++
+ app/Models/Enrollment.php                     | 33 ++++++-
+ app/Models/Event.php                          | 14 +++
+ app/Models/User.php                           | 12 +++
+ app/views/admin/events/show.phtml             |  3 +
+ app/views/events/show.phtml                   | 20 +++-
+ config/routes.php                             |  3 +
+ database/schema.sql                           |  2 +
+ .../events/ParticipantCheckinCest.php         | 50 ++++++++++
+ .../Access/ParticipantEventsAccessTest.php    | 29 ++++++
+ .../Controllers/EnrollmentsControllerTest.php | 92 +++++++++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   | 86 +++++++++++++++++
+ 12 files changed, 370 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Acceptance/events/ParticipantCheckinCest.php
+
+diff --git a/app/Controllers/EnrollmentsController.php b/app/Controllers/EnrollmentsController.php
+index bf577d9..30a1d80 100644
+--- a/app/Controllers/EnrollmentsController.php
++++ b/app/Controllers/EnrollmentsController.php
+@@ -32,4 +32,32 @@ class EnrollmentsController extends Controller
+ 
+         $this->redirectTo(route('events.show', ['id' => $event->id]));
+     }
++
++    public function checkin(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('events.index'));
++            return;
++        }
++
++        $enrollment = $this->currentUser()?->enrollmentIn($event);
++        if ($enrollment === null) {
++            FlashMessage::danger('Você não está inscrito neste evento!');
++            $this->redirectTo(route('events.show', ['id' => $event->id]));
++            return;
++        }
++
++        $code = $request->getParam('code');
++        $code = is_string($code) ? trim($code) : '';
++
++        if ($enrollment->confirm($code)) {
++            FlashMessage::success('Presença confirmada!');
++        } else {
++            FlashMessage::danger($enrollment->errors('base') ?? 'Não foi possível confirmar a presença!');
++        }
++
++        $this->redirectTo(route('events.show', ['id' => $event->id]));
++    }
+ }
+diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
+index 640846a..22dfedf 100644
+--- a/app/Models/Enrollment.php
++++ b/app/Models/Enrollment.php
+@@ -12,11 +12,12 @@ use Lib\Validations;
+  * @property int $id
+  * @property int $event_id
+  * @property int $user_id
++ * @property string|null $confirmed_at data e hora da confirmação de presença (NULL = não confirmada)
+  */
+ class Enrollment extends Model
+ {
+     protected static string $table = 'event_user';
+-    protected static array $columns = ['event_id', 'user_id'];
++    protected static array $columns = ['event_id', 'user_id', 'confirmed_at'];
+ 
+     public function validates(): void
+     {
+@@ -50,6 +51,36 @@ class Enrollment extends Model
+         }
+     }
+ 
++    /**
++     * Confirma a presença com o código de check-in do Evento. Grava confirmed_at só se o código
++     * estiver certo e a presença ainda não tiver sido confirmada; senão retorna false e registra
++     * o motivo em errors('base'). A mensagem de código errado é genérica (não revela o código).
++     */
++    public function confirm(string $code): bool
++    {
++        $this->errors = [];
++
++        if ($this->isConfirmed()) {
++            $this->addError('base', 'presença já confirmada!');
++            return false;
++        }
++
++        $event = Event::findById((int) $this->event_id);
++
++        if ($event === null || !ctype_digit($code) || (int) $code !== (int) $event->checkin_code) {
++            $this->addError('base', 'código inválido!');
++            return false;
++        }
++
++        // update() não passa por validates(): proposital, a inscrição já foi validada ao ser criada.
++        return $this->update(['confirmed_at' => date('Y-m-d H:i:s')]);
++    }
++
++    public function isConfirmed(): bool
++    {
++        return $this->confirmed_at !== null && $this->confirmed_at !== '';
++    }
++
+     public function event(): BelongsTo
+     {
+         return $this->belongsTo(Event::class, 'event_id');
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index 5599881..8aaa372 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -194,6 +194,20 @@ class Event extends Model
+         return max(0, (int) $this->capacity - $this->enrollmentsCount());
+     }
+ 
++    /**
++     * Total de Inscrições com presença confirmada pelo código de check-in.
++     */
++    public function confirmedCount(): int
++    {
++        if ($this->newRecord()) {
++            return 0;
++        }
++
++        $enrollments = Enrollment::where(['event_id' => $this->id]);
++
++        return count(array_filter($enrollments, fn(Enrollment $enrollment) => $enrollment->isConfirmed()));
++    }
++
+     public function hasEnrollments(): bool
+     {
+         return $this->enrollmentsCount() > 0;
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ba7a0df..5a7ef92 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -62,6 +62,18 @@ class User extends Model
+         return $this->hasMany(Enrollment::class, 'user_id');
+     }
+ 
++    /**
++     * Inscrição deste usuário no Evento, ou null se não estiver inscrito.
++     */
++    public function enrollmentIn(Event $event): ?Enrollment
++    {
++        if ($this->newRecord() || $event->newRecord()) {
++            return null;
++        }
++
++        return Enrollment::findBy(['event_id' => $event->id, 'user_id' => $this->id]);
++    }
++
+     public function isEnrolledIn(Event $event): bool
+     {
+         if ($this->newRecord() || $event->newRecord()) {
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 2dcfeca..8e50af6 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -31,6 +31,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
+ 
++    <dt class="col-sm-3">Presenças confirmadas</dt>
++    <dd class="col-sm-9" id="event_confirmed"><?= $event->confirmedCount() ?>/<?= $event->enrollmentsCount() ?></dd>
++
+     <dt class="col-sm-3">Código de check-in</dt>
+     <dd class="col-sm-9" id="event_checkin_code"><?= (int) $event->checkin_code ?></dd>
+ </dl>
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+index da39cb1..949c371 100644
+--- a/app/views/events/show.phtml
++++ b/app/views/events/show.phtml
+@@ -35,8 +35,26 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
+-<?php if ($this->currentUser()?->isEnrolledIn($event)) : ?>
++<?php $enrollment = $this->currentUser()?->enrollmentIn($event); ?>
++<?php if ($enrollment !== null) : ?>
+     <p class="text-success">Você está inscrito neste evento.</p>
++    <?php if ($enrollment->isConfirmed()) : ?>
++        <p class="text-success" id="checkin_confirmed">
++            Presença confirmada em <?= date('d/m/Y H:i', (int) strtotime($enrollment->confirmed_at)) ?>.
++        </p>
++    <?php else : ?>
++        <form class="row g-2 align-items-end mb-3" action="<?= route('events.checkin', ['id' => $event->id]) ?>"
++              method="post" novalidate>
++            <div class="col-auto">
++                <label for="checkin_code" class="form-label">Código de check-in</label>
++                <input type="text" class="form-control" id="checkin_code" name="code"
++                       inputmode="numeric" maxlength="4" autocomplete="off">
++            </div>
++            <div class="col-auto">
++                <button type="submit" class="btn btn-success">Confirmar presença</button>
++            </div>
++        </form>
++    <?php endif; ?>
+ <?php else : ?>
+     <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
+         <button type="submit" class="btn btn-primary">Inscrever-se</button>
+diff --git a/config/routes.php b/config/routes.php
+index ed13ab3..403dc0a 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -29,6 +29,9 @@ Route::middleware('auth')->group(function () {
+     Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])
+         ->name('events.enrollments.create');
+ 
++    // Confirmação de presença do inscrito com o código de check-in do Evento.
++    Route::post('/events/{id}/checkin', [EnrollmentsController::class, 'checkin'])->name('events.checkin');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/database/schema.sql b/database/schema.sql
+index 7b34c96..e923d7d 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -48,6 +48,8 @@ CREATE TABLE event_user (
+     event_id   INT NOT NULL,
+     user_id    INT NOT NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    -- Presença confirmada pelo código de check-in do Evento (Enrollment::confirm); NULL = não confirmada.
++    confirmed_at TIMESTAMP NULL DEFAULT NULL,
+     CONSTRAINT index_event_user_on_event_id_and_user_id UNIQUE (event_id, user_id),
+     CONSTRAINT fk_event_user_event FOREIGN KEY (event_id) REFERENCES events (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
+diff --git a/tests/Acceptance/events/ParticipantCheckinCest.php b/tests/Acceptance/events/ParticipantCheckinCest.php
+new file mode 100644
+index 0000000..6082d5f
+--- /dev/null
++++ b/tests/Acceptance/events/ParticipantCheckinCest.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++class ParticipantCheckinCest extends BaseParticipantEventsCest
++{
++    public function confirmPresenceWithTheCheckinCode(AcceptanceTester $page): void
++    {
++        // Evento 03: o Participante 1 já está inscrito (BaseEventsCest).
++        $event = Event::findById((int) $this->events[3]->id);
++        Assert::assertNotNull($event);
++        $code = (int) $event->checkin_code;
++        $wrong = $code === 9999 ? 1000 : $code + 1;
++
++        $page->wantTo('Confirmação de presença com o código de check-in (errado e depois certo)');
++        $page->amOnPage("/events/{$event->id}");
++        $page->see('Você está inscrito neste evento.');
++        $page->dontSee((string) $code);
++
++        $page->fillField('#checkin_code', (string) $wrong);
++        $page->click('Confirmar presença');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('código inválido!');
++        $page->seeElement('#checkin_code');
++        Assert::assertSame(0, $event->confirmedCount());
++
++        $page->fillField('#checkin_code', (string) $code);
++        $page->click('Confirmar presença');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('Presença confirmada!');
++        $page->see('Presença confirmada em', '#checkin_confirmed');
++        $page->dontSeeElement('#checkin_code');
++        Assert::assertSame(1, $event->confirmedCount());
++    }
++
++    public function notEnrolledParticipantSeesNoCheckinForm(AcceptanceTester $page): void
++    {
++        $page->wantTo('Participante não inscrito não vê o formulário de check-in');
++        $page->amOnPage("/events/{$this->events[2]->id}");
++
++        $page->see('Inscrever-se');
++        $page->dontSeeElement('#checkin_code');
++    }
++}
+diff --git a/tests/Integration/Access/ParticipantEventsAccessTest.php b/tests/Integration/Access/ParticipantEventsAccessTest.php
+index e606ad3..4b5f5df 100644
+--- a/tests/Integration/Access/ParticipantEventsAccessTest.php
++++ b/tests/Integration/Access/ParticipantEventsAccessTest.php
+@@ -139,6 +139,35 @@ class ParticipantEventsAccessTest extends TestCase
+         $this->assertCount(0, Enrollment::all());
+     }
+ 
++    public function test_checkin_should_redirect_to_login_without_session(): void
++    {
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]))->save();
++
++        $response = $this->newClient()->post(
++            "/events/{$this->event->id}/checkin",
++            ['form_params' => ['code' => (string) Event::findById((int) $this->event->id)?->checkin_code]]
++        );
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++        $this->assertSame(0, $this->event->confirmedCount());
++    }
++
++    public function test_participant_should_confirm_presence_over_http(): void
++    {
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]))->save();
++        $code = (string) Event::findById((int) $this->event->id)?->checkin_code;
++
++        $response = $this->loggedClient($this->participant)->post(
++            "/events/{$this->event->id}/checkin",
++            ['form_params' => ['code' => $code]]
++        );
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/events/{$this->event->id}", $response->getHeaderLine('Location'));
++        $this->assertSame(1, $this->event->confirmedCount());
++    }
++
+     public function test_participant_should_enroll_and_return_to_the_event(): void
+     {
+         $response = $this->loggedClient($this->participant)->post("/events/{$this->event->id}/enrollments");
+diff --git a/tests/Integration/Controllers/EnrollmentsControllerTest.php b/tests/Integration/Controllers/EnrollmentsControllerTest.php
+index 8a5a68d..1e26b92 100644
+--- a/tests/Integration/Controllers/EnrollmentsControllerTest.php
++++ b/tests/Integration/Controllers/EnrollmentsControllerTest.php
+@@ -99,6 +99,98 @@ class EnrollmentsControllerTest extends ControllerTestCase
+         $this->assertCount(0, Enrollment::all());
+     }
+ 
++    /* ------------------- POST /events/{id}/checkin ------------------- */
++
++    private function enrollParticipant(Event $event): Enrollment
++    {
++        $enrollment = new Enrollment(['event_id' => $event->id, 'user_id' => $this->participant->id]);
++        $enrollment->save();
++
++        return $enrollment;
++    }
++
++    private function wrongCode(Event $event): string
++    {
++        return (string) ((int) $event->checkin_code === 9999 ? 1000 : (int) $event->checkin_code + 1);
++    }
++
++    public function test_checkin_with_the_right_code_confirms_presence(): void
++    {
++        $event = $this->createEvent();
++        $enrollment = $this->enrollParticipant($event);
++
++        $response = $this->post(
++            action: 'checkin',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'code' => " {$event->checkin_code} "]
++        );
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals('Presença confirmada!', $_SESSION['flash']['success']);
++        $this->assertTrue(Enrollment::findById((int) $enrollment->id)?->isConfirmed());
++    }
++
++    public function test_checkin_with_a_wrong_code_shows_a_generic_error(): void
++    {
++        $event = $this->createEvent();
++        $enrollment = $this->enrollParticipant($event);
++
++        $response = $this->post(
++            action: 'checkin',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'code' => $this->wrongCode($event)]
++        );
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals('código inválido!', $_SESSION['flash']['danger']);
++        $this->assertStringNotContainsString((string) $event->checkin_code, $_SESSION['flash']['danger']);
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++        $this->assertFalse(Enrollment::findById((int) $enrollment->id)?->isConfirmed());
++    }
++
++    public function test_checkin_with_a_code_sent_as_array_does_not_break(): void
++    {
++        $event = $this->createEvent();
++        $enrollment = $this->enrollParticipant($event);
++
++        $response = $this->post(
++            action: 'checkin',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'code' => [(string) $event->checkin_code]]
++        );
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals('código inválido!', $_SESSION['flash']['danger']);
++        $this->assertFalse(Enrollment::findById((int) $enrollment->id)?->isConfirmed());
++    }
++
++    public function test_checkin_without_enrollment_is_rejected(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->post(
++            action: 'checkin',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'code' => (string) $event->checkin_code]
++        );
++
++        $this->assertSame("Location: /events/{$event->id}", $response);
++        $this->assertEquals('Você não está inscrito neste evento!', $_SESSION['flash']['danger']);
++        $this->assertCount(0, Enrollment::all());
++    }
++
++    public function test_checkin_with_unknown_event_redirects_to_index(): void
++    {
++        $response = $this->post(
++            action: 'checkin',
++            controllerName: self::CONTROLLER,
++            params: ['id' => 9999, 'code' => '1234']
++        );
++
++        $this->assertSame('Location: /events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
+     private function createUser(string $name, string $email, string $role): User
+     {
+         $user = new User([
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index 8fe4a60..8d27764 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use PDOException;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\TestCase;
+ 
+ class EnrollmentTest extends TestCase
+@@ -129,6 +130,91 @@ class EnrollmentTest extends TestCase
+         $this->assertCount(0, Enrollment::all());
+     }
+ 
++    /* ------------------- confirmação de presença pelo código de check-in ------------------- */
++
++    private function enrollParticipant(): Enrollment
++    {
++        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
++        $this->assertTrue($enrollment->save());
++
++        return $enrollment;
++    }
++
++    private function checkinCode(): string
++    {
++        return (string) Event::findById((int) $this->event->id)?->checkin_code;
++    }
++
++    public function test_new_enrollment_should_not_be_confirmed(): void
++    {
++        $enrollment = $this->enrollParticipant();
++
++        $this->assertFalse($enrollment->isConfirmed());
++        $this->assertNull(Enrollment::findById((int) $enrollment->id)?->confirmed_at);
++    }
++
++    public function test_confirm_with_the_right_code_should_store_confirmed_at(): void
++    {
++        $enrollment = $this->enrollParticipant();
++
++        $this->assertTrue($enrollment->confirm($this->checkinCode()));
++
++        $this->assertTrue($enrollment->isConfirmed());
++        $stored = Enrollment::findById((int) $enrollment->id);
++        $this->assertNotNull($stored);
++        $this->assertTrue($stored->isConfirmed());
++        $this->assertSame(1, $this->event->confirmedCount());
++    }
++
++    public function test_confirm_with_a_wrong_code_should_fail_without_storing(): void
++    {
++        $enrollment = $this->enrollParticipant();
++        $wrong = (string) ((int) $this->checkinCode() === 9999 ? 1000 : (int) $this->checkinCode() + 1);
++
++        $this->assertFalse($enrollment->confirm($wrong));
++
++        $this->assertEquals('código inválido!', $enrollment->errors('base'));
++        $this->assertFalse(Enrollment::findById((int) $enrollment->id)?->isConfirmed());
++        $this->assertSame(0, $this->event->confirmedCount());
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function malformedCodesProvider(): array
++    {
++        return [
++            'vazio' => [''],
++            'letras' => ['12a4'],
++            'negativo' => ['-123'],
++            'decimal' => ['12.0'],
++        ];
++    }
++
++    #[DataProvider('malformedCodesProvider')]
++    public function test_confirm_with_a_malformed_code_should_fail(string $code): void
++    {
++        $enrollment = $this->enrollParticipant();
++
++        $this->assertFalse($enrollment->confirm($code));
++        $this->assertEquals('código inválido!', $enrollment->errors('base'));
++        $this->assertFalse(Enrollment::findById((int) $enrollment->id)?->isConfirmed());
++    }
++
++    public function test_confirm_twice_should_keep_the_first_date(): void
++    {
++        $enrollment = $this->enrollParticipant();
++        $this->assertTrue($enrollment->confirm($this->checkinCode()));
++        $first = Enrollment::findById((int) $enrollment->id)?->confirmed_at;
++
++        $again = Enrollment::findById((int) $enrollment->id);
++        $this->assertNotNull($again);
++        $this->assertFalse($again->confirm($this->checkinCode()));
++
++        $this->assertEquals('presença já confirmada!', $again->errors('base'));
++        $this->assertSame($first, Enrollment::findById((int) $enrollment->id)?->confirmed_at);
++    }
++
+     private function createParticipant(string $email): User
+     {
+         $user = new User([
+-- 
+2.54.0 (Apple Git-157)
+

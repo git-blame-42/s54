@@ -101,6 +101,12 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   - feat: Add events listing and details for participants
   - feat: Allow participants to enroll in events
   - feat: Allow participants to cancel their enrollment
+- P4. Confirmar presença pelo código do Evento
+  `p4-confirmar-presenca-codigo/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Generate a random check-in code for each Event
+  - feat: Confirm event presence with the check-in code
 - P5. Status do Evento: cancelar e encerrar
   `p5-status-cancelar-encerrar/`
   - feat: Add Event status with cancel and finish actions

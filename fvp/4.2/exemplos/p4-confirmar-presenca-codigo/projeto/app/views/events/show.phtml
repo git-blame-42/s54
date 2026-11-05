@@ -1,0 +1,63 @@
+<?php
+use App\Models\Event;
+
+$audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
+?>
+<dl class="row">
+    <dt class="col-sm-3">Título</dt>
+    <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
+
+    <dt class="col-sm-3">Descrição</dt>
+    <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
+
+    <dt class="col-sm-3">Tipo</dt>
+    <dd class="col-sm-9"><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></dd>
+
+    <dt class="col-sm-3">Modalidade</dt>
+    <dd class="col-sm-9"><?= Event::MODALITIES[$event->modality] ?? htmlspecialchars($event->modality) ?></dd>
+
+    <dt class="col-sm-3">Público-alvo</dt>
+    <dd class="col-sm-9"><?= htmlspecialchars(implode(', ', $audience)) ?></dd>
+
+    <dt class="col-sm-3">Data</dt>
+    <dd class="col-sm-9"><?= date('d/m/Y', strtotime($event->starts_on)) ?></dd>
+
+    <dt class="col-sm-3">Local</dt>
+    <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
+
+    <dt class="col-sm-3">Vagas</dt>
+    <dd class="col-sm-9">
+        <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+        (<?= $event->availableSpots() ?> disponíveis)
+        <?php if ($event->availableSpots() === 0) : ?>
+            <span class="badge text-bg-danger">Lotado</span>
+        <?php endif; ?>
+    </dd>
+</dl>
+
+<?php $enrollment = $this->currentUser()?->enrollmentIn($event); ?>
+<?php if ($enrollment !== null) : ?>
+    <p class="text-success">Você está inscrito neste evento.</p>
+    <?php if ($enrollment->isConfirmed()) : ?>
+        <p class="text-success" id="checkin_confirmed">
+            Presença confirmada em <?= date('d/m/Y H:i', (int) strtotime($enrollment->confirmed_at)) ?>.
+        </p>
+    <?php else : ?>
+        <form class="row g-2 align-items-end mb-3" action="<?= route('events.checkin', ['id' => $event->id]) ?>"
+              method="post" novalidate>
+            <div class="col-auto">
+                <label for="checkin_code" class="form-label">Código de check-in</label>
+                <input type="text" class="form-control" id="checkin_code" name="code"
+                       inputmode="numeric" maxlength="4" autocomplete="off">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-success">Confirmar presença</button>
+            </div>
+        </form>
+    <?php endif; ?>
+<?php else : ?>
+    <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
+        <button type="submit" class="btn btn-primary">Inscrever-se</button>
+    </form>
+<?php endif; ?>
+<a class="btn btn-secondary" href="<?= route('events.index') ?>">Voltar</a>
