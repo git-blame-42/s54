@@ -6,9 +6,7 @@ framework: crie um gancho `beforeValidation` no `Model`, chamado antes
 do `validates()`, e use no Evento."
 
 Chance: baixa. Tempo estimado: 15-20 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, M16: "`Model::isValid()` chama
-`beforeValidation()` antes de `validates()`; `Event` sobrescreve com
-`trim` em `title`, `description` e `location`".
+`s50/fvp/4.2/catalogo.md`, M16.
 
 Branch no clone: `fvp/m16-before-validation`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
