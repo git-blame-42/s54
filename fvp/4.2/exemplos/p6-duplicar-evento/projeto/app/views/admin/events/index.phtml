@@ -31,7 +31,8 @@
                             <input type="hidden" name="_method" value="DELETE">
                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
                         </form>
-                        <form class="d-inline" action="<?= route('admin.events.duplicate', ['id' => $event->id]) ?>" method="post">
+                        <form class="d-inline"
+                              action="<?= route('admin.events.duplicate', ['id' => $event->id]) ?>" method="post">
                             <button type="submit" class="btn btn-sm btn-outline-dark">Duplicar</button>
                         </form>
                     </td>

@@ -1,4 +1,4 @@
-From b0e1b12fabfdb7aaf18b88bbf37774856906f549 Mon Sep 17 00:00:00 2001
+From 858c5512c6d973f4de15d2cf19561d21fbc79e4f Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:20:23 -0300
 Subject: [PATCH] feat: Duplicate an Event from the listing
@@ -10,12 +10,12 @@ POST /admin/events/{id}/duplicate saves Event::duplicate() (all columns, title +
 ---
  app/Controllers/Admin/EventsController.php    | 19 +++++++
  app/Models/Event.php                          | 20 +++++++
- app/views/admin/events/index.phtml            |  3 ++
+ app/views/admin/events/index.phtml            |  4 ++
  config/routes.php                             |  2 +
  .../admin/events/DuplicateEventCest.php       | 40 ++++++++++++++
  tests/Integration/Access/EventsAccessTest.php | 20 ++++++-
  .../Admin/EventsControllerTest.php            | 52 +++++++++++++++++++
- 7 files changed, 155 insertions(+), 1 deletion(-)
+ 7 files changed, 156 insertions(+), 1 deletion(-)
  create mode 100644 tests/Acceptance/admin/events/DuplicateEventCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
@@ -80,14 +80,15 @@ index ba66870..e0708f7 100644
      {
          return $this->belongsTo(User::class, 'user_id');
 diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
-index 6835d74..35811ef 100644
+index 6835d74..bbc2e98 100644
 --- a/app/views/admin/events/index.phtml
 +++ b/app/views/admin/events/index.phtml
-@@ -31,6 +31,9 @@
+@@ -31,6 +31,10 @@
                              <input type="hidden" name="_method" value="DELETE">
                              <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
                          </form>
-+                        <form class="d-inline" action="<?= route('admin.events.duplicate', ['id' => $event->id]) ?>" method="post">
++                        <form class="d-inline"
++                              action="<?= route('admin.events.duplicate', ['id' => $event->id]) ?>" method="post">
 +                            <button type="submit" class="btn btn-sm btn-outline-dark">Duplicar</button>
 +                        </form>
                      </td>

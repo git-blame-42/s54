@@ -12,7 +12,7 @@ Branch no clone: `fvp/p6-duplicar-evento`, a partir de `main`
 
 | Commit    | Mensagem                                     |
 |-----------|----------------------------------------------|
-| `b0e1b12` | `feat: Duplicate an Event from the listing`  |
+| `858c551` | `feat: Duplicate an Event from the listing`  |
 
 Os testes unitários de `duplicate()` ficam de propósito no cenário S3
 (`s3-teste-unitario-model`), empilhado sobre este; aqui ficam
@@ -110,7 +110,7 @@ público. `<caminho>` abaixo é `s50/fvp/4.2/exemplos/p6-duplicar-evento`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-p6 s50/fvp/4.2/exemplos/p6-duplicar-evento/projeto
 git fetch fvp-p6 fvp/p6-duplicar-evento
-git cherry-pick b0e1b12
+git cherry-pick 858c551
 git remote remove fvp-p6
 ```
 
@@ -119,7 +119,7 @@ git remote remove fvp-p6
 ```
 git fetch s50/fvp/4.2/exemplos/p6-duplicar-evento/solucao.bundle \
     fvp/p6-duplicar-evento:fvp-p6
-git cherry-pick b0e1b12
+git cherry-pick 858c551
 # opcional, limpa a ref
 git branch -D fvp-p6
 ```
