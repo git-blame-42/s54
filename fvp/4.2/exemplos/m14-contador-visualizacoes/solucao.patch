@@ -1,0 +1,305 @@
+From eb852bb21b1f85398f2a7006c522314102fb106e Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:58:10 -0300
+Subject: [PATCH] feat: Count event views on the admin show page
+
+New events.views_count column (default 0, also set in the Event constructor because save() writes every column). Event::registerView increments it with update(), without validation, and the admin show calls it once per access. The count appears on the show page and in the listing.
+---
+ app/Controllers/Admin/EventsController.php    |  2 +
+ app/Models/Event.php                          | 32 +++++++++++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 +
+ database/Populate/populate.php                |  1 +
+ database/schema.sql                           |  2 +
+ .../admin/events/ViewsCountCest.php           | 32 +++++++++++
+ .../Admin/EventsControllerTest.php            | 38 +++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 56 +++++++++++++++++++
+ 9 files changed, 168 insertions(+)
+ create mode 100644 tests/Acceptance/admin/events/ViewsCountCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8e59252 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -34,6 +34,8 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        $event->registerView();
++
+         $title = htmlspecialchars($event->title);
+         $this->render('admin/events/show', compact('event', 'title'));
+     }
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..7a63baa 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string $views_count visualizações do show (M14); nunca vem do formulário
+  */
+ class Event extends Model
+ {
+@@ -55,8 +56,24 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'views_count',
+     ];
+ 
++    /**
++     * save() grava todas as colunas de $columns e o DEFAULT do banco não vale: Evento novo começa
++     * com views_count = 0 aqui.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        if ($this->views_count === null) {
++            $this->views_count = 0;
++        }
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+@@ -114,6 +131,21 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Soma uma visualização. Usa update(), que grava só views_count, sem validar (ver um Evento
++     * passado não pode falhar por starts_on). Corrida: dois acessos ao mesmo tempo leem o mesmo
++     * valor e um incremento se perde; a alternativa atômica é um SQL no model com
++     * `UPDATE events SET views_count = views_count + 1 WHERE id = :id`.
++     */
++    public function registerView(): void
++    {
++        if ($this->newRecord()) {
++            return;
++        }
++
++        $this->update(['views_count' => (int) $this->views_count + 1]);
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..417016c 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Visualizações</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td class="views-count"><?= (int) $event->views_count ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..9fe5ce9 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Visualizações</dt>
++    <dd class="col-sm-9" id="event_views_count"><?= (int) $event->views_count ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..da638a3 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -140,6 +140,7 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
+         'location' => $location,
+         'capacity' => $capacity,
++        'views_count' => 0, // M14: todo Evento começa sem visualizações
+     ]);
+     $event->setAudienceList(explode(',', $audience));
+     if (!$event->save()) {
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..8e5c955 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,8 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- M14: visualizações do detalhe do Evento (incrementado por Event::registerView).
++    views_count INT UNSIGNED NOT NULL DEFAULT 0,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/ViewsCountCest.php b/tests/Acceptance/admin/events/ViewsCountCest.php
+new file mode 100644
+index 0000000..714520d
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ViewsCountCest.php
+@@ -0,0 +1,32 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * M14: cada abertura do show do Evento soma uma visualização, exibida no show e na listagem.
++ */
++class ViewsCountCest extends BaseEventsCest
++{
++    public function showCountsViews(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Abrir o detalhe do Evento duas vezes e ver o contador subir');
++        $page->amOnPage('/admin/events');
++        $page->see('0', $this->rowOf('Evento 02') . "//td[@class='views-count']");
++
++        $page->click('Ver', $this->rowOf('Evento 02'));
++        $page->see('1', '#event_views_count');
++
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->see('2', '#event_views_count');
++
++        $page->amOnPage('/admin/events');
++        $page->see('2', $this->rowOf('Evento 02') . "//td[@class='views-count']");
++        Assert::assertEquals(2, Event::findById((int) $event->id)?->views_count);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..b23db88 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,44 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_show_increments_views_count_once_per_access(): void
++    {
++        $event = $this->createEvent();
++
++        $first = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertEquals(1, Event::findById($event->id)->views_count);
++        $this->assertMatchesRegularExpression('/id="event_views_count">1</', $first);
++
++        $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertEquals(2, Event::findById($event->id)->views_count);
++    }
++
++    public function test_index_and_edit_do_not_count_views_and_index_shows_them(): void
++    {
++        $event = $this->createEvent();
++        $event->registerView();
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertEquals(1, Event::findById($event->id)->views_count);
++        $this->assertStringContainsString('<th>Visualizações</th>', $index);
++        $this->assertStringContainsString('<td class="views-count">1</td>', $index);
++    }
++
++    public function test_update_does_not_take_views_count_from_the_form(): void
++    {
++        $event = $this->createEvent();
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['views_count' => '999'])]
++        );
++
++        $this->assertEquals(0, Event::findById($event->id)->views_count);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..d344042 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,60 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- Visualizações (M14) ------------------- */
++
++    public function test_views_count_should_default_to_zero(): void
++    {
++        $event = new Event($this->params());
++        $this->assertSame(0, $event->views_count);
++
++        $event->save();
++        $this->assertEquals(0, Event::findById($event->id)->views_count);
++    }
++
++    public function test_register_view_should_increment_views_count(): void
++    {
++        $event = $this->createEvent();
++
++        $event->registerView();
++        $event->registerView();
++
++        $this->assertEquals(2, $event->views_count);
++        $this->assertEquals(2, Event::findById($event->id)->views_count);
++    }
++
++    public function test_register_view_should_not_run_the_validation(): void
++    {
++        $event = $this->createPastEvent();
++        $event->capacity = 0;
++
++        $event->registerView();
++
++        $stored = Event::findById($event->id);
++        $this->assertEquals(1, $stored->views_count);
++        $this->assertEquals(10, $stored->capacity);
++    }
++
++    public function test_register_view_on_new_record_should_do_nothing(): void
++    {
++        $event = new Event($this->params());
++
++        $event->registerView();
++
++        $this->assertSame(0, $event->views_count);
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_save_should_keep_the_views_count(): void
++    {
++        $event = $this->createEvent();
++        $event->registerView();
++
++        $loaded = Event::findById($event->id);
++        $loaded->title = 'Outro título';
++        $this->assertTrue($loaded->save());
++
++        $this->assertEquals(1, Event::findById($event->id)->views_count);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

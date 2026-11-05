@@ -48,6 +48,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M11. Validar `user_id` no model (existe e é admin)
   `m11-validar-user-id/`
   - feat: Validate that the event creator exists and is an admin
+- M14. Contador de visualizações com `Model::update()`
+  `m14-contador-visualizacoes/`
+  - feat: Count event views on the admin show page
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100
