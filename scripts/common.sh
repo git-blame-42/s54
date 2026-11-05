@@ -378,7 +378,7 @@ ensure_env_file() { [[ -f .env ]] || cp .env.example .env; }
 framework_bootstrap() {
   run_step "Arquivo .env" ensure_env_file || return 1
   run_step "./run composer install" ./run composer install || return 1
-  run_step "./run up -d" ./run up -d || return 1
+  run_step "./run up -d --build" ./run up -d --build || return 1
   run_step "Esperando o MySQL aceitar conexões" wait_for_mysql || return 1
   run_step "./run db:reset" ./run db:reset || return 1
   run_step "./run db:populate" ./run db:populate || return 1

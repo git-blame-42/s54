@@ -15,9 +15,10 @@ uso: $(basename "$0") [-h] [-z]
 Baixa e sobe o projeto Eventos do Câmpus:
   1. git clone \$REPO_URL em $PROJECT_DIR
      (outro lugar: EVENTOS_DIR=/caminho $(basename "$0"))
-  2. cp .env.example .env; ./run composer install; ./run up -d
+  2. cp .env.example .env; ./run composer install; ./run up -d --build
   3. ./run db:reset; ./run db:populate; ./run codecept build
-  4. ajusta o dono de public/assets/uploads (se existir e houver sudo)
+  4. ./run test tests/Unit (tem de passar)
+  5. ajusta o dono de public/assets/uploads (se existir e houver sudo)
 
 REPO_URL é obrigatório: a URL do repositório git do projeto, como o
 git clone aceita. Exemplo:
@@ -74,6 +75,9 @@ run() {
   fi
   if (( ! failed )); then
     run_step "./run codecept build" ./run codecept build || failed=1
+  fi
+  if (( ! failed )); then
+    run_step "./run test tests/Unit" ./run test tests/Unit || failed=1
     run_step "Dono de public/assets/uploads" fix_uploads_owner || true
   fi
 
@@ -92,7 +96,7 @@ run() {
   info
   info "Comandos (dentro de $PROJECT_DIR):"
   info "  ./run ps                 containers"
-  info "  ./run down               parar;  ./run up -d  subir"
+  info "  ./run down               parar;  ./run up -d --build  subir"
   info "  ./run test tests/Unit    testes unitários"
   info "  ./run phpcs              estilo;  ./run phpstan  análise"
   info "  ./run db:reset && ./run db:populate   recriar o banco"

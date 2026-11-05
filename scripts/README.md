@@ -151,7 +151,7 @@ instalado nunca é removido.
 
 Clona `SI-DABE/tsi34d-framework-template` sem alterações em
 `/tmp/tsi34d-framework.XXXXXX`, roda `cp .env.example .env`,
-`./run composer install`, `./run up -d`, espera o MySQL, `./run
+`./run composer install`, `./run up -d --build`, espera o MySQL, `./run
 db:reset`, `./run db:populate`, faz GET em `http://localhost` e roda
 `./run test tests/Unit`. No fim derruba containers, volumes, as
 imagens que não existiam antes e o diretório. Imprime um resumo por
@@ -162,7 +162,8 @@ etapa com tempo. O `-z` limpa os restos de uma execução interrompida.
 Clona o repositório indicado em `REPO_URL` (obrigatório; a URL git
 do projeto da equipe) em
 `~/eventos-do-campus` (ou `EVENTOS_DIR=/outro/lugar`), sobe tudo como
-o 07-test-framework.sh, roda `./run codecept build` e ajusta o dono de
+o 07-test-framework.sh, roda `./run codecept build` e `./run test
+tests/Unit` (tem de passar) e ajusta o dono de
 `public/assets/uploads` se houver sudo. Para se o diretório já
 existir. Mostra URL e credenciais do populate
 (`admin@example.com` / `user@example.com`, senha `123456`). O `-z`
@@ -261,7 +262,12 @@ ficam intactos no `-z`. O `chsh` foi testado com senha (pty) e sem
 senha (fallback no `.bashrc`). `07-test-framework.sh` passou 9/9 na VM
 (rootful) e no macOS; em rootless falha no `composer install`, como
 documentado. `08-install-eventos-do-campus.sh` passou 10/10 e o `-z`
-não deixou containers, imagens nem pasta.
+não deixou containers, imagens nem pasta. Com o `--build` e o `./run
+test tests/Unit`, o 08 foi refeito contra o main da Entrega 4.2
+(`f31006b`) em container Ubuntu 24.04 usando o docker do host: 11/11
+etapas em 32 s, 159 testes verdes, fuso `America/Sao_Paulo` nos
+containers php e php_test, HTTP 200 em `/` e `/login`; o `-z`
+removeu containers, imagens, volume, rede e pasta em 6 s.
 
 `00-run-all.sh` passou em outra VM limpa: 01 a 08 em 3m45s sem
 relogar (o segundo 05 ficou sem FALHA via `sg docker`), 5 containers

@@ -16,7 +16,7 @@ uso: $(basename "$0") [-h] [-z]
 Prova que esta máquina roda o framework da disciplina:
   1. git clone $TEMPLATE_URL
      em /tmp/tsi34d-framework.XXXXXX (sem alterar nada no código)
-  2. cp .env.example .env; ./run composer install; ./run up -d
+  2. cp .env.example .env; ./run composer install; ./run up -d --build
   3. ./run db:reset; ./run db:populate; GET http://localhost
   4. ./run test tests/Unit
   5. derruba os containers, apaga volumes, imagens que não existiam
