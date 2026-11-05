@@ -210,6 +210,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   - feat: Add events listing and details for participants
   - feat: Allow participants to enroll in events
   - feat: Add enrollment receipt code
+- P15. Inscrição via JSON (prévia do Ajax da 4.4)
+  `p15-inscricao-json/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Answer enrollment requests with JSON
 - P16. Remover Evento só com código de confirmação gerado no backend
   `p16-remover-com-codigo-confirmacao/`
   - feat: Require a confirmation code to remove an Event
