@@ -1,0 +1,854 @@
+From 6011e4c42e3a6a3e6894e8e731dbc55b6e87a0b9 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:25:51 -0300
+Subject: [PATCH 1/2] feat: Support null conditions as IS NULL in Paginator
+
+---
+ lib/Paginator.php | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..b33dbba 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -150,9 +150,10 @@ class Paginator
+             return '';
+         }
+ 
+-        $sqlConditions = array_map(function ($column) {
+-            return "{$column} = :{$column}";
+-        }, array_keys($this->conditions));
++        // Valor null vira IS NULL (`= NULL` nunca é verdadeiro no SQL); ex.: ['deleted_at' => null].
++        $sqlConditions = array_map(function ($column, $value) {
++            return $value === null ? "{$column} IS NULL" : "{$column} = :{$column}";
++        }, array_keys($this->conditions), $this->conditions);
+ 
+         return ' WHERE ' . implode(' AND ', $sqlConditions);
+     }
+@@ -164,7 +165,9 @@ class Paginator
+         }
+ 
+         foreach ($this->conditions as $column => $value) {
+-            $stmt->bindValue($column, $value);
++            if ($value !== null) {
++                $stmt->bindValue($column, $value);
++            }
+         }
+     }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 70e36dd2b9765182d9aa8acba8ee3674747bd0ca Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:25:51 -0300
+Subject: [PATCH 2/2] feat: Archive events instead of deleting them
+
+Destroy now sets deleted_at; the index lists only active events, archived ones are listed at /admin/events/archived and can be restored. Enrollments are kept.
+---
+ app/Controllers/Admin/EventsController.php    |  35 +++++-
+ app/Models/Event.php                          | 103 ++++++++++++++++
+ app/views/admin/events/archived.phtml         |  36 ++++++
+ app/views/admin/events/index.phtml            |   3 +-
+ app/views/admin/events/show.phtml             |   5 +
+ config/routes.php                             |   6 +-
+ database/schema.sql                           |   1 +
+ .../admin/events/BaseEventsCest.php           |   2 +-
+ .../admin/events/DeleteEventCest.php          |  70 ++++++++---
+ .../admin/events/ListEventsCest.php           |   2 +-
+ tests/Integration/Access/EventsAccessTest.php |  34 +++++-
+ .../Admin/EventsControllerTest.php            | 112 +++++++++++++++--
+ tests/Unit/Models/Events/EventTest.php        | 114 ++++++++++++++++++
+ 13 files changed, 483 insertions(+), 40 deletions(-)
+ create mode 100644 app/views/admin/events/archived.phtml
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..cf5b435 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,9 +15,9 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
++        $paginator = Event::paginateActive(
+             page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
++            perPage: self::PER_PAGE,
+             route: 'admin.events.paginate'
+         );
+         $events = $paginator->registers();
+@@ -26,6 +26,14 @@ class EventsController extends Controller
+         $this->render('admin/events/index', compact('events', 'paginator', 'title'));
+     }
+ 
++    public function archived(): void
++    {
++        $events = Event::archived();
++
++        $title = 'Eventos arquivados';
++        $this->render('admin/events/archived', compact('events', 'title'));
++    }
++
+     public function show(Request $request): void
+     {
+         $event = $this->findEvent($request);
+@@ -101,15 +109,32 @@ class EventsController extends Controller
+             return;
+         }
+ 
+-        if ($event->safeDestroy()) {
+-            FlashMessage::success('Evento removido com sucesso!');
++        if ($event->archive()) {
++            FlashMessage::success('Evento arquivado com sucesso!');
+         } else {
+-            FlashMessage::danger($event->errors('base') ?? 'Não foi possível remover o evento!');
++            FlashMessage::danger($event->errors('base') ?? 'Não foi possível arquivar o evento!');
+         }
+ 
+         $this->redirectTo(route('admin.events.index'));
+     }
+ 
++    public function restore(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        if ($event->restore()) {
++            FlashMessage::success('Evento restaurado com sucesso!');
++        } else {
++            FlashMessage::danger($event->errors('base') ?? 'Não foi possível restaurar o evento!');
++        }
++
++        $this->redirectTo(route('admin.events.archived'));
++    }
++
+     /**
+      * Copia para o Evento só os campos do formulário (nunca user_id nem id).
+      */
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..8b06c93 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,9 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use Lib\Paginator;
++use PDO;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -18,6 +21,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property string|null $deleted_at quando foi arquivado (soft delete); null = ativo
+  */
+ class Event extends Model
+ {
+@@ -55,6 +59,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'deleted_at',
+     ];
+ 
+     public function validates(): void
+@@ -172,6 +177,104 @@ class Event extends Model
+         }
+     }
+ 
++    public function isArchived(): bool
++    {
++        return $this->deleted_at !== null;
++    }
++
++    /**
++     * Arquiva o Evento (soft delete): grava deleted_at e o tira da listagem. As Inscrições
++     * continuam no banco. Retorna false e registra o motivo em errors('base') se não der.
++     */
++    public function archive(): bool
++    {
++        $this->errors = [];
++
++        if ($this->newRecord()) {
++            $this->addError('base', 'o evento não existe e não pode ser arquivado!');
++            return false;
++        }
++
++        if ($this->isArchived()) {
++            $this->addError('base', 'o evento já está arquivado!');
++            return false;
++        }
++
++        return $this->update(['deleted_at' => date('Y-m-d H:i:s')]);
++    }
++
++    /**
++     * Desfaz o arquivamento: o Evento volta para a listagem.
++     */
++    public function restore(): bool
++    {
++        $this->errors = [];
++
++        if ($this->newRecord() || !$this->isArchived()) {
++            $this->addError('base', 'o evento não está arquivado!');
++            return false;
++        }
++
++        return $this->update(['deleted_at' => null]);
++    }
++
++    /**
++     * Eventos ativos (não arquivados), na ordem do banco.
++     *
++     * @return array<static>
++     */
++    public static function active(): array
++    {
++        return self::fetchAll('deleted_at IS NULL', 'id');
++    }
++
++    /**
++     * Eventos arquivados, do arquivado mais recentemente para o mais antigo.
++     *
++     * @return array<static>
++     */
++    public static function archived(): array
++    {
++        return self::fetchAll('deleted_at IS NOT NULL', 'deleted_at DESC, id DESC');
++    }
++
++    /**
++     * Página da listagem só com Eventos ativos (o Model::paginate do core não aceita condições).
++     */
++    public static function paginateActive(int $page, int $perPage, string $route): Paginator
++    {
++        return new Paginator(
++            class: static::class,
++            page: $page,
++            per_page: $perPage,
++            table: static::$table,
++            attributes: static::$columns,
++            conditions: ['deleted_at' => null],
++            route: $route
++        );
++    }
++
++    /**
++     * @return array<static>
++     */
++    private static function fetchAll(string $where, string $orderBy): array
++    {
++        $attributes = implode(', ', static::$columns);
++        $table = static::$table;
++
++        $sql = "SELECT id, {$attributes} FROM {$table} WHERE {$where} ORDER BY {$orderBy}";
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->execute();
++
++        $events = [];
++        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
++            $events[] = new static($row);
++        }
++
++        return $events;
++    }
++
+     /**
+      * Público-alvo como array (o banco guarda "students,professors").
+      *
+diff --git a/app/views/admin/events/archived.phtml b/app/views/admin/events/archived.phtml
+new file mode 100644
+index 0000000..26b3129
+--- /dev/null
++++ b/app/views/admin/events/archived.phtml
+@@ -0,0 +1,36 @@
++<div class="mb-3">
++    <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar para Eventos</a>
++</div>
++
++<?php if (empty($events)) : ?>
++    <p>Nenhum evento arquivado.</p>
++<?php else : ?>
++    <table class="table table-striped align-middle">
++        <thead>
++            <tr>
++                <th>Título</th>
++                <th>Data</th>
++                <th>Inscrições</th>
++                <th>Arquivado em</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($events as $event) : ?>
++                <tr>
++                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                    <td><?= $event->enrollmentsCount() ?></td>
++                    <td><?= date('d/m/Y H:i', strtotime((string) $event->deleted_at)) ?></td>
++                    <td>
++                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++                        <form class="d-inline" action="<?= route('admin.events.restore', ['id' => $event->id]) ?>" method="post">
++                            <input type="hidden" name="_method" value="PUT">
++                            <button type="submit" class="btn btn-sm btn-outline-success">Restaurar</button>
++                        </form>
++                    </td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++<?php endif; ?>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..63ce60a 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,5 +1,6 @@
+ <div class="mb-3">
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
++    <a class="btn btn-outline-secondary" href="<?= route('admin.events.archived') ?>">Arquivados</a>
+ </div>
+ 
+ <?php if (empty($events)) : ?>
+@@ -29,7 +30,7 @@
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                         <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+                             <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++                            <button type="submit" class="btn btn-sm btn-outline-danger">Arquivar</button>
+                         </form>
+                     </td>
+                 </tr>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..506edf0 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -3,6 +3,11 @@ use App\Models\Event;
+ 
+ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
+ ?>
++<?php if ($event->isArchived()) : ?>
++    <div class="alert alert-secondary">
++        Evento arquivado em <?= date('d/m/Y H:i', strtotime((string) $event->deleted_at)) ?>.
++    </div>
++<?php endif; ?>
+ <dl class="row">
+     <dt class="col-sm-3">Título</dt>
+     <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..1c73721 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -22,16 +22,20 @@ Route::middleware('auth')->group(function () {
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+ 
+-        // Eventos (CRUD RESTful). 'new' vem antes de '{id}', senão 'new' seria capturado como id.
++        // Eventos (CRUD RESTful). 'new' e 'archived' vêm antes de '{id}', senão seriam capturados como id.
+         Route::get('/admin/events', [AdminEventsController::class, 'index'])->name('admin.events.index');
+         Route::get('/admin/events/page/{page}', [AdminEventsController::class, 'index'])
+             ->name('admin.events.paginate');
+         Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
++        Route::get('/admin/events/archived', [AdminEventsController::class, 'archived'])
++            ->name('admin.events.archived');
+         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+         Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
++        Route::put('/admin/events/{id}/restore', [AdminEventsController::class, 'restore'])
++            ->name('admin.events.restore');
+     });
+ });
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..579d514 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,7 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    deleted_at  DATETIME NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..4a9f014 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -101,7 +101,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+             $this->enroll($this->events[1], $participant);
+         }
+ 
+-        // Evento 03: uma Inscrição (também não pode ser removido). Evento 02 fica sem Inscrições.
++        // Evento 03: uma Inscrição. Evento 02 fica sem Inscrições.
+         $this->enroll($this->events[3], $this->participants[1]);
+     }
+ 
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..9f401f7 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -2,54 +2,84 @@
+ 
+ namespace Tests\Acceptance\admin\events;
+ 
++use App\Models\Enrollment;
+ use App\Models\Event;
+ use PHPUnit\Framework\Assert;
+ use Tests\Support\AcceptanceTester;
+ 
++/**
++ * Remover virou arquivar (soft delete): o Evento some da listagem, mas continua no banco com deleted_at.
++ */
+ class DeleteEventCest extends BaseEventsCest
+ {
+-    public function deleteEventWithoutEnrollments(AcceptanceTester $page): void
++    public function archiveEventWithoutEnrollments(AcceptanceTester $page): void
+     {
+         $event = $this->events[2];
+         Assert::assertFalse($event->hasEnrollments());
+ 
+-        $page->wantTo('Remoção do registro');
++        $page->wantTo('Arquivamento do registro (some da listagem, continua no banco)');
+         $page->amOnPage('/admin/events');
+         $page->see('Evento 02', $this->rowOf('Evento 02'));
+ 
+-        $this->clickRemove($page, 'Evento 02');
++        $this->clickArchive($page, 'Evento 02');
+ 
+         $page->seeCurrentUrlEquals('/admin/events');
+-        $page->see('Evento removido com sucesso!');
++        $page->see('Evento arquivado com sucesso!');
+         $page->see('Eventos', 'h1');
+         $page->dontSee('Evento 02', 'table');
+-        Assert::assertNull(Event::findById((int) $event->id));
+-        Assert::assertCount(self::TOTAL_EVENTS - 1, Event::all());
++        $page->see('Mostrando 1 - 5 de ' . (self::TOTAL_EVENTS - 1));
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertTrue($stored->isArchived());
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++        Assert::assertCount(self::TOTAL_EVENTS - 1, Event::active());
+     }
+ 
+-    public function deleteEventWithEnrollmentsIsBlocked(AcceptanceTester $page): void
++    public function archiveEventWithEnrollmentsKeepsThem(AcceptanceTester $page): void
+     {
+         $event = $this->events[1];
+-        Assert::assertTrue($event->hasEnrollments());
++        Assert::assertSame(3, $event->enrollmentsCount());
+ 
+-        $page->wantTo('Remoção do registro (P03: Evento com Inscrições não pode ser removido)');
++        $page->wantTo('Arquivamento de Evento com Inscrições (as Inscrições continuam)');
+         $page->amOnPage('/admin/events');
+ 
+-        $this->clickRemove($page, 'Evento 01');
++        $this->clickArchive($page, 'Evento 01');
+ 
+         $page->seeCurrentUrlEquals('/admin/events');
+-        $page->see('não é possível remover um evento com inscrições (3)!');
+-        $page->dontSee('Evento removido com sucesso!');
+-        $page->see('Eventos', 'h1');
+-        $page->see('Evento 01', 'table');
+-        Assert::assertNotNull(Event::findById((int) $event->id));
+-        Assert::assertSame(3, $event->enrollmentsCount());
+-        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++        $page->see('Evento arquivado com sucesso!');
++        $page->dontSee('Evento 01', 'table');
++
++        Assert::assertTrue(Event::findById((int) $event->id)?->isArchived());
++        Assert::assertCount(3, Enrollment::where(['event_id' => $event->id]));
++    }
++
++    public function restoreArchivedEvent(AcceptanceTester $page): void
++    {
++        $page->wantTo('Listagem de arquivados e restauração do Evento');
++        $page->amOnPage('/admin/events');
++        $this->clickArchive($page, 'Evento 03');
++
++        $page->click('Arquivados');
++        $page->seeCurrentUrlEquals('/admin/events/archived');
++        $page->see('Eventos arquivados', 'h1');
++        $page->see('Evento 03', $this->rowOf('Evento 03'));
++        $page->dontSee('Evento 02', 'table');
++
++        $page->click('Restaurar', $this->rowOf('Evento 03'));
++
++        $page->seeCurrentUrlEquals('/admin/events/archived');
++        $page->see('Evento restaurado com sucesso!');
++        $page->see('Nenhum evento arquivado.');
++
++        $page->amOnPage('/admin/events');
++        $page->see('Evento 03', 'table');
++        Assert::assertFalse(Event::findById((int) $this->events[3]->id)?->isArchived());
+     }
+ 
+-    private function clickRemove(AcceptanceTester $page, string $title): void
++    private function clickArchive(AcceptanceTester $page, string $title): void
+     {
+-        // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+-        $page->click('Remover', $this->rowOf($title));
++        // Arquivar é um form com _method=DELETE e botão "Arquivar", sem confirm() (contrato-ui-eventos.md).
++        $page->click('Arquivar', $this->rowOf($title));
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..48ff636 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -29,7 +29,7 @@ class ListEventsCest extends BaseEventsCest
+             $this->assertContains($event->location, $row);
+             $this->assertContains('Ver', $row);
+             $this->assertContains('Editar', $row);
+-            $this->assertContains('Remover', $row);
++            $this->assertContains('Arquivar', $row);
+         }
+ 
+         // Vagas no formato inscritos/capacity: Evento 01 lotado (3/3), Evento 03 com 1 Inscrição, Evento 02 sem.
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..abd96de 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 10 rotas admin.events.* (index, paginate, new, archived, create, show, edit, update, destroy, restore).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -88,11 +88,13 @@ class EventsAccessTest extends TestCase
+             'admin.events.index' => ['GET', '/admin/events'],
+             'admin.events.paginate' => ['GET', '/admin/events/page/2'],
+             'admin.events.new' => ['GET', '/admin/events/new'],
++            'admin.events.archived' => ['GET', '/admin/events/archived'],
+             'admin.events.create' => ['POST', '/admin/events'],
+             'admin.events.show' => ['GET', '/admin/events/1'],
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.restore' => ['PUT', '/admin/events/1/restore'],
+         ];
+     }
+ 
+@@ -106,6 +108,7 @@ class EventsAccessTest extends TestCase
+         return [
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.restore' => ['PUT', '/admin/events/1/restore'],
+         ];
+     }
+ 
+@@ -157,6 +160,35 @@ class EventsAccessTest extends TestCase
+         $events = Event::all();
+         $this->assertCount(1, $events);
+         $this->assertEquals('Palestra de Acesso', $events[0]->title);
++        $this->assertFalse($events[0]->isArchived());
++    }
++
++    public function test_participant_should_not_restore_an_archived_event(): void
++    {
++        $this->event->archive();
++
++        $response = $this->loggedClient($this->participant)->post(
++            "/admin/events/{$this->event->id}/restore",
++            ['form_params' => ['_method' => 'PUT']]
++        );
++
++        $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));
++        $this->assertTrue(Event::findById($this->event->id)?->isArchived());
++    }
++
++    public function test_admin_should_archive_and_list_archived_events(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $archive = $client->post("/admin/events/{$this->event->id}", ['form_params' => ['_method' => 'DELETE']]);
++        $this->assertEquals('/admin/events', $archive->getHeaderLine('Location'));
++
++        $archived = $client->get('/admin/events/archived');
++        $this->assertEquals(200, $archived->getStatusCode());
++        $this->assertStringContainsString('Palestra de Acesso', (string) $archived->getBody());
++
++        $index = (string) $client->get('/admin/events')->getBody();
++        $this->assertStringNotContainsString('Palestra de Acesso', $index);
+     }
+ 
+     public function test_admin_should_access_events_index_and_new(): void
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..67a482d 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -239,30 +239,122 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
+-    public function test_destroy_removes_event_without_enrollments(): void
++    public function test_destroy_archives_event_instead_of_removing_it(): void
+     {
+-        $event = $this->createEvent();
++        $event = $this->createEvent(['title' => 'Vai Arquivar']);
++        $this->createEvent(['title' => 'Continua Ativo']);
+ 
+         $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
+ 
+-        $this->assertNull(Event::findById($event->id));
++        $archived = Event::findById($event->id);
++        $this->assertNotNull($archived);
++        $this->assertTrue($archived->isArchived());
+         $this->assertSame('Location: /admin/events', $response);
+-        $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
++        $this->assertEquals('Evento arquivado com sucesso!', $_SESSION['flash']['success']);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $this->assertStringNotContainsString('Vai Arquivar', $index);
++        $this->assertStringContainsString('Continua Ativo', $index);
++        $this->assertStringContainsString('Mostrando 1 - 1 de 1', $index);
+     }
+ 
+-    public function test_destroy_keeps_event_with_enrollments(): void
++    public function test_destroy_archives_event_with_enrollments_and_keeps_them(): void
+     {
+         $event = $this->createEvent();
+         $this->enroll($event);
+ 
+         $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
+ 
+-        $this->assertNotNull(Event::findById($event->id));
++        $this->assertTrue(Event::findById($event->id)?->isArchived());
++        $this->assertCount(1, Enrollment::where(['event_id' => $event->id]));
+         $this->assertSame('Location: /admin/events', $response);
+-        $this->assertEquals(
+-            'não é possível remover um evento com inscrições (1)!',
+-            $_SESSION['flash']['danger']
+-        );
++        $this->assertEquals('Evento arquivado com sucesso!', $_SESSION['flash']['success']);
++    }
++
++    public function test_destroy_of_archived_event_shows_error(): void
++    {
++        $event = $this->createEvent();
++        $event->archive();
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('o evento já está arquivado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_archived_lists_only_archived_events(): void
++    {
++        $event = $this->createEvent(['title' => 'Evento Arquivado']);
++        $event->archive();
++        $this->createEvent(['title' => 'Evento Ativo']);
++
++        $response = $this->get(action: 'archived', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Eventos arquivados\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Evento Arquivado', $response);
++        $this->assertStringNotContainsString('Evento Ativo', $response);
++        $this->assertStringContainsString("/admin/events/{$event->id}/restore", $response);
++        $this->assertStringContainsString('name="_method" value="PUT"', $response);
++    }
++
++    public function test_archived_without_events_shows_empty_message(): void
++    {
++        $this->createEvent();
++
++        $response = $this->get(action: 'archived', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Nenhum evento arquivado.', $response);
++    }
++
++    public function test_index_links_to_archived_and_offers_archive_button(): void
++    {
++        $this->createEvent();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('href="/admin/events/archived"', $response);
++        $this->assertStringContainsString('Arquivar', $response);
++    }
++
++    public function test_restore_brings_event_back_to_index(): void
++    {
++        $event = $this->createEvent(['title' => 'Volta Para a Lista']);
++        $event->archive();
++
++        $response = $this->put(action: 'restore', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertFalse(Event::findById($event->id)?->isArchived());
++        $this->assertSame('Location: /admin/events/archived', $response);
++        $this->assertEquals('Evento restaurado com sucesso!', $_SESSION['flash']['success']);
++        $this->assertStringContainsString('Volta Para a Lista', $this->get(action: 'index', controllerName: self::CONTROLLER));
++    }
++
++    public function test_restore_of_active_event_shows_error(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(action: 'restore', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame('Location: /admin/events/archived', $response);
++        $this->assertEquals('o evento não está arquivado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_restore_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->put(action: 'restore', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_show_of_archived_event_shows_notice(): void
++    {
++        $event = $this->createEvent();
++        $event->archive();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Evento arquivado em', $response);
+     }
+ 
+     /**
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..b2c9a34 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,120 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    /* ------------------- arquivamento (soft delete) ------------------- */
++
++    public function test_new_event_should_not_be_archived(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertNull(Event::findById($event->id)?->deleted_at);
++        $this->assertFalse($event->isArchived());
++    }
++
++    public function test_archive_should_set_deleted_at_and_hide_from_active(): void
++    {
++        $kept = $this->createEvent(['title' => 'Ativo']);
++        $event = $this->createEvent(['title' => 'Arquivado']);
++
++        $this->assertTrue($event->archive());
++        $this->assertTrue($event->isArchived());
++
++        $found = Event::findById($event->id);
++        $this->assertNotNull($found);
++        $this->assertTrue($found->isArchived());
++        $this->assertCount(2, Event::all());
++
++        $active = Event::active();
++        $this->assertCount(1, $active);
++        $this->assertEquals($kept->id, $active[0]->id);
++
++        $archived = Event::archived();
++        $this->assertCount(1, $archived);
++        $this->assertEquals($event->id, $archived[0]->id);
++    }
++
++    public function test_archive_should_keep_the_enrollments(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 2);
++
++        $this->assertTrue($event->archive());
++        $this->assertSame(2, Event::findById($event->id)?->enrollmentsCount());
++        $this->assertCount(2, Enrollment::where(['event_id' => $event->id]));
++    }
++
++    public function test_archive_twice_should_fail_with_error(): void
++    {
++        $event = $this->createEvent();
++        $this->assertTrue($event->archive());
++
++        $this->assertFalse($event->archive());
++        $this->assertEquals('o evento já está arquivado!', $event->errors('base'));
++    }
++
++    public function test_archive_should_fail_for_a_new_record(): void
++    {
++        $event = new Event($this->params());
++
++        $this->assertFalse($event->archive());
++        $this->assertEquals('o evento não existe e não pode ser arquivado!', $event->errors('base'));
++    }
++
++    public function test_restore_should_bring_the_event_back_to_active(): void
++    {
++        $event = $this->createEvent();
++        $this->assertTrue($event->archive());
++
++        $this->assertTrue($event->restore());
++        $this->assertFalse($event->isArchived());
++        $this->assertNull(Event::findById($event->id)?->deleted_at);
++        $this->assertCount(1, Event::active());
++        $this->assertCount(0, Event::archived());
++    }
++
++    public function test_restore_of_an_active_event_should_fail_with_error(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertFalse($event->restore());
++        $this->assertEquals('o evento não está arquivado!', $event->errors('base'));
++    }
++
++    public function test_saving_an_archived_event_should_keep_it_archived(): void
++    {
++        $event = $this->createEvent();
++        $this->assertTrue($event->archive());
++
++        $found = Event::findById($event->id);
++        $this->assertNotNull($found);
++        $found->title = 'Título corrigido';
++        $this->assertTrue($found->save());
++
++        $this->assertTrue(Event::findById($event->id)?->isArchived());
++    }
++
++    public function test_paginate_active_should_skip_archived_events(): void
++    {
++        $events = [];
++        for ($i = 1; $i <= 7; $i++) {
++            $events[$i] = $this->createEvent(['title' => "Evento {$i}"]);
++        }
++        $events[2]->archive();
++        $events[6]->archive();
++
++        $page1 = Event::paginateActive(1, 5, 'admin.events.paginate');
++        $page2 = Event::paginateActive(2, 5, 'admin.events.paginate');
++
++        $this->assertEquals(5, $page1->totalOfRegisters());
++        $this->assertEquals(1, $page1->totalOfPages());
++        $this->assertCount(5, $page1->registers());
++        $this->assertCount(0, $page2->registers());
++        $this->assertEquals('admin.events.paginate', $page1->getRouteName());
++
++        $titles = array_map(fn(Event $event) => $event->title, $page1->registers());
++        $this->assertEquals(['Evento 1', 'Evento 3', 'Evento 4', 'Evento 5', 'Evento 7'], $titles);
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,36 @@
+<div class="mb-3">
+    <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar para Eventos</a>
+</div>
+
+<?php if (empty($events)) : ?>
+    <p>Nenhum evento arquivado.</p>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Data</th>
+                <th>Inscrições</th>
+                <th>Arquivado em</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($events as $event) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($event->title) ?></td>
+                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                    <td><?= $event->enrollmentsCount() ?></td>
+                    <td><?= date('d/m/Y H:i', strtotime((string) $event->deleted_at)) ?></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <form class="d-inline" action="<?= route('admin.events.restore', ['id' => $event->id]) ?>" method="post">
+                            <input type="hidden" name="_method" value="PUT">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Restaurar</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
