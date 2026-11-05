@@ -9,12 +9,22 @@ direto para os Eventos dele."
 Chance: média. Tempo estimado: 35-40 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, Q4.
 
+**Variante.** Este exemplo não segue os passos do catálogo ao pé da
+letra. O catálogo pede um middleware `Staff` (admin ou organizer) nas
+mesmas rotas `/admin/events`, com o admin vendo tudo e o organizer só
+os dele. Aqui o Organizador ganha uma área separada,
+`/organizer/events`, onde o admin não entra, e o admin continua com o
+CRUD de todos em `/admin/events`, sem mudança. O ENUM, `isOrganizer()`,
+middleware com alias, restrição por `events()`, navbar e populate são
+os mesmos nos dois caminhos. Se o professor pedir "o organizer usa a
+mesma tela do admin", siga os passos do catálogo.
+
 Branch no clone: `fvp/q4-perfil-organizador`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
 
 | Commit    | Mensagem                                            |
 |-----------|-----------------------------------------------------|
-| `b6e1df0` | `feat: Add organizer role with its own events area` |
+| `cf4b26b` | `feat: Add organizer role with its own events area` |
 
 ## O que mudou
 
@@ -25,7 +35,8 @@ Branch no clone: `fvp/q4-perfil-organizador`, a partir de `main`
 - `app/Middleware/Organizer.php` (novo): cópia do `Admin`; usuário
   logado que não é Organizador recebe "Acesso restrito a
   organizadores" e vai para `/dashboard`. Sem usuário, não faz nada:
-  quem manda para `/login` é o `Authenticate`.
+  ele roda antes do `Authenticate` (ver "Por que assim"), e é o
+  `Authenticate` que manda para `/login`.
 - `config/App.php`: alias `'organizer' => Organizer::class`.
 - `config/routes.php`: grupo `Route::middleware('organizer')`
   **dentro** do grupo `auth`, com as 8 rotas `organizer.events.*`
@@ -73,7 +84,8 @@ Branch no clone: `fvp/q4-perfil-organizador`, a partir de `main`
 ## Por que assim
 
 - Herança em vez de copiar o controller: o CRUD (validação, flash,
-  `fill`, P02/P03) é o mesmo; o que muda é de onde vêm os Eventos e o
+  `fill`, regras P02 e P03 do projeto) é o
+  mesmo; o que muda é de onde vêm os Eventos e o
   prefixo das rotas. Cópia de 150 linhas divergiria na primeira
   correção.
 - Restrição pela relação (`events()->findById`), como Q1 e O5: o
@@ -82,9 +94,13 @@ Branch no clone: `fvp/q4-perfil-organizador`, a partir de `main`
   todos os Eventos em `/admin/events`; a área do Organizador é para
   quem só gerencia os próprios. Organizador fora de `/admin` vem de
   graça do middleware `Admin`.
-- O grupo `organizer` dentro do `auth` (ordem dos middlewares): os
-  dois middlewares de perfil não tratam "sem login" e contam com o
-  `Authenticate` antes (A17 da 4.1).
+- Ordem dos middlewares: `RouteWrapperMiddleware::group` roda o
+  callback (o grupo interno registra o dele) e só depois acrescenta o
+  seu, então o middleware do grupo **interno** roda primeiro. Aqui o
+  `Organizer` roda antes do `Authenticate`. Por isso ele não pode
+  supor usuário logado: com `Auth::user()` nulo, ele deixa passar e o
+  `Authenticate`, logo depois, manda para `/login` (o `Admin` da base
+  faz igual). Ver A17 da 4.1.
 
 ## Como verificar
 
@@ -140,7 +156,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-q4 \
     s50/fvp/4.2/exemplos/q4-perfil-organizador/projeto
 git fetch fvp-q4 fvp/q4-perfil-organizador
-git cherry-pick b6e1df0
+git cherry-pick cf4b26b
 git remote remove fvp-q4
 ```
 
@@ -151,7 +167,7 @@ git fetch \
     s50/fvp/4.2/exemplos/q4-perfil-organizador/solucao.bundle \
     fvp/q4-perfil-organizador:fvp-q4
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick b6e1df0
+git cherry-pick cf4b26b
 # opcional, limpa a ref
 git branch -D fvp-q4
 ```
@@ -198,6 +214,14 @@ Arquivos que costumam conflitar neste cenário e por quê:
 
 - Grupo `organizer` fora do `auth`: sem login, o `Organizer` não
   redireciona (`Auth::user()` é `null`) e a ação roda sem usuário.
+- Achar que o `auth` (externo) roda antes: o grupo interno roda
+  primeiro. Um `Organizer` que chamasse `$user->isOrganizer()` sem
+  checar `null` daria erro 500 para quem não está logado, em vez do
+  redirect para `/login`.
+- `isAdmin()`/`isOrganizer()` espalhados nas views (navbar) e no
+  login: cada perfil novo exige procurar todos os `if`. É o custo de
+  não centralizar o perfil (H2 da 4.1); um método como
+  `User::homeRoute()` ou `manageEvents()` concentraria a decisão.
 - Esquecer o alias em `config/App.php`: "middleware não encontrado"
   em todas as rotas do grupo.
 - ENUM sem `organizer`: `save()` falha com `Data truncated` (o model

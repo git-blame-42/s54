@@ -13,7 +13,8 @@ class Organizer implements Middleware
     {
         $user = Auth::user();
 
-        // Sem usuário logado, quem redireciona é o middleware Authenticate (o grupo 'auth' vem antes).
+        // O grupo de rotas mais interno roda primeiro: sem usuário logado este middleware não faz nada e
+        // o Authenticate (grupo 'auth', externo, roda depois) redireciona para /login.
         if ($user !== null && !$user->isOrganizer()) {
             FlashMessage::danger('Acesso restrito a organizadores');
             $this->redirectTo(route('dashboard.index'));

@@ -37,7 +37,8 @@ Route::middleware('auth')->group(function () {
     });
 
     // Área do Organizador (autenticado com perfil organizer): CRUD só dos próprios Eventos.
-    // Fica dentro do grupo 'auth': sem login, quem redireciona para /login é o Authenticate.
+    // Fica dentro do grupo 'auth'. O middleware do grupo interno roda antes do externo: sem login o
+    // Organizer deixa passar e o Authenticate redireciona para /login.
     Route::middleware('organizer')->group(function () {
         Route::get('/organizer/events', [OrganizerEventsController::class, 'index'])->name('organizer.events.index');
         Route::get('/organizer/events/page/{page}', [OrganizerEventsController::class, 'index'])

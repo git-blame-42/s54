@@ -1,4 +1,4 @@
-From b6e1df096cd6bba9b7aae56dba55ed8e29bcbfdf Mon Sep 17 00:00:00 2001
+From cf4b26ba611d3e1dcdd362fd0bfcc760a4278197 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:57:43 -0300
 Subject: [PATCH] feat: Add organizer role with its own events area
@@ -8,7 +8,7 @@ Organizers log in to /organizer/events and manage only the events they own. The 
  app/Controllers/Admin/EventsController.php    |  53 +++--
  app/Controllers/AuthenticationsController.php |   3 +-
  .../Organizer/EventsController.php            |  56 +++++
- app/Middleware/Organizer.php                  |  28 +++
+ app/Middleware/Organizer.php                  |  29 +++
  app/Models/User.php                           |  10 +-
  app/views/admin/events/_form.phtml            |   2 +-
  app/views/admin/events/edit.phtml             |   2 +-
@@ -17,7 +17,7 @@ Organizers log in to /organizer/events and manage only the events they own. The 
  app/views/admin/events/show.phtml             |   4 +-
  app/views/layouts/_navbar.phtml               |   5 +
  config/App.php                                |   1 +
- config/routes.php                             |  18 ++
+ config/routes.php                             |  19 ++
  database/Populate/populate.php                |  23 +-
  database/schema.sql                           |   2 +-
  .../organizer/OrganizerEventsCest.php         | 112 ++++++++++
@@ -25,7 +25,7 @@ Organizers log in to /organizer/events and manage only the events they own. The 
  .../AuthenticationsControllerTest.php         |  21 ++
  .../Organizer/EventsControllerTest.php        | 210 ++++++++++++++++++
  tests/Unit/Models/Users/UserTest.php          |  26 +++
- 20 files changed, 716 insertions(+), 30 deletions(-)
+ 20 files changed, 718 insertions(+), 30 deletions(-)
  create mode 100644 app/Controllers/Organizer/EventsController.php
  create mode 100644 app/Middleware/Organizer.php
  create mode 100644 tests/Acceptance/organizer/OrganizerEventsCest.php
@@ -227,10 +227,10 @@ index 0000000..50c8672
 +}
 diff --git a/app/Middleware/Organizer.php b/app/Middleware/Organizer.php
 new file mode 100644
-index 0000000..a449f7a
+index 0000000..fd65ee9
 --- /dev/null
 +++ b/app/Middleware/Organizer.php
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,29 @@
 +<?php
 +
 +namespace App\Middleware;
@@ -246,7 +246,8 @@ index 0000000..a449f7a
 +    {
 +        $user = Auth::user();
 +
-+        // Sem usuário logado, quem redireciona é o middleware Authenticate (o grupo 'auth' vem antes).
++        // O grupo de rotas mais interno roda primeiro: sem usuário logado este middleware não faz nada e
++        // o Authenticate (grupo 'auth', externo, roda depois) redireciona para /login.
 +        if ($user !== null && !$user->isOrganizer()) {
 +            FlashMessage::danger('Acesso restrito a organizadores');
 +            $this->redirectTo(route('dashboard.index'));
@@ -384,7 +385,7 @@ index b58901e..95a9127 100644
      ];
  }
 diff --git a/config/routes.php b/config/routes.php
-index 9ee0c90..0be6198 100644
+index 9ee0c90..fb08a14 100644
 --- a/config/routes.php
 +++ b/config/routes.php
 @@ -5,6 +5,7 @@ use App\Controllers\Admin\EventsController as AdminEventsController;
@@ -395,13 +396,14 @@ index 9ee0c90..0be6198 100644
  use Core\Router\Route;
  
  Route::get('/', [HomeController::class, 'index'])->name('root');
-@@ -34,4 +35,21 @@ Route::middleware('auth')->group(function () {
+@@ -34,4 +35,22 @@ Route::middleware('auth')->group(function () {
          Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
              ->name('admin.events.destroy');
      });
 +
 +    // Área do Organizador (autenticado com perfil organizer): CRUD só dos próprios Eventos.
-+    // Fica dentro do grupo 'auth': sem login, quem redireciona para /login é o Authenticate.
++    // Fica dentro do grupo 'auth'. O middleware do grupo interno roda antes do externo: sem login o
++    // Organizer deixa passar e o Authenticate redireciona para /login.
 +    Route::middleware('organizer')->group(function () {
 +        Route::get('/organizer/events', [OrganizerEventsController::class, 'index'])->name('organizer.events.index');
 +        Route::get('/organizer/events/page/{page}', [OrganizerEventsController::class, 'index'])
