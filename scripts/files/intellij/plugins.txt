@@ -1,0 +1,66 @@
+# Plugins do IntelliJ IDEA para a disciplina (TSI34D: PHP + framework
+# MVC próprio + Docker + MySQL). Lido por scripts/12-1-config-intellij.sh.
+#
+# Formato: um ID por linha (o <id> do META-INF/plugin.xml; sem <id>,
+# o <name>; pode ter espaços). Linhas com "#" no começo são comentários.
+# As linhas "# === ..." separam as seções e são lidas pelo script:
+# - marketplace: o script roda "<IDE> installPlugins <id>" para cada um;
+# - bundled: já vêm no IntelliJ IDEA 2026.3. O script só confere nos
+#   plugin.xml do IDE; se faltar algum, tenta o marketplace.
+
+# === marketplace (o script instala) =================================
+
+# PHP: linguagem, PHPUnit, PHP_CodeSniffer. Exige a edição paga do
+# IntelliJ (estudante: licença educacional gratuita da JetBrains).
+com.jetbrains.php
+# Interpretador PHP remoto: o serviço php do docker-compose.yml.
+org.jetbrains.plugins.phpstorm-remote-interpreter
+# PHPStan (phpstan.neon do projeto, nível 6). Em 2026-11-05 ainda não
+# há versão para o 2026.3: o script avisa e segue; rode de novo depois.
+com.intellij.php.tools.quality.phpstan
+# Codeception (Cests de tests/Acceptance). Idem: ainda sem versão 2026.3.
+com.jetbrains.php.codeception
+# .env e .env.example (variáveis do compose e do banco).
+ru.adelf.idea.dotenv
+# .ignore: realce e conferência do .gitignore.
+mobi.hsz.idea.gitignore
+# Mostra o atalho de cada ação feita com o mouse: ajuda a aprender o
+# keymap TSI34D.
+Key Promoter X
+
+# === bundled no IntelliJ IDEA 2026.3 (já vêm; o script confere) ====
+
+# docker-compose.yml, containers e base do interpretador remoto.
+Docker
+# Database Tools: o MySQL do compose (serviço db), console SQL.
+com.intellij.database
+# Shell Script: ./run e scripts/*.sh.
+com.jetbrains.sh
+# Markdown: README.md e wiki.
+org.intellij.plugins.markdown
+# Terminal embutido (./run test, phpcs, phpstan).
+org.jetbrains.plugins.terminal
+# YAML: docker-compose.yml, codeception.yml.
+org.jetbrains.plugins.yaml
+
+# === avaliados e deixados de fora ===================================
+#
+# com.jetbrains.php.framework      PHP Command Line Tool: integra CLIs
+#                                  (Symfony Console...); o ./run não usa.
+# com.jetbrains.php.architecture   PHP Architecture: não é usado.
+# com.pestphp.pest-intellij        Pest: o projeto usa PHPUnit e
+#                                  Codeception.
+# com.laravel_idea.plugin          o framework da disciplina não é Laravel.
+# com.github.catppuccin.jetbrains  tema não é essencial: Darcula, que já
+#                                  vem no IDE.
+# ijkl-shortcuts                   os atalhos alt+i/j/k/l (e alt+n/m/u/o,
+#                                  alt+h, alt+b...) já estão no keymap
+#                                  TSI34D. Instalado, o plugin grava de
+#                                  volta atalhos que o TSI34D tirou por
+#                                  conflito no Linux (ctrl+shift+T do Go
+#                                  to Test, ctrl+shift+backspace do Last
+#                                  Edit Location...). Só vale para quem
+#                                  quiser alt+ijkl também em listas e
+#                                  popups.
+# Copilot, AI Assistant, Android, Go, Python, Big Data, Spring, Jupyter:
+# fora do escopo da disciplina.

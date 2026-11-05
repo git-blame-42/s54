@@ -1,0 +1,7 @@
+<application>
+  <component name="KeyPromoterXSettings">
+    <option name="showTipsClickCount" value="3" />
+    <option name="disabledInPresentationMode" value="true" />
+    <option name="disabledInDistractionFreeMode" value="true" />
+  </component>
+</application>

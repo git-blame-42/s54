@@ -72,7 +72,8 @@ estiver errada).
 | `09-install-php.sh`               | PHP nativo, composer, phpcs/stan  | sim  |
 | `10-install-neovim.sh`            | Neovim + LazyVim + PHP (LSP)      | sim  |
 | `11-install-vscode.sh`            | opcional: VS Code + Intelephense  | sim  |
-| `12-install-intellij.sh`          | opcional: IntelliJ Community snap | sim  |
+| `12-install-intellij.sh`          | opcional: IntelliJ IDEA (snap)    | sim  |
+| `12-1-config-intellij.sh`         | opcional: config + plugins do 12  | sim  |
 | `13-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
 | `14-fvp-prep.sh`                  | soluções FVP como branches; `fvp` | não  |
 | `15-fvp-check.sh`                 | só verifica: o que aplica no main | não  |
@@ -260,16 +261,134 @@ que já existia, ficam só logs e caches do próprio code.
 
 ### 12-install-intellij.sh
 
-Opcional, interface gráfica, fora do 00. Instala o IntelliJ IDEA
-Community com `snap install intellij-idea-community --classic` (e o
-snapd, se faltar, rastreado). Se já houver `idea`, o snap, ou o
-JetBrains Toolbox em `~/.local/share/JetBrains/Toolbox`, não instala
-nada e o `-z` não faz nada. A edição Community não tem o plugin de
-PHP (só PhpStorm ou Ultimate): serve para Java/Kotlin; para PHP use
-o 11 ou o 10. Anota os snaps que já existiam; o `-z` remove o snap
-do IntelliJ e os que vieram junto com ele (`core22`, `snapd`...), na
-ordem que o snapd aceita, e o pacote snapd, tudo só se o script
-instalou.
+Opcional, interface gráfica, fora do 00. Instala o IntelliJ IDEA com
+`snap install intellij-idea --classic` (o produto único da JetBrains
+desde o 2025.3; e o snapd, se faltar, rastreado). Com
+`INTELLIJ_EDITION=community` na frente, instala o
+`intellij-idea-community`. Até o 2025.2 ele era a Community (Java e
+Kotlin, sem PHP); no 2026.3 o snap traz o mesmo produto único do
+`intellij-idea` (`productCode` IU, configuração em
+`~/.config/JetBrains/IntelliJIdea2026.3`), conferido na VM.
+
+Antes de instalar, procura um IntelliJ IDEA já presente, de qualquer
+origem (função `intellij_detect` do `common.sh`): snaps
+`intellij-idea`, `-ultimate`, `-community` e `-educational`; JetBrains
+Toolbox (`~/.local/share/JetBrains/Toolbox/apps/*`); tarball
+(`/opt/idea*`, `~/idea*`, `idea` ou `idea.sh` no PATH); flatpak
+(`com.jetbrains.IntelliJ-IDEA-*`). Cada instalação é lida do seu
+`product-info.json` (produto, edição pelo `productCode`, versão,
+diretório de configuração). Se achar, mostra o que achou, não instala
+nada e o `-z` não remove nada.
+
+O suporte a PHP (plugin `com.jetbrains.php`) exige a assinatura paga
+do IntelliJ; estudante tem licença educacional gratuita da JetBrains
+(jetbrains.com/student). O script não embute licença nem conta: o
+login é feito no próprio IDE, no primeiro uso.
+
+Com `INTELLIJ_CONFIG=1` na frente, ao final roda o
+`12-1-config-intellij.sh` (seção abaixo). Anota os snaps que já
+existiam; o `-z` remove o snap do IntelliJ e os que vieram junto com
+ele (`core22`, `snapd`...), na ordem que o snapd aceita, e o pacote
+snapd, tudo só se o script instalou. A configuração do 12-1 sai com o
+`-z` do próprio 12-1.
+
+### 12-1-config-intellij.sh
+
+Opcional, fora do 00 (o 12 o chama com `INTELLIJ_CONFIG=1`). Usa o
+IntelliJ que `intellij_detect` achar (o unificado, se houver mais de
+um); sem nenhum, para e diz como instalar. Numa Community (ou
+Educational) avisa que PHP não vai funcionar e segue copiando a
+configuração. Feche o IDE antes de rodar. Faz:
+
+- copia `scripts/files/intellij` (`codestyles`, `fileTemplates`,
+  `keymaps`, `options`, `templates`) para
+  `~/.config/JetBrains/<produto><versão>` (no flatpak,
+  `~/.var/app/<id>/config/JetBrains/...`). Arquivo que já existia e é
+  diferente vai para o estado e volta no `-z`;
+- instala `fonts-jetbrains-mono` (apt, rastreado) se a fonte faltar;
+  sem sudo só avisa, porque o IDE já traz a JetBrains Mono embutida;
+- instala cada ID de `scripts/files/intellij/plugins.txt` com
+  `<IDE> installPlugins <id>` (sem janela). Os bundled respondem
+  "already installed". Sem rede, ou sem versão compatível no
+  marketplace, avisa e segue.
+
+O que vai na configuração (derivada da do Mac do professor, sem
+licença, contas, caminhos pessoais, IA nem plugins fora da lista):
+
+- keymap `TSI34D` (`keymaps/TSI34D.xml`, pai `Default for GNOME`,
+  ativado em `options/linux/keymap.xml`): os atalhos do plugin IJKL que
+  o Mac usava, já convertidos para o Linux. `alt+i/k` sobe e desce,
+  `alt+j/l` palavra anterior e seguinte, `alt+n/m` esquerda e direita,
+  `alt+u/o` início e fim da linha, `alt+w/f` página acima e abaixo
+  (com `shift`, seleciona), `alt+e` amplia a seleção, `alt+h` vai à
+  declaração, `alt+b`/`shift+alt+b` volta e avança, `alt+s` usos,
+  `alt+r` renomeia, `alt+a` realça usos, `alt+y` apaga a linha,
+  `alt+d` apaga até o fim da palavra, `alt+;` apaga, `alt+q` fecha a
+  aba, `alt+'` completa, `ctrl+L` completa a instrução,
+  `alt+,`/`alt+.` método anterior e seguinte,
+  `ctrl+shift+alt+i/k` move a instrução. Os mnemônicos de menu ficam
+  desligados (senão `alt+f` abriria o menu File). Fora: atalhos com
+  `super`, `ctrl+alt+setas`, `alt+F1/F2/F4/F7/F8` (GNOME), as teclas só
+  do Mac e o que colidia com atalhos úteis do Linux (`ctrl+shift+T` é
+  Go to Test, `ctrl+shift+backspace` é Last Edit Location,
+  `ctrl+shift+[`/`]` seleciona bloco). Perde o atalho, por usar
+  `alt+j`: Select Next Occurrence (use `ctrl+alt+shift+J`, todas);
+- tema Darcula (`Islands Darcula`) e esquema de cores Darcula; fonte
+  JetBrains Mono 16, entrelinha 1.5;
+- code style `Default`: PHP no PSR-12 (o preset do IDE) com 4 espaços
+  e margem 130, como o `phpcs.xml` do projeto; HTML com 4 espaços,
+  como as views. O suporte a EditorConfig fica desligado: o
+  `.editorconfig` do projeto põe `indent_size = 2` em tudo, o que
+  quebraria o PSR-12 do phpcs; em troca, o editor garante a quebra de
+  linha no fim do arquivo e tira espaços no fim das linhas alteradas;
+- `.phtml` como PHP (`options/filetypes.xml`);
+- live templates `fw*` (grupo TSI34D, os mesmos atalhos dos snippets
+  do Neovim): `fwcontroller`, `fwindex`, `fwshow`, `fwnew`,
+  `fwcreate`, `fwedit`, `fwupdate`, `fwdestroy`, `fwmodel`,
+  `fwvalidates`, `fwvalida`, `fwbelongsto`, `fwrota`, `fwrotas`,
+  `fwteste`, `fwtget`, `fwtpost`, `fwtesteunit`, `fwcest`,
+  `fwcenario`, `fwinvalid`, `fwcampo`, `fwselect`, `fwform`. Digite o
+  atalho e `Tab`;
+- file templates (New > TSI34D-Controller, TSI34D-Model,
+  TSI34D-Controller-Test, TSI34D-Cest), no estilo de
+  `app/Controllers/Admin/EventsController.php`, `app/Models/Event.php`,
+  `tests/Integration/Controllers/Admin/EventsControllerTest.php` e
+  `tests/Acceptance/admin/events/`;
+- interpretador PHP global `PHP 8.3 (sistema)`, `/usr/bin/php` (o do
+  09), e, para projeto aberto pela primeira vez
+  (`options/project.default.xml`): nível PHP 8.3, phpcs em
+  `vendor/bin/phpcs` com o `phpcs.xml` do projeto, phpstan em
+  `vendor/bin/phpstan` com o `phpstan.neon` (nível 6), as duas
+  inspeções ligadas.
+
+Isso vale só para projeto sem `.idea` (o `.gitignore` do projeto
+ignora a pasta). Num projeto já aberto antes, ou para conferir:
+Settings > PHP (nível 8.3, interpretador), Settings > PHP > Quality
+Tools (PHP_CodeSniffer: `vendor/bin/phpcs`, coding standard Custom,
+`phpcs.xml`; PHPStan: `vendor/bin/phpstan`, `phpstan.neon`) e
+Settings > Editor > Inspections > PHP > Quality tools. Para rodar os
+testes de dentro do IDE (o banco está no compose), troque o
+interpretador por um do Docker Compose: Settings > PHP > CLI
+Interpreter > `...` > `+` > From Docker... > Docker Compose,
+arquivo `docker-compose.yml` do projeto, serviço `php_test` (ou
+`php`). O caminho do compose é do projeto de cada um, por isso não vai
+na configuração global. Os testes também rodam no terminal do IDE:
+`./run test`.
+
+Não vai: Catppuccin (tema não é essencial), o plugin IJKL (os atalhos
+já estão no keymap; instalado, ele regrava os atalhos que o TSI34D
+tirou por conflito), Pest (o projeto usa PHPUnit e Codeception) e um
+`settings.zip` (a cópia direta no diretório de configuração dispensa o
+import; o keymap é do Linux). A lista de plugins, com o motivo de cada
+um e quais já vêm no IDE, está em `scripts/files/intellij/plugins.txt`.
+
+O `-z` remove os plugins que instalou (o diretório
+`~/.local/share/JetBrains/<produto><versão>` inteiro, se não existia),
+devolve os arquivos de configuração guardados (ou apaga o diretório
+de configuração, se o script o criou: o login e os ajustes feitos no
+IDE depois saem junto), o cache do IDE e `~/.java` criados pela
+execução do `installPlugins` e a fonte, se a instalou. O estado fica
+em `1-config-intellij.state` (o `common.sh` tira só o `12-`).
 
 ### 13-setup-docker-rootless.sh
 

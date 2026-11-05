@@ -1,0 +1,16 @@
+<application>
+  <component name="DefaultFont">
+    <option name="VERSION" value="1" />
+    <option name="FONT_FAMILY" value="JetBrains Mono" />
+    <option name="FONT_SIZE" value="16" />
+    <option name="FONT_SIZE_2D" value="16.0" />
+    <option name="FONT_REGULAR_SUB_FAMILY" value="SemiBold" />
+    <option name="FONT_BOLD_SUB_FAMILY" value="ExtraBold" />
+    <option name="LINE_SPACING" value="1.5" />
+    <option name="CHARACTER_VARIANTS">
+      <set>
+        <option value="zero" />
+      </set>
+    </option>
+  </component>
+</application>

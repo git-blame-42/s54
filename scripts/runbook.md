@@ -43,9 +43,11 @@ scripts/10-install-neovim.sh
 ```
 
 Opcionais, fora do 00: `scripts/11-install-vscode.sh` (VS Code +
-Intelephense), `scripts/12-install-intellij.sh` (IntelliJ Community,
-sem PHP) e, só se precisar de Docker rootless por outro motivo (o
-framework não roda nele), `scripts/13-setup-docker-rootless.sh`.
+Intelephense), `scripts/12-install-intellij.sh` (IntelliJ IDEA; com
+`INTELLIJ_CONFIG=1`, já roda o `12-1-config-intellij.sh`: keymap,
+PSR-12, templates e plugins; PHP pede licença educacional) e, só se
+precisar de Docker rootless por outro motivo (o framework não roda
+nele), `scripts/13-setup-docker-rootless.sh`.
 
 ## Dia da FVP
 
@@ -76,6 +78,7 @@ scripts/14-fvp-prep.sh -z
 scripts/08-install-eventos-do-campus.sh -z
 scripts/07-test-framework.sh -z     # só se uma execução foi interrompida
 scripts/13-setup-docker-rootless.sh -z   # só se rodou
+scripts/12-1-config-intellij.sh -z       # só se rodou
 scripts/12-install-intellij.sh -z        # só se rodou
 scripts/11-install-vscode.sh -z          # só se rodou
 scripts/06-install-docker.sh -z

@@ -515,3 +515,104 @@ remove_dir_maybe_root() { # dir [imagem]
   fi
   [[ ! -e "$dir" ]] || die "não consegui remover $dir; remova à mão."
 }
+
+# --- IntelliJ IDEA (usado pelo 12 e pelo 12-1) ---------------------------
+
+# Snaps e flatpaks do IntelliJ IDEA que intellij_detect procura.
+IJ_SNAPS=(intellij-idea intellij-idea-ultimate intellij-idea-community
+  intellij-idea-educational)
+IJ_FLATPAKS=(com.jetbrains.IntelliJ-IDEA-Ultimate
+  com.jetbrains.IntelliJ-IDEA-Community)
+
+_ij_field() { # product-info.json campo -> valor (o arquivo tem um por linha)
+  sed -n "s/^ *\"$2\": *\"\([^\"]*\)\".*/\1/p" "$1" | head -n 1
+}
+
+# _ij_emit origem dir binário [base-config base-dados base-cache]
+# Lê dir/product-info.json e imprime uma linha (ver intellij_detect).
+# Ignora o que não for IntelliJ IDEA (PhpStorm etc.) e dir já visto.
+_ij_emit() {
+  local origin="$1" dir="$2" bin="$3" pi code edition data real
+  local cfg="${4:-$HOME/.config/JetBrains}"
+  local dat="${5:-$HOME/.local/share/JetBrains}"
+  local cch="${6:-$HOME/.cache/JetBrains}"
+  pi="$dir/product-info.json"
+  [[ -f "$pi" ]] || return 0
+  real="$(readlink -f "$dir")"
+  [[ " $_IJ_SEEN " == *" $real "* ]] && return 0
+  _IJ_SEEN="$_IJ_SEEN $real"
+  code="$(_ij_field "$pi" productCode)"
+  case "$code" in
+    IU) edition=unificado ;;   # 2025.3+: produto único; antes, Ultimate
+    IC) edition=community ;;
+    IE) edition=educational ;;
+    *) return 0 ;;
+  esac
+  data="$(_ij_field "$pi" dataDirectoryName)"
+  [[ -n "$data" ]] || return 0
+  printf '%s|%s|%s|%s|%s|%s|%s|%s|%s\n' "$origin" \
+    "$(_ij_field "$pi" name)" "$edition" "$(_ij_field "$pi" version)" \
+    "$bin" "$cfg/$data" "$dat/$data" "$cch/$data" "$dir"
+}
+
+_ij_bin() { # dir -> launcher (bin/idea; versões antigas: bin/idea.sh)
+  if [[ -x "$1/bin/idea" ]]; then echo "$1/bin/idea"
+  else echo "$1/bin/idea.sh"; fi
+}
+
+# intellij_detect: lista as instalações do IntelliJ IDEA desta máquina,
+# uma por linha, campos separados por "|":
+#   origem|produto|edição|versão|binário|config|plugins|cache|dir
+# origem: snap:<nome>, toolbox, tarball ou flatpak:<id>. edição:
+# unificado (IU), community (IC) ou educational (IE). config, plugins e
+# cache: ~/.config, ~/.local/share e ~/.cache /JetBrains/<produto><versão>
+# (no flatpak, em ~/.var/app/<id>/...). binário: o launcher (no flatpak,
+# "flatpak run <id>"). Não imprime nada se não achar.
+intellij_detect() {
+  local s d b id loc
+  _IJ_SEEN=""
+  if command -v snap >/dev/null 2>&1; then
+    for s in "${IJ_SNAPS[@]}"; do
+      snap list "$s" >/dev/null 2>&1 || continue
+      _ij_emit "snap:$s" "/snap/$s/current" "/snap/bin/$s"
+    done
+  fi
+  # Toolbox 2.x: apps/<nome>/; 1.x: apps/<nome>/ch-0/<build>/.
+  for d in "$HOME"/.local/share/JetBrains/Toolbox/apps/*/ \
+      "$HOME"/.local/share/JetBrains/Toolbox/apps/*/*/*/; do
+    [[ -f "$d/product-info.json" ]] || continue
+    d="${d%/}"
+    _ij_emit toolbox "$d" "$(_ij_bin "$d")"
+  done
+  for d in /opt/idea*/ /opt/intellij*/ "$HOME"/idea*/; do
+    [[ -f "$d/product-info.json" ]] || continue
+    d="${d%/}"
+    _ij_emit tarball "$d" "$(_ij_bin "$d")"
+  done
+  for s in idea idea.sh; do
+    b="$(command -v "$s" 2>/dev/null)" || continue
+    d="$(dirname "$(dirname "$(readlink -f "$b")")")"
+    _ij_emit tarball "$d" "$(_ij_bin "$d")"
+  done
+  if command -v flatpak >/dev/null 2>&1; then
+    for id in "${IJ_FLATPAKS[@]}"; do
+      loc="$(flatpak info --show-location "$id" 2>/dev/null)" || continue
+      for d in "$loc"/files/extra/*/ "$loc"/files/extra/ "$loc"/files/*/; do
+        [[ -f "$d/product-info.json" ]] || continue
+        _ij_emit "flatpak:$id" "${d%/}" "flatpak run $id" \
+          "$HOME/.var/app/$id/config/JetBrains" \
+          "$HOME/.var/app/$id/data/JetBrains" \
+          "$HOME/.var/app/$id/cache/JetBrains"
+        break
+      done
+    done
+  fi
+  return 0
+}
+
+# intellij_describe linha -> "produto versão (edição, origem)"
+intellij_describe() {
+  local origin name edition ver
+  IFS='|' read -r origin name edition ver _ <<<"$1"
+  echo "$name $ver ($edition, $origin)"
+}

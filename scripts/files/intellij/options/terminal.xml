@@ -1,0 +1,6 @@
+<application>
+  <component name="TerminalOptionsProvider">
+    <option name="commandCompletionShowingMode" value="ALWAYS" />
+    <option name="myCopyOnSelection" value="true" />
+  </component>
+</application>

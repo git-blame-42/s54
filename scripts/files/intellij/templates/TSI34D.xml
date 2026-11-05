@@ -1,0 +1,241 @@
+<templateSet group="TSI34D">
+  <template name="fwcontroller" value="&lt;?php&#10;&#10;namespace App\Controllers\$P1$;&#10;&#10;use App\Models\$P2$;&#10;use Core\Http\Controllers\Controller;&#10;use Core\Http\Request;&#10;use Lib\FlashMessage;&#10;&#10;class $P3$Controller extends Controller&#10;{&#10;    public function index(Request $$request): void&#10;    {&#10;        $$$P4$ = $P2$::all();&#10;&#10;        $$title = &#x27;$P5$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/index&#x27;, compact(&#x27;$P4$&#x27;, &#x27;title&#x27;));&#10;    }&#10;&#10;    public function show(Request $$request): void&#10;    {&#10;        $$$P7$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;        if ($$$P7$ === null) {&#10;            FlashMessage::danger(&#x27;$P8$ não encontrado!&#x27;);&#10;            $$this-&gt;redirectTo(route(&#x27;$P9$.index&#x27;));&#10;            return;&#10;        }&#10;&#10;        $$title = &#x27;$P8$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/show&#x27;, compact(&#x27;$P7$&#x27;, &#x27;title&#x27;));&#10;    }&#10;&#10;    public function new(): void&#10;    {&#10;        $$$P7$ = new $P2$();&#10;&#10;        $$title = &#x27;Novo $P8$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/new&#x27;, compact(&#x27;$P7$&#x27;, &#x27;title&#x27;));&#10;    }&#10;&#10;    public function create(Request $$request): void&#10;    {&#10;        $$$P7$ = new $P2$($$request-&gt;getParam(&#x27;$P7$&#x27;, []));&#10;&#10;        if ($$$P7$-&gt;save()) {&#10;            FlashMessage::success(&#x27;$P8$ cadastrado com sucesso!&#x27;);&#10;            $$this-&gt;redirectTo(route(&#x27;$P9$.show&#x27;, [&#x27;id&#x27; =&gt; $$$P7$-&gt;id]));&#10;        } else {&#10;            FlashMessage::danger(&#x27;Existem dados incorretos! Por favor, verifique!&#x27;);&#10;            $$title = &#x27;Novo $P8$&#x27;;&#10;            $$this-&gt;render(&#x27;$P6$/new&#x27;, compact(&#x27;$P7$&#x27;, &#x27;title&#x27;));&#10;        }&#10;    }&#10;&#10;    public function edit(Request $$request): void&#10;    {&#10;        $$$P7$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;        if ($$$P7$ === null) {&#10;            FlashMessage::danger(&#x27;$P8$ não encontrado!&#x27;);&#10;            $$this-&gt;redirectTo(route(&#x27;$P9$.index&#x27;));&#10;            return;&#10;        }&#10;&#10;        $$title = &#x27;Editar $P8$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/edit&#x27;, compact(&#x27;$P7$&#x27;, &#x27;title&#x27;));&#10;    }&#10;&#10;    public function update(Request $$request): void&#10;    {&#10;        $$$P7$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;        if ($$$P7$ === null) {&#10;            FlashMessage::danger(&#x27;$P8$ não encontrado!&#x27;);&#10;            $$this-&gt;redirectTo(route(&#x27;$P9$.index&#x27;));&#10;            return;&#10;        }&#10;        foreach ($$request-&gt;getParam(&#x27;$P7$&#x27;, []) as $$field =&gt; $$value) {&#10;            $$$P7$-&gt;$$field = $$value;&#10;        }&#10;&#10;        if ($$$P7$-&gt;save()) {&#10;            FlashMessage::success(&#x27;$P8$ atualizado com sucesso!&#x27;);&#10;            $$this-&gt;redirectTo(route(&#x27;$P9$.show&#x27;, [&#x27;id&#x27; =&gt; $$$P7$-&gt;id]));&#10;        } else {&#10;            FlashMessage::danger(&#x27;Existem dados incorretos! Por favor, verifique!&#x27;);&#10;            $$title = &#x27;Editar $P8$&#x27;;&#10;            $$this-&gt;render(&#x27;$P6$/edit&#x27;, compact(&#x27;$P7$&#x27;, &#x27;title&#x27;));&#10;        }&#10;    }&#10;&#10;    public function destroy(Request $$request): void&#10;    {&#10;        $$$P7$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;        if ($$$P7$ !== null &amp;&amp; $$$P7$-&gt;destroy()) {&#10;            FlashMessage::success(&#x27;$P8$ removido com sucesso!&#x27;);&#10;        } else {&#10;            FlashMessage::danger(&#x27;Não foi possível remover!&#x27;);&#10;        }&#10;&#10;        $$this-&gt;redirectTo(route(&#x27;$P9$.index&#x27;));&#10;    }&#10;}" description="fw: controller RESTful completo (index/new/create/show/edit/update/destroy)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;Admin&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Events&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Eventos&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P7" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P8" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P9" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwindex" value="public function index(Request $$request): void&#10;{&#10;    $$paginator = $P1$::paginate(&#10;        page: max(1, (int) $$request-&gt;getParam(&#x27;page&#x27;, 1)),&#10;        per_page: $P2$,&#10;        route: &#x27;$P3$.paginate&#x27;&#10;    );&#10;    $$$P4$ = $$paginator-&gt;registers();&#10;&#10;    $$title = &#x27;$P5$&#x27;;&#10;    $$this-&gt;render(&#x27;$P6$/index&#x27;, compact(&#x27;$P4$&#x27;, &#x27;paginator&#x27;, &#x27;title&#x27;));&#10;}" description="fw: ação index (lista paginada)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;5&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Eventos&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwshow" value="public function show(Request $$request): void&#10;{&#10;    $$$P1$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;    if ($$$P1$ === null) {&#10;        FlashMessage::danger(&#x27;$P3$ não encontrado!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.index&#x27;));&#10;        return;&#10;    }&#10;&#10;    $$title = htmlspecialchars($$$P1$-&gt;$P5$);&#10;    $$this-&gt;render(&#x27;$P6$/show&#x27;, compact(&#x27;$P1$&#x27;, &#x27;title&#x27;));&#10;}" description="fw: ação show (um registro pelo id)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;title&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwnew" value="public function new(): void&#10;{&#10;    $$$P1$ = new $P2$();&#10;&#10;    $$title = &#x27;$P3$&#x27;;&#10;    $$this-&gt;render(&#x27;$P4$/new&#x27;, compact(&#x27;$P1$&#x27;, &#x27;title&#x27;));&#10;}" description="fw: ação new (formulário vazio)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Novo Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwcreate" value="public function create(Request $$request): void&#10;{&#10;    $$$P1$ = new $P2$($$request-&gt;getParam(&#x27;$P1$&#x27;, []));&#10;&#10;    if ($$$P1$-&gt;save()) {&#10;        FlashMessage::success(&#x27;$P3$ cadastrado com sucesso!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.show&#x27;, [&#x27;id&#x27; =&gt; $$$P1$-&gt;id]));&#10;    } else {&#10;        FlashMessage::danger(&#x27;Existem dados incorretos! Por favor, verifique!&#x27;);&#10;        $$title = &#x27;$P5$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/new&#x27;, compact(&#x27;$P1$&#x27;, &#x27;title&#x27;));&#10;    }&#10;}" description="fw: ação create (save, flash, redirect ou render do new)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Novo Evento&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwedit" value="public function edit(Request $$request): void&#10;{&#10;    $$$P1$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;    if ($$$P1$ === null) {&#10;        FlashMessage::danger(&#x27;$P3$ não encontrado!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.index&#x27;));&#10;        return;&#10;    }&#10;&#10;    $$title = &#x27;$P5$&#x27;;&#10;    $$this-&gt;render(&#x27;$P6$/edit&#x27;, compact(&#x27;$P1$&#x27;, &#x27;title&#x27;));&#10;}" description="fw: ação edit (formulário preenchido)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Editar Evento&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwupdate" value="public function update(Request $$request): void&#10;{&#10;    $$$P1$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;    if ($$$P1$ === null) {&#10;        FlashMessage::danger(&#x27;$P3$ não encontrado!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.index&#x27;));&#10;        return;&#10;    }&#10;    foreach ($$request-&gt;getParam(&#x27;$P1$&#x27;, []) as $$field =&gt; $$value) {&#10;        $$$P1$-&gt;$$field = $$value;&#10;    }&#10;&#10;    if ($$$P1$-&gt;save()) {&#10;        FlashMessage::success(&#x27;$P3$ atualizado com sucesso!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.show&#x27;, [&#x27;id&#x27; =&gt; $$$P1$-&gt;id]));&#10;    } else {&#10;        FlashMessage::danger(&#x27;Existem dados incorretos! Por favor, verifique!&#x27;);&#10;        $$title = &#x27;$P5$&#x27;;&#10;        $$this-&gt;render(&#x27;$P6$/edit&#x27;, compact(&#x27;$P1$&#x27;, &#x27;title&#x27;));&#10;    }&#10;}" description="fw: ação update (save, flash, redirect ou render do edit)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Editar Evento&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwdestroy" value="public function destroy(Request $$request): void&#10;{&#10;    $$$P1$ = $P2$::findById((int) $$request-&gt;getParam(&#x27;id&#x27;));&#10;    if ($$$P1$ === null) {&#10;        FlashMessage::danger(&#x27;$P3$ não encontrado!&#x27;);&#10;        $$this-&gt;redirectTo(route(&#x27;$P4$.index&#x27;));&#10;        return;&#10;    }&#10;&#10;    if ($$$P1$-&gt;destroy()) {&#10;        FlashMessage::success(&#x27;$P3$ removido com sucesso!&#x27;);&#10;    } else {&#10;        FlashMessage::danger(&#x27;Não foi possível remover!&#x27;);&#10;    }&#10;&#10;    $$this-&gt;redirectTo(route(&#x27;$P4$.index&#x27;));&#10;}" description="fw: ação destroy (remove e volta para o index)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Evento&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwmodel" value="&lt;?php&#10;&#10;namespace App\Models;&#10;&#10;use Core\Database\ActiveRecord\Model;&#10;use Lib\Validations;&#10;&#10;/**&#10; * @property int $$id&#10; * @property string $$$P3$&#10; */&#10;class $P1$ extends Model&#10;{&#10;    protected static string $$table = &#x27;$P2$&#x27;;&#10;    protected static array $$columns = [&#10;        &#x27;$P3$&#x27;,&#10;    ];&#10;&#10;    public function validates(): void&#10;    {&#10;        Validations::notEmpty(&#x27;$P3$&#x27;, $$this);&#10;        $END$&#10;    }&#10;}" description="fw: model (ActiveRecord) com @property, $table, $columns e validates()" toReformat="false" toShortenFQNames="false">
+    <variable name="P3" expression="" defaultValue="&quot;title&quot;" alwaysStopAt="true" />
+    <variable name="P1" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwvalidates" value="public function validates(): void&#10;{&#10;    Validations::notEmpty(&#x27;$P1$&#x27;, $$this);&#10;    Validations::$P2$(&#x27;$P3$&#x27;, $$this$P4$);&#10;    $END$&#10;}" description="fw: método validates() com Validations::*" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;title&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="enum(&quot;notEmpty&quot;,&quot;inclusion&quot;,&quot;inclusionOfAll&quot;,&quot;integerMin&quot;,&quot;validDate&quot;,&quot;notPastDate&quot;,&quot;uniqueness&quot;,&quot;passwordConfirmation&quot;)" defaultValue="&quot;notEmpty&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;kind&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwvalida" value="Validations::notEmpty(&#x27;$P1$&#x27;, $$this) &amp;&amp;&#10;    Validations::$P2$(&#x27;$P1$&#x27;, $$this, array_keys(self::$P3$));" description="fw: uma linha Validations::* (notEmpty &amp;&amp; regra)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;kind&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="enum(&quot;inclusion&quot;,&quot;inclusionOfAll&quot;)" defaultValue="&quot;inclusion&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;KINDS&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwbelongsto" value="public function $P1$(): BelongsTo&#10;{&#10;    return $$this-&gt;belongsTo($P2$::class, &#x27;$P3$&#x27;);&#10;}" description="fw: associação belongsTo" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;user&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;User&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;user_id&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwrota" value="Route::$P1$(&#x27;/$P2$&#x27;, [$P3$::class, &#x27;$P4$&#x27;])-&gt;name(&#x27;$P5$&#x27;);" description="fw: rota Route::get/post/put/delete(...)-&gt;name(...)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="enum(&quot;get&quot;,&quot;post&quot;,&quot;put&quot;,&quot;delete&quot;)" defaultValue="&quot;get&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;AdminEventsController&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;index&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;admin.events.index&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwrotas" value="Route::get(&#x27;/$P1$&#x27;, [$P2$::class, &#x27;index&#x27;])-&gt;name(&#x27;$P3$.index&#x27;);&#10;Route::get(&#x27;/$P1$/page/{page}&#x27;, [$P2$::class, &#x27;index&#x27;])&#10;    -&gt;name(&#x27;$P3$.paginate&#x27;);&#10;Route::get(&#x27;/$P1$/new&#x27;, [$P2$::class, &#x27;new&#x27;])-&gt;name(&#x27;$P3$.new&#x27;);&#10;Route::post(&#x27;/$P1$&#x27;, [$P2$::class, &#x27;create&#x27;])-&gt;name(&#x27;$P3$.create&#x27;);&#10;Route::get(&#x27;/$P1$/{id}&#x27;, [$P2$::class, &#x27;show&#x27;])-&gt;name(&#x27;$P3$.show&#x27;);&#10;Route::get(&#x27;/$P1$/{id}/edit&#x27;, [$P2$::class, &#x27;edit&#x27;])-&gt;name(&#x27;$P3$.edit&#x27;);&#10;Route::put(&#x27;/$P1$/{id}&#x27;, [$P2$::class, &#x27;update&#x27;])-&gt;name(&#x27;$P3$.update&#x27;);&#10;Route::delete(&#x27;/$P1$/{id}&#x27;, [$P2$::class, &#x27;destroy&#x27;])&#10;    -&gt;name(&#x27;$P3$.destroy&#x27;);" description="fw: as 8 rotas RESTful de um recurso (&#x27;new&#x27; antes de &#x27;{id}&#x27;)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;AdminEventsController&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwteste" value="&lt;?php&#10;&#10;namespace Tests\Integration\Controllers\$P1$;&#10;&#10;use App\Models\User;&#10;use Lib\Authentication\Auth;&#10;use Tests\Integration\Controllers\ControllerTestCase;&#10;&#10;class $P2$ControllerTest extends ControllerTestCase&#10;{&#10;    private const CONTROLLER = &#x27;App\Controllers\$P1$\$P2$Controller&#x27;;&#10;&#10;    private User $$admin;&#10;&#10;    public function setUp(): void&#10;    {&#10;        parent::setUp();&#10;        $$_SESSION[&#x27;flash&#x27;] = [];&#10;&#10;        $$this-&gt;admin = new User([&#10;            &#x27;name&#x27; =&gt; &#x27;Admin&#x27;,&#10;            &#x27;email&#x27; =&gt; &#x27;admin@example.com&#x27;,&#10;            &#x27;password&#x27; =&gt; &#x27;123456&#x27;,&#10;            &#x27;password_confirmation&#x27; =&gt; &#x27;123456&#x27;,&#10;            &#x27;role&#x27; =&gt; &#x27;admin&#x27;&#10;        ]);&#10;        $$this-&gt;admin-&gt;save();&#10;        Auth::login($$this-&gt;admin);&#10;    }&#10;&#10;    public function tearDown(): void&#10;    {&#10;        unset($$_SESSION[&#x27;flash&#x27;]);&#10;        parent::tearDown();&#10;    }&#10;&#10;    public function test_$P3$(): void&#10;    {&#10;        $$response = $$this-&gt;get(action: &#x27;$P4$&#x27;, controllerName: self::CONTROLLER);&#10;&#10;        $$this-&gt;assertStringContainsString(&#x27;$P5$&#x27;, $$response);&#10;        $END$&#10;    }&#10;}" description="fw: teste de controller (Integration, ControllerTestCase, login de admin)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;Admin&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Events&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;index_renders_list&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;index&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Eventos&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwtget" value="public function test_$P1$(): void&#10;{&#10;    $$response = $$this-&gt;get(action: &#x27;$P2$&#x27;, controllerName: self::CONTROLLER, params: [&#x27;id&#x27; =&gt; $P3$]);&#10;&#10;    $$this-&gt;assertStringContainsString(&#x27;$P4$&#x27;, $$response);&#10;    $END$&#10;}" description="fw: método de teste de controller com get()" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;show_renders_event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;show&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;$event-&gt;id&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;texto&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwtpost" value="public function test_$P1$(): void&#10;{&#10;    $$response = $$this-&gt;post(&#10;        action: &#x27;$P2$&#x27;,&#10;        controllerName: self::CONTROLLER,&#10;        params: [&#x27;$P3$&#x27; =&gt; [$P4$]]&#10;    );&#10;&#10;    $$this-&gt;assertSame(&#x27;Location: $P5$&#x27;, $$response);&#10;    $$this-&gt;assertEquals(&#x27;$P6$&#x27;, $$_SESSION[&#x27;flash&#x27;][&#x27;success&#x27;]);&#10;    $END$&#10;}" description="fw: método de teste de controller com post() e redirect" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;create_with_valid_data_saves&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;create&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;&#x27;title&#x27; =&gt; &#x27;Oficina de Testes&#x27;&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;/admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;Evento cadastrado com sucesso!&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwtesteunit" value="&lt;?php&#10;&#10;namespace Tests\Unit\Models\$P1$;&#10;&#10;use App\Models\$P2$;&#10;use Tests\TestCase;&#10;&#10;class $P2$Test extends TestCase&#10;{&#10;    public function test_$P3$(): void&#10;    {&#10;        $$$P4$ = new $P2$([$P5$]);&#10;&#10;        $$this-&gt;assertFalse($$$P4$-&gt;save());&#10;        $$this-&gt;assertNotNull($$$P4$-&gt;errors(&#x27;$P6$&#x27;));&#10;        $END$&#10;    }&#10;}" description="fw: teste unitário de model (tests/Unit/Models/...)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;Events&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;should_not_save_with_empty_title&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;&#x27;title&#x27; =&gt; &#x27;&#x27;&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;title&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwcest" value="&lt;?php&#10;&#10;namespace Tests\Acceptance\$P1$;&#10;&#10;use Tests\Support\AcceptanceTester;&#10;&#10;class $P2$Cest extends $P3$&#10;{&#10;    public function $P4$(AcceptanceTester $$page): void&#10;    {&#10;        $$page-&gt;wantTo(&#x27;$P5$&#x27;);&#10;        $$page-&gt;amOnPage(&#x27;$P6$&#x27;);&#10;        $$page-&gt;see(&#x27;$P7$&#x27;, &#x27;h1&#x27;);&#10;        $END$&#10;    }&#10;}" description="fw: Cest de aceitação (tests/Acceptance/..., Codeception)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;admin\events&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;ListEvents&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;BaseEventsCest&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;listEvents&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Ver a listagem de Eventos&quot;" alwaysStopAt="true" />
+    <variable name="P6" expression="" defaultValue="&quot;/admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P7" expression="" defaultValue="&quot;Eventos&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwcenario" value="public function $P1$(AcceptanceTester $$page): void&#10;{&#10;    $$page-&gt;wantTo(&#x27;$P2$&#x27;);&#10;    $$page-&gt;amOnPage(&#x27;$P3$&#x27;);&#10;    $$page-&gt;click(&#x27;$P4$&#x27;);&#10;    $$page-&gt;see(&#x27;$P5$&#x27;, &#x27;h1&#x27;);&#10;    $END$&#10;}" description="fw: método de cenário num Cest" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;createSuccessfully&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;descrição do cenário&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;/admin/events&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;Novo Evento&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;Novo Evento&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+    </context>
+  </template>
+  <template name="fwinvalid" value="$$invalid = fn(string $$field): string =&gt; $$$P1$-&gt;errors($$field) !== null ? &#x27; is-invalid&#x27; : &#x27;&#x27;;&#10;$$feedback = fn(string $$field, string $$extra = &#x27;&#x27;): string =&gt; $$$P1$-&gt;errors($$field) !== null&#10;    ? &#x27;&lt;div class=&quot;invalid-feedback&#x27; . $$extra . &#x27;&quot;&gt;&#x27; . htmlspecialchars($$$P1$-&gt;errors($$field)) . &#x27;&lt;/div&gt;&#x27;&#10;    : &#x27;&#x27;;" description="fw: closures $invalid/$feedback do topo de um _form.phtml" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+      <option name="HTML" value="true" />
+    </context>
+  </template>
+  <template name="fwcampo" value="&lt;div class=&quot;mb-3&quot;&gt;&#10;    &lt;label for=&quot;$P1$_$P2$&quot; class=&quot;form-label&quot;&gt;$P3$&lt;/label&gt;&#10;    &lt;input type=&quot;$P4$&quot; class=&quot;form-control&lt;?= $$invalid(&#x27;$P2$&#x27;) ?&gt;&quot; id=&quot;$P1$_$P2$&quot; name=&quot;$P1$[$P2$]&quot;&#10;        value=&quot;&lt;?= htmlspecialchars((string) $$$P1$-&gt;$P2$) ?&gt;&quot;&gt;&#10;    &lt;?= $$feedback(&#x27;$P2$&#x27;) ?&gt;&#10;&lt;/div&gt;" description="fw: campo de formulário .phtml com $invalid/$feedback (Bootstrap)" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;title&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Título&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="enum(&quot;text&quot;,&quot;number&quot;,&quot;date&quot;,&quot;email&quot;,&quot;password&quot;)" defaultValue="&quot;text&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+      <option name="HTML" value="true" />
+    </context>
+  </template>
+  <template name="fwselect" value="&lt;div class=&quot;mb-3&quot;&gt;&#10;    &lt;label for=&quot;$P1$_$P2$&quot; class=&quot;form-label&quot;&gt;$P3$&lt;/label&gt;&#10;    &lt;select class=&quot;form-select&lt;?= $$invalid(&#x27;$P2$&#x27;) ?&gt;&quot; id=&quot;$P1$_$P2$&quot; name=&quot;$P1$[$P2$]&quot;&gt;&#10;        &lt;option value=&quot;&quot;&gt;Selecione&lt;/option&gt;&#10;        &lt;?php foreach ($P4$::$P5$ as $$value =&gt; $$label) : ?&gt;&#10;            &lt;option value=&quot;&lt;?= $$value ?&gt;&quot; &lt;?= $$$P1$-&gt;$P2$ === $$value ? &#x27;selected&#x27; : &#x27;&#x27; ?&gt;&gt;&lt;?= $$label ?&gt;&lt;/option&gt;&#10;        &lt;?php endforeach; ?&gt;&#10;    &lt;/select&gt;&#10;    &lt;?= $$feedback(&#x27;$P2$&#x27;) ?&gt;&#10;&lt;/div&gt;" description="fw: select .phtml com opções de uma constante do model" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="" defaultValue="&quot;kind&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;Tipo&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="" defaultValue="&quot;Event&quot;" alwaysStopAt="true" />
+    <variable name="P5" expression="" defaultValue="&quot;KINDS&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+      <option name="HTML" value="true" />
+    </context>
+  </template>
+  <template name="fwform" value="&lt;?php&#10;$$action = route(&#x27;$P1$.$P2$&#x27;$P3$);&#10;$$isUpdate = $P4$;&#10;require __DIR__ . &#x27;/_form.phtml&#x27;;" description="fw: view new/edit que inclui o _form.phtml" toReformat="false" toShortenFQNames="false">
+    <variable name="P1" expression="" defaultValue="&quot;admin.events&quot;" alwaysStopAt="true" />
+    <variable name="P2" expression="enum(&quot;create&quot;,&quot;update&quot;)" defaultValue="&quot;create&quot;" alwaysStopAt="true" />
+    <variable name="P3" expression="" defaultValue="&quot;, [&#x27;id&#x27; =&gt; $event-&gt;id]&quot;" alwaysStopAt="true" />
+    <variable name="P4" expression="enum(&quot;false&quot;,&quot;true&quot;)" defaultValue="&quot;false&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="PHP" value="true" />
+      <option name="HTML" value="true" />
+    </context>
+  </template>
+</templateSet>

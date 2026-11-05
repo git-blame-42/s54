@@ -1,0 +1,36 @@
+<application>
+  <component name="ProjectManager">
+    <defaultProject>
+      <component name="PhpProjectSharedConfiguration" php_language_level="8.3" />
+      <component name="PhpWorkspaceProjectConfiguration" interpreter_name="PHP 8.3 (sistema)" />
+      <component name="PhpCodeSniffer">
+        <phpcs_settings>
+          <PhpCSConfiguration tool_path="$PROJECT_DIR$/vendor/bin/phpcs" beautifier_path="$PROJECT_DIR$/vendor/bin/phpcbf" />
+        </phpcs_settings>
+      </component>
+      <component name="PHPCodeSnifferOptionsConfiguration">
+        <option name="codingStandard" value="Custom" />
+        <option name="customRuleset" value="$PROJECT_DIR$/phpcs.xml" />
+        <option name="extensions" value="php" />
+        <option name="transferred" value="true" />
+      </component>
+      <component name="PhpStan">
+        <PhpStan_settings>
+          <PhpStanConfiguration tool_path="$PROJECT_DIR$/vendor/bin/phpstan" />
+        </PhpStan_settings>
+      </component>
+      <component name="PhpStanOptionsConfiguration">
+        <option name="config" value="$PROJECT_DIR$/phpstan.neon" />
+        <option name="level" value="6" />
+        <option name="transferred" value="true" />
+      </component>
+      <component name="InspectionProjectProfileManager">
+        <profile version="1.0">
+          <option name="myName" value="Project Default" />
+          <inspection_tool class="PhpCSValidationInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
+          <inspection_tool class="PhpStanGlobalInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+        </profile>
+      </component>
+    </defaultProject>
+  </component>
+</application>

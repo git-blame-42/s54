@@ -1,23 +1,44 @@
 #!/usr/bin/env bash
-# 12-install-intellij.sh: IntelliJ IDEA Community (snap). Opcional.
+# 12-install-intellij.sh: IntelliJ IDEA (snap). Opcional.
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-SNAP=intellij-idea-community
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INTELLIJ_EDITION="${INTELLIJ_EDITION:-}"
+INTELLIJ_CONFIG="${INTELLIJ_CONFIG:-0}"
+case "$INTELLIJ_EDITION" in
+  ''|unificado) SNAP=intellij-idea ;;
+  community)    SNAP=intellij-idea-community ;;
+  *) die "INTELLIJ_EDITION=$INTELLIJ_EDITION inválido (use community" \
+    "ou deixe vazio)." ;;
+esac
 
 usage() {
   cat <<USAGE
 uso: $(basename "$0") [-h] [-z]
 
 Opcional (interface gráfica; fora do 00-run-all.sh). Instala o
-IntelliJ IDEA Community com "snap install $SNAP --classic"
-(e o snapd, se faltar). Se já houver "idea" ou
-"$SNAP" no PATH, o snap instalado ou o JetBrains
-Toolbox em ~/.local/share/JetBrains/Toolbox, não instala nada.
+IntelliJ IDEA com "snap install $SNAP --classic" (e o snapd, se
+faltar). Antes procura um IntelliJ já instalado, de qualquer origem:
+snap (intellij-idea, -ultimate, -community, -educational), JetBrains
+Toolbox (~/.local/share/JetBrains/Toolbox/apps), tarball (/opt/idea*,
+~/idea*, idea ou idea.sh no PATH) ou flatpak. Se achar, mostra
+produto, edição, versão e origem e não instala nada (o -z também não
+remove).
 
-Atenção: a edição Community não tem o plugin de PHP (só PhpStorm ou
-Ultimate). Serve para Java/Kotlin e edição genérica. Para PHP use o
-11 (VS Code + Intelephense) ou o 10 (Neovim).
+O padrão é o snap intellij-idea, o produto único da JetBrains desde o
+2025.3. O suporte a PHP (plugin com.jetbrains.php, que o
+12-1-config-intellij.sh instala) exige a assinatura paga; estudante
+tem licença educacional gratuita da JetBrains (jetbrains.com/student).
+Este script não embute licença nem conta: o login é feito no IDE.
+
+Variáveis:
+  INTELLIJ_EDITION=community  instala o intellij-idea-community. Até o
+                              2025.2 era a Community (sem PHP); no
+                              2026.3 o snap já traz o produto único
+                              (productCode IU), igual ao intellij-idea
+  INTELLIJ_CONFIG=1           ao final, roda o 12-1-config-intellij.sh
+                              (keymap, tema, PSR-12, templates, plugins)
 
   -h  mostra esta ajuda
   -z  desfaz: remove o snap do IntelliJ, os snaps que vieram junto
@@ -50,11 +71,22 @@ remove_snaps() { # nomes...
   done
 }
 
-idea_present() {
-  command -v idea >/dev/null 2>&1 \
-    || command -v "$SNAP" >/dev/null 2>&1 \
-    || snap list "$SNAP" >/dev/null 2>&1 \
-    || [[ -d "$HOME/.local/share/JetBrains/Toolbox" ]]
+# Mostra as instalações do IntelliJ que já existem. Retorna 1 se não há.
+report_existing() {
+  local line found=1
+  while IFS= read -r line; do
+    [[ -n "$line" ]] || continue
+    ok "já instalado: $(intellij_describe "$line")"
+    info "    binário: $(cut -d'|' -f5 <<<"$line")"
+    found=0
+  done < <(intellij_detect)
+  return "$found"
+}
+
+config_if_asked() {
+  [[ "$INTELLIJ_CONFIG" == 1 ]] || return 0
+  step "INTELLIJ_CONFIG=1: 12-1-config-intellij.sh"
+  "$SCRIPTS_DIR/12-1-config-intellij.sh"
 }
 
 run() {
@@ -62,14 +94,16 @@ run() {
   warn_if_not_ubuntu_2404
   step "Situação atual"
   if [[ -z "$(state_get idea_preexisting)" ]]; then
-    if idea_present; then state_set idea_preexisting 1
+    if report_existing; then state_set idea_preexisting 1
     else state_set idea_preexisting 0; fi
   fi
   if [[ "$(state_get idea_preexisting)" == 1 ]]; then
-    ok "IntelliJ IDEA (ou JetBrains Toolbox) já existe; nada a fazer."
+    ok "IntelliJ IDEA já existe; nada a instalar (o -z não o remove)."
     state_mark_done
+    config_if_asked
     return 0
   fi
+  info "nenhum IntelliJ IDEA encontrado; vou instalar o snap $SNAP"
   require_sudo
   if ! command -v snap >/dev/null 2>&1; then
     step "snapd"
@@ -78,7 +112,8 @@ run() {
     sudo systemctl enable --now snapd.socket >/dev/null 2>&1 || true
     ok "snapd instalado"
   fi
-  if [[ -e "$HOME/snap" ]]; then state_set snap_dir_preexisting 1
+  if [[ -n "$(state_get snap_dir_preexisting)" ]]; then :
+  elif [[ -e "$HOME/snap" ]]; then state_set snap_dir_preexisting 1
   else state_set snap_dir_preexisting 0; fi
   if [[ -z "$(state_get snaps_recorded)" ]]; then
     state_set snaps_before "$(snap_names)"
@@ -90,6 +125,7 @@ run() {
   else
     sudo snap install "$SNAP" --classic
     state_set snap_installed 1
+    state_set snap_name "$SNAP"
   fi
   # Snaps que vieram junto (core22, snapd...): o -z tira também.
   local before s added=""
@@ -104,12 +140,27 @@ run() {
   ok "binário: $(command -v "$SNAP" || echo /snap/bin/$SNAP)"
   state_mark_done
   info
-  info "Pronto. Abra: $SNAP (ou pelo menu). Sem plugin de PHP na Community."
+  info "Pronto. Abra: $SNAP (ou pelo menu)."
+  if grep -q '"productCode": *"IC"' "/snap/$SNAP/current/product-info.json" \
+      2>/dev/null; then
+    info "Edição Community: sem suporte a PHP."
+  else
+    info "PHP: faça login com a licença (educacional) no primeiro uso."
+  fi
+  if [[ "$INTELLIJ_CONFIG" == 1 ]]; then
+    config_if_asked
+  else
+    info "Configuração da disciplina: $SCRIPTS_DIR/12-1-config-intellij.sh"
+  fi
 }
 
 undo() {
   undo_or_nothing
   local pkgs
+  if [[ -f "$S50_STATE_DIR/1-config-intellij.state" ]]; then
+    warn "a configuração do 12-1 continua; para tirá-la:" \
+      "$SCRIPTS_DIR/12-1-config-intellij.sh -z"
+  fi
   if [[ "$(state_get idea_preexisting)" == 1 ]]; then
     info "IntelliJ já existia; este script não instalou nada."
     state_remove
@@ -123,9 +174,12 @@ undo() {
     # shellcheck disable=SC2086  # lista de nomes separada por espaço
     remove_snaps $added
   elif [[ "$(state_get snap_installed)" == 1 ]]; then
-    step "snap remove --purge $SNAP"
+    local name
+    name="$(state_get snap_name)"
+    name="${name:-$SNAP}"
+    step "snap remove --purge $name"
     require_sudo
-    sudo snap remove --purge "$SNAP"
+    sudo snap remove --purge "$name"
     ok "snap removido"
   fi
   if [[ "$(state_get snap_dir_preexisting)" == 0 ]]; then
