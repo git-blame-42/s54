@@ -12,7 +12,7 @@ Branch no clone: `fvp/p20-exportar-ical`, a partir de `main`
 
 | Commit    | Mensagem                                       |
 |-----------|------------------------------------------------|
-| `5b8bd8c` | `feat: Export an Event as an iCalendar file`   |
+| `f1d54d6` | `feat: Export an Event as an iCalendar file`   |
 
 ## O que mudou
 
@@ -157,7 +157,7 @@ público. `<caminho>` abaixo é `s50/fvp/4.2/exemplos/p20-exportar-ical`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-p20 s50/fvp/4.2/exemplos/p20-exportar-ical/projeto
 git fetch fvp-p20 fvp/p20-exportar-ical
-git cherry-pick 5b8bd8c
+git cherry-pick f1d54d6
 git remote remove fvp-p20
 ```
 
@@ -166,7 +166,7 @@ git remote remove fvp-p20
 ```
 git fetch s50/fvp/4.2/exemplos/p20-exportar-ical/solucao.bundle \
     fvp/p20-exportar-ical:fvp-p20
-git cherry-pick 5b8bd8c
+git cherry-pick f1d54d6
 # opcional, limpa a ref
 git branch -D fvp-p20
 ```

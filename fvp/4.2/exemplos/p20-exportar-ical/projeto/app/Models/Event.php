@@ -116,7 +116,7 @@ class Event extends Model
     }
 
     /**
-     * P20: o Evento como arquivo iCalendar (.ics) de um dia inteiro (starts_on). DTEND é o dia
+     * O Evento como arquivo iCalendar (.ics) de um dia inteiro (starts_on). DTEND é o dia
      * seguinte, pois no formato o fim de um evento de dia inteiro é exclusivo.
      */
     public function toICalendar(): string

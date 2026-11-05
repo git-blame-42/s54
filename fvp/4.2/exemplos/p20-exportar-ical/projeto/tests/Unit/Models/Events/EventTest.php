@@ -297,7 +297,7 @@ class EventTest extends TestCase
         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
     }
 
-    /* ------------------- P20: iCalendar ------------------- */
+    /* ------------------- iCalendar ------------------- */
 
     public function test_to_icalendar_should_describe_an_all_day_event(): void
     {

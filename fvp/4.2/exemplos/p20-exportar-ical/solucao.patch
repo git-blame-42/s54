@@ -1,4 +1,4 @@
-From 5b8bd8c1164df5df86611ac82d87457797959625 Mon Sep 17 00:00:00 2001
+From f1d54d6053806582e801ccb2c43abcbb4b5f68ff Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:11:36 -0300
 Subject: [PATCH] feat: Export an Event as an iCalendar file
@@ -24,7 +24,7 @@ GET /admin/events/{id}/ics answers text/calendar with Event::toICalendar(), buil
  create mode 100644 tests/Unit/Lib/ICalendarTest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
-index ca4ada1..104da8e 100644
+index ca4ada1..81f7c54 100644
 --- a/app/Controllers/Admin/EventsController.php
 +++ b/app/Controllers/Admin/EventsController.php
 @@ -38,6 +38,23 @@ class EventsController extends Controller
@@ -32,7 +32,7 @@ index ca4ada1..104da8e 100644
      }
  
 +    /**
-+     * P20: baixa o Evento em iCalendar. Responde com header + echo, sem render() (que poria o
++     * Baixa o Evento em iCalendar. Responde com header + echo, sem render() (que poria o
 +     * layout HTML em volta) e sem exit (o teste de controller precisa que a ação retorne).
 +     */
 +    public function ics(Request $request): void
@@ -52,7 +52,7 @@ index ca4ada1..104da8e 100644
      {
          $event = new Event();
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..31ac403 100644
+index ba66870..bad11d2 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -4,6 +4,7 @@ namespace App\Models;
@@ -68,7 +68,7 @@ index ba66870..31ac403 100644
      }
  
 +    /**
-+     * P20: o Evento como arquivo iCalendar (.ics) de um dia inteiro (starts_on). DTEND é o dia
++     * O Evento como arquivo iCalendar (.ics) de um dia inteiro (starts_on). DTEND é o dia
 +     * seguinte, pois no formato o fim de um evento de dia inteiro é exclusivo.
 +     */
 +    public function toICalendar(): string
@@ -179,7 +179,7 @@ index 0000000..26aabd0
 +}
 diff --git a/tests/Acceptance/admin/events/ExportICalendarCest.php b/tests/Acceptance/admin/events/ExportICalendarCest.php
 new file mode 100644
-index 0000000..ad42b6a
+index 0000000..0662ecb
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/ExportICalendarCest.php
 @@ -0,0 +1,23 @@
@@ -190,7 +190,7 @@ index 0000000..ad42b6a
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P20: botão "Adicionar ao calendário" no show do Evento. O download em si (headers e corpo .ics)
++ * Botão "Adicionar ao calendário" no show do Evento. O download em si (headers e corpo .ics)
 + * é conferido no teste de acesso, porque o Selenium não lê o arquivo baixado.
 + */
 +class ExportICalendarCest extends BaseEventsCest
@@ -360,14 +360,14 @@ index 0000000..695d8c6
 +    }
 +}
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..35aceb9 100644
+index f961b4c..b0dda6e 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -297,6 +297,44 @@ class EventTest extends TestCase
          $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
      }
  
-+    /* ------------------- P20: iCalendar ------------------- */
++    /* ------------------- iCalendar ------------------- */
 +
 +    public function test_to_icalendar_should_describe_an_all_day_event(): void
 +    {

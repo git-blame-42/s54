@@ -39,7 +39,7 @@ class EventsController extends Controller
     }
 
     /**
-     * P20: baixa o Evento em iCalendar. Responde com header + echo, sem render() (que poria o
+     * Baixa o Evento em iCalendar. Responde com header + echo, sem render() (que poria o
      * layout HTML em volta) e sem exit (o teste de controller precisa que a ação retorne).
      */
     public function ics(Request $request): void

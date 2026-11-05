@@ -5,7 +5,7 @@ namespace Tests\Acceptance\admin\events;
 use Tests\Support\AcceptanceTester;
 
 /**
- * P20: botão "Adicionar ao calendário" no show do Evento. O download em si (headers e corpo .ics)
+ * Botão "Adicionar ao calendário" no show do Evento. O download em si (headers e corpo .ics)
  * é conferido no teste de acesso, porque o Selenium não lê o arquivo baixado.
  */
 class ExportICalendarCest extends BaseEventsCest
