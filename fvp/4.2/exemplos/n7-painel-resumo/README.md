@@ -99,9 +99,9 @@ Testes novos:
 
 No navegador, depois do `./run db:populate`, abra `/admin` como
 `admin@example.com`: 16 Eventos, 14 Inscrições; por tipo Palestra 5,
-Oficina 4, Minicurso 4, Semana acadêmica 3 (o catálogo fala em
-4/4/4/4, mas o populate atual tem essa distribuição); próximos: os
-três primeiros do populate (hoje + 14, 15 e 21 dias). Pelo terminal:
+Oficina 4, Minicurso 4, Semana acadêmica 3 (distribuição do populate);
+próximos: os três primeiros do populate (hoje + 14, 15 e 21 dias).
+Pelo terminal:
 
 ```
 docker compose exec web sh -c "curl -s -c /tmp/a \
@@ -120,9 +120,18 @@ docker compose exec web sh -c "curl -s -c /tmp/a \
   `DashboardControllerTest` próprio. Conflito provável no controller,
   na view do painel e no arquivo de teste: junte as variáveis no
   `compact` e os testes no mesmo arquivo.
-- N11 (`n11-model-count`): com `Model::count()` no framework,
-  `Enrollment::total()` vira `Enrollment::count()`; troque e apague o
-  `total()`.
+- N11 (`n11-model-count`): também mexe no painel e conta Eventos. Ele
+  põe `$eventsCount = Event::count()` no `compact` e um badge
+  `#events_count` ao lado do link "Eventos", e cria o seu próprio
+  `DashboardControllerTest.php`. Se os dois forem aplicados:
+  - fique com um total de Eventos só: o cartão `#total_events` deste
+    (`array_sum` do `countByKind`, sem consulta extra) ou o
+    `Event::count()` do N11, não os dois números na mesma tela;
+  - `Enrollment::total()` vira `Enrollment::count()`; troque e apague
+    o `total()`;
+  - junte os testes dos dois `DashboardControllerTest` num arquivo e
+    confira as contagens esperadas (o painel vazio deste espera zeros;
+    o do N11 espera `3` no badge com três Eventos).
 
 ## Como aplicar em outro repositório (cherry-pick)
 
@@ -179,8 +188,14 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar neste cenário e por quê:
 
-- `DashboardController.php` e `admin/dashboard/index.phtml`: N6 mexe
-  nos mesmos. Fique com as variáveis e blocos dos dois.
+- `DashboardController.php` e `admin/dashboard/index.phtml`: N6 e N11
+  mexem nos mesmos. Fique com as variáveis e blocos dos dois, mas com
+  um total de Eventos só (ver N11 acima).
+- `tests/Integration/Controllers/Admin/DashboardControllerTest.php`:
+  N6 e N11 também criam esse arquivo, então o conflito é "both added".
+  Junte os métodos de teste numa classe só (um `setUp`/`tearDown`).
+- `AdminDashboardCest.php`: N11 acrescenta a checagem do badge em
+  `accessAdminAsAdmin`; fique com as duas checagens.
 - `Event.php` (imports `Database`/`PDO` e métodos estáticos novos):
   N5 e N3 também acrescentam. Um `use` de cada; métodos lado a lado.
 - `EventTest.php`, `EnrollmentTest.php`, `AdminDashboardCest.php`:
