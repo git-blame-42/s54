@@ -5,9 +5,7 @@ não pode ficar fixo no código. A capacidade máxima de um Evento também
 vem da configuração."
 
 Chance: média-baixa. Tempo estimado: 15-20 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, T4: "`EVENTS_PER_PAGE` e `MAX_CAPACITY` no
-`.env`, lidos de `$_ENV` num só lugar (`lib/Config.php`), com faixa e
-valor padrão".
+`s50/fvp/4.2/catalogo.md`, T4.
 
 Branch no clone: `fvp/t4-env-per-page`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
@@ -28,7 +26,9 @@ Branch no clone: `fvp/t4-env-per-page`, a partir de `main`
   `"0"` ou fora da faixa devolvem `$default`.
 - `lib/Validations.php`: `integerMax($attribute, $obj, int $max)`,
   cópia de `integerMin` com `>` no lugar de `<`. Mensagem
-  "deve ser menor ou igual a {$max}!".
+  "deve ser menor ou igual a {$max}!". Sem tipo em `$attribute`,
+  `$obj` e no retorno de propósito: segue a assinatura do
+  `integerMin` ao lado (`lib/` fica fora do phpstan).
 - `app/Controllers/Admin/EventsController.php`, `index`:
   `per_page: Config::int('EVENTS_PER_PAGE', self::PER_PAGE, 1, 100)`.
   `PER_PAGE = 5` continua, agora como valor padrão.
@@ -94,9 +94,10 @@ Resultado obtido: Unit 178, Integration 50, Acceptance 23
 (base 159 / 45 / 23; nenhum Cest novo nem ajustado). PHPCS e PHPStan
 sem erros; PSR-4 estrito ok. Schema não mudou.
 
-Os testes PHPUnit não rodam o `EnvLoader`: `$_ENV` só tem o que está
-no `<env>` do `phpunit.xml`. Por isso "sem a chave" é o padrão, e os
-testes que gravam `$_ENV[...]` fazem `unset` no `tearDown`.
+Os testes PHPUnit não leem o `.env` (o `EnvLoader` não roda neles), e
+o `<env>` do `phpunit.xml` não tem as duas chaves. Por isso "sem a
+chave" é o padrão, e os testes que gravam `$_ENV[...]` fazem `unset`
+no `tearDown`.
 
 Na tela (populate): acrescente as duas chaves ao seu `.env`, logue como
 `admin@example.com` / `123456` e abra `/admin/events`: 5 Eventos,
@@ -203,10 +204,10 @@ Depois de aplicar: `./run composer dump-autoload -o --strict-psr`
 - `getenv()` não enxerga o `.env` (o `EnvLoader` não faz `putenv`);
   leia `$_ENV`. Ao contrário, uma variável que já existe no processo
   (ex.: `environment:` do `php_test`) vence o `.env`.
-- O `.env` do teste não é o seu: PHPUnit usa só o `<env>` do
-  `phpunit.xml`; os Cests passam pelo `bootstrap` e leem o `.env` do
-  projeto (no CI, a cópia do `.env.example`). Por isso o padrão no
-  código precisa ser o mesmo valor do `.env.example`.
+- O `.env` do teste não é o seu: o PHPUnit não lê o `.env`; os Cests
+  passam pelo `bootstrap` e leem o `.env` do projeto (no CI, a cópia
+  do `.env.example`). Por isso o padrão no código precisa ser o mesmo
+  valor do `.env.example`.
 - Teste que grava `$_ENV[...]` sem `unset` no `tearDown` vaza para os
   testes seguintes (mesmo processo).
 - Nunca commite o `.env`, só o `.env.example`. Quem já tem `.env`
