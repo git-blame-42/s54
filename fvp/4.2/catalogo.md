@@ -123,6 +123,8 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M11 | Validar `user_id` no model | média | 15-20 min |
 | M12 | Último editor gravado da sessão | média-baixa | 20-25 min |
 | M13 | Montagem do Evento no model ou service | média-baixa | 10-20 min |
+| M14 | Contador de visualizações com `update()` | média-baixa | 15-20 min |
+| M15 | Escolher o responsável entre os admins | média-baixa | 20-30 min |
 | N1 | Filtro por tipo com `where` na paginação | alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
@@ -134,6 +136,8 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | N9 | Filtro por período | média | 30-40 min |
 | N10 | Página e id inválidos, sem `(int)` cego | média-alta | 15-25 min |
 | N11 | `Model::count()` no framework | média | 15-20 min |
+| N12 | Paginação com Primeira/Última e janela | média | 10-20 min |
+| N13 | Filtro fora do `where` (SET, vagas) | média-baixa | 25-35 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
@@ -142,6 +146,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | O6 | Inscritos em página própria, paginada | média-baixa | 25-35 min |
 | O7 | `Route::patch` no core | média-baixa | 15-20 min |
 | O8 | Status HTTP corretos (404, 422) | baixa | 15-20 min |
+| O9 | `_method` só via POST (falha real) | média | 15-20 min |
 | P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
 | P2 | Inscrição do Participante em um Evento | média-alta | 30-40 min |
 | P3 | Cancelar a própria inscrição | média | 15-20 min |
@@ -164,6 +169,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
 | Q3 | Ação só para Participante | média-baixa | 20-30 min |
 | Q4 | Perfil Organizador com CRUD dos próprios Eventos | média | 35-40 min |
+| Q5 | Token CSRF nos formulários de Evento | média-baixa | 25-35 min |
 | R1 | Flash: texto, título do Evento, `warning` | média | 10-15 min |
 | R2 | Nome do criador no `show` e na listagem | média-alta | 10-15 min |
 | R3 | Formatação na view com helper num só lugar | média | 10-15 min |
@@ -171,6 +177,10 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | R5 | Mostrar `created_at` e `updated_at` | média | 15-25 min |
 | R6 | Partials reutilizados e Remover no `show` | média-baixa | 15-25 min |
 | R7 | Voltar à mesma página após remover/editar | média-baixa | 10-15 min |
+| R8 | Lista de todos os erros no topo do formulário | média | 15-20 min |
+| R9 | Lista de presença imprimível com layout próprio | média | 20-30 min |
+| R10 | "Salvar e cadastrar outro" | média-baixa | 10-15 min |
+| R11 | Evento anterior e próximo no detalhe | média-baixa | 20-25 min |
 | S1 | Teste de aceitação da modificação | alta | 20-30 min |
 | S2 | Teste de acesso por HTTP da rota nova | alta | 15-20 min |
 | S3 | Teste unitário do método novo do model | alta | 10-15 min |
@@ -949,6 +959,118 @@ Armadilhas:
 
 Prova: `EventTest` novo e `EventsControllerTest` inalterado.
 
+### M14. Contador de visualizações com `Model::update()`
+
+Chance: média-baixa. Tempo: 15-20 min.
+
+Pedido típico: "conte quantas vezes cada Evento foi visto e mostre na
+listagem". Bom para explicar `update()` (grava sem validar, `MODEL:189-213`)
+contra `save()`.
+
+Arquivos: `SCH:21-38`, `EV:48-58` (coluna em `$columns`; padrão `0` no
+construtor, `US:28-35`, porque `save()` grava todas as colunas),
+`MODEL:189-213` (`update()`: `rowCount() !== 0`, e sincroniza
+`$this->$column`), `EC:29-39` (`show`), `IDX:11-26`, `SHOW:6-33`,
+`ECT:151-161`, `EVT:325-357`.
+
+Passos:
+
+1. Testes: `EVT`: `registerView()` duas vezes -> `findById` traz `2`;
+   Evento novo nasce com `0`. `ECT`: `show` incrementa.
+2. `SCH`: `views_count INT UNSIGNED NOT NULL DEFAULT 0`. `EV`:
+   `'views_count'` em `$columns`, construtor com
+   `if ($this->views_count === null) { $this->views_count = 0; }`.
+3. `EV` (atômico, no SQL):
+
+   ```php
+   public function registerView(): void
+   {
+       if ($this->newRecord()) {
+           return;
+       }
+
+       $stmt = Database::getDatabaseConn()->prepare(
+           'UPDATE events SET views_count = views_count + 1 WHERE id = :id'
+       );
+       $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+       $stmt->execute();
+       $this->views_count = (int) $this->views_count + 1;
+   }
+   ```
+
+   Variante didática com `update(['views_count' => $this->views_count + 1])`
+   (lê-modifica-grava; dois acessos simultâneos perdem um).
+4. `EC::show`: `$event->registerView();` antes do `render`. `IDX`:
+   coluna "Visualizações".
+
+Armadilhas:
+
+- Coluna nova sem padrão no construtor: `save()` manda `NULL` em
+  `NOT NULL` -> erro (`MODEL:143-158`).
+- `update()` **não valida** (`MODEL:189`): é o que se quer aqui, e é a
+  diferença para `save()` que o professor pergunta.
+- `update()` devolve `false` quando nada mudou (`rowCount() === 0`,
+  `MODEL:212`): não use o retorno como "deu erro".
+- Efeito colateral em GET (contar ao exibir): aceitável para contador;
+  não faça o mesmo para regras de negócio.
+- A view do admin conta a visita do próprio admin; se o pedido for
+  "visualizações de Participantes", conte só em O2.
+
+Prova: testes; no navegador, abrir o `show` duas vezes e ver `2` na
+listagem.
+
+### M15. Escolher o responsável entre os administradores
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "ao cadastrar, escolher qual administrador é o
+responsável pelo Evento". Inverte a regra atual (`user_id` nunca vem do
+form, `ECT:101-112`): agora vem, **validado no model** (M11) e com a
+lista restrita a admins.
+
+Arquivos: `EC:14` (`FIELDS`, `user_id` entra), `EC:41-47` (`new`: padrão
+= admin logado), `EC:116-130` (`fill`), `EV:60-82` (validação de M11),
+`US:19-20`, `FORM:35-44` (select, modelo), `SHOW` (R2 mostra o nome),
+`ECT:101-112` (teste a inverter), `POP:12-19` (segundo admin, T1).
+
+Passos:
+
+1. Testes: `ECT`: `create` com `user_id` de outro admin grava esse dono;
+   com `user_id` de Participante ou inexistente volta ao form com erro;
+   sem `user_id` usa o logado. Inverta `ECT:101-112` (agora o form
+   manda).
+2. `US`, com `@return array<static>`:
+
+   ```php
+   public static function admins(): array
+   {
+       return self::where(['role' => 'admin']);
+   }
+   ```
+
+3. `EC`: `'user_id'` em `FIELDS`; em `new()`,
+   `$event->user_id = $this->currentUser()?->id;`; em `create`, se o form
+   não mandar, mantenha o logado.
+4. `EV::validates()`: M11 (`user_id` existe e é admin), mensagem no
+   campo.
+5. `FORM`: `<select name="event[user_id]">` com `User::admins()`,
+   `selected` no atual. `SHOW`: nome do responsável (R2).
+
+Armadilhas:
+
+- Abrir `user_id` ao form sem M11 é a falha que a issue 4.2 do grupo 6
+  aponta (recurso pai sem checar); a validação no model é obrigatória.
+- Q1/O5 (dono edita) mudam de sentido: quem é "dono", o criador ou o
+  responsável? Decida e diga.
+- `ECT:101-112` passa a falhar por definição: troque a asserção, não
+  apague o teste.
+- Populate com um admin só mostra um `select` de uma opção: T1.
+- Participante não chega a esse form (grupo `admin`), mas a validação
+  cobre quem forjar o POST.
+
+Prova: testes; no navegador, criar Evento para `admin2@` (T1) e ver o
+nome no `show`.
+
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
 Chance: alta (`where` é a linha nova da rubrica; manter o filtro na
@@ -1550,6 +1672,134 @@ Armadilhas:
 
 Prova: testes; a listagem continua igual no navegador.
 
+### N12. Paginação com Primeira/Última e janela de números
+
+Chance: média. Tempo: 10-20 min.
+
+Pedido típico: "botões Primeira e Última e, no máximo, três números em
+volta da página atual" (o `Paginator` é item 2.6 da rubrica).
+
+Arquivos: `PAG:56-79` (`previousPage`, `nextPage`, `hasPreviousPage`,
+`hasNextPage`, `isPage`), `PAG:51-54` (`totalOfPages`), `PAGES:14-18`
+(laço `for` que imprime todas as páginas), `ACT/PaginateEventsCest.php`
+(conta os itens da paginação: 6 com 4 páginas), `ECT:39-57`, S5
+(`PaginatorTest`), T1 (30 Eventos para a janela aparecer).
+
+Passos:
+
+1. Testes: `PaginatorTest` (S5): com 7 páginas na página 4,
+   `pagesWindow()` devolve `[3, 4, 5]`; na página 1, `[1, 2]`;
+   `lastPage() === 7`. `ECT`: a página 2 de 12 Eventos (5 por página)
+   mostra links "Primeira" e "Última".
+2. `PAG`:
+
+   ```php
+   public function firstPage(): int
+   {
+       return 1;
+   }
+
+   public function lastPage(): int
+   {
+       return max(1, $this->totalOfPages);
+   }
+
+   /** @return array<int, int> */
+   public function pagesWindow(int $radius = 1): array
+   {
+       $from = max(1, $this->page - $radius);
+       $to = min($this->lastPage(), $this->page + $radius);
+
+       return range($from, $to);
+   }
+   ```
+
+3. `PAGES`: "Primeira" (desabilitada em `isPage(1)`), Anterior, o laço
+   sobre `pagesWindow()` (com "…" quando `$from > 1` / `$to < lastPage`),
+   Próxima, "Última". Links com
+   `route($paginator->getRouteName(), ['page' => N])`
+   (mais `queryParams()` se N1 forma 2 existir).
+4. Atualize `PaginateEventsCest` (número de itens) e `ListEventsCest`
+   se contarem elementos da paginação.
+
+Armadilhas:
+
+- `totalOfPages` é `0` sem registros: `lastPage()` com `max(1, ...)`
+  evita `range(1, 0)` (que devolve `[1, 0]`!).
+- O partial só enxerga `$paginator` (`PAG:93-97`): toda informação vem
+  de métodos dele.
+- `PaginateEventsCest:18` conta 6 itens (Anterior, 4 páginas, Próxima):
+  com Primeira/Última e janela muda; reescreva o cenário.
+- `lib/` fora do `phpstan`: anote `@return array<int, int>` mesmo assim.
+
+Prova: testes; no navegador com T1 (30 Eventos, 6 páginas), página 3
+mostra "Primeira 2 3 4 Última".
+
+### N13. Filtro que o `where` não expressa: público-alvo ou "só com vagas"
+
+Chance: média-baixa. Tempo: 25-35 min.
+
+Pedido típico: "filtre os Eventos para Estudantes" (`audience` é um
+`SET`: igualdade não serve) ou "mostre só os que ainda têm vaga"
+(depende de uma contagem).
+
+Arquivos: `SCH:28` (`SET`), `EV:40-45` (`AUDIENCES`), `EV:180-211`
+(`audienceList`, `hasAudience`), `VAL:52-73` (`inclusionOfAll`),
+`MODEL:300-333` (`where`, só igualdade), `PAG:147-169` (idem), `EC:16-27`,
+`IDX:1-3`, N1 (validação do parâmetro e `$paginator` nulo), `EVT:366-376`.
+
+Passos (forma 1, sem paginação quando filtrado):
+
+1. Testes em `EVT`: `forAudience('students')` traz quem tem `students`
+   no SET (inclusive `students,professors`) e não quem só tem
+   `professors`; `withSpots()` exclui o lotado (`enroll` até a capacidade).
+2. `EV`:
+
+   ```php
+   /** @return array<static> */
+   public static function forAudience(string $audience): array
+   {
+       $columns = implode(', ', static::$columns);
+       $stmt = Database::getDatabaseConn()->prepare(
+           "SELECT id, {$columns} FROM events "
+           . 'WHERE FIND_IN_SET(:audience, audience) > 0 ORDER BY starts_on, id'
+       );
+       $stmt->bindValue(':audience', $audience);
+       $stmt->execute();
+
+       $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+       return array_map(fn($row) => new static($row), $rows);
+   }
+   ```
+
+   `withSpots()`:
+
+   ```sql
+   WHERE capacity > (SELECT COUNT(*) FROM event_user eu
+                     WHERE eu.event_id = events.id)
+   ```
+
+3. `EC::index`: `audience` validado com `array_key_exists($v, Event::AUDIENCES)`
+   (`is_string` antes); `spots=1` booleano; com filtro, `$paginator = null`.
+4. `IDX`: `<select name="audience">` sobre `AUDIENCES` e checkbox "só
+   com vagas"; guarda do `$paginator` nulo.
+
+Armadilhas:
+
+- `SET` guarda `students,professors` como string: `LIKE '%students%'`
+  casaria `students` dentro de outro valor; `FIND_IN_SET` compara o
+  token inteiro.
+- Subconsulta por linha é aceitável aqui; a alternativa é `LEFT JOIN` +
+  `GROUP BY` + `HAVING`.
+- `where` e `Paginator` não servem (igualdade); para paginar, estenda o
+  `Paginator` com condição crua em `lib/` (P11 mostra o caminho) e nunca
+  concatene o valor do usuário.
+- Valor do filtro sempre por `bindValue`.
+
+Prova: testes; no populate, "Servidores" traz 7 Eventos e "só com
+vagas" tira o Evento 1.
+
 ### O1. Rota RESTful nova com página (lotados)
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -1994,6 +2244,58 @@ Armadilhas:
   é melhoria opcional, diga o custo (testes a mudar).
 
 Prova: `curl -i` com cookie de admin em `/admin/events/999999`.
+
+### O9. `_method` só via POST
+
+Chance: média (falha real, 15 min). Tempo: 15-20 min.
+
+Pedido típico: "GET nunca pode alterar dados". Hoje
+`GET /admin/events/16?_method=DELETE` cai no `destroy`: o `Request` lê
+`_method` de `$_REQUEST` (`Request.php:18`), que inclui a query string.
+Um `<img src="...">` numa página visitada por um admin logado remove um
+Evento.
+
+Arquivos: `core/Http/Request.php:16-22` (construtor),
+`core/Router/Route.php:72-75` (`isSameMethod`),
+`tests/Unit/Core/Http/RequestTest.php:13-25` (`setUp`/`tearDown` com
+`$_SERVER`/`$_REQUEST`), `ACC:104-137` (`methodOverrideRoutes`, POST +
+`_method`, continua verde), `IDX:30-33`, `FORM:17-19`.
+
+Passos:
+
+1. Testes em `RequestTest`: `REQUEST_METHOD=GET` +
+   `$_REQUEST['_method'] = 'DELETE'` -> `getMethod() === 'GET'`; `POST` +
+   `$_POST['_method'] = 'DELETE'` -> `DELETE`; `POST` + `_method=GET` ->
+   `POST`. Teste HTTP (`ACC`): `GET /admin/events/1?_method=DELETE` com admin -> 200 do `show`, Evento
+   continua existindo.
+2. `Request.php:18`:
+
+   ```php
+   $method = $_SERVER['REQUEST_METHOD'];
+   $override = $_POST['_method'] ?? null;
+   $allowed = ['PUT', 'PATCH', 'DELETE'];
+   if ($method === 'POST' && in_array($override, $allowed, true)) {
+       $method = $override;
+   }
+   $this->method = $method;
+   ```
+
+3. Nada muda nos forms (`FORM:17-19`, `IDX:30-33` já usam POST).
+
+Armadilhas:
+
+- `$_REQUEST` mistura GET, POST e cookie: nunca decida método por ele.
+- Lista fechada de verbos: `_method=GET` ou `=HEAD` não pode virar
+  método.
+- Mudança em `core/` com teste unitário; `RequestTest` limpa
+  `$_REQUEST`/`$_SERVER` no `tearDown` (`:20-25`): limpe `$_POST` também.
+- `Route::isSameMethod` (`Route.php:72-75`) compara strings: `delete`
+  minúsculo não casa; mantenha maiúsculas.
+- Não resolve CSRF por completo (um form POST em outro site ainda
+  funciona): isso é Q5.
+
+Prova: `RequestTest`; no navegador logado, abrir
+`/admin/events/16?_method=DELETE` e ver o `show`, não a remoção.
 
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
@@ -3610,6 +3912,76 @@ Armadilhas:
 Prova: testes; no navegador, logar como organizer e ver só os seus
 Eventos, sem link "Administração".
 
+### Q5. Token CSRF nos formulários de Evento
+
+Chance: média-baixa. Tempo: 25-35 min.
+
+Pedido típico: "proteja criar, editar e remover contra CSRF" (variante
+de A15 da 4.1, agora no CRUD). Faz par com O9.
+
+Arquivos: `config/App.php:7-10` (aliases), `app/Middleware/Admin.php`
+(modelo de middleware), `core/Router/RouteWrapperMiddleware.php:15-25`
+(o grupo **interno** roda primeiro), `core/Http/Request.php:24-27,57-60`,
+`FORM:16`, `IDX:30-33`, `app/views/authentications/new.phtml` (se cobrir
+o login), `CTC:70-84` (teste de controller **não** roda middleware),
+`ACC:58-78` (`loggedClient` faz POST em `/login`),
+`ACT/BaseEventsCest.php:122-158` (form preenchido pelo navegador: já leva
+o token).
+
+Passos:
+
+1. Testes HTTP (`ACC`): `POST /admin/events` sem `_token` -> 302 para a
+   origem com flash (ou 403) e nada gravado; com o token lido da página
+   `new` (regex no `<input name="_token">`) -> grava. Unitário de
+   `Lib\Csrf` (gera, confere, rejeita diferente/ausente).
+2. `lib/Csrf.php`:
+
+   ```php
+   final class Csrf
+   {
+       public static function token(): string
+       {
+           $_SESSION['_token'] ??= bin2hex(random_bytes(32));
+
+           return $_SESSION['_token'];
+       }
+
+       public static function check(mixed $given): bool
+       {
+           return is_string($given) && isset($_SESSION['_token'])
+               && hash_equals($_SESSION['_token'], $given);
+       }
+   }
+   ```
+
+3. `app/Middleware/VerifyCsrf.php`: em `POST/PUT/PATCH/DELETE`
+   (`$request->getMethod()`), se `!Csrf::check($request->getParam('_token'))`
+   -> flash `danger('Sessão expirada, tente de novo')` + redirect para
+   `/` (padrão de `Admin.php:23-27`). Alias `'csrf'`.
+4. `ROUTES`: envolva os grupos `auth`/`admin` com
+   `Route::middleware('csrf')->group(...)` **por fora** (assim roda depois
+   do `auth`).
+5. Forms: `<input type="hidden" name="_token" value="<?= Csrf::token() ?>">`
+   em `FORM:16` e `IDX:30-33` (e no login, se incluído).
+
+Armadilhas:
+
+- Ordem: o middleware do grupo de fora é anexado por último
+  (`RouteWrapperMiddleware:21-23`) e roda por último; se o `csrf` for o
+  grupo interno, roda antes do `auth` (funciona, mas um POST anônimo
+  recebe "sessão expirada" em vez de "faça login").
+- `ECT` não passa pelo Router (`CTC:70-84`): não vê o middleware; a
+  prova é por HTTP e por Cest.
+- `loggedClient` (`ACC:67-78`) posta `/login`: se o login exigir token,
+  o helper precisa buscar a página antes (A15 da 4.1 descreve).
+- Token por sessão (não por requisição): abas múltiplas continuam
+  funcionando.
+- Leia o token de `$_POST` (via `getParam`), nunca da query string; e
+  combine com O9.
+
+Prova: testes; `curl -X POST -b <cookie> localhost/admin/events` sem
+token é recusado.
+
 ### R1. Flash: texto, título do Evento, tipo `warning`
 
 Chance: média (micro-ajuste de texto; costuma vir dentro de outro
@@ -3938,6 +4310,227 @@ Armadilhas:
   `Referrer-Policy`); não dependa dele para fluxo principal.
 
 Prova: testes; no navegador, remover um Evento da página 2 e ficar nela.
+
+### R8. Lista de todos os erros no topo do formulário
+
+Chance: média. Tempo: 15-20 min.
+
+Pedido típico: "quando o cadastro falhar, mostre no topo quais campos
+estão errados" (item 1 da demonstração da rubrica). O core não devolve
+todos os erros: `errors()` sem índice retorna `null` (`MODEL:122-129`).
+
+Arquivos: `MODEL:122-134` (`errors`, `addError`; a propriedade
+`$errors` é acessível na subclasse), `EC:59,90` (flash genérico),
+`FORM:11-16` (helpers e abertura do form),
+`app/views/layouts/_flash_message.phtml:3` (sem escape), `EV` (rótulos num
+só lugar, C8 da 4.1), `ECT:114-138`.
+
+Passos:
+
+1. Teste em `ECT`: create inválido com título e local vazios -> a resposta
+   tem `<ul class="form-errors">` com "Título" e "Local".
+2. `MODEL`, ao lado de `errors()`:
+
+   ```php
+   /** @return array<string, string> */
+   public function allErrors(): array
+   {
+       return $this->errors;
+   }
+   ```
+
+3. `EV`:
+
+   ```php
+   public const LABELS = ['title' => 'Título', 'description' => 'Descrição'];
+
+   public static function label(string $field): string
+   {
+       return self::LABELS[$field] ?? $field;
+   }
+   ```
+
+4. `FORM`, antes do `<form>`:
+
+   ```php
+   <?php if ($event->hasErrors()) : ?>
+       <ul class="form-errors alert alert-danger">
+           <?php foreach ($event->allErrors() as $field => $message) : ?>
+               <li><?= htmlspecialchars(
+                   Event::label($field) . ' ' . $message
+               ) ?></li>
+           <?php endforeach; ?>
+       </ul>
+   <?php endif; ?>
+   ```
+
+5. O flash `danger` de `EC:59,90` pode sair (duplica) ou ficar como
+   resumo; decida.
+
+Armadilhas:
+
+- `errors('base')` (`safeDestroy`, P2) entra na lista com chave `base`:
+  trate o rótulo (`LABELS['base'] = ''`).
+- Mensagens começam em minúscula e terminam em `!` ("não pode ser
+  vazio!"): a concatenação "Título não pode ser vazio!" fica certa.
+- Rótulos duplicados entre `FORM` (labels) e a lista: tire de um só
+  lugar (`LABELS`), e use também nos `<label>` do form.
+- Escape no partial; `hasErrors()` existe (`MODEL:117-120`).
+- Mudança em `core/`: um método de leitura, com PHPDoc de array.
+
+Prova: teste; no navegador, enviar o form vazio e ver a lista.
+
+### R9. Lista de presença imprimível com layout próprio
+
+Chance: média. Tempo: 20-30 min.
+
+Pedido típico: "uma página para imprimir a lista de presença: inscritos
+com coluna para assinatura, sem navbar". Único cenário que usa
+`Controller::$layout` (`CTRL:11`), hoje só com o layout padrão.
+
+Arquivos: `CTRL:11` (`protected string $layout = 'application'`) e
+`CTRL:32-39` (`render` monta `layouts/{$this->layout}.phtml`),
+`LAYOUT:1-35` (modelo), `ROUTES:26-35` (rota
+`GET /admin/events/{id}/attendance`, 4 partes), O3 (`participants()`),
+`EN:20-28`, `public/assets/css/application.css` (`@media print`),
+`ECT:151-161`, `ACC:85-97`.
+
+Passos:
+
+1. Testes: `ECT`: `attendance` lista os inscritos e **não** contém a
+   navbar ("Eventos do Câmpus" de `NAV:3`); `ACC`: rota em `eventRoutes()`
+   + admin 200.
+2. `app/views/layouts/print.phtml`: `<!DOCTYPE html>`, `<head>` com o CSS,
+   `<main>` com `<h1><?= $title ?></h1>` e `require $view`; sem navbar
+   nem flash.
+3. `EC::attendance(Request $request)`: `findEvent`;
+   `$this->layout = 'print';` antes do `render(...)` da view
+   `admin/events/attendance` com `event`, `participants` e `title`,
+   sendo `$participants = $event->participants()->get()` (O3).
+4. View: tabela Nome, E-mail, Assinatura (célula vazia); botão
+   "Imprimir" com `window.print()` em arquivo JS (R4) ou só `Ctrl+P`.
+5. CSS: `@media print { .no-print { display: none; } }` em
+   `application.css` (29 linhas hoje).
+
+Armadilhas:
+
+- `$layout` é propriedade de instância: mude só na ação que precisa;
+  as outras continuam com `application`.
+- O layout novo precisa imprimir `$title` e incluir `$view` exatamente
+  como `LAYOUT:24-30`, senão a view não aparece.
+- Sem navbar não há link de volta: ponha "Voltar" na própria view.
+- JS inline `onclick="window.print()"` é o que o professor penaliza
+  (R4): arquivo em `public/assets/js`.
+- C4 da 4.1 (layout do login) é o mesmo mecanismo.
+
+Prova: testes; no navegador, `/admin/events/1/attendance` com os 3
+inscritos do populate e `Ctrl+P`.
+
+### R10. "Salvar e cadastrar outro"
+
+Chance: média-baixa. Tempo: 10-15 min.
+
+Pedido típico: "um segundo botão que salva e já abre um formulário em
+branco".
+
+Arquivos: `FORM:91` (botão Salvar), `EC:49-63` (`create`: redirect para
+o `show`), `ECT:85-99` (`Location` do create), `ACT/CreateSuccessfullyCest.php`.
+
+Passos:
+
+1. Testes em `ECT`: `create` com `'commit' => 'save_and_new'` ->
+   `Location: /admin/events/new` e Evento gravado; sem `commit` -> `show`.
+2. `FORM:91`: segundo botão
+
+   ```html
+   <button type="submit" name="commit" value="save_and_new"
+           class="btn btn-outline-primary">Salvar e cadastrar outro</button>
+   ```
+
+   (`name` fora de `event[]`, para não entrar no `fill`).
+3. `EC::create`, após o `save()` com sucesso:
+
+   ```php
+   $target = $request->getParam('commit') === 'save_and_new'
+       ? route('admin.events.new')
+       : route('admin.events.show', ['id' => $event->id]);
+   $this->redirectTo($target);
+   ```
+
+4. Cest: clicar no botão novo e `see('Novo Evento', 'h1')` +
+   `see('Evento cadastrado com sucesso!')`.
+
+Armadilhas:
+
+- `getParam('commit')` pode vir array: a comparação estrita com string
+  já protege.
+- O botão não pode ficar dentro de `event[...]`, senão `fill()` tenta
+  atribuir `commit` ao model (`MODEL:86`: `Property commit not found`).
+  Com `FIELDS` fechado (`EC:14`) ele é ignorado, mas não dependa disso.
+- Flash de sucesso aparece na tela de novo cadastro: ok, é o esperado.
+- `update` não ganha o botão (não faz sentido editar e "cadastrar
+  outro").
+
+Prova: teste; navegador.
+
+### R11. Evento anterior e próximo no detalhe
+
+Chance: média-baixa. Tempo: 20-25 min.
+
+Pedido típico: "no detalhe, links para o Evento anterior e o próximo
+pela data".
+
+Arquivos: `EV` (dois métodos com SQL; desempate por `id`), `SHOW:35-36`,
+O2 (`events/show.phtml`), `EVT:366-376` (modelo de teste de consulta),
+`ECT:151-161`, N3 (mesma noção de ordem).
+
+Passos:
+
+1. Testes em `EVT`: três Eventos em datas crescentes: o do meio tem
+   `previous()` e `next()` certos; o primeiro tem `previous() === null`;
+   dois na mesma data desempatam por `id`.
+2. `EV`:
+
+   ```php
+   public function next(): ?static
+   {
+       return $this->neighbour('>', 'ASC');
+   }
+
+   public function previous(): ?static
+   {
+       return $this->neighbour('<', 'DESC');
+   }
+
+   private function neighbour(string $op, string $dir): ?static
+   {
+       $columns = implode(', ', static::$columns);
+       $sql = "SELECT id, {$columns} FROM events "
+           . "WHERE (starts_on {$op} :date "
+           . "OR (starts_on = :date AND id {$op} :id)) "
+           . "ORDER BY starts_on {$dir}, id {$dir} LIMIT 1";
+       $stmt = Database::getDatabaseConn()->prepare($sql);
+       $stmt->bindValue(':date', $this->starts_on);
+       $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+       $stmt->execute();
+       $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+       return $row ? new static($row) : null;
+   }
+   ```
+
+3. `SHOW:35-36`: links "« Anterior" / "Próximo »" quando não nulos.
+
+Armadilhas:
+
+- `$op` e `$dir` são texto fixo do model (`'<'`/`'>'`, `'ASC'`/`'DESC'`),
+  nunca entrada do usuário: diga isso ao interpolar.
+- Sem desempate por `id`, dois Eventos no mesmo dia se tornam um "laço"
+  (próximo do A é B e próximo do B é A? não: B não aparece).
+- Nos extremos os métodos devolvem `null`: a view precisa testar.
+- `PDO::PARAM_INT` no `id`; `starts_on` como string `Y-m-d`.
+
+Prova: testes; no navegador, navegar do Evento 1 ao 16 pelos links.
 
 ### S1. Teste de aceitação da modificação
 
