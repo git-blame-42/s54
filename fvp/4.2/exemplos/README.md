@@ -162,6 +162,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R4. Confirmação antes de remover, JS em arquivo próprio
   `r4-confirmacao-js-arquivo/`
   - feat: Confirm before removing an event
+- R5. Mostrar `created_at`/`updated_at` no show e na listagem
+  `r5-created-updated-at/`
+  - feat: Show event created_at and updated_at
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in
