@@ -105,20 +105,30 @@ plain() {
     printf '%s' "$t"
 }
 
-# search [escopo] termo...: ranking (título vale 10) e exemplos.
+# search [escopo] termo...: ranking (título vale 10) e exemplos. Compara
+# sem distinguir maiúsculas nem acentos (termo e catálogo são normalizados).
 search() {
     local scope="$1" s terms pat ex
     shift
     local IFS="|"
-    terms="$(printf "%s" "$*" | tr "A-Z" "a-z")"
+    terms="$(plain "$(printf "%s" "$*" | tr "A-Z" "a-z")")"
     unset IFS
     for s in $(scopes "$scope"); do
         awk -v terms="$terms" -v scope="$s" '
-            BEGIN { n = split(terms, T, "|") }
+            BEGIN {
+                n = split(terms, T, "|")
+                acc = "á:a à:a ã:a â:a é:e ê:e í:i " \
+                      "ó:o ô:o õ:o ú:u ü:u ç:c " \
+                      "Á:a À:a Ã:a Â:a É:e Ê:e Í:i " \
+                      "Ó:o Ô:o Õ:o Ú:u Ü:u Ç:c"
+                split(acc, M, " ")
+                for (i in M) { split(M[i], pr, ":"); P[pr[1]] = pr[2] }
+            }
             /^### / { h = $0; order[++k] = h; w = 10 }
             /^## /  { h = "" }
             h != "" {
                 l = tolower($0)
+                for (a in P) gsub(a, P[a], l)
                 for (i = 1; i <= n; i++) if (index(l, T[i])) c[h] += w
                 w = 1
             }
