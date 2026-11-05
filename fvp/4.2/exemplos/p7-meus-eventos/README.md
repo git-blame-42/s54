@@ -16,10 +16,10 @@ o P3 (é irmão dele).
 
 Commits (os dois primeiros são a base):
 
-- `9d7c82f` `feat: Add events listing and details for participants`
+- `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
-- `95e5e82` `feat: Allow participants to enroll in events` (base, P2)
-- `5676612` `feat: Add my events page for participants`
+- `458a05b` `feat: Allow participants to enroll in events` (base, P2)
+- `eaf69a2` `feat: Add my events page for participants`
 
 ## O que mudou
 
@@ -97,7 +97,7 @@ docker compose exec web curl -s -b /tmp/c http://localhost/enrollments
   inscrição".
 - P9 (lista de espera): com ele, mostre o status (confirmada/espera)
   em uma coluna nova.
-- P1/P4 (código de check-in e confirmação de presença, agente B): esta
+- P1 e P4 (código de check-in e confirmação de presença): esta
   página é um bom lugar para mostrar "presença confirmada". Não estão
   implementados aqui.
 
@@ -119,9 +119,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p7 s50/fvp/4.2/exemplos/p7-meus-eventos/projeto
 git fetch fvp-p7 fvp/p7-meus-eventos
 # O2 + P2 + P7 (range)
-git cherry-pick 9d7c82f^..5676612
+git cherry-pick 0669a19^..eaf69a2
 # ou só o topo (P7), se já tem O2 e P2
-git cherry-pick 5676612
+git cherry-pick eaf69a2
 git remote remove fvp-p7
 ```
 
@@ -133,7 +133,7 @@ git fetch s50/fvp/4.2/exemplos/p7-meus-eventos/solucao.bundle \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p7
 # ou só o topo
-git cherry-pick 5676612
+git cherry-pick eaf69a2
 # opcional, limpa a ref
 git branch -D fvp-p7
 ```
