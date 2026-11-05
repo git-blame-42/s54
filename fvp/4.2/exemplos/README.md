@@ -110,6 +110,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R2. Nome do criador no show/listagem (BelongsTo)
   `r2-nome-do-criador/`
   - feat: Show event creator name in listing and show
+- R3. Formatação na view com helper num só lugar
+  `r3-helper-formatacao/`
+  - refactor: Move event formatting to model helpers
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in
