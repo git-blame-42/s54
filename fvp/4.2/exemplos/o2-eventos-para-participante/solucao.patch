@@ -1,11 +1,11 @@
-From 9d7c82fb2d86089b6b624d4c093f7f86f071560f Mon Sep 17 00:00:00 2001
+From 0669a191ab2e3f7885ac11d7c4b426862b28698d Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:00:17 -0300
 Subject: [PATCH] feat: Add events listing and details for participants
 
 ---
  app/Controllers/EventsController.php          |  42 ++++++
- app/views/events/index.phtml                  |  32 +++++
+ app/views/events/index.phtml                  |  33 +++++
  app/views/events/show.phtml                   |  35 +++++
  app/views/layouts/_navbar.phtml               |   4 +
  config/routes.php                             |   6 +
@@ -13,7 +13,7 @@ Subject: [PATCH] feat: Add events listing and details for participants
  .../events/ParticipantListEventsCest.php      |  58 ++++++++
  .../Access/ParticipantEventsAccessTest.php    | 131 ++++++++++++++++++
  .../Controllers/EventsControllerTest.php      | 126 +++++++++++++++++
- 9 files changed, 456 insertions(+)
+ 9 files changed, 457 insertions(+)
  create mode 100644 app/Controllers/EventsController.php
  create mode 100644 app/views/events/index.phtml
  create mode 100644 app/views/events/show.phtml
@@ -72,10 +72,10 @@ index 0000000..73c73ab
 +}
 diff --git a/app/views/events/index.phtml b/app/views/events/index.phtml
 new file mode 100644
-index 0000000..ed62859
+index 0000000..fc225c9
 --- /dev/null
 +++ b/app/views/events/index.phtml
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,33 @@
 +<?php if (empty($events)) : ?>
 +    <p>Nenhum evento cadastrado.</p>
 +<?php else : ?>
@@ -99,7 +99,8 @@ index 0000000..ed62859
 +                    <td><?= htmlspecialchars($event->location) ?></td>
 +                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
 +                    <td>
-+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
++                        <a class="btn btn-sm btn-outline-secondary"
++                            href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
 +                    </td>
 +                </tr>
 +            <?php endforeach; ?>

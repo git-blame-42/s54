@@ -13,7 +13,7 @@ Branch no clone: `fvp/o2-eventos-para-participante`, a partir de
 
 | Commit | Mensagem |
 |--------|----------|
-| `9d7c82f` | `feat: Add events listing and details for participants` |
+| `0669a19` | `feat: Add events listing and details for participants` |
 
 ## O que mudou
 
@@ -94,7 +94,7 @@ docker compose exec web curl -s -b /tmp/c http://localhost/events
 - P2 (`p2-inscricao-participante`) é feito sobre este: o botão
   "Inscrever-se" entra em `events/show.phtml`. P3, P7 e P9 vêm
   depois do P2.
-- P1/P4 (código de check-in e confirmação de presença, agente B) também
+- P1 e P4 (código de check-in e confirmação de presença) também
   usam a área do Participante; se aplicados juntos, o `show` deste
   cenário é o lugar natural do formulário de presença do P4.
 
@@ -115,7 +115,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-o2 \
     s50/fvp/4.2/exemplos/o2-eventos-para-participante/projeto
 git fetch fvp-o2 fvp/o2-eventos-para-participante
-git cherry-pick 9d7c82f
+git cherry-pick 0669a19
 git remote remove fvp-o2
 ```
 
@@ -125,7 +125,7 @@ git remote remove fvp-o2
 git fetch \
     s50/fvp/4.2/exemplos/o2-eventos-para-participante/solucao.bundle \
     fvp/o2-eventos-para-participante:fvp-o2
-git cherry-pick 9d7c82f
+git cherry-pick 0669a19
 # opcional, limpa a ref
 git branch -D fvp-o2
 ```
