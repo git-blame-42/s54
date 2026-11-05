@@ -19,7 +19,7 @@ Commits (os dois primeiros são a base):
 - `9d7c82f` `feat: Add events listing and details for participants`
   (base, O2)
 - `95e5e82` `feat: Allow participants to enroll in events` (base, P2)
-- `1138a53` `feat: Add my events page for participants`
+- `5676612` `feat: Add my events page for participants`
 
 ## O que mudou
 
@@ -119,9 +119,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p7 s50/fvp/4.2/exemplos/p7-meus-eventos/projeto
 git fetch fvp-p7 fvp/p7-meus-eventos
 # O2 + P2 + P7 (range)
-git cherry-pick 9d7c82f^..1138a53
+git cherry-pick 9d7c82f^..5676612
 # ou só o topo (P7), se já tem O2 e P2
-git cherry-pick 1138a53
+git cherry-pick 5676612
 git remote remove fvp-p7
 ```
 
@@ -133,7 +133,7 @@ git fetch s50/fvp/4.2/exemplos/p7-meus-eventos/solucao.bundle \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p7
 # ou só o topo
-git cherry-pick 1138a53
+git cherry-pick 5676612
 # opcional, limpa a ref
 git branch -D fvp-p7
 ```

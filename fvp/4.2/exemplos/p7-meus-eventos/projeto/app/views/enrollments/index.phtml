@@ -19,7 +19,8 @@
                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
                     <td><?= htmlspecialchars($event->location) ?></td>
                     <td>
-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-secondary"
+                            href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
