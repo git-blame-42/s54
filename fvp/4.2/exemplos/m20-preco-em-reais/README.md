@@ -219,6 +219,16 @@ Arquivos que costumam conflitar neste cenário e por quê:
   "Gratuito" testa `(float) $preco === 0.0`, não `=== '0'`.
 - `DEFAULT 0` no schema não resolve o campo vazio: o `INSERT` manda
   `NULL`. Quem garante o valor é a validação.
+- A troca de vírgula por ponto dentro de `validates()` altera o
+  objeto: depois de `isValid()`, `$event->price` já é `"10.50"`, mesmo
+  que nada seja gravado (outro campo com erro). Por isso o form usa
+  `priceForInput()` para mostrar `10,50` de novo. Uma alternativa
+  mais limpa é o gancho `beforeValidation()` do M16
+  (`m16-before-validation`): o `Model::isValid()` chama o gancho antes
+  de `validates()`, e o Evento faz a troca lá; o `validates()` fica só
+  com regras. No gancho, troque só se o valor for string; a regex de
+  `validates()` continua aceitando o ponto, e o objeto continua
+  alterado mesmo quando a validação falha.
 - O form tem `novalidate`; o erro vem sempre do servidor.
 - Esquecer `db:populate`: `Unknown column 'price'` só no navegador; os
   testes passam porque recriam o schema a cada teste.
