@@ -93,6 +93,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O4. Resposta JSON da listagem
   `o4-resposta-json/`
   - feat: Return JSON for admin events listing
+- O5. Admin vê e lista só os próprios Eventos
+  `o5-admin-lista-so-proprios/`
+  - feat: List and manage only the logged admin events
 - P1. Código de check-in aleatório (1000–9999) por Evento
   `p1-codigo-checkin-aleatorio/`
   - feat: Generate a random check-in code for each Event

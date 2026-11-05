@@ -1,0 +1,380 @@
+From 1b9fed5700d92a0d45a527e892238bfa215478e4 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:42:35 -0300
+Subject: [PATCH] feat: List and manage only the logged admin events
+
+The index paginates currentUser()->events(); show, edit, update and destroy look the event up through events()->findById, so another admin's event is reported as not found. The populate gets a second admin (admin2@example.com) with three events.
+---
+ app/Controllers/Admin/EventsController.php    |  34 ++++-
+ database/Populate/populate.php                |  59 ++++++++-
+ .../admin/events/ListEventsCest.php           |  26 ++++
+ tests/Integration/Access/EventsAccessTest.php |  14 ++
+ .../Admin/EventsControllerTest.php            | 120 ++++++++++++++++++
+ 5 files changed, 242 insertions(+), 11 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..ea661ac 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -13,9 +13,18 @@ class EventsController extends Controller
+ 
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
++    /**
++     * Lista só os Eventos do Administrador logado (user_id = id dele), paginados.
++     */
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
++        $owner = $this->currentUser();
++        if ($owner === null) {
++            $this->redirectTo(route('users.login'));
++            return;
++        }
++
++        $paginator = $owner->events()->paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+             per_page: self::PER_PAGE,
+             route: 'admin.events.paginate'
+@@ -40,7 +49,7 @@ class EventsController extends Controller
+ 
+     public function new(): void
+     {
+-        $event = new Event();
++        $event = $this->newEvent();
+ 
+         $title = 'Novo Evento';
+         $this->render('admin/events/new', compact('event', 'title'));
+@@ -48,9 +57,8 @@ class EventsController extends Controller
+ 
+     public function create(Request $request): void
+     {
+-        $event = new Event();
++        $event = $this->newEvent();
+         $this->fill($event, $request);
+-        $event->user_id = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento cadastrado com sucesso!');
+@@ -129,9 +137,25 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * Evento novo já com user_id do Administrador logado (events()->new()).
++     */
++    private function newEvent(): Event
++    {
++        $event = $this->currentUser()?->events()->new();
++
++        return $event instanceof Event ? $event : new Event();
++    }
++
++    /**
++     * Só acha Eventos do Administrador logado: o de outro admin vira null e cai em "Evento não encontrado!"
++     * (vale para show, edit, update e destroy, sem revelar que o Evento existe).
++     */
+     private function findEvent(Request $request): ?Event
+     {
+-        return Event::findById((int) $request->getParam('id'));
++        $event = $this->currentUser()?->events()->findById((int) $request->getParam('id'));
++
++        return $event instanceof Event ? $event : null;
+     }
+ 
+     private function eventNotFound(): void
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..88d5dd4 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -18,6 +18,16 @@ $admin = new User([
+ ]);
+ $admin->save();
+ 
++// Segundo Administrador: dono dos próprios Eventos; cada admin lista só os seus.
++$admin2 = new User([
++    'name' => 'Administrador 2',
++    'email' => 'admin2@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'role' => 'admin'
++]);
++$admin2->save();
++
+ $user = new User([
+     'name' => 'Usuário',
+     'email' => 'user@example.com',
+@@ -26,7 +36,7 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++echo "Usuários criados: {$admin->email} e {$admin2->email} (admin), {$user->email} (participant), senha 123456\n";
+ 
+ // Participantes extras, para haver Inscrições de mais de uma pessoa.
+ $participants = [$user];
+@@ -129,10 +139,32 @@ $events = [
+     ],
+ ];
+ 
+-$eventModels = [];
+-foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity]) {
+-    $event = new Event([
+-        'user_id' => $admin->id,
++// Eventos do Administrador 2 (mesmo formato): não aparecem na listagem do admin@example.com.
++$admin2Events = [
++    [
++        'Oficina de Laravel para Iniciantes (Administrador 2)',
++        'Rotas, controllers, Eloquent e Blade em uma aplicação de exemplo, passo a passo.',
++        'workshop', 'in_person', 'students', 17, 'Bloco B, Laboratório de Informática B202', 25,
++    ],
++    [
++        'Palestra: Software Livre na Universidade (Administrador 2)',
++        'Como projetos de software livre ajudam na formação e na pesquisa dentro da universidade.',
++        'lecture', 'online', 'students,professors,community', 31, 'Google Meet (link enviado aos inscritos)', 200,
++    ],
++    [
++        'Minicurso de JavaScript Moderno (Administrador 2)',
++        'Módulos, promises, async/await e manipulação do DOM sem frameworks.',
++        'short_course', 'hybrid', 'students', 45, 'Bloco C, Laboratório C101 e transmissão online', 30,
++    ],
++];
++
++/**
++ * @param array<int, mixed> $data uma linha de $events ou $admin2Events
++ */
++$createEvent = function (User $owner, array $data): Event {
++    [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity] = $data;
++
++    $event = $owner->events()->new([
+         'title' => $title,
+         'description' => $description,
+         'kind' => $kind,
+@@ -141,15 +173,30 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'location' => $location,
+         'capacity' => $capacity,
+     ]);
++    if (!$event instanceof Event) {
++        throw new RuntimeException('events()->new() deveria criar um Event');
++    }
+     $event->setAudienceList(explode(',', $audience));
+     if (!$event->save()) {
+         throw new RuntimeException("Evento inválido no populate: {$title}");
+     }
+-    $eventModels[] = $event;
++
++    return $event;
++};
++
++$eventModels = [];
++foreach ($events as $data) {
++    $eventModels[] = $createEvent($admin, $data);
+ }
+ 
+ echo count($eventModels) . " Eventos criados pelo Administrador\n";
+ 
++foreach ($admin2Events as $data) {
++    $createEvent($admin2, $data);
++}
++
++echo count($admin2Events) . " Eventos criados pelo Administrador 2\n";
++
+ // Inscrições (event_user): índice do Evento => índices dos Participantes.
+ // O Evento 0 tem capacity 3 e três Inscrições (lotado): serve de caso para P02 (capacity >= Inscrições).
+ // Os Eventos com Inscrições não podem ser removidos (P03).
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..59db3b9 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -60,6 +60,32 @@ class ListEventsCest extends BaseEventsCest
+         $page->seeLink('Voltar');
+     }
+ 
++    public function listShowsOnlyTheLoggedAdminEvents(AcceptanceTester $page): void
++    {
++        $other = $this->createUser('Administrador 2', 'admin2@example.com', 'admin');
++        $foreign = new Event([
++            'user_id' => $other->id,
++            'title' => 'Evento de Outro Administrador',
++            'description' => 'Não deve aparecer para admin@example.com.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => $this->startsOn(1),
++            'location' => 'Sala 99',
++            'capacity' => 10,
++        ]);
++        \PHPUnit\Framework\Assert::assertTrue($foreign->save());
++
++        $page->wantTo('Listagem só com os Eventos do Administrador logado');
++        $page->amOnPage('/admin/events/page/4');
++        $page->dontSee('Evento de Outro Administrador');
++        $page->see(sprintf('Mostrando 16 - 16 de %d', self::TOTAL_EVENTS));
++
++        $page->amOnPage("/admin/events/{$foreign->id}");
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Evento não encontrado!');
++    }
++
+     private function assertContains(string $needle, string $haystack): void
+     {
+         \PHPUnit\Framework\Assert::assertStringContainsString($needle, $haystack);
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..5868a98 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,20 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_another_admin_should_not_see_or_open_the_event(): void
++    {
++        $other = $this->createUser('Administrador 2', 'admin2@example.com', 'admin');
++        $client = $this->loggedClient($other);
++
++        $index = $client->get('/admin/events');
++        $this->assertEquals(200, $index->getStatusCode());
++        $this->assertStringNotContainsString('Palestra de Acesso', (string) $index->getBody());
++
++        $show = $client->get("/admin/events/{$this->event->id}");
++        $this->assertEquals(302, $show->getStatusCode());
++        $this->assertEquals('/admin/events', $show->getHeaderLine('Location'));
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..702db93 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,126 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- cada Administrador vê só os próprios Eventos ------------------- */
++
++    public function test_index_lists_only_the_logged_admin_events(): void
++    {
++        $other = $this->createOtherAdmin();
++        $this->createEvent(['title' => 'Meu Evento']);
++        $this->createEvent(['title' => 'Evento do Outro', 'user_id' => $other->id]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Meu Evento', $response);
++        $this->assertStringNotContainsString('Evento do Outro', $response);
++        $this->assertStringContainsString('Mostrando 1 - 1 de 1', $response);
++    }
++
++    public function test_index_paginates_using_only_the_logged_admin_count(): void
++    {
++        $other = $this->createOtherAdmin();
++        for ($i = 1; $i <= 4; $i++) {
++            $this->createEvent(['title' => "Alheio {$i}", 'user_id' => $other->id]);
++        }
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Próprio {$i}"]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
++        $this->assertStringContainsString('/admin/events/page/2', $page1);
++        $this->assertStringNotContainsString('/admin/events/page/3', $page1);
++        $this->assertStringContainsString('Próprio 1', $page1);
++        $this->assertStringContainsString('Próprio 5', $page1);
++        $this->assertStringContainsString('Mostrando 6 - 7 de 7', $page2);
++        $this->assertStringContainsString('Próprio 7', $page2);
++        $this->assertStringNotContainsString('Alheio', $page1 . $page2);
++    }
++
++    public function test_the_other_admin_sees_only_his_events(): void
++    {
++        $other = $this->createOtherAdmin();
++        $this->createEvent(['title' => 'Do Primeiro']);
++        $this->createEvent(['title' => 'Do Segundo', 'user_id' => $other->id]);
++
++        Auth::login($other);
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Do Segundo', $response);
++        $this->assertStringNotContainsString('Do Primeiro', $response);
++    }
++
++    public function test_index_without_logged_user_redirects_to_login(): void
++    {
++        Auth::logout();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertSame('Location: /login', $response);
++    }
++
++    public function test_new_and_create_use_the_logged_admin_as_owner(): void
++    {
++        $other = $this->createOtherAdmin();
++        Auth::login($other);
++
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertInstanceOf(Event::class, $event);
++        $this->assertEquals($other->id, $event->user_id);
++    }
++
++    public function test_show_and_edit_of_another_admin_event_redirect_to_index(): void
++    {
++        $other = $this->createOtherAdmin();
++        $event = $this->createEvent(['title' => 'Evento Alheio', 'user_id' => $other->id]);
++
++        foreach (['show', 'edit'] as $action) {
++            $response = $this->get(action: $action, controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++            $this->assertSame('Location: /admin/events', $response, $action);
++            $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger'], $action);
++        }
++    }
++
++    public function test_update_and_destroy_of_another_admin_event_do_not_change_it(): void
++    {
++        $other = $this->createOtherAdmin();
++        $event = $this->createEvent(['title' => 'Evento Alheio', 'user_id' => $other->id]);
++
++        $update = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Invadido'])]
++        );
++        $destroy = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame('Location: /admin/events', $update);
++        $this->assertSame('Location: /admin/events', $destroy);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++        $stored = Event::findById($event->id);
++        $this->assertNotNull($stored);
++        $this->assertEquals('Evento Alheio', $stored->title);
++        $this->assertEquals($other->id, $stored->user_id);
++    }
++
++    private function createOtherAdmin(): User
++    {
++        $other = new User([
++            'name' => 'Outro Admin',
++            'email' => 'admin2@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $other->save();
++
++        return $other;
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+
