@@ -1,0 +1,14 @@
+<div class="mb-3">
+    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+</div>
+
+<?php if (empty($events)) : ?>
+    <p>Nenhum evento cadastrado.</p>
+<?php else : ?>
+    <?php
+    $showActions = true;
+    require __DIR__ . '/_table.phtml';
+    ?>
+
+    <?php $paginator->renderPagesNavigation(); ?>
+<?php endif; ?>

@@ -1,0 +1,222 @@
+From ea87f09b0e796b4c058e2bb4a9374a622672b59a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:10:04 -0300
+Subject: [PATCH] feat: Reuse events table partials and add Remover to show
+
+The events listing table goes to _table.phtml and the Ver/Editar/Remover buttons to _actions.phtml. The index includes the table with actions, and the show page reuses _actions.phtml, so it gets the Remover button too.
+---
+ app/views/admin/events/_actions.phtml         | 17 +++++++
+ app/views/admin/events/_table.phtml           | 44 +++++++++++++++++++
+ app/views/admin/events/index.phtml            | 35 ++-------------
+ app/views/admin/events/show.phtml             |  7 ++-
+ .../admin/events/DeleteEventCest.php          | 17 +++++++
+ .../Admin/EventsControllerTest.php            | 29 ++++++++++++
+ 6 files changed, 116 insertions(+), 33 deletions(-)
+ create mode 100644 app/views/admin/events/_actions.phtml
+ create mode 100644 app/views/admin/events/_table.phtml
+
+diff --git a/app/views/admin/events/_actions.phtml b/app/views/admin/events/_actions.phtml
+new file mode 100644
+index 0000000..9a98b27
+--- /dev/null
++++ b/app/views/admin/events/_actions.phtml
+@@ -0,0 +1,17 @@
++<?php
++/**
++ * Botões de ação de um Evento: Ver (opcional), Editar e Remover (form com _method=DELETE).
++ * Usado em cada linha de _table.phtml e no show.
++ *
++ * @var \App\Models\Event $event
++ * @var bool $withView quando true, mostra o botão Ver (no próprio show não faz sentido)
++ */
++?>
++<?php if ($withView) : ?>
++    <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++<?php endif; ?>
++<a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++    <input type="hidden" name="_method" value="DELETE">
++    <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++</form>
+diff --git a/app/views/admin/events/_table.phtml b/app/views/admin/events/_table.phtml
+new file mode 100644
+index 0000000..8b46b85
+--- /dev/null
++++ b/app/views/admin/events/_table.phtml
+@@ -0,0 +1,44 @@
++<?php
++/**
++ * Tabela de Eventos (título, tipo, data, local, vagas e, opcionalmente, ações).
++ * Quem inclui define as variáveis antes do require (o render faz extract no mesmo escopo).
++ *
++ * @var array<\App\Models\Event> $events
++ * @var bool $showActions quando true, acrescenta a coluna Ações (Ver, Editar, Remover)
++ */
++use App\Models\Event;
++
++?>
++<table class="table table-striped align-middle">
++    <thead>
++        <tr>
++            <th>Título</th>
++            <th>Tipo</th>
++            <th>Data</th>
++            <th>Local</th>
++            <th>Vagas</th>
++            <?php if ($showActions) : ?>
++                <th>Ações</th>
++            <?php endif; ?>
++        </tr>
++    </thead>
++    <tbody>
++        <?php foreach ($events as $event) : ?>
++            <tr>
++                <td><?= htmlspecialchars($event->title) ?></td>
++                <td><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                <td><?= htmlspecialchars($event->location) ?></td>
++                <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                <?php if ($showActions) : ?>
++                    <td>
++                        <?php
++                        $withView = true;
++                        require __DIR__ . '/_actions.phtml';
++                        ?>
++                    </td>
++                <?php endif; ?>
++            </tr>
++        <?php endforeach; ?>
++    </tbody>
++</table>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..f07e10f 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -5,37 +5,10 @@
+ <?php if (empty($events)) : ?>
+     <p>Nenhum evento cadastrado.</p>
+ <?php else : ?>
+-    <table class="table table-striped align-middle">
+-        <thead>
+-            <tr>
+-                <th>Título</th>
+-                <th>Tipo</th>
+-                <th>Data</th>
+-                <th>Local</th>
+-                <th>Vagas</th>
+-                <th>Ações</th>
+-            </tr>
+-        </thead>
+-        <tbody>
+-            <?php foreach ($events as $event) : ?>
+-                <tr>
+-                    <td><?= htmlspecialchars($event->title) ?></td>
+-                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+-                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+-                    <td><?= htmlspecialchars($event->location) ?></td>
+-                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+-                    <td>
+-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+-                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
+-                    </td>
+-                </tr>
+-            <?php endforeach; ?>
+-        </tbody>
+-    </table>
++    <?php
++    $showActions = true;
++    require __DIR__ . '/_table.phtml';
++    ?>
+ 
+     <?php $paginator->renderPagesNavigation(); ?>
+ <?php endif; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..7018eda 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,8 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
+-<a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-<a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++<?php
++$withView = false;
++require __DIR__ . '/_actions.phtml';
++?>
++<a class="btn btn-sm btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..525ad39 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -47,6 +47,23 @@ class DeleteEventCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function deleteEventFromShowPage(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Remoção do registro pela tela de detalhes');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->see($event->title, 'h1');
++        $page->dontSeeLink('Ver');
++
++        $page->click('Remover', 'main');
++
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Evento removido com sucesso!');
++        $page->dontSee('Evento 02', 'table');
++        Assert::assertNull(Event::findById((int) $event->id));
++    }
++
+     private function clickRemove(AcceptanceTester $page, string $title): void
+     {
+         // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..a1fed56 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,35 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_has_edit_and_remove_but_not_view(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra Final']);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString(
++            "<form class=\"d-inline\" action=\"/admin/events/{$event->id}\" method=\"post\">",
++            $response
++        );
++        $this->assertStringContainsString('name="_method" value="DELETE"', $response);
++        $this->assertStringContainsString('>Remover</button>', $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}/edit\">Editar</a>", $response);
++        $this->assertStringNotContainsString('>Ver</a>', $response);
++        $this->assertStringContainsString('href="/admin/events">Voltar</a>', $response);
++    }
++
++    public function test_index_rows_have_view_edit_and_remove_actions(): void
++    {
++        $event = $this->createEvent(['title' => 'Evento da Tabela']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<th>Ações</th>', $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}\">Ver</a>", $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}/edit\">Editar</a>", $response);
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}\" method=\"post\"", $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+-- 
+2.54.0 (Apple Git-157)
+

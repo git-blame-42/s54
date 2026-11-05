@@ -1,0 +1,44 @@
+<?php
+/**
+ * Tabela de Eventos (título, tipo, data, local, vagas e, opcionalmente, ações).
+ * Quem inclui define as variáveis antes do require (o render faz extract no mesmo escopo).
+ *
+ * @var array<\App\Models\Event> $events
+ * @var bool $showActions quando true, acrescenta a coluna Ações (Ver, Editar, Remover)
+ */
+use App\Models\Event;
+
+?>
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>Local</th>
+            <th>Vagas</th>
+            <?php if ($showActions) : ?>
+                <th>Ações</th>
+            <?php endif; ?>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($events as $event) : ?>
+            <tr>
+                <td><?= htmlspecialchars($event->title) ?></td>
+                <td><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                <td><?= htmlspecialchars($event->location) ?></td>
+                <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                <?php if ($showActions) : ?>
+                    <td>
+                        <?php
+                        $withView = true;
+                        require __DIR__ . '/_actions.phtml';
+                        ?>
+                    </td>
+                <?php endif; ?>
+            </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>

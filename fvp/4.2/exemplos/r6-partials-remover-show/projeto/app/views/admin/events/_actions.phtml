@@ -1,0 +1,17 @@
+<?php
+/**
+ * Botões de ação de um Evento: Ver (opcional), Editar e Remover (form com _method=DELETE).
+ * Usado em cada linha de _table.phtml e no show.
+ *
+ * @var \App\Models\Event $event
+ * @var bool $withView quando true, mostra o botão Ver (no próprio show não faz sentido)
+ */
+?>
+<?php if ($withView) : ?>
+    <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+<?php endif; ?>
+<a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+<form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+    <input type="hidden" name="_method" value="DELETE">
+    <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+</form>
