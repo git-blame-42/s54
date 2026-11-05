@@ -1,0 +1,19 @@
+<div class="card login mx-auto">
+    <div class="card-body">
+        <form action="<?= route('passwords.update') ?>" method="post" novalidate>
+            <input type="hidden" name="_method" value="PUT">
+            <div class="mb-3">
+                <label for="user_password" class="form-label">Nova senha</label>
+                <input type="password" class="form-control <?= $user->errors('password') ? 'is-invalid' : '' ?>"
+                       id="user_password" name="user[password]">
+                <div class="invalid-feedback"><?= $user->errors('password') ?></div>
+            </div>
+            <div class="mb-3">
+                <label for="user_password_confirmation" class="form-label">Confirme a nova senha</label>
+                <input type="password" class="form-control" id="user_password_confirmation"
+                       name="user[password_confirmation]">
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </form>
+    </div>
+</div>

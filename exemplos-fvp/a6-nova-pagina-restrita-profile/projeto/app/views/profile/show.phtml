@@ -1,0 +1,10 @@
+<?php $user = $this->currentUser(); ?>
+<ul class="list-group profile">
+    <li class="list-group-item">Nome: <?= $user->name ?></li>
+    <li class="list-group-item">E-mail: <?= $user->email ?></li>
+    <li class="list-group-item">Perfil: <?= $user->isAdmin() ? 'Administrador' : 'Participante' ?></li>
+    <li class="list-group-item">
+        Último acesso:
+        <?= $user->last_login_at ? date('d/m/Y H:i', strtotime($user->last_login_at)) : 'primeiro acesso' ?>
+    </li>
+</ul>

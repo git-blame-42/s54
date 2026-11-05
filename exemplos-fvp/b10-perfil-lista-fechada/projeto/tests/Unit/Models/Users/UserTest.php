@@ -1,0 +1,252 @@
+<?php
+
+namespace Tests\Unit\Models\Users;
+
+use App\Models\User;
+use Tests\TestCase;
+
+class UserTest extends TestCase
+{
+    private User $user;
+    private User $user2;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = new User([
+            'name' => 'User 1',
+            'email' => 'fulano@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456'
+        ]);
+        $this->user->save();
+
+        $this->user2 = new User([
+            'name' => 'User 2',
+            'email' => 'fulano1@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456'
+        ]);
+        $this->user2->save();
+    }
+
+    public function test_should_create_new_user(): void
+    {
+        $this->assertCount(2, User::all());
+    }
+
+    public function test_all_should_return_all_users(): void
+    {
+        $this->user2->save();
+
+        $users[] = $this->user->id;
+        $users[] = $this->user2->id;
+
+        $all = array_map(fn($user) => $user->id, User::all());
+
+        $this->assertCount(2, $all);
+        $this->assertEquals($users, $all);
+    }
+
+    public function test_destroy_should_remove_the_user(): void
+    {
+        $this->user->destroy();
+        $this->assertCount(1, User::all());
+    }
+
+    public function test_set_id(): void
+    {
+        $this->user->id = 10;
+        $this->assertEquals(10, $this->user->id);
+    }
+
+    public function test_set_name(): void
+    {
+        $this->user->name = 'User name';
+        $this->assertEquals('User name', $this->user->name);
+    }
+
+    public function test_set_email(): void
+    {
+        $this->user->email = 'outro@example.com';
+        $this->assertEquals('outro@example.com', $this->user->email);
+    }
+
+    public function test_errors_should_return_errors(): void
+    {
+        $user = new User();
+
+        $this->assertFalse($user->isValid());
+        $this->assertFalse($user->save());
+        $this->assertTrue($user->hasErrors());
+
+        $this->assertEquals('não pode ser vazio!', $user->errors('name'));
+        $this->assertEquals('não pode ser vazio!', $user->errors('email'));
+    }
+
+    public function test_errors_should_return_password_confirmation_error(): void
+    {
+        $user = new User([
+            'name' => 'User 3',
+            'email' => 'fulano3@example.com',
+            'password' => '123456',
+            'password_confirmation' => '1234567'
+        ]);
+
+        $this->assertFalse($user->isValid());
+        $this->assertFalse($user->save());
+
+        $this->assertEquals('as senhas devem ser idênticas!', $user->errors('password'));
+    }
+
+    public function test_find_by_id_should_return_the_user(): void
+    {
+        $this->assertEquals($this->user->id, User::findById($this->user->id)->id);
+    }
+
+    public function test_find_by_id_should_return_null(): void
+    {
+        $this->assertNull(User::findById(3));
+    }
+
+    public function test_find_by_email_should_return_the_user(): void
+    {
+        $this->assertEquals($this->user->id, User::findByEmail($this->user->email)->id);
+    }
+
+    public function test_find_by_email_should_return_null(): void
+    {
+        $this->assertNull(User::findByEmail('not.exits@example.com'));
+    }
+
+    public function test_authenticate_should_return_the_true(): void
+    {
+        $this->assertTrue($this->user->authenticate('123456'));
+        $this->assertFalse($this->user->authenticate('wrong'));
+    }
+
+    public function test_authenticate_should_return_false(): void
+    {
+        $this->assertFalse($this->user->authenticate(''));
+    }
+
+    public function test_is_admin_should_return_false_by_default(): void
+    {
+        $this->assertEquals(User::ROLE_PARTICIPANT, User::findById($this->user->id)->role);
+        $this->assertFalse($this->user->isAdmin());
+    }
+
+    public function test_is_admin_should_return_true_for_admin_role(): void
+    {
+        $this->user->role = User::ROLE_ADMIN;
+        $this->user->save();
+
+        $this->assertTrue(User::findById($this->user->id)->isAdmin());
+    }
+
+    public function test_role_constants_should_match_database_enum_values(): void
+    {
+        $this->assertSame('admin', User::ROLE_ADMIN);
+        $this->assertSame('participant', User::ROLE_PARTICIPANT);
+    }
+
+    public function test_new_user_should_have_participant_role_by_default(): void
+    {
+        $user = new User(['name' => 'Novo', 'email' => 'novo@example.com']);
+
+        $this->assertSame(User::ROLE_PARTICIPANT, $user->role);
+    }
+
+    public function test_is_participant_should_return_true_by_default(): void
+    {
+        $this->assertTrue($this->user->isParticipant());
+        $this->assertTrue(User::findById($this->user->id)->isParticipant());
+    }
+
+    public function test_is_participant_should_return_false_for_admin_role(): void
+    {
+        $this->user->role = User::ROLE_ADMIN;
+        $this->user->save();
+
+        $admin = User::findById($this->user->id);
+        $this->assertFalse($admin->isParticipant());
+        $this->assertTrue($admin->isAdmin());
+    }
+
+    public function test_role_given_in_constructor_should_be_kept(): void
+    {
+        $admin = new User(['name' => 'Admin', 'email' => 'admin@example.com', 'role' => User::ROLE_ADMIN]);
+
+        $this->assertSame(User::ROLE_ADMIN, $admin->role);
+        $this->assertTrue($admin->isAdmin());
+    }
+
+    public function test_roles_should_list_admin_and_participant(): void
+    {
+        $this->assertSame([User::ROLE_ADMIN, User::ROLE_PARTICIPANT], User::ROLES);
+    }
+
+    public function test_save_should_fail_with_invalid_role(): void
+    {
+        $user = new User([
+            'name' => 'Ghost',
+            'email' => 'ghost@example.com',
+            'password' => '123456',
+            'password_confirmation' => '123456',
+            'role' => 'other',
+        ]);
+
+        $this->assertFalse($user->isValid());
+        $this->assertFalse($user->save());
+        $this->assertEquals('não é um valor válido!', $user->errors('role'));
+        $this->assertNull(User::findByEmail('ghost@example.com'));
+    }
+
+    public function test_update_should_fail_with_empty_role(): void
+    {
+        $this->user->role = '';
+
+        $this->assertFalse($this->user->save());
+        $this->assertEquals('não é um valor válido!', $this->user->errors('role'));
+        $this->assertTrue(User::findById($this->user->id)->isParticipant());
+    }
+
+    public function test_admin_and_participant_roles_should_be_valid(): void
+    {
+        foreach (User::ROLES as $i => $role) {
+            $user = new User([
+                'name' => "User {$role}",
+                'email' => "role{$i}@example.com",
+                'password' => '123456',
+                'password_confirmation' => '123456',
+                'role' => $role,
+            ]);
+
+            $this->assertTrue($user->isValid(), $role);
+            $this->assertTrue($user->save(), $role);
+            $this->assertSame($role, User::findById($user->id)->role);
+        }
+    }
+
+    public function test_last_login_at_should_be_null_by_default(): void
+    {
+        $this->assertNull(User::findById($this->user->id)->last_login_at);
+    }
+
+    public function test_register_login_should_set_last_login_at(): void
+    {
+        $this->user->registerLogin();
+
+        $this->assertNotNull(User::findById($this->user->id)->last_login_at);
+    }
+
+    public function test_update_should_not_change_the_password(): void
+    {
+        $this->user->password = '654321';
+        $this->user->save();
+
+        $this->assertTrue($this->user->authenticate('123456'));
+        $this->assertFalse($this->user->authenticate('654321'));
+    }
+}

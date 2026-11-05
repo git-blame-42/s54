@@ -1,0 +1,18 @@
+<form action="<?= route('profile.update') ?>" method="post"
+      class="<?= $user->hasErrors() ? 'was-validated' : '' ?>" novalidate>
+    <input type="hidden" name="_method" value="PUT">
+    <div class="mb-3">
+        <label for="user_name" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="user_name" name="user[name]"
+               value="<?= htmlspecialchars((string) $user->name) ?>" required>
+        <div class="invalid-feedback"><?= $user->errors('name') ?></div>
+    </div>
+    <div class="mb-3">
+        <label for="user_email" class="form-label">E-mail</label>
+        <input type="email" class="form-control" id="user_email" name="user[email]"
+               value="<?= htmlspecialchars((string) $user->email) ?>" required>
+        <div class="invalid-feedback"><?= $user->errors('email') ?></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar</button>
+    <a href="<?= route('dashboard.index') ?>" class="btn btn-link">Cancelar</a>
+</form>

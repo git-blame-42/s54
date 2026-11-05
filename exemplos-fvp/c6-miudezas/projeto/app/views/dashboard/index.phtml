@@ -1,0 +1,9 @@
+<p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
+<p>Membro desde <?= $this->currentUser()->createdAt('d/m/Y') ?>.</p>
+
+<?php if ($this->currentUser()->isAdmin()) : ?>
+    <div class="alert alert-info">
+        Você é administrador(a).
+        <a href="<?= route('admin.dashboard.index') ?>">Ir para a área administrativa</a>
+    </div>
+<?php endif; ?>

@@ -1,0 +1,8 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title"><?= htmlspecialchars((string) $event->title) ?></h5>
+        <p class="card-text">Início: <?= $event->startsAtFormatted() ?></p>
+        <a href="<?= route('events.edit', ['id' => $event->id]) ?>" class="btn btn-outline-primary">Editar</a>
+        <a href="<?= route('events.index') ?>" class="btn btn-link">Voltar</a>
+    </div>
+</div>

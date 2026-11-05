@@ -1,0 +1,40 @@
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Perfil</th>
+            <th>Último acesso</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($users as $user) : ?>
+            <tr>
+                <td><?= $user->id ?></td>
+                <td><?= $user->name ?></td>
+                <td><?= $user->email ?></td>
+                <td>
+                    <?php if ((int) $user->id === (int) $this->currentUser()?->id) : ?>
+                        <?= $user->role ?>
+                    <?php else : ?>
+                        <form action="<?= route('admin.users.update', ['id' => $user->id]) ?>" method="post"
+                              class="d-flex gap-2" novalidate>
+                            <input type="hidden" name="_method" value="PUT">
+                            <select name="user[role]" class="form-select form-select-sm" aria-label="Perfil">
+                                <option value="participant" <?= $user->role === 'participant' ? 'selected' : '' ?>>
+                                    participant
+                                </option>
+                                <option value="admin" <?= $user->role === 'admin' ? 'selected' : '' ?>>admin</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Salvar</button>
+                        </form>
+                    <?php endif; ?>
+                </td>
+                <td><?= $user->last_login_at ?? 'nunca' ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>
+
+<?php $paginator->renderPagesNavigation(); ?>
