@@ -1,0 +1,30 @@
+<?php
+/**
+ * Confirmação da remoção (P16).
+ *
+ * @var \App\Models\Event $event
+ * @var int $code código gerado no servidor e guardado na sessão
+ */
+?>
+<p>
+    Você está removendo o evento <strong><?= htmlspecialchars($event->title) ?></strong>
+    (<?= date('d/m/Y', strtotime($event->starts_on)) ?>). Esta ação não pode ser desfeita.
+</p>
+
+<div class="alert alert-warning">
+    Código de confirmação: <strong id="confirmation_code_value"><?= (int) $code ?></strong>
+    <div class="small">Em produção este código seria enviado por e-mail; aqui ele aparece na tela.</div>
+</div>
+
+<form action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post" novalidate>
+    <input type="hidden" name="_method" value="DELETE">
+
+    <div class="mb-3">
+        <label for="confirmation_code" class="form-label">Digite o código para confirmar</label>
+        <input type="text" class="form-control" id="confirmation_code" name="confirmation_code"
+            inputmode="numeric" maxlength="4" autocomplete="off">
+    </div>
+
+    <button type="submit" class="btn btn-danger">Remover</button>
+    <a class="btn btn-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Cancelar</a>
+</form>
