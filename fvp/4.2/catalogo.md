@@ -305,117 +305,615 @@ Classes:
 - **genérico**: depende só do framework e do CRUD; o enunciado sai
   sem citar o domínio.
 - **adaptável**: escrito sobre Eventos, mas com equivalente óbvio em
-  outro CRUD (coluna "Equivalente genérico"). Cai quando o equivalente
+  outro CRUD (linha "Forma genérica"). Cai quando o equivalente
   exige algo que nem todo recurso tem (data, ENUM, `user_id`, filho).
 - **específico**: só existe no nosso domínio; sem equivalente.
 
-"Chance pedido único" usa a mesma escala da seção 4; a chance original
-não muda. Ordem: chance pedido único, depois chance original, depois
-ID. Total: 55 genéricos, 34 adaptáveis, 11 específicos.
-A matriz dos projetos dos outros grupos vai refinar esta tabela.
+"Pedido único" é a chance sob enunciado único, na escala da seção 4;
+a chance original não muda. Ordem: chance pedido único, depois chance
+original, depois ID. Total: 55 genéricos, 34 adaptáveis, 11
+específicos. A matriz dos projetos dos outros grupos vai refinar esta
+lista.
 
-| # | ID | Título | Chance original | Chance pedido único | Classe | Justificativa | Equivalente genérico |
-|---|---|---|---|---|---|---|---|
-| 1 | M1 | Campo novo em `events` com validação | alta | alta | genérico | Todo CRUD aceita coluna nova com validação; é a linha "campo novo + validação" da rubrica e cabe no tempo | campo novo no recurso principal com validação |
-| 2 | M2 | Validação nova em `lib/Validations.php` | alta | alta | genérico | Só depende de `Validations` e de um campo de texto ou número, que todo recurso tem; linha da rubrica | — |
-| 3 | N1 | Filtro por tipo com `where` na paginação | alta | alta | genérico | Todo CRUD tem index paginado e algum campo para filtrar; é a linha `where` da rubrica | filtro por um campo do recurso com `where`, mantido na paginação |
-| 4 | P1 | Código de check-in aleatório (1000-9999) | alta | alta | genérico | Transposição direta da FVP 4.1 para qualquer CRUD: campo gerado no backend, único, validado no model | Código aleatório 1000-9999 único por registro, gerado no backend |
-| 5 | S1 | Teste de aceitação da modificação | alta | alta | genérico | Acompanha qualquer pedido único; rubrica cobra Cest da coisa nova | — |
-| 6 | S2 | Teste de acesso por HTTP da rota nova | alta | alta | genérico | Todo CRUD tem auth/admin; rota nova sempre pede prova de acesso | — |
-| 7 | S3 | Teste unitário do método novo do model | alta | alta | genérico | Qualquer método novo no model pede teste unitário; independe do domínio | — |
-| 8 | T1 | Populate: campo novo, mais Eventos, segundo admin | alta | alta | genérico | Todo grupo tem populate; vem junto de campo novo ou paginação | populate com campo novo, mais registros e segundo admin |
-| 9 | T2 | `phpcs`, `phpstan` e CI verdes | alta | alta | genérico | Implícito em qualquer pedido; CI é item da rubrica | — |
-| 10 | N3 | Ordenar por data no `Paginator` | média-alta | alta | genérico | Todo `Paginator` do template não tem `ORDER BY`; pequeno, toca paginação e vale para qualquer coluna | `ORDER BY` por coluna do recurso no `Paginator`, com desempate por `id` |
-| 11 | N10 | Página e id inválidos, sem `(int)` cego | média-alta | alta | genérico | O `(int)` cego vem do template e está em todo CRUD; pequeno, apontado em issue de avaliação da 4.2 | Página e id da rota validados, sem conversão silenciosa |
-| 12 | P16 | Remover só com código de confirmação | média-alta | alta | genérico | Todo CRUD tem destroy; repete o padrão da FVP 4.1 (código no backend, validado) numa ação nova | — |
-| 13 | S4 | Testes de borda pedidos pelo professor | média-alta | alta | genérico | Vazio, inválido, não autorizado e update sem mudança existem em todo CRUD | testes de borda da validação e do acesso do recurso |
-| 14 | P5 | Status do Evento: cancelar e encerrar | alta | média-alta | adaptável | Status ativo/inativo cabe em todo recurso, mas "encerrar por data" e "barrar inscrição" são nossos | campo status (ENUM) no recurso com ação ativar/desativar |
-| 15 | M6 | Unicidade (título único na mesma data) | média-alta | média-alta | genérico | Todo recurso tem nome; `uniqueness` já existe e pode já estar em uso, o que tira desafio | nome do recurso único (só ou combinado com outro campo) |
-| 16 | M17 | Campo sim/não por checkbox (certificado) | média-alta | média-alta | genérico | Booleano por checkbox cabe em qualquer recurso; é campo novo + validação com armadilha comum a todos | campo sim/não por checkbox no recurso |
-| 17 | N4 | Mudar `per_page` ou deixar o usuário escolher | média-alta | média-alta | genérico | Vale para todo CRUD paginado, mas é pequeno demais para ser a FVP inteira; entra como parte | — |
-| 18 | O1 | Rota RESTful nova com página (lotados) | média-alta | média-alta | adaptável | "Lotados" é nosso, mas rota GET nova com página de subconjunto existe em todo CRUD | Rota GET nova listando registros do recurso que atendem a um critério |
-| 19 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | média-alta | genérico | Todo grupo tem admin x comum; lista e detalhe só leitura para o comum vale em qualquer domínio | Lista e detalhe do recurso, só leitura, para o usuário comum |
-| 20 | P6 | Duplicar Evento | média-alta | média-alta | genérico | Todo CRUD pode duplicar um registro; pequeno, mas não toca linha da rubrica (só "+7 dias" é nosso) | duplicar um registro do recurso |
-| 21 | Q1 | Só o dono edita e remove | média-alta | média-alta | adaptável | Exige `user_id` no recurso (provável, não garantido); é o D8 da 4.1 levado ao CRUD | só o dono (`user_id`) edita e remove o registro |
-| 22 | M9 | Slug único gerado no backend | média | média-alta | genérico | Todo recurso tem nome; é "código gerado no backend e validado", irmão do precedente da 4.1 | slug único gerado do nome do recurso |
-| 23 | M19 | "Nenhuma alteração" ao salvar sem mudar | média | média-alta | genérico | Todo CRUD tem edição; pequeno, compara com o banco e cobra detecção de alteração | "nenhuma alteração" ao salvar a edição sem mudar nada |
-| 24 | N2 | Busca por título (`LIKE`) | média | média-alta | genérico | Todo recurso tem nome e listagem; pequeno, mas `LIKE` foge do `where` da rubrica | busca pelo nome do recurso na listagem |
-| 25 | N8 | Ordenar clicando no cabeçalho da listagem | média | média-alta | genérico | Funciona em qualquer listagem e junta `ORDER BY` com `queryParams` na paginação; um pouco maior | — |
-| 26 | N11 | `Model::count()` no framework | média | média-alta | genérico | Core pequeno, igual em todo template; contar registros (total na listagem, por dono) serve a qualquer CRUD | `count()` no Model e total de registros na listagem |
-| 27 | N12 | Paginação com Primeira/Última e janela | média | média-alta | genérico | `Paginator` é item da rubrica e é igual em todo grupo; pequeno e testável sem domínio | — |
-| 28 | O9 | `_method` só via POST (falha real) | média | média-alta | genérico | Falha de segurança idêntica em todo template; pequeno, com teste unitário de core | — |
-| 29 | R4 | Confirmar antes de remover (JS em arquivo) | média | média-alta | genérico | Todo CRUD tem destroy; pequeno, regra de JS em arquivo próprio já cobrada pelo professor | confirmar remoção com JS em arquivo próprio |
-| 30 | R5 | Mostrar `created_at` e `updated_at` | média | média-alta | genérico | Toda tabela pode ter `created_at`; o core não lê timestamps e `save()` grava NULL: armadilha igual p/ todos | exibir data de cadastro e de alteração do registro |
-| 31 | R8 | Lista de todos os erros no topo do formulário | média | média-alta | genérico | Universal e ligado à validação (item da demonstração); exige método pequeno no core | listar todos os erros de validação no topo do form |
-| 32 | M4 | Data de término não anterior ao início | média-alta | média | adaptável | Nem todo recurso tem data; sem ela o grupo cria duas colunas e o pedido cresce | segundo campo de data com ordem em relação ao primeiro |
-| 33 | M7 | Horário do Evento (`TIME` ou `DATETIME`) | média-alta | média | adaptável | Depende de campo de data, que nem todo recurso tem; formato `HH:MM:SS` gera armadilha igual para todos | campo de hora ou data-hora no recurso, validado |
-| 34 | M18 | Janela de datas: antecedência e limite | média-alta | média | adaptável | Exige campo de data; quem não tem precisa criar antes, e o pedido deixa de caber | data do recurso dentro de uma faixa de dias a partir de hoje |
-| 35 | O5 | Admin vê e lista só os próprios Eventos | média-alta | média | adaptável | Mesma dependência de `user_id` do Q1, que é o pedido mais provável dessa família | Admin só lista e cadastra registros dele (`user_id`) |
-| 36 | R2 | Nome do criador no `show` e na listagem | média-alta | média | adaptável | Depende de `user_id`/dono no recurso, que é provável mas não garantido em todo CRUD | mostrar o usuário dono do registro (BelongsTo) no detalhe |
-| 37 | M5 | Validação condicional por modalidade | média | média | adaptável | Exige um campo de categoria (tipo, status); comum mas não universal | campo obrigatório só quando outro campo tem certo valor |
-| 38 | M10 | Campo que não muda depois de haver inscrições | média | média | adaptável | Inscrição é nossa, mas "não muda após criação" serve a todo CRUD e cobra detecção de alteração | campo que não pode mudar depois de criado (comparar com o banco) |
-| 39 | M11 | Validar `user_id` no model | média | média | adaptável | `user_id` no recurso é provável, não garantido; sem dono vale para qualquer FK | validar no model a FK do recurso (existe e tem o papel certo) |
-| 40 | M20 | Preço em reais com vírgula | média | média | adaptável | Valor decimal cabe na maioria dos recursos, mas em alguns domínios soa forçado | campo decimal com vírgula, validado e formatado na view |
-| 41 | N5 | Só Eventos futuros ou passados | média | média | adaptável | Exige campo de data no recurso; nem todo recurso tem data além de `created_at` | Filtro por campo de data do recurso (antes/depois de hoje) |
-| 42 | N6 | Dado calculado na tela (badge "Lotado", total) | média | média | adaptável | "Lotado" depende de vagas; o total de registros no painel serve a todos, mas é pequeno | Total de registros no painel ou valor derivado na listagem |
-| 43 | N7 | Painel administrativo com resumo | média | média | adaptável | Painel é genérico de nicho; contagem por tipo exige ENUM ou categoria, que nem todos têm | Painel admin com total por categoria e últimos N registros |
-| 44 | N9 | Filtro por período | média | média | adaptável | Validar o filtro no model vale para todos, mas exige campo de data no recurso | Filtro de/até sobre campo de data do recurso, com validação |
-| 45 | P8 | Exportar a listagem em CSV | média | média | genérico | Roda em qualquer listagem, mas é formato de nicho fora da rubrica (âncora de média) | — |
-| 46 | Q2 | Bloquear alterar Evento passado ou cancelado | média | média | adaptável | Depende de campo de data ou status no recurso, comum mas não universal | bloquear editar/remover conforme data ou status do registro |
-| 47 | R1 | Flash: texto, título do Evento, `warning` | média | média | genérico | Todo CRUD tem flash no destroy; pequeno demais para pedido sozinho, costuma vir junto | flash com o nome do registro e tipo `warning` novo |
-| 48 | R3 | Formatação na view com helper num só lugar | média | média | adaptável | Truncar texto ou badge vale em qualquer CRUD; data por extenso exige campo de data | método de apresentação no model (texto truncado, badge) |
-| 49 | M12 | Último editor gravado da sessão | média-baixa | média | genérico | Só precisa de login e do recurso; valor vindo da sessão e nunca do form serve a todo CRUD | — |
-| 50 | M14 | Contador de visualizações com `update()` | média-baixa | média | genérico | Coluna nova e `update()` no `show` servem a todo CRUD; pequeno, mas foge das linhas da rubrica | contador de visualizações no `show` com `update()` |
-| 51 | M22 | No máximo N Eventos por dia | média-baixa | média | adaptável | "Por dia" exige data, mas "por dono" ou por valor de campo vale em todo CRUD | no máximo N registros por dono ou por valor de um campo |
-| 52 | O7 | `Route::patch` no core | média-baixa | média | genérico | Core pequeno, igual em todo template; a ação parcial pode ser qualquer campo do recurso | — |
-| 53 | O10 | `Route::resource` ou `Route::prefix` no core | média-baixa | média | genérico | Item de framework da rubrica, aplicável a todo `routes.php`; 25-40 min e risco na ordem das rotas | — |
-| 54 | P22 | Adiar o Evento uma semana com um botão | média-baixa | média | adaptável | Ação de um botão que altera campo é universal; exige campo de data, comum mas não garantido | botão que soma N dias à data do recurso (ou altera campo) |
-| 55 | Q5 | Token CSRF nos formulários de Evento | média-baixa | média | genérico | Todo CRUD tem forms POST/DELETE e middleware; repete o A15 da 4.1, mas mexe em rotas e helper de login | token CSRF nos formulários do CRUD (criar, editar, remover) |
-| 56 | Q6 | Revisar escape e testar XSS | média-baixa | média | genérico | "Ponha `<script>` no campo de texto" roda em qualquer CRUD; pequeno, mas não é linha da rubrica | escapar toda saída do recurso e provar com teste de XSS |
-| 57 | R7 | Voltar à mesma página após remover/editar | média-baixa | média | genérico | Todo CRUD tem index paginado + destroy; toca a linha de paginação da rubrica | após remover/editar, voltar à mesma página da listagem |
-| 58 | R10 | "Salvar e cadastrar outro" | média-baixa | média | genérico | Todo create aceita o botão extra; pequeno, mas fora da rubrica | botão "Salvar e cadastrar outro" no create |
-| 59 | S5 | `PaginatorTest` e Cests do `show` | média-baixa | média | genérico | `Paginator` e show estão em todo template; Paginator é linha da rubrica sem teste próprio | — |
-| 60 | T4 | Itens por página e capacidade no `.env` | média-baixa | média | genérico | `per_page` fixo existe em todo index paginado; limite máximo exige campo numérico | itens por página (e limite de campo numérico) lidos do `.env` |
-| 61 | O4 | Resposta JSON da listagem | baixa | média | genérico | Genérico de nicho, vale para todos via `renderJson`; prepara o Ajax da 4.4 | — |
-| 62 | O8 | Status HTTP corretos (404, 422) | baixa | média | genérico | Todo CRUD responde 302 para não encontrado e 200 para form inválido; pequeno, mas mexe em testes | — |
-| 63 | P11 | Soft delete (arquivar Evento) | baixa | média | genérico | Todo CRUD tem destroy; arquivar em vez de apagar é universal, mas mexe no Paginator (`IS NULL`) | — |
-| 64 | P19 | Remoção em lote | baixa | média | genérico | Toda listagem admin aceita checkbox e destroy em lote; sobe, mas fica fora da rubrica | — |
-| 65 | P7 | "Meus eventos" do Participante | média-alta | média-baixa | adaptável | Exige registros ligados ao usuário comum; no template o CRUD é do admin e user_id não é garantido | página "meus registros" do usuário logado (por user_id) |
-| 66 | M3 | Valor novo em ENUM/SET | média | média-baixa | adaptável | Exige ENUM no recurso, não garantido em todos; pequeno demais para render uma FVP sozinho | valor novo num campo de opções fixas do recurso |
-| 67 | O3 | Inscritos no `show` (`participants()`) | média | média-baixa | adaptável | Exige relação N:N ou segundo recurso, que nem todo grupo tem; inscrição é conceito nosso | Registros relacionados (1xN ou N:N) listados no `show` |
-| 68 | P10 | Comentários do Evento (recurso filho 1xN) | média | média-baixa | genérico | Recurso filho cabe em qualquer CRUD, mas é o cenário mais longo e antecipa a 4.3 | comentários (recurso filho 1xN) no recurso |
-| 69 | P17 | Remover com inscrições, em cascata e confirmado | média | média-baixa | adaptável | Só faz sentido se o recurso tiver filhos com FK RESTRICT; nem todo grupo tem segundo recurso | remover registro com filhos em cascata, após confirmação |
-| 70 | Q4 | Perfil Organizador com CRUD dos próprios Eventos | média | média-baixa | genérico | Todo grupo tem papéis e CRUD, mas papel novo + middleware + dono passa dos 40 min | perfil novo com CRUD só dos próprios registros |
-| 71 | R9 | Lista de presença imprimível com layout próprio | média | média-baixa | específico | Lista de inscritos só existe aqui; reaproveita só o layout de impressão sem navbar | nenhum |
-| 72 | R12 | Tela reflete as regras do model | média | média-baixa | adaptável | Nossa regra usa inscrições; outros precisam de uma regra de estado que bloqueie ação | esconder ação ou ajustar `min`/`max` conforme regra do model |
-| 73 | M8 | Enum PHP para tipo e modalidade | média-baixa | média-baixa | adaptável | Refatoração que exige constantes de opções; nem todo recurso tem ENUM e não acrescenta função | constantes de opções do recurso viram `enum` do PHP |
-| 74 | M13 | Montagem do Evento no model ou service | média-baixa | média-baixa | genérico | Refatoração sem função nova é difícil de avaliar igual entre grupos; rara em FVP | mover a montagem do recurso do controller para model/service |
-| 75 | M15 | Escolher o responsável entre os admins | média-baixa | média-baixa | adaptável | Exige `user_id` no recurso e inverte a regra do dono; maior e com decisões por grupo | escolher no form o usuário responsável pelo recurso, validado |
-| 76 | M21 | Vagas ilimitadas (`capacity` NULL) | média-baixa | média-baixa | adaptável | Exige campo numérico com limite já existente, que nem todo recurso tem | campo numérico opcional em que vazio significa "sem limite" |
-| 77 | N13 | Filtro fora do `where` (SET, vagas) | média-baixa | média-baixa | adaptável | SET e contagem de vagas são raros; serve só quem tem campo numérico ou multivalorado | Filtro com condição que não é igualdade (faixa numérica, `LIKE`) |
-| 78 | O6 | Inscritos em página própria, paginada | média-baixa | média-baixa | adaptável | Exige recurso filho; parte reaproveitável: rota aninhada com `{id}` e paginação dos links | Registros filhos de um recurso em rota aninhada paginada |
-| 79 | R6 | Partials reutilizados e Remover no `show` | média-baixa | média-baixa | genérico | Remover no show vale em todos; extrair partial exige várias telas com a mesma tabela | partial da tabela/ações do recurso e Remover no detalhe |
-| 80 | R11 | Evento anterior e próximo no detalhe | média-baixa | média-baixa | adaptável | Por id vale em todos; ordenar por data exige campo de data e SQL próprio | links anterior/próximo no detalhe (por id ou campo de ordem) |
-| 81 | R14 | Título da aba com o nome do Evento | baixa-média | média-baixa | genérico | Todo layout tem `<title>` e todo show tem nome; trivial e fora da rubrica | `<title>` da aba com o nome do registro |
-| 82 | T3 | README e wiki da feature nova | média-baixa | média-baixa | genérico | Vale para todos, mas é acessório; raramente vira o pedido em si | — |
-| 83 | M16 | Gancho `beforeValidation` no core (espaços) | baixa | média-baixa | genérico | Genérico e pequeno, mas é mudança de core; o professor tende a pedir no recurso, não no `Model` | — |
-| 84 | N14 | Query Builder mínimo no core | baixa | média-baixa | genérico | Vale para todos e houve aula de Builder, mas 40-60 min de core estoura a prova | — |
-| 85 | O11 | Página 404 amigável, sem stack trace | baixa | média-baixa | genérico | Stack trace aparece em todo template, mas é infra de erro, longe do CRUD que a 4.2 avalia | — |
-| 86 | P20 | Exportar Evento em iCal (`.ics`) | baixa | média-baixa | adaptável | Exige campo de data (nem todo recurso tem) e formato de nicho | exportar registro com data em .ics |
-| 87 | P2 | Inscrição do Participante em um Evento | média-alta | baixa | específico | Exige N:N usuário-recurso com vagas; nem todo CRUD tem inscrição, e o NxN é tema da 4.4 | nenhum |
-| 88 | P13 | Admin inscreve e remove um Participante | média-alta | baixa | específico | Depende de inscrição N:N; a parte "validar user_id vindo do form" já é M11/M15 | nenhum |
-| 89 | P3 | Cancelar a própria inscrição | média | baixa | específico | Só existe em cima de P2; sem inscrição não há o que cancelar | nenhum |
-| 90 | P14 | Comprovante de inscrição com número gerado | média | baixa | específico | Vive na tabela de inscrição; o padrão "código 1000-9999 único" no recurso já é P1 | nenhum |
-| 91 | P4 | Confirmar presença pelo código do Evento | média-baixa | baixa | específico | Presença/inscrição são nossos; a parte "código gerado e validado" já é P1/P16 | nenhum |
-| 92 | P9 | Lista de espera quando lotado | média-baixa | baixa | específico | Exige vagas/lotado e inscrição; empilha P2 e P3, sem equivalente em outros CRUDs | nenhum |
-| 93 | P12 | Login por código aleatório (FVP real 4.1) | média-baixa | baixa | genérico | Genérico, mas já foi a FVP 4.1 de toda a turma; repetir não avalia nada da 4.2 | — |
-| 94 | P15 | Inscrição via JSON | média-baixa | baixa | específico | Exige P2; a parte JSON genérica já é O4 (listagem em JSON) | nenhum |
-| 95 | Q3 | Ação só para Participante | média-baixa | baixa | específico | A ação barrada (inscrever-se) é nossa; o middleware "só não-admin" é a parte reaproveitável | nenhum |
-| 96 | R13 | Textos de vagas com concordância | média-baixa | baixa | específico | Vagas e inscritos são só nossos; sobra só a ideia de plural no model | nenhum |
-| 97 | M23 | Data digitada como dd/mm/aaaa | baixa | baixa | adaptável | Exige campo de data e o `type="date"` já mostra dd/mm/aaaa; pedido raro | campo de data aceito em dd/mm/aaaa e gravado em Y-m-d |
-| 98 | N15 | Dois paginadores na mesma tela | baixa | baixa | adaptável | Precisa de critério para separar duas listas (datas) e de mexer no `Paginator`; grande e raro | Duas listagens paginadas independentes do recurso na mesma tela |
-| 99 | P18 | Evento privado com código de convite | baixa | baixa | específico | Convite e inscrição são nossos; o código gerado reaproveitável já é P1 | nenhum |
-| 100 | P21 | Imagem de capa do Evento (upload) | baixa | baixa | genérico | Cabe em qualquer recurso, mas upload é tema da 4.3 e passa de 40 min com testes | imagem (upload) no recurso |
+1. M1 Campo novo em `events` com validação
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Todo CRUD aceita coluna nova com validação; é a linha "campo novo +
+   validação" da rubrica e cabe no tempo.
+   Forma genérica: campo novo no recurso principal com validação.
+
+2. M2 Validação nova em `lib/Validations.php`
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Só depende de `Validations` e de um campo de texto ou número, que
+   todo recurso tem; linha da rubrica.
+   Forma genérica: a do título serve.
+
+3. N1 Filtro por tipo com `where` na paginação
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Todo CRUD tem index paginado e algum campo para filtrar; é a linha
+   `where` da rubrica.
+   Forma genérica: filtro por um campo do recurso com `where`, mantido na
+   paginação.
+
+4. P1 Código de check-in aleatório (1000-9999)
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Transposição direta da FVP 4.1 para qualquer CRUD: campo gerado no
+   backend, único, validado no model.
+   Forma genérica: Código aleatório 1000-9999 único por registro, gerado no
+   backend.
+
+5. S1 Teste de aceitação da modificação
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Acompanha qualquer pedido único; rubrica cobra Cest da coisa nova.
+   Forma genérica: a do título serve.
+
+6. S2 Teste de acesso por HTTP da rota nova
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Todo CRUD tem auth/admin; rota nova sempre pede prova de acesso.
+   Forma genérica: a do título serve.
+
+7. S3 Teste unitário do método novo do model
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Qualquer método novo no model pede teste unitário; independe do
+   domínio.
+   Forma genérica: a do título serve.
+
+8. T1 Populate: campo novo, mais Eventos, segundo admin
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Todo grupo tem populate; vem junto de campo novo ou paginação.
+   Forma genérica: populate com campo novo, mais registros e segundo admin.
+
+9. T2 `phpcs`, `phpstan` e CI verdes
+   Pedido único: alta (original: alta). Genérico.
+   Por quê: Implícito em qualquer pedido; CI é item da rubrica.
+   Forma genérica: a do título serve.
+
+10. N3 Ordenar por data no `Paginator`
+   Pedido único: alta (original: média-alta). Genérico.
+   Por quê: Todo `Paginator` do template não tem `ORDER BY`; pequeno, toca
+   paginação e vale para qualquer coluna.
+   Forma genérica: `ORDER BY` por coluna do recurso no `Paginator`, com
+   desempate por `id`.
+
+11. N10 Página e id inválidos, sem `(int)` cego
+   Pedido único: alta (original: média-alta). Genérico.
+   Por quê: O `(int)` cego vem do template e está em todo CRUD; pequeno,
+   apontado em issue de avaliação da 4.2.
+   Forma genérica: Página e id da rota validados, sem conversão silenciosa.
+
+12. P16 Remover só com código de confirmação
+   Pedido único: alta (original: média-alta). Genérico.
+   Por quê: Todo CRUD tem destroy; repete o padrão da FVP 4.1 (código no
+   backend, validado) numa ação nova.
+   Forma genérica: a do título serve.
+
+13. S4 Testes de borda pedidos pelo professor
+   Pedido único: alta (original: média-alta). Genérico.
+   Por quê: Vazio, inválido, não autorizado e update sem mudança existem em todo
+   CRUD.
+   Forma genérica: testes de borda da validação e do acesso do recurso.
+
+14. P5 Status do Evento: cancelar e encerrar
+   Pedido único: média-alta (original: alta). Adaptável.
+   Por quê: Status ativo/inativo cabe em todo recurso, mas "encerrar por data" e
+   "barrar inscrição" são nossos.
+   Forma genérica: campo status (ENUM) no recurso com ação ativar/desativar.
+
+15. M6 Unicidade (título único na mesma data)
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Por quê: Todo recurso tem nome; `uniqueness` já existe e pode já estar em
+   uso, o que tira desafio.
+   Forma genérica: nome do recurso único (só ou combinado com outro campo).
+
+16. M17 Campo sim/não por checkbox (certificado)
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Por quê: Booleano por checkbox cabe em qualquer recurso; é campo novo +
+   validação com armadilha comum a todos.
+   Forma genérica: campo sim/não por checkbox no recurso.
+
+17. N4 Mudar `per_page` ou deixar o usuário escolher
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Por quê: Vale para todo CRUD paginado, mas é pequeno demais para ser a FVP
+   inteira; entra como parte.
+   Forma genérica: a do título serve.
+
+18. O1 Rota RESTful nova com página (lotados)
+   Pedido único: média-alta (original: média-alta). Adaptável.
+   Por quê: "Lotados" é nosso, mas rota GET nova com página de subconjunto
+   existe em todo CRUD.
+   Forma genérica: Rota GET nova listando registros do recurso que atendem a um
+   critério.
+
+19. O2 Eventos para o Participante (lista e detalhe)
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Por quê: Todo grupo tem admin x comum; lista e detalhe só leitura para o
+   comum vale em qualquer domínio.
+   Forma genérica: Lista e detalhe do recurso, só leitura, para o usuário comum.
+
+20. P6 Duplicar Evento
+   Pedido único: média-alta (original: média-alta). Genérico.
+   Por quê: Todo CRUD pode duplicar um registro; pequeno, mas não toca linha da
+   rubrica (só "+7 dias" é nosso).
+   Forma genérica: duplicar um registro do recurso.
+
+21. Q1 Só o dono edita e remove
+   Pedido único: média-alta (original: média-alta). Adaptável.
+   Por quê: Exige `user_id` no recurso (provável, não garantido); é o D8 da 4.1
+   levado ao CRUD.
+   Forma genérica: só o dono (`user_id`) edita e remove o registro.
+
+22. M9 Slug único gerado no backend
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Todo recurso tem nome; é "código gerado no backend e validado",
+   irmão do precedente da 4.1.
+   Forma genérica: slug único gerado do nome do recurso.
+
+23. M19 "Nenhuma alteração" ao salvar sem mudar
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Todo CRUD tem edição; pequeno, compara com o banco e cobra detecção
+   de alteração.
+   Forma genérica: "nenhuma alteração" ao salvar a edição sem mudar nada.
+
+24. N2 Busca por título (`LIKE`)
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Todo recurso tem nome e listagem; pequeno, mas `LIKE` foge do
+   `where` da rubrica.
+   Forma genérica: busca pelo nome do recurso na listagem.
+
+25. N8 Ordenar clicando no cabeçalho da listagem
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Funciona em qualquer listagem e junta `ORDER BY` com `queryParams`
+   na paginação; um pouco maior.
+   Forma genérica: a do título serve.
+
+26. N11 `Model::count()` no framework
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Core pequeno, igual em todo template; contar registros (total na
+   listagem, por dono) serve a qualquer CRUD.
+   Forma genérica: `count()` no Model e total de registros na listagem.
+
+27. N12 Paginação com Primeira/Última e janela
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: `Paginator` é item da rubrica e é igual em todo grupo; pequeno e
+   testável sem domínio.
+   Forma genérica: a do título serve.
+
+28. O9 `_method` só via POST (falha real)
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Falha de segurança idêntica em todo template; pequeno, com teste
+   unitário de core.
+   Forma genérica: a do título serve.
+
+29. R4 Confirmar antes de remover (JS em arquivo)
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Todo CRUD tem destroy; pequeno, regra de JS em arquivo próprio já
+   cobrada pelo professor.
+   Forma genérica: confirmar remoção com JS em arquivo próprio.
+
+30. R5 Mostrar `created_at` e `updated_at`
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Toda tabela pode ter `created_at`; o core não lê timestamps e
+   `save()` grava NULL: armadilha igual p/ todos.
+   Forma genérica: exibir data de cadastro e de alteração do registro.
+
+31. R8 Lista de todos os erros no topo do formulário
+   Pedido único: média-alta (original: média). Genérico.
+   Por quê: Universal e ligado à validação (item da demonstração); exige método
+   pequeno no core.
+   Forma genérica: listar todos os erros de validação no topo do form.
+
+32. M4 Data de término não anterior ao início
+   Pedido único: média (original: média-alta). Adaptável.
+   Por quê: Nem todo recurso tem data; sem ela o grupo cria duas colunas e o
+   pedido cresce.
+   Forma genérica: segundo campo de data com ordem em relação ao primeiro.
+
+33. M7 Horário do Evento (`TIME` ou `DATETIME`)
+   Pedido único: média (original: média-alta). Adaptável.
+   Por quê: Depende de campo de data, que nem todo recurso tem; formato
+   `HH:MM:SS` gera armadilha igual para todos.
+   Forma genérica: campo de hora ou data-hora no recurso, validado.
+
+34. M18 Janela de datas: antecedência e limite
+   Pedido único: média (original: média-alta). Adaptável.
+   Por quê: Exige campo de data; quem não tem precisa criar antes, e o pedido
+   deixa de caber.
+   Forma genérica: data do recurso dentro de uma faixa de dias a partir de hoje.
+
+35. O5 Admin vê e lista só os próprios Eventos
+   Pedido único: média (original: média-alta). Adaptável.
+   Por quê: Mesma dependência de `user_id` do Q1, que é o pedido mais provável
+   dessa família.
+   Forma genérica: Admin só lista e cadastra registros dele (`user_id`).
+
+36. R2 Nome do criador no `show` e na listagem
+   Pedido único: média (original: média-alta). Adaptável.
+   Por quê: Depende de `user_id`/dono no recurso, que é provável mas não
+   garantido em todo CRUD.
+   Forma genérica: mostrar o usuário dono do registro (BelongsTo) no detalhe.
+
+37. M5 Validação condicional por modalidade
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Exige um campo de categoria (tipo, status); comum mas não universal.
+   Forma genérica: campo obrigatório só quando outro campo tem certo valor.
+
+38. M10 Campo que não muda depois de haver inscrições
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Inscrição é nossa, mas "não muda após criação" serve a todo CRUD e
+   cobra detecção de alteração.
+   Forma genérica: campo que não pode mudar depois de criado (comparar com o
+   banco).
+
+39. M11 Validar `user_id` no model
+   Pedido único: média (original: média). Adaptável.
+   Por quê: `user_id` no recurso é provável, não garantido; sem dono vale para
+   qualquer FK.
+   Forma genérica: validar no model a FK do recurso (existe e tem o papel
+   certo).
+
+40. M20 Preço em reais com vírgula
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Valor decimal cabe na maioria dos recursos, mas em alguns domínios
+   soa forçado.
+   Forma genérica: campo decimal com vírgula, validado e formatado na view.
+
+41. N5 Só Eventos futuros ou passados
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Exige campo de data no recurso; nem todo recurso tem data além de
+   `created_at`.
+   Forma genérica: Filtro por campo de data do recurso (antes/depois de hoje).
+
+42. N6 Dado calculado na tela (badge "Lotado", total)
+   Pedido único: média (original: média). Adaptável.
+   Por quê: "Lotado" depende de vagas; o total de registros no painel serve a
+   todos, mas é pequeno.
+   Forma genérica: Total de registros no painel ou valor derivado na listagem.
+
+43. N7 Painel administrativo com resumo
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Painel é genérico de nicho; contagem por tipo exige ENUM ou
+   categoria, que nem todos têm.
+   Forma genérica: Painel admin com total por categoria e últimos N registros.
+
+44. N9 Filtro por período
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Validar o filtro no model vale para todos, mas exige campo de data
+   no recurso.
+   Forma genérica: Filtro de/até sobre campo de data do recurso, com validação.
+
+45. P8 Exportar a listagem em CSV
+   Pedido único: média (original: média). Genérico.
+   Por quê: Roda em qualquer listagem, mas é formato de nicho fora da rubrica
+   (âncora de média).
+   Forma genérica: a do título serve.
+
+46. Q2 Bloquear alterar Evento passado ou cancelado
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Depende de campo de data ou status no recurso, comum mas não
+   universal.
+   Forma genérica: bloquear editar/remover conforme data ou status do registro.
+
+47. R1 Flash: texto, título do Evento, `warning`
+   Pedido único: média (original: média). Genérico.
+   Por quê: Todo CRUD tem flash no destroy; pequeno demais para pedido sozinho,
+   costuma vir junto.
+   Forma genérica: flash com o nome do registro e tipo `warning` novo.
+
+48. R3 Formatação na view com helper num só lugar
+   Pedido único: média (original: média). Adaptável.
+   Por quê: Truncar texto ou badge vale em qualquer CRUD; data por extenso exige
+   campo de data.
+   Forma genérica: método de apresentação no model (texto truncado, badge).
+
+49. M12 Último editor gravado da sessão
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Só precisa de login e do recurso; valor vindo da sessão e nunca do
+   form serve a todo CRUD.
+   Forma genérica: a do título serve.
+
+50. M14 Contador de visualizações com `update()`
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Coluna nova e `update()` no `show` servem a todo CRUD; pequeno, mas
+   foge das linhas da rubrica.
+   Forma genérica: contador de visualizações no `show` com `update()`.
+
+51. M22 No máximo N Eventos por dia
+   Pedido único: média (original: média-baixa). Adaptável.
+   Por quê: "Por dia" exige data, mas "por dono" ou por valor de campo vale em
+   todo CRUD.
+   Forma genérica: no máximo N registros por dono ou por valor de um campo.
+
+52. O7 `Route::patch` no core
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Core pequeno, igual em todo template; a ação parcial pode ser
+   qualquer campo do recurso.
+   Forma genérica: a do título serve.
+
+53. O10 `Route::resource` ou `Route::prefix` no core
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Item de framework da rubrica, aplicável a todo `routes.php`; 25-40
+   min e risco na ordem das rotas.
+   Forma genérica: a do título serve.
+
+54. P22 Adiar o Evento uma semana com um botão
+   Pedido único: média (original: média-baixa). Adaptável.
+   Por quê: Ação de um botão que altera campo é universal; exige campo de data,
+   comum mas não garantido.
+   Forma genérica: botão que soma N dias à data do recurso (ou altera campo).
+
+55. Q5 Token CSRF nos formulários de Evento
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Todo CRUD tem forms POST/DELETE e middleware; repete o A15 da 4.1,
+   mas mexe em rotas e helper de login.
+   Forma genérica: token CSRF nos formulários do CRUD (criar, editar, remover).
+
+56. Q6 Revisar escape e testar XSS
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: "Ponha `<script>` no campo de texto" roda em qualquer CRUD; pequeno,
+   mas não é linha da rubrica.
+   Forma genérica: escapar toda saída do recurso e provar com teste de XSS.
+
+57. R7 Voltar à mesma página após remover/editar
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Todo CRUD tem index paginado + destroy; toca a linha de paginação da
+   rubrica.
+   Forma genérica: após remover/editar, voltar à mesma página da listagem.
+
+58. R10 "Salvar e cadastrar outro"
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: Todo create aceita o botão extra; pequeno, mas fora da rubrica.
+   Forma genérica: botão "Salvar e cadastrar outro" no create.
+
+59. S5 `PaginatorTest` e Cests do `show`
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: `Paginator` e show estão em todo template; Paginator é linha da
+   rubrica sem teste próprio.
+   Forma genérica: a do título serve.
+
+60. T4 Itens por página e capacidade no `.env`
+   Pedido único: média (original: média-baixa). Genérico.
+   Por quê: `per_page` fixo existe em todo index paginado; limite máximo exige
+   campo numérico.
+   Forma genérica: itens por página (e limite de campo numérico) lidos do
+   `.env`.
+
+61. O4 Resposta JSON da listagem
+   Pedido único: média (original: baixa). Genérico.
+   Por quê: Genérico de nicho, vale para todos via `renderJson`; prepara o Ajax
+   da 4.4.
+   Forma genérica: a do título serve.
+
+62. O8 Status HTTP corretos (404, 422)
+   Pedido único: média (original: baixa). Genérico.
+   Por quê: Todo CRUD responde 302 para não encontrado e 200 para form inválido;
+   pequeno, mas mexe em testes.
+   Forma genérica: a do título serve.
+
+63. P11 Soft delete (arquivar Evento)
+   Pedido único: média (original: baixa). Genérico.
+   Por quê: Todo CRUD tem destroy; arquivar em vez de apagar é universal, mas
+   mexe no Paginator (`IS NULL`).
+   Forma genérica: a do título serve.
+
+64. P19 Remoção em lote
+   Pedido único: média (original: baixa). Genérico.
+   Por quê: Toda listagem admin aceita checkbox e destroy em lote; sobe, mas
+   fica fora da rubrica.
+   Forma genérica: a do título serve.
+
+65. P7 "Meus eventos" do Participante
+   Pedido único: média-baixa (original: média-alta). Adaptável.
+   Por quê: Exige registros ligados ao usuário comum; no template o CRUD é do
+   admin e user_id não é garantido.
+   Forma genérica: página "meus registros" do usuário logado (por user_id).
+
+66. M3 Valor novo em ENUM/SET
+   Pedido único: média-baixa (original: média). Adaptável.
+   Por quê: Exige ENUM no recurso, não garantido em todos; pequeno demais para
+   render uma FVP sozinho.
+   Forma genérica: valor novo num campo de opções fixas do recurso.
+
+67. O3 Inscritos no `show` (`participants()`)
+   Pedido único: média-baixa (original: média). Adaptável.
+   Por quê: Exige relação N:N ou segundo recurso, que nem todo grupo tem;
+   inscrição é conceito nosso.
+   Forma genérica: Registros relacionados (1xN ou N:N) listados no `show`.
+
+68. P10 Comentários do Evento (recurso filho 1xN)
+   Pedido único: média-baixa (original: média). Genérico.
+   Por quê: Recurso filho cabe em qualquer CRUD, mas é o cenário mais longo e
+   antecipa a 4.3.
+   Forma genérica: comentários (recurso filho 1xN) no recurso.
+
+69. P17 Remover com inscrições, em cascata e confirmado
+   Pedido único: média-baixa (original: média). Adaptável.
+   Por quê: Só faz sentido se o recurso tiver filhos com FK RESTRICT; nem todo
+   grupo tem segundo recurso.
+   Forma genérica: remover registro com filhos em cascata, após confirmação.
+
+70. Q4 Perfil Organizador com CRUD dos próprios Eventos
+   Pedido único: média-baixa (original: média). Genérico.
+   Por quê: Todo grupo tem papéis e CRUD, mas papel novo + middleware + dono
+   passa dos 40 min.
+   Forma genérica: perfil novo com CRUD só dos próprios registros.
+
+71. R9 Lista de presença imprimível com layout próprio
+   Pedido único: média-baixa (original: média). Específico.
+   Por quê: Lista de inscritos só existe aqui; reaproveita só o layout de
+   impressão sem navbar.
+   Forma genérica: nenhuma.
+
+72. R12 Tela reflete as regras do model
+   Pedido único: média-baixa (original: média). Adaptável.
+   Por quê: Nossa regra usa inscrições; outros precisam de uma regra de estado
+   que bloqueie ação.
+   Forma genérica: esconder ação ou ajustar `min`/`max` conforme regra do model.
+
+73. M8 Enum PHP para tipo e modalidade
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: Refatoração que exige constantes de opções; nem todo recurso tem
+   ENUM e não acrescenta função.
+   Forma genérica: constantes de opções do recurso viram `enum` do PHP.
+
+74. M13 Montagem do Evento no model ou service
+   Pedido único: média-baixa (original: média-baixa). Genérico.
+   Por quê: Refatoração sem função nova é difícil de avaliar igual entre grupos;
+   rara em FVP.
+   Forma genérica: mover a montagem do recurso do controller para model/service.
+
+75. M15 Escolher o responsável entre os admins
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: Exige `user_id` no recurso e inverte a regra do dono; maior e com
+   decisões por grupo.
+   Forma genérica: escolher no form o usuário responsável pelo recurso,
+   validado.
+
+76. M21 Vagas ilimitadas (`capacity` NULL)
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: Exige campo numérico com limite já existente, que nem todo recurso
+   tem.
+   Forma genérica: campo numérico opcional em que vazio significa "sem limite".
+
+77. N13 Filtro fora do `where` (SET, vagas)
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: SET e contagem de vagas são raros; serve só quem tem campo numérico
+   ou multivalorado.
+   Forma genérica: Filtro com condição que não é igualdade (faixa numérica,
+   `LIKE`).
+
+78. O6 Inscritos em página própria, paginada
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: Exige recurso filho; parte reaproveitável: rota aninhada com `{id}`
+   e paginação dos links.
+   Forma genérica: Registros filhos de um recurso em rota aninhada paginada.
+
+79. R6 Partials reutilizados e Remover no `show`
+   Pedido único: média-baixa (original: média-baixa). Genérico.
+   Por quê: Remover no show vale em todos; extrair partial exige várias telas
+   com a mesma tabela.
+   Forma genérica: partial da tabela/ações do recurso e Remover no detalhe.
+
+80. R11 Evento anterior e próximo no detalhe
+   Pedido único: média-baixa (original: média-baixa). Adaptável.
+   Por quê: Por id vale em todos; ordenar por data exige campo de data e SQL
+   próprio.
+   Forma genérica: links anterior/próximo no detalhe (por id ou campo de ordem).
+
+81. R14 Título da aba com o nome do Evento
+   Pedido único: média-baixa (original: baixa-média). Genérico.
+   Por quê: Todo layout tem `<title>` e todo show tem nome; trivial e fora da
+   rubrica.
+   Forma genérica: `<title>` da aba com o nome do registro.
+
+82. T3 README e wiki da feature nova
+   Pedido único: média-baixa (original: média-baixa). Genérico.
+   Por quê: Vale para todos, mas é acessório; raramente vira o pedido em si.
+   Forma genérica: a do título serve.
+
+83. M16 Gancho `beforeValidation` no core (espaços)
+   Pedido único: média-baixa (original: baixa). Genérico.
+   Por quê: Genérico e pequeno, mas é mudança de core; o professor tende a pedir
+   no recurso, não no `Model`.
+   Forma genérica: a do título serve.
+
+84. N14 Query Builder mínimo no core
+   Pedido único: média-baixa (original: baixa). Genérico.
+   Por quê: Vale para todos e houve aula de Builder, mas 40-60 min de core
+   estoura a prova.
+   Forma genérica: a do título serve.
+
+85. O11 Página 404 amigável, sem stack trace
+   Pedido único: média-baixa (original: baixa). Genérico.
+   Por quê: Stack trace aparece em todo template, mas é infra de erro, longe do
+   CRUD que a 4.2 avalia.
+   Forma genérica: a do título serve.
+
+86. P20 Exportar Evento em iCal (`.ics`)
+   Pedido único: média-baixa (original: baixa). Adaptável.
+   Por quê: Exige campo de data (nem todo recurso tem) e formato de nicho.
+   Forma genérica: exportar registro com data em .ics.
+
+87. P2 Inscrição do Participante em um Evento
+   Pedido único: baixa (original: média-alta). Específico.
+   Por quê: Exige N:N usuário-recurso com vagas; nem todo CRUD tem inscrição, e
+   o NxN é tema da 4.4.
+   Forma genérica: nenhuma.
+
+88. P13 Admin inscreve e remove um Participante
+   Pedido único: baixa (original: média-alta). Específico.
+   Por quê: Depende de inscrição N:N; a parte "validar user_id vindo do form" já
+   é M11/M15.
+   Forma genérica: nenhuma.
+
+89. P3 Cancelar a própria inscrição
+   Pedido único: baixa (original: média). Específico.
+   Por quê: Só existe em cima de P2; sem inscrição não há o que cancelar.
+   Forma genérica: nenhuma.
+
+90. P14 Comprovante de inscrição com número gerado
+   Pedido único: baixa (original: média). Específico.
+   Por quê: Vive na tabela de inscrição; o padrão "código 1000-9999 único" no
+   recurso já é P1.
+   Forma genérica: nenhuma.
+
+91. P4 Confirmar presença pelo código do Evento
+   Pedido único: baixa (original: média-baixa). Específico.
+   Por quê: Presença/inscrição são nossos; a parte "código gerado e validado" já
+   é P1/P16.
+   Forma genérica: nenhuma.
+
+92. P9 Lista de espera quando lotado
+   Pedido único: baixa (original: média-baixa). Específico.
+   Por quê: Exige vagas/lotado e inscrição; empilha P2 e P3, sem equivalente em
+   outros CRUDs.
+   Forma genérica: nenhuma.
+
+93. P12 Login por código aleatório (FVP real 4.1)
+   Pedido único: baixa (original: média-baixa). Genérico.
+   Por quê: Genérico, mas já foi a FVP 4.1 de toda a turma; repetir não avalia
+   nada da 4.2.
+   Forma genérica: a do título serve.
+
+94. P15 Inscrição via JSON
+   Pedido único: baixa (original: média-baixa). Específico.
+   Por quê: Exige P2; a parte JSON genérica já é O4 (listagem em JSON).
+   Forma genérica: nenhuma.
+
+95. Q3 Ação só para Participante
+   Pedido único: baixa (original: média-baixa). Específico.
+   Por quê: A ação barrada (inscrever-se) é nossa; o middleware "só não-admin" é
+   a parte reaproveitável.
+   Forma genérica: nenhuma.
+
+96. R13 Textos de vagas com concordância
+   Pedido único: baixa (original: média-baixa). Específico.
+   Por quê: Vagas e inscritos são só nossos; sobra só a ideia de plural no
+   model.
+   Forma genérica: nenhuma.
+
+97. M23 Data digitada como dd/mm/aaaa
+   Pedido único: baixa (original: baixa). Adaptável.
+   Por quê: Exige campo de data e o `type="date"` já mostra dd/mm/aaaa; pedido
+   raro.
+   Forma genérica: campo de data aceito em dd/mm/aaaa e gravado em Y-m-d.
+
+98. N15 Dois paginadores na mesma tela
+   Pedido único: baixa (original: baixa). Adaptável.
+   Por quê: Precisa de critério para separar duas listas (datas) e de mexer no
+   `Paginator`; grande e raro.
+   Forma genérica: Duas listagens paginadas independentes do recurso na mesma
+   tela.
+
+99. P18 Evento privado com código de convite
+   Pedido único: baixa (original: baixa). Específico.
+   Por quê: Convite e inscrição são nossos; o código gerado reaproveitável já é
+   P1.
+   Forma genérica: nenhuma.
+
+100. P21 Imagem de capa do Evento (upload)
+   Pedido único: baixa (original: baixa). Genérico.
+   Por quê: Cabe em qualquer recurso, mas upload é tema da 4.3 e passa de 40 min
+   com testes.
+   Forma genérica: imagem (upload) no recurso.
 
 ## 7. Top 15 para estudar primeiro sob pedido único
 
