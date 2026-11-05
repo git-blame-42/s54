@@ -120,6 +120,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N13. Filtro que `where` não expressa: público-alvo e "só com vagas"
   `n13-filtro-find-in-set-vagas/`
   - feat: Filter events by audience and available spots
+- N14. Query Builder mínimo no core
+  `n14-query-builder/`
+  - feat: Add minimal query builder to the core
+  - feat: Order events listing by date with the query builder
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title

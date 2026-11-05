@@ -1,0 +1,667 @@
+From c19445c45e0766c16506271bcd03076d046b78a8 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:29:52 -0300
+Subject: [PATCH 1/2] feat: Add minimal query builder to the core
+
+Model::query() returns a QueryBuilder with where, orderBy, get and
+paginate. Values are bound as numbered placeholders; columns, operators
+and directions come from closed lists. Paginator accepts the builder's
+WHERE fragment, bindings and ORDER BY.
+---
+ core/Database/ActiveRecord/Model.php          |  10 +
+ core/Database/ActiveRecord/QueryBuilder.php   | 181 ++++++++++++++++++
+ lib/Paginator.php                             |  19 +-
+ .../Database/QueryBuilderDatabaseTest.php     | 119 ++++++++++++
+ tests/Unit/Core/Database/QueryBuilderTest.php |  90 +++++++++
+ 5 files changed, 418 insertions(+), 1 deletion(-)
+ create mode 100644 core/Database/ActiveRecord/QueryBuilder.php
+ create mode 100644 tests/Unit/Core/Database/QueryBuilderDatabaseTest.php
+ create mode 100644 tests/Unit/Core/Database/QueryBuilderTest.php
+
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..8be57be 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -293,6 +293,16 @@ abstract class Model
+         );
+     }
+ 
++    /**
++     * Query Builder: Event::query()->where('kind', 'lecture')->orderBy('starts_on')->get().
++     *
++     * @return QueryBuilder<static>
++     */
++    public static function query(): QueryBuilder
++    {
++        return new QueryBuilder(static::class, static::$table, static::$columns);
++    }
++
+     /**
+      * @param array<string, mixed> $conditions
+      * @return array<static>
+diff --git a/core/Database/ActiveRecord/QueryBuilder.php b/core/Database/ActiveRecord/QueryBuilder.php
+new file mode 100644
+index 0000000..005bf3e
+--- /dev/null
++++ b/core/Database/ActiveRecord/QueryBuilder.php
+@@ -0,0 +1,181 @@
++<?php
++
++namespace Core\Database\ActiveRecord;
++
++use Core\Database\Database;
++use InvalidArgumentException;
++use Lib\Paginator;
++use PDO;
++
++/**
++ * Query Builder mínimo: Model::query()->where(...)->orderBy(...)->get() ou ->paginate(...).
++ *
++ * Valores sempre por bindValue (placeholders :p0, :p1, ...). Coluna, operador e direção não
++ * aceitam bind, por isso só passam se estiverem nas listas fechadas abaixo.
++ *
++ * @template T of Model
++ */
++class QueryBuilder
++{
++    private const OPERATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE'];
++    private const DIRECTIONS = ['ASC', 'DESC'];
++
++    /** @var list<array{0: string, 1: string, 2: string|int|float|bool}> coluna, operador, valor */
++    private array $wheres = [];
++
++    /** @var list<array{0: string, 1: string}> coluna, direção */
++    private array $orders = [];
++
++    /**
++     * @param class-string<T> $class
++     * @param array<int, string> $columns colunas do model (sem o id)
++     */
++    public function __construct(
++        private string $class,
++        private string $table,
++        private array $columns
++    ) {
++    }
++
++    /**
++     * where('kind', 'lecture') é igualdade; where('starts_on', '>=', $data) usa o operador dado.
++     *
++     * @return static
++     */
++    public function where(string $column, mixed $operatorOrValue, mixed $value = null): static
++    {
++        if (func_num_args() === 2) {
++            $value = $operatorOrValue;
++            $operator = '=';
++        } else {
++            $operator = is_string($operatorOrValue) ? strtoupper($operatorOrValue) : '';
++        }
++
++        if (!in_array($operator, self::OPERATORS, true)) {
++            throw new InvalidArgumentException("Operador inválido: {$operator}");
++        }
++
++        if (!is_scalar($value)) {
++            throw new InvalidArgumentException("Valor inválido para a coluna {$column}");
++        }
++
++        $this->wheres[] = [$this->checkColumn($column), $operator, $value];
++
++        return $this;
++    }
++
++    /**
++     * @return static
++     */
++    public function orderBy(string $column, string $direction = 'ASC'): static
++    {
++        $direction = strtoupper($direction);
++
++        if (!in_array($direction, self::DIRECTIONS, true)) {
++            throw new InvalidArgumentException("Direção inválida: {$direction}");
++        }
++
++        $this->orders[] = [$this->checkColumn($column), $direction];
++
++        return $this;
++    }
++
++    /**
++     * Condições sem a palavra WHERE: "kind = :p0 AND starts_on >= :p1" ('' se não houver).
++     */
++    public function whereSql(): string
++    {
++        $conditions = [];
++        foreach ($this->wheres as $index => [$column, $operator]) {
++            $conditions[] = "{$column} {$operator} :p{$index}";
++        }
++
++        return implode(' AND ', $conditions);
++    }
++
++    /**
++     * Ordem sem a palavra ORDER BY: "starts_on ASC, id ASC" ('' se não houver).
++     */
++    public function orderBySql(): string
++    {
++        $orders = array_map(fn(array $order) => "{$order[0]} {$order[1]}", $this->orders);
++
++        return implode(', ', $orders);
++    }
++
++    /**
++     * @return array<string, string|int|float|bool> placeholder => valor
++     */
++    public function bindings(): array
++    {
++        $bindings = [];
++        foreach ($this->wheres as $index => $where) {
++            $bindings[":p{$index}"] = $where[2];
++        }
++
++        return $bindings;
++    }
++
++    public function toSql(): string
++    {
++        $attributes = implode(', ', $this->columns);
++        $sql = "SELECT id, {$attributes} FROM {$this->table}";
++
++        if ($this->wheres !== []) {
++            $sql .= ' WHERE ' . $this->whereSql();
++        }
++
++        if ($this->orders !== []) {
++            $sql .= ' ORDER BY ' . $this->orderBySql();
++        }
++
++        return $sql;
++    }
++
++    /**
++     * @return array<T>
++     */
++    public function get(): array
++    {
++        $stmt = Database::getDatabaseConn()->prepare($this->toSql());
++
++        foreach ($this->bindings() as $placeholder => $value) {
++            $stmt->bindValue($placeholder, $value);
++        }
++
++        $stmt->execute();
++
++        $models = [];
++        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
++            $models[] = new $this->class($row);
++        }
++
++        return $models;
++    }
++
++    public function paginate(int $page = 1, int $perPage = 10, ?string $route = null): Paginator
++    {
++        $orderBy = $this->orderBySql();
++
++        return new Paginator(
++            class: $this->class,
++            page: $page,
++            per_page: $perPage,
++            table: $this->table,
++            attributes: $this->columns,
++            route: $route,
++            whereSql: $this->whereSql(),
++            bindings: $this->bindings(),
++            orderBy: $orderBy !== '' ? $orderBy : null
++        );
++    }
++
++    private function checkColumn(string $column): string
++    {
++        if (!in_array($column, ['id', ...$this->columns], true)) {
++            throw new InvalidArgumentException("Coluna inválida: {$column}");
++        }
++
++        return $column;
++    }
++}
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..0c16daa 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -22,7 +22,11 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        // Vindos do QueryBuilder: condições sem "WHERE" (com :p0, :p1...), valores e ordem sem "ORDER BY".
++        private string $whereSql = '',
++        private array $bindings = [],
++        private ?string $orderBy = null
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -120,10 +124,12 @@ class Paginator
+         $this->offset = $this->per_page * ($this->page - 1);
+ 
+         $attributes = implode(', ', $this->attributes);
++        $order = $this->orderBy !== null ? "ORDER BY {$this->orderBy}" : '';
+ 
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$order}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+@@ -146,6 +152,10 @@ class Paginator
+ 
+     private function buildConditions(): string
+     {
++        if ($this->whereSql !== '') {
++            return " WHERE {$this->whereSql}";
++        }
++
+         if (empty($this->conditions)) {
+             return '';
+         }
+@@ -159,6 +169,13 @@ class Paginator
+ 
+     private function bindConditions(PDOStatement $stmt): void
+     {
++        if ($this->whereSql !== '') {
++            foreach ($this->bindings as $placeholder => $value) {
++                $stmt->bindValue($placeholder, $value);
++            }
++            return;
++        }
++
+         if (empty($this->conditions)) {
+             return;
+         }
+diff --git a/tests/Unit/Core/Database/QueryBuilderDatabaseTest.php b/tests/Unit/Core/Database/QueryBuilderDatabaseTest.php
+new file mode 100644
+index 0000000..157911e
+--- /dev/null
++++ b/tests/Unit/Core/Database/QueryBuilderDatabaseTest.php
+@@ -0,0 +1,119 @@
++<?php
++
++namespace Tests\Unit\Core\Database;
++
++use App\Models\Event;
++use App\Models\User;
++use Tests\TestCase;
++
++/**
++ * get() e paginate() do QueryBuilder contra o banco de teste.
++ */
++class QueryBuilderDatabaseTest extends TestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $this->admin->save();
++    }
++
++    private function createEvent(string $title, string $kind, int $days): Event
++    {
++        $event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => $title,
++            'description' => 'Descrição.',
++            'kind' => $kind,
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime("+{$days} days")),
++            'location' => 'Auditório',
++            'capacity' => 10,
++        ]);
++        $this->assertTrue($event->save());
++
++        return $event;
++    }
++
++    /**
++     * @param array<Event> $events
++     * @return array<int, string>
++     */
++    private function titles(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_get_should_filter_and_order_in_the_database(): void
++    {
++        $this->createEvent('Palestra 30', 'lecture', 30);
++        $this->createEvent('Oficina 10', 'workshop', 10);
++        $this->createEvent('Palestra 5', 'lecture', 5);
++        $this->createEvent('Palestra 20', 'lecture', 20);
++
++        $events = Event::query()->where('kind', 'lecture')->orderBy('starts_on', 'DESC')->get();
++
++        $this->assertContainsOnlyInstancesOf(Event::class, $events);
++        $this->assertSame(['Palestra 30', 'Palestra 20', 'Palestra 5'], $this->titles($events));
++    }
++
++    public function test_get_with_same_column_twice_should_filter_a_range(): void
++    {
++        foreach ([5, 10, 15, 20] as $days) {
++            $this->createEvent("Evento {$days}", 'lecture', $days);
++        }
++
++        $events = Event::query()
++            ->where('starts_on', '>=', date('Y-m-d', strtotime('+10 days')))
++            ->where('starts_on', '<=', date('Y-m-d', strtotime('+15 days')))
++            ->orderBy('starts_on')
++            ->get();
++
++        $this->assertSame(['Evento 10', 'Evento 15'], $this->titles($events));
++    }
++
++    public function test_get_should_bind_values_instead_of_concatenating(): void
++    {
++        $this->createEvent('Oficina de PHP', 'workshop', 5);
++        $this->createEvent('Palestra', 'lecture', 6);
++
++        $this->assertSame([], Event::query()->where('title', "x' OR '1' = '1")->get());
++        $this->assertSame(
++            ['Oficina de PHP'],
++            $this->titles(Event::query()->where('title', 'LIKE', '%Oficina%')->get())
++        );
++    }
++
++    public function test_paginate_should_count_only_filtered_rows_and_keep_the_order(): void
++    {
++        // Palestras cadastradas fora de ordem de data, misturadas com Oficinas.
++        foreach ([35, 5, 25, 15, 30, 10, 20] as $days) {
++            $this->createEvent("Palestra {$days}", 'lecture', $days);
++            $this->createEvent("Oficina {$days}", 'workshop', $days);
++        }
++
++        $query = Event::query()->where('kind', 'lecture')->orderBy('starts_on');
++        $page1 = $query->paginate(page: 1, perPage: 5, route: 'admin.events.paginate');
++        $page2 = $query->paginate(page: 2, perPage: 5, route: 'admin.events.paginate');
++
++        $this->assertSame(7, $page1->totalOfRegisters());
++        $this->assertSame(2, $page1->totalOfPages());
++        $this->assertSame('admin.events.paginate', $page1->getRouteName());
++        $this->assertSame(
++            ['Palestra 5', 'Palestra 10', 'Palestra 15', 'Palestra 20', 'Palestra 25'],
++            $this->titles($page1->registers())
++        );
++        $this->assertSame(['Palestra 30', 'Palestra 35'], $this->titles($page2->registers()));
++        $this->assertSame('Mostrando 6 - 7 de 7', $page2->entriesInfo());
++    }
++}
+diff --git a/tests/Unit/Core/Database/QueryBuilderTest.php b/tests/Unit/Core/Database/QueryBuilderTest.php
+new file mode 100644
+index 0000000..ece1822
+--- /dev/null
++++ b/tests/Unit/Core/Database/QueryBuilderTest.php
+@@ -0,0 +1,90 @@
++<?php
++
++namespace Tests\Unit\Core\Database;
++
++use App\Models\Event;
++use InvalidArgumentException;
++use PHPUnit\Framework\TestCase;
++
++/**
++ * Só monta o SQL (toSql/bindings): não toca no banco.
++ */
++class QueryBuilderTest extends TestCase
++{
++    private const SELECT = 'SELECT id, user_id, title, description, kind, modality, audience, starts_on, '
++        . 'location, capacity FROM events';
++
++    public function test_query_without_where_and_order_should_select_every_column(): void
++    {
++        $this->assertSame(self::SELECT, Event::query()->toSql());
++        $this->assertSame([], Event::query()->bindings());
++    }
++
++    public function test_where_and_order_by_should_build_sql_with_numbered_placeholders(): void
++    {
++        $query = Event::query()
++            ->where('kind', 'lecture')
++            ->where('starts_on', '>=', '2026-11-05')
++            ->orderBy('starts_on')
++            ->orderBy('id', 'DESC');
++
++        $this->assertSame(
++            self::SELECT . ' WHERE kind = :p0 AND starts_on >= :p1 ORDER BY starts_on ASC, id DESC',
++            $query->toSql()
++        );
++        $this->assertSame([':p0' => 'lecture', ':p1' => '2026-11-05'], $query->bindings());
++    }
++
++    public function test_same_column_twice_should_use_different_placeholders(): void
++    {
++        $query = Event::query()
++            ->where('starts_on', '>=', '2026-11-01')
++            ->where('starts_on', '<=', '2026-11-30');
++
++        $this->assertSame('starts_on >= :p0 AND starts_on <= :p1', $query->whereSql());
++        $this->assertSame([':p0' => '2026-11-01', ':p1' => '2026-11-30'], $query->bindings());
++    }
++
++    public function test_operator_and_direction_should_be_case_insensitive(): void
++    {
++        $query = Event::query()->where('title', 'like', '%Oficina%')->orderBy('title', 'desc');
++
++        $this->assertSame('title LIKE :p0', $query->whereSql());
++        $this->assertSame('title DESC', $query->orderBySql());
++    }
++
++    public function test_where_with_unknown_operator_should_throw(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        Event::query()->where('capacity', '; DROP TABLE events; --', 1);
++    }
++
++    public function test_where_with_unknown_column_should_throw(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        Event::query()->where('1 = 1 OR title', 'x');
++    }
++
++    public function test_where_with_non_scalar_value_should_throw(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        Event::query()->where('kind', ['lecture', 'workshop']);
++    }
++
++    public function test_order_by_with_unknown_column_should_throw(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        Event::query()->orderBy('starts_on; DROP TABLE events');
++    }
++
++    public function test_order_by_with_unknown_direction_should_throw(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        Event::query()->orderBy('starts_on', 'ASC, (SELECT 1)');
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From aeb29e0bab0c222f665d397223a43f8c3472a296 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:29:52 -0300
+Subject: [PATCH 2/2] feat: Order events listing by date with the query builder
+
+---
+ app/Controllers/Admin/EventsController.php    | 14 +++--
+ .../admin/events/BaseEventsCest.php           |  4 +-
+ .../admin/events/CreateSuccessfullyCest.php   |  8 ++-
+ .../admin/events/ListEventsCest.php           |  2 +-
+ .../Admin/EventsControllerTest.php            | 52 +++++++++++++++++++
+ 5 files changed, 70 insertions(+), 10 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..0bcbb5d 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,11 +15,15 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
++        // Mais próximos primeiro; id desempata datas iguais (a ordem não muda entre páginas).
++        $paginator = Event::query()
++            ->orderBy('starts_on')
++            ->orderBy('id')
++            ->paginate(
++                page: max(1, (int) $request->getParam('page', 1)),
++                perPage: self::PER_PAGE,
++                route: 'admin.events.paginate'
++            );
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..0fccdb9 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -71,8 +71,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+     }
+ 
+     /**
+-     * Cria os Eventos em ordem de data crescente. A listagem segue a ordem do banco (id), sem ORDER BY
+-     * (contrato-ui-eventos.md), então aqui a ordem de id coincide com a de starts_on, como no populate.
++     * Cria os Eventos em ordem de data crescente. A listagem é ordenada por starts_on (desempate por id),
++     * e aqui a ordem de id coincide com a de data, como no populate.
+      */
+     private function seedEvents(): void
+     {
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..344e6f6 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -29,9 +29,13 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+-        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
++        // A listagem usa Event::query()->orderBy('starts_on')->orderBy('id'): o Evento novo (amanhã) é o mais
++        // próximo e abre a 1ª página, antes do Evento 01 (hoje + 14 dias). Sem ORDER BY iria para a 4ª página.
++        $page->amOnPage('/admin/events');
++        $page->see($data['title'], 'table tbody tr:first-child');
++        $page->see('Mostrando 1 - 5 de 17');
+         $page->amOnPage('/admin/events/page/4');
+-        $page->see($data['title'], 'table');
++        $page->dontSee($data['title'], 'table');
+         $page->see('Mostrando 16 - 17 de 17');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..a8d6525 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -16,7 +16,7 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('Novo Evento');
+         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
+ 
+-        // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
++        // Primeira página: os 5 Eventos mais próximos (ORDER BY starts_on, id).
+         $rows = $page->grabMultiple('table tbody tr');
+         foreach ($rows as $index => $row) {
+             $number = $index + 1;
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..164fe68 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,42 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_orders_events_by_date_across_pages(): void
++    {
++        // Cadastrados fora de ordem: a ordem de id não coincide com a de data.
++        foreach ([30, 5, 20, 1, 25, 10, 15] as $day) {
++            $this->createEvent([
++                'title' => sprintf('Evento em %02d dias', $day),
++                'starts_on' => date('Y-m-d', strtotime("+{$day} days")),
++            ]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        // Página 1: os 5 mais próximos, em ordem crescente de data.
++        $this->assertTitlesInOrder($page1, [
++            'Evento em 01 dias', 'Evento em 05 dias', 'Evento em 10 dias', 'Evento em 15 dias', 'Evento em 20 dias',
++        ]);
++        $this->assertStringNotContainsString('Evento em 25 dias', $page1);
++
++        // Página 2: o restante. A ordem vem do ORDER BY no SQL, antes do LIMIT/OFFSET.
++        $this->assertTitlesInOrder($page2, ['Evento em 25 dias', 'Evento em 30 dias']);
++        $this->assertStringNotContainsString('Evento em 01 dias', $page2);
++    }
++
++    public function test_index_breaks_date_ties_by_id(): void
++    {
++        $date = date('Y-m-d', strtotime('+3 days'));
++        $this->createEvent(['title' => 'Empate B', 'starts_on' => $date]);
++        $this->createEvent(['title' => 'Empate A', 'starts_on' => $date]);
++        $this->createEvent(['title' => 'Antes de todos', 'starts_on' => date('Y-m-d', strtotime('+1 day'))]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertTitlesInOrder($response, ['Antes de todos', 'Empate B', 'Empate A']);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+@@ -265,6 +301,22 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /**
++     * Confere que os títulos aparecem na resposta nesta ordem.
++     *
++     * @param array<int, string> $titles
++     */
++    private function assertTitlesInOrder(string $response, array $titles): void
++    {
++        $previous = -1;
++        foreach ($titles as $title) {
++            $position = strpos($response, $title);
++            $this->assertNotFalse($position, "{$title} não aparece");
++            $this->assertGreaterThan($previous, $position, "{$title} fora de ordem");
++            $previous = $position;
++        }
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+
