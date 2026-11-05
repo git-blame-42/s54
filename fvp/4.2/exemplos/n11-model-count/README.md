@@ -5,9 +5,10 @@ todos os objetos é desperdício. Crie `Model::count()` no framework,
 com `SELECT COUNT(*)`, e use na contagem de inscrições e no painel."
 
 Chance: média. Tempo estimado: 15-20 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, N11: "`Model::count(array $conditions =
-[])` no core (`SELECT COUNT(*)`), `enrollmentsCount()` passa a usá-lo
-(fim do N+1), testes do core".
+`s50/fvp/4.2/catalogo.md`, N11.
+
+O N+1 da listagem não acaba aqui: continua uma consulta por linha, só
+mais barata (ver "Por que assim").
 
 Branch no clone: `fvp/n11-model-count`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
@@ -101,6 +102,12 @@ Na tela (populate): logue como `admin@example.com` / `123456` e abra
 - O3 (`o3-inscritos-no-show`): `participants()` é `BelongsToMany`,
   que já tem `count()`; `$event->participants()->count()` daria o
   mesmo que `enrollmentsCount()`. Não foi trocado (não pedido).
+- N7 (`n7-painel-resumo`): também conta no painel. Ele mostra o total
+  de Eventos num cartão (`#total_events`, `array_sum` do
+  `countByKind()`) e cria `Enrollment::total()`. Com os dois: um total
+  de Eventos só na tela (o cartão do N7 ou o badge deste), e
+  `Enrollment::total()` vira `Enrollment::count()`. O N7 também cria um
+  `DashboardControllerTest.php`.
 - Qualquer filtro por igualdade (N1) pode usar
   `Event::count(['kind' => ...])` para um total sem paginar.
 
@@ -162,9 +169,17 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar e por quê:
 
-- `DashboardController.php` e `admin/dashboard/index.phtml`: o N6
-  mexe nos mesmos pontos. Fique com uma variável só no `compact` e
-  com `Event::count()` no lugar de `count(Event::all())`.
+- `DashboardController.php` e `admin/dashboard/index.phtml`: N6 e N7
+  mexem nos mesmos pontos. Com o N6, fique com uma variável só no
+  `compact` e com `Event::count()` no lugar de `count(Event::all())`.
+  Com o N7, junte as variáveis dele (`countByKind`, `totalEvents`,
+  `totalEnrollments`, `upcoming`) e não mostre o total de Eventos duas
+  vezes: ou o cartão `#total_events` ou o badge `#events_count`.
+- `tests/Integration/Controllers/Admin/DashboardControllerTest.php`:
+  N6 e N7 também criam esse arquivo ("both added"). Junte os métodos
+  numa classe só e confira as contagens esperadas de cada teste.
+- `AdminDashboardCest.php`: N7 também mexe em `accessAdminAsAdmin`
+  (confere os zeros dos cartões); fique com as duas checagens.
 - `Event.php`, `enrollmentsCount()`: se outro cenário mudou o
   método, mantenha a mudança dele e troque só o
   `count(Enrollment::where(...))` por `Enrollment::count(...)`.
