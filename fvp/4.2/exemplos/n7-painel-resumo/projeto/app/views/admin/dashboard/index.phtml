@@ -1,0 +1,66 @@
+<?php
+use App\Models\Event;
+?>
+<p>Olá, <?= htmlspecialchars($this->currentUser()->name) ?>! Esta área só aparece para administradores.</p>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6" id="total_events"><?= (int) $totalEvents ?></div>
+                <div class="text-muted">Eventos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-6" id="total_enrollments"><?= (int) $totalEnrollments ?></div>
+                <div class="text-muted">Inscrições</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <h2 class="h5">Eventos por tipo</h2>
+        <table class="table table-sm" id="events_by_kind">
+            <tbody>
+                <?php foreach ($countByKind as $kind => $total) : ?>
+                    <tr>
+                        <td><?= Event::KINDS[$kind] ?? htmlspecialchars($kind) ?></td>
+                        <td class="text-end"><?= (int) $total ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-lg-8">
+        <h2 class="h5">Próximos eventos</h2>
+        <?php if (empty($upcoming)) : ?>
+            <p class="text-muted">Nenhum evento agendado.</p>
+        <?php else : ?>
+            <table class="table table-sm" id="upcoming_events">
+                <tbody>
+                    <?php foreach ($upcoming as $event) : ?>
+                        <tr>
+                            <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                            <td>
+                                <a href="<?= route('admin.events.show', ['id' => $event->id]) ?>">
+                                    <?= htmlspecialchars($event->title) ?>
+                                </a>
+                            </td>
+                            <td><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="list-group">
+    <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
+</div>

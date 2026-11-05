@@ -1,0 +1,475 @@
+From 23df0bc69e14ef1eec888678b524655d7f0c4dc4 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:48:59 -0300
+Subject: [PATCH] feat: Show event summary on the admin dashboard
+
+The admin dashboard shows the total of events and enrollments, events per kind and the next three events. Event::countByKind uses GROUP BY, Event::upcoming filters starts_on from today ordered by date with LIMIT, and Enrollment::total uses COUNT(*), all in the models.
+---
+ app/Controllers/Admin/DashboardController.php | 14 ++-
+ app/Models/Enrollment.php                     | 17 ++++
+ app/Models/Event.php                          | 55 +++++++++++
+ app/views/admin/dashboard/index.phtml         | 63 +++++++++++-
+ tests/Acceptance/admin/AdminDashboardCest.php | 48 ++++++++++
+ .../Admin/DashboardControllerTest.php         | 95 +++++++++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   | 17 ++++
+ tests/Unit/Models/Events/EventTest.php        | 42 ++++++++
+ 8 files changed, 349 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Admin/DashboardController.php b/app/Controllers/Admin/DashboardController.php
+index 0a3e62f..39d4566 100644
+--- a/app/Controllers/Admin/DashboardController.php
++++ b/app/Controllers/Admin/DashboardController.php
+@@ -2,13 +2,25 @@
+ 
+ namespace App\Controllers\Admin;
+ 
++use App\Models\Enrollment;
++use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ 
+ class DashboardController extends Controller
+ {
++    private const UPCOMING_LIMIT = 3;
++
+     public function index(): void
+     {
++        $countByKind = Event::countByKind();
++        $totalEvents = array_sum($countByKind);
++        $totalEnrollments = Enrollment::total();
++        $upcoming = Event::upcoming(self::UPCOMING_LIMIT);
++
+         $title = 'Painel Administrativo';
+-        $this->render('admin/dashboard/index', compact('title'));
++        $this->render(
++            'admin/dashboard/index',
++            compact('countByKind', 'totalEvents', 'totalEnrollments', 'upcoming', 'title')
++        );
+     }
+ }
+diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
+index 3afd7c5..a1c66bb 100644
+--- a/app/Models/Enrollment.php
++++ b/app/Models/Enrollment.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
+ 
+ /**
+  * Inscrição de um Participante em um Evento (tabela pivô event_user).
+@@ -17,6 +18,22 @@ class Enrollment extends Model
+     protected static string $table = 'event_user';
+     protected static array $columns = ['event_id', 'user_id'];
+ 
++    /**
++     * Total de Inscrições de todos os Eventos (COUNT(*) no banco, sem carregar as linhas).
++     */
++    public static function total(): int
++    {
++        $table = static::$table;
++        $sql = <<<SQL
++            SELECT COUNT(*) FROM {$table};
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->execute();
++
++        return (int) $stmt->fetchColumn();
++    }
++
+     public function event(): BelongsTo
+     {
+         return $this->belongsTo(Event::class, 'event_id');
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..6f33a51 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,7 +4,9 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
+ use Lib\Validations;
++use PDO;
+ use PDOException;
+ 
+ /**
+@@ -114,6 +116,59 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Total de Eventos por tipo, numa consulta só (GROUP BY). Todo tipo de KINDS aparece, com 0 se não
++     * houver Evento dele; a ordem é a de KINDS.
++     *
++     * @return array<string, int>
++     */
++    public static function countByKind(): array
++    {
++        $table = static::$table;
++        $sql = <<<SQL
++            SELECT kind, COUNT(*) AS total FROM {$table} GROUP BY kind;
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->execute();
++
++        $counts = array_fill_keys(array_keys(self::KINDS), 0);
++        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
++            $counts[(string) $row['kind']] = (int) $row['total'];
++        }
++
++        return $counts;
++    }
++
++    /**
++     * Próximos Eventos: data de hoje em diante, do mais próximo ao mais distante (empate pelo id).
++     *
++     * @return array<static>
++     */
++    public static function upcoming(int $limit = 3): array
++    {
++        $table = static::$table;
++        $attributes = implode(', ', static::$columns);
++        $sql = <<<SQL
++            SELECT id, {$attributes} FROM {$table}
++            WHERE starts_on >= :today
++            ORDER BY starts_on ASC, id ASC
++            LIMIT :limit;
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':today', date('Y-m-d'));
++        $stmt->bindValue(':limit', max(0, $limit), PDO::PARAM_INT);
++        $stmt->execute();
++
++        $events = [];
++        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
++            $events[] = new static($row);
++        }
++
++        return $events;
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index b1f8075..99deeca 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1,4 +1,65 @@
+-<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
++<?php
++use App\Models\Event;
++?>
++<p>Olá, <?= htmlspecialchars($this->currentUser()->name) ?>! Esta área só aparece para administradores.</p>
++
++<div class="row g-3 mb-4">
++    <div class="col-sm-6 col-lg-3">
++        <div class="card text-center">
++            <div class="card-body">
++                <div class="display-6" id="total_events"><?= (int) $totalEvents ?></div>
++                <div class="text-muted">Eventos</div>
++            </div>
++        </div>
++    </div>
++    <div class="col-sm-6 col-lg-3">
++        <div class="card text-center">
++            <div class="card-body">
++                <div class="display-6" id="total_enrollments"><?= (int) $totalEnrollments ?></div>
++                <div class="text-muted">Inscrições</div>
++            </div>
++        </div>
++    </div>
++</div>
++
++<div class="row g-4 mb-4">
++    <div class="col-lg-4">
++        <h2 class="h5">Eventos por tipo</h2>
++        <table class="table table-sm" id="events_by_kind">
++            <tbody>
++                <?php foreach ($countByKind as $kind => $total) : ?>
++                    <tr>
++                        <td><?= Event::KINDS[$kind] ?? htmlspecialchars($kind) ?></td>
++                        <td class="text-end"><?= (int) $total ?></td>
++                    </tr>
++                <?php endforeach; ?>
++            </tbody>
++        </table>
++    </div>
++
++    <div class="col-lg-8">
++        <h2 class="h5">Próximos eventos</h2>
++        <?php if (empty($upcoming)) : ?>
++            <p class="text-muted">Nenhum evento agendado.</p>
++        <?php else : ?>
++            <table class="table table-sm" id="upcoming_events">
++                <tbody>
++                    <?php foreach ($upcoming as $event) : ?>
++                        <tr>
++                            <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                            <td>
++                                <a href="<?= route('admin.events.show', ['id' => $event->id]) ?>">
++                                    <?= htmlspecialchars($event->title) ?>
++                                </a>
++                            </td>
++                            <td><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                        </tr>
++                    <?php endforeach; ?>
++                </tbody>
++            </table>
++        <?php endif; ?>
++    </div>
++</div>
+ 
+ <div class="list-group">
+     <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..dddee7e 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -2,6 +2,8 @@
+ 
+ namespace Tests\Acceptance\admin;
+ 
++use App\Models\Enrollment;
++use App\Models\Event;
+ use App\Models\User;
+ use Tests\Acceptance\BaseAcceptanceCest;
+ use Tests\Support\AcceptanceTester;
+@@ -53,5 +55,51 @@ class AdminDashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
++        $page->see('0', '#total_events');
++        $page->see('0', '#total_enrollments');
++        $page->see('Nenhum evento agendado.');
++    }
++
++    public function adminDashboardShowsSummary(AcceptanceTester $page): void
++    {
++        $admin = User::findByEmail('admin@example.com');
++        $participant = User::findByEmail('fulano@example.com');
++        $days = ['Oficina Distante' => 40, 'Palestra Amanhã' => 1, 'Palestra Semana' => 7, 'Minicurso Mês' => 30];
++        $kinds = ['Oficina Distante' => 'workshop', 'Palestra Amanhã' => 'lecture', 'Palestra Semana' => 'lecture',
++            'Minicurso Mês' => 'short_course'];
++        foreach ($days as $title => $daysAhead) {
++            $event = new Event([
++                'user_id' => $admin->id,
++                'title' => $title,
++                'description' => 'Descrição.',
++                'kind' => $kinds[$title],
++                'modality' => 'online',
++                'audience' => 'students',
++                'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
++                'location' => 'Online',
++                'capacity' => 10,
++            ]);
++            $event->save();
++            if ($title === 'Palestra Amanhã') {
++                (new Enrollment(['event_id' => $event->id, 'user_id' => $participant->id]))->save();
++            }
++        }
++
++        $page->wantTo('Ver o resumo do painel: totais, Eventos por tipo e próximos 3');
++        $page->login('admin@example.com', '123456');
++        $page->amOnPage('/admin');
++
++        $page->see('4', '#total_events');
++        $page->see('1', '#total_enrollments');
++        $page->see('Palestra', '#events_by_kind tr:nth-child(1)');
++        $page->see('2', '#events_by_kind tr:nth-child(1)');
++        $page->see('0', '#events_by_kind tr:nth-child(4)');
++        $page->see('Palestra Amanhã', '#upcoming_events tr:nth-child(1)');
++        $page->see('Palestra Semana', '#upcoming_events tr:nth-child(2)');
++        $page->see('Minicurso Mês', '#upcoming_events tr:nth-child(3)');
++        $page->dontSee('Oficina Distante', '#upcoming_events');
++
++        $page->click('Palestra Amanhã');
++        $page->see('Palestra Amanhã', 'h1');
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..45d2ae1
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,95 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\Admin\DashboardController';
++
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Admin', 'admin@example.com', 'admin');
++        Auth::login($this->admin);
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function createEvent(string $title, string $kind, int $daysAhead): Event
++    {
++        $event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => $title,
++            'description' => 'Descrição.',
++            'kind' => $kind,
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
++            'location' => 'Online',
++            'capacity' => 10,
++        ]);
++        $event->save();
++
++        return $event;
++    }
++
++    public function test_index_shows_totals_counts_by_kind_and_next_three_events(): void
++    {
++        $this->createEvent('Oficina Distante', 'workshop', 40);
++        $lecture = $this->createEvent('Palestra Amanhã', 'lecture', 1);
++        $this->createEvent('Palestra Semana', 'lecture', 7);
++        $this->createEvent('Minicurso Mês', 'short_course', 30);
++        $participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++        (new Enrollment(['event_id' => $lecture->id, 'user_id' => $participant->id]))->save();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel Administrativo\s*<\/h1>/', $response);
++        $this->assertMatchesRegularExpression('/id="total_events">4</', $response);
++        $this->assertMatchesRegularExpression('/id="total_enrollments">1</', $response);
++        $this->assertMatchesRegularExpression('/<td>Palestra<\/td>\s*<td class="text-end">2<\/td>/', $response);
++        $this->assertMatchesRegularExpression('/<td>Oficina<\/td>\s*<td class="text-end">1<\/td>/', $response);
++        $this->assertMatchesRegularExpression('/<td>Semana acadêmica<\/td>\s*<td class="text-end">0<\/td>/', $response);
++        $this->assertMatchesRegularExpression('/Palestra Amanhã.*Palestra Semana.*Minicurso Mês/s', $response);
++        $this->assertStringNotContainsString('Oficina Distante', $this->upcomingTable($response));
++        $this->assertStringContainsString("/admin/events/{$lecture->id}", $response);
++    }
++
++    public function test_index_without_events_shows_zeros(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/id="total_events">0</', $response);
++        $this->assertMatchesRegularExpression('/id="total_enrollments">0</', $response);
++        $this->assertStringContainsString('Nenhum evento agendado.', $response);
++    }
++
++    private function upcomingTable(string $response): string
++    {
++        $start = strpos($response, 'id="upcoming_events"');
++        $this->assertNotFalse($start);
++
++        return substr($response, $start, (int) strpos($response, '</table>', $start) - $start);
++    }
++}
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..7c8bb43 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -76,4 +76,21 @@ class EnrollmentTest extends TestCase
+ 
+         (new Enrollment($params))->save();
+     }
++
++    public function test_total_should_count_every_enrollment(): void
++    {
++        $this->assertSame(0, Enrollment::total());
++
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]))->save();
++        $other = new User([
++            'name' => 'Outro Participante',
++            'email' => 'outro@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]);
++        $other->save();
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $other->id]))->save();
++
++        $this->assertSame(2, Enrollment::total());
++    }
+ }
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..296983b 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,46 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- Painel (N7) ------------------- */
++
++    public function test_count_by_kind_should_group_events_by_kind_with_zeros(): void
++    {
++        $this->createEvent(['kind' => 'lecture']);
++        $this->createEvent(['kind' => 'lecture']);
++        $this->createEvent(['kind' => 'workshop']);
++
++        $this->assertSame(
++            ['lecture' => 2, 'workshop' => 1, 'short_course' => 0, 'academic_week' => 0],
++            Event::countByKind()
++        );
++    }
++
++    public function test_count_by_kind_without_events_should_be_all_zeros(): void
++    {
++        $this->assertSame(array_fill_keys(array_keys(Event::KINDS), 0), Event::countByKind());
++    }
++
++    public function test_upcoming_should_return_the_next_events_by_date(): void
++    {
++        $this->createEvent(['title' => 'Daqui a 20', 'starts_on' => date('Y-m-d', strtotime('+20 days'))]);
++        $this->createEvent(['title' => 'Daqui a 5', 'starts_on' => date('Y-m-d', strtotime('+5 days'))]);
++        $this->createEvent(['title' => 'Hoje', 'starts_on' => date('Y-m-d')]);
++        $this->createEvent(['title' => 'Daqui a 10', 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
++        $this->createPastEvent();
++
++        $titles = array_map(fn(Event $event) => $event->title, Event::upcoming(3));
++
++        $this->assertSame(['Hoje', 'Daqui a 5', 'Daqui a 10'], $titles);
++    }
++
++    public function test_upcoming_should_ignore_past_events_and_respect_the_limit(): void
++    {
++        $this->createPastEvent();
++        $future = $this->createEvent(['starts_on' => date('Y-m-d', strtotime('+3 days'))]);
++
++        $this->assertCount(1, Event::upcoming(3));
++        $this->assertEquals($future->id, Event::upcoming(3)[0]->id);
++        $this->assertCount(0, Event::upcoming(0));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

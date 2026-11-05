@@ -84,6 +84,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N6. Dado calculado na tela (badge "Lotado", total no painel)
   `n6-badge-lotado-contador/`
   - feat: Show full badge and admin dashboard totals
+- N7. Painel administrativo com resumo
+  `n7-painel-resumo/`
+  - feat: Show event summary on the admin dashboard
 - O1. Rota RESTful nova com página (lotados)
   `o1-rota-eventos-lotados/`
   - feat: List full events in admin area
