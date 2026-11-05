@@ -247,13 +247,16 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringContainsString('src="/assets/uploads/events/abc123.png"', $edit);
     }
 
-    public function test_show_without_banner_renders_no_image(): void
+    public function test_show_and_edit_without_banner_render_no_image(): void
     {
         $event = $this->createEvent();
 
-        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
+        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
+        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
 
-        $this->assertStringNotContainsString('event-banner', $response);
+        $this->assertStringNotContainsString('event-banner', $show);
+        $this->assertStringNotContainsString('event-banner-current', $edit);
+        $this->assertStringNotContainsString('/assets/uploads/events/', $edit);
     }
 
     public function test_update_with_valid_data_changes_event(): void

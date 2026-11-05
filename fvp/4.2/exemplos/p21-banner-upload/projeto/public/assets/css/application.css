@@ -27,3 +27,8 @@ nav.navbar {
   width: 315px;
   height: 315px;
 }
+
+/* Miniatura da imagem de capa atual no formulário de Evento */
+.event-banner-current {
+  max-height: 120px;
+}

@@ -14,7 +14,7 @@ Branch no clone: `fvp/p21-banner-upload`, a partir de `main`
 
 | Commit    | Mensagem                                |
 |-----------|-----------------------------------------|
-| `a65b218` | `feat: Add event cover image upload`    |
+| `512efc2` | `feat: Add event cover image upload`    |
 
 ## O que mudou
 
@@ -53,6 +53,8 @@ Branch no clone: `fvp/p21-banner-upload`, a partir de `main`
   `$feedback('banner')`). Na edição mostra a capa atual.
 - `app/views/admin/events/show.phtml`: `<img class="event-banner">` no
   topo quando há capa.
+- `public/assets/css/application.css`: classe `.event-banner-current`
+  (altura máxima da miniatura da capa atual no formulário).
 - Testes novos:
   - `tests/Unit/Services/EventBannerTest.php` (10): PNG aceito; texto
     com nome `.png` recusado; mais de 2 MB; `UPLOAD_ERR_INI_SIZE`;
@@ -64,7 +66,8 @@ Branch no clone: `fvp/p21-banner-upload`, a partir de `main`
     campo vazio mantém `banner_name`; `safeDestroy()` apaga o arquivo.
   - `EventsControllerTest` (+5): form multipart com o campo; criar com
     arquivo que não é imagem (erro no campo, nada gravado); editar sem
-    arquivo mantém a capa; `show` e `edit` com e sem `<img>`.
+    arquivo mantém a capa; `show` e `edit` com `<img>` quando há capa;
+    `show` e `edit` sem `<img>` quando não há.
   - `tests/Acceptance/admin/events/BannerUploadCest.php` (3): cadastrar
     com capa (confere nome gerado, arquivo no disco e a imagem
     carregada no navegador, `naturalWidth` 240); trocar a capa na
@@ -148,7 +151,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p21 \
     s50/fvp/4.2/exemplos/p21-banner-upload/projeto
 git fetch fvp-p21 fvp/p21-banner-upload
-git cherry-pick a65b218
+git cherry-pick 512efc2
 git remote remove fvp-p21
 ```
 
@@ -159,7 +162,7 @@ git fetch \
     s50/fvp/4.2/exemplos/p21-banner-upload/solucao.bundle \
     fvp/p21-banner-upload:fvp-p21
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick a65b218
+git cherry-pick 512efc2
 # opcional, limpa a ref
 git branch -D fvp-p21
 ```

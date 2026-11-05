@@ -29,7 +29,7 @@ CREATE TABLE events (
     starts_on   DATE NOT NULL,
     location    VARCHAR(255) NOT NULL,
     capacity    INT NOT NULL,
-    -- Imagem de capa (P21): nome gerado do arquivo em public/assets/uploads/events/; NULL = sem banner.
+    -- Imagem de capa: nome gerado do arquivo em public/assets/uploads/events/; NULL = sem banner.
     banner_name VARCHAR(255) NULL,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

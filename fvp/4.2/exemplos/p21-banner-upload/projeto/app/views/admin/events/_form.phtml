@@ -93,7 +93,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
         <label for="event_banner" class="form-label">Imagem de capa</label>
         <?php if ($event->banner()->url() !== null) : ?>
             <img src="<?= htmlspecialchars($event->banner()->url()) ?>" alt="Imagem de capa atual"
-                class="d-block img-thumbnail mb-2 event-banner-current" style="max-height: 120px">
+                class="d-block img-thumbnail mb-2 event-banner-current">
         <?php endif; ?>
         <input type="file" class="form-control<?= $invalid('banner') ?>" id="event_banner" name="event_banner"
             accept="image/jpeg,image/png">

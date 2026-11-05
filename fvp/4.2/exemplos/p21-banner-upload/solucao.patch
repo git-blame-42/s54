@@ -1,4 +1,4 @@
-From a65b218bf905390d1bb1059c388d5187e00edae7 Mon Sep 17 00:00:00 2001
+From 512efc2cc802e20694f584e33a5c6dc23e084ae7 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:32:09 -0300
 Subject: [PATCH] feat: Add event cover image upload
@@ -12,13 +12,14 @@ validate type with finfo and size up to 2 MB in Event::validates().
  app/views/admin/events/_form.phtml            |  15 +-
  app/views/admin/events/show.phtml             |   5 +
  database/schema.sql                           |   2 +
+ public/assets/css/application.css             |   5 +
  .../admin/events/BannerUploadCest.php         | 102 +++++++++
- .../Admin/EventsControllerTest.php            |  70 +++++-
+ .../Admin/EventsControllerTest.php            |  73 ++++++-
  tests/Support/Data/banner-falso.png           |   1 +
  tests/Support/Data/banner.png                 | Bin 0 -> 345 bytes
  tests/Unit/Models/Events/EventTest.php        |  52 +++++
  tests/Unit/Services/EventBannerTest.php       | 199 ++++++++++++++++++
- 12 files changed, 656 insertions(+), 3 deletions(-)
+ 13 files changed, 664 insertions(+), 3 deletions(-)
  create mode 100644 app/Services/EventBanner.php
  create mode 100644 tests/Acceptance/admin/events/BannerUploadCest.php
  create mode 100644 tests/Support/Data/banner-falso.png
@@ -316,7 +317,7 @@ index 0000000..b478872
 +    }
 +}
 diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
-index 2e98c21..498c894 100644
+index 2e98c21..cb8ce4e 100644
 --- a/app/views/admin/events/_form.phtml
 +++ b/app/views/admin/events/_form.phtml
 @@ -13,7 +13,8 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
@@ -337,7 +338,7 @@ index 2e98c21..498c894 100644
 +        <label for="event_banner" class="form-label">Imagem de capa</label>
 +        <?php if ($event->banner()->url() !== null) : ?>
 +            <img src="<?= htmlspecialchars($event->banner()->url()) ?>" alt="Imagem de capa atual"
-+                class="d-block img-thumbnail mb-2 event-banner-current" style="max-height: 120px">
++                class="d-block img-thumbnail mb-2 event-banner-current">
 +        <?php endif; ?>
 +        <input type="file" class="form-control<?= $invalid('banner') ?>" id="event_banner" name="event_banner"
 +            accept="image/jpeg,image/png">
@@ -365,18 +366,31 @@ index 6cab74e..f281353 100644
      <dt class="col-sm-3">Título</dt>
      <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
 diff --git a/database/schema.sql b/database/schema.sql
-index fe7f1d6..3f10ea7 100644
+index fe7f1d6..7c1d122 100644
 --- a/database/schema.sql
 +++ b/database/schema.sql
 @@ -29,6 +29,8 @@ CREATE TABLE events (
      starts_on   DATE NOT NULL,
      location    VARCHAR(255) NOT NULL,
      capacity    INT NOT NULL,
-+    -- Imagem de capa (P21): nome gerado do arquivo em public/assets/uploads/events/; NULL = sem banner.
++    -- Imagem de capa: nome gerado do arquivo em public/assets/uploads/events/; NULL = sem banner.
 +    banner_name VARCHAR(255) NULL,
      created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
      CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/public/assets/css/application.css b/public/assets/css/application.css
+index d771132..d9839a2 100644
+--- a/public/assets/css/application.css
++++ b/public/assets/css/application.css
+@@ -27,3 +27,8 @@ nav.navbar {
+   width: 315px;
+   height: 315px;
+ }
++
++/* Miniatura da imagem de capa atual no formulário de Evento */
++.event-banner-current {
++  max-height: 120px;
++}
 diff --git a/tests/Acceptance/admin/events/BannerUploadCest.php b/tests/Acceptance/admin/events/BannerUploadCest.php
 new file mode 100644
 index 0000000..80ab6a3
@@ -486,7 +500,7 @@ index 0000000..80ab6a3
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..889c011 100644
+index bc62d1d..786d9fd 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -32,7 +32,7 @@ class EventsControllerTest extends ControllerTestCase
@@ -498,7 +512,7 @@ index bc62d1d..889c011 100644
          parent::tearDown();
      }
  
-@@ -188,6 +188,74 @@ class EventsControllerTest extends ControllerTestCase
+@@ -188,6 +188,77 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertDoesNotMatchRegularExpression('/id="event_audience_students"[^>]*checked/', $response);
      }
  
@@ -561,13 +575,16 @@ index bc62d1d..889c011 100644
 +        $this->assertStringContainsString('src="/assets/uploads/events/abc123.png"', $edit);
 +    }
 +
-+    public function test_show_without_banner_renders_no_image(): void
++    public function test_show_and_edit_without_banner_render_no_image(): void
 +    {
 +        $event = $this->createEvent();
 +
-+        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
 +
-+        $this->assertStringNotContainsString('event-banner', $response);
++        $this->assertStringNotContainsString('event-banner', $show);
++        $this->assertStringNotContainsString('event-banner-current', $edit);
++        $this->assertStringNotContainsString('/assets/uploads/events/', $edit);
 +    }
 +
      public function test_update_with_valid_data_changes_event(): void
