@@ -490,7 +490,7 @@ class EventTest extends TestCase
         $this->assertEquals(3, $event->availableSpots());
     }
 
-    /* ------------------- R9: participantes (lista de presença) ------------------- */
+    /* ------------------- participantes (lista de presença) ------------------- */
 
     public function test_participants_should_list_the_enrolled_users_ordered_by_name(): void
     {

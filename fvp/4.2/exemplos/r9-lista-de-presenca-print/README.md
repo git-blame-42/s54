@@ -13,7 +13,7 @@ Branch no clone: `fvp/r9-lista-de-presenca-print`, a partir de `main`
 
 | Commit    | Mensagem                                                  |
 |-----------|-----------------------------------------------------------|
-| `311753e` | `feat: Add printable attendance list with its own layout` |
+| `9743dca` | `feat: Add printable attendance list with its own layout` |
 
 ## O que mudou
 
@@ -48,7 +48,9 @@ ORDER BY users.name, users.id
   local e "Inscritos: N/capacidade" no cabeçalho; botão
   `#print_button` "Imprimir" e link "Voltar" (classe `no-print`);
   tabela `#`, Nome, E-mail e Assinatura (em branco), tudo com
-  `htmlspecialchars`; "Nenhum inscrito neste evento." sem inscritos.
+  `htmlspecialchars` (inclusive a capacidade, com
+  `htmlspecialchars((string) ...)` em vez de `(int)`); "Nenhum
+  inscrito neste evento." sem inscritos.
 - `public/assets/css/print.css` (novo): bordas na tabela, coluna de
   assinatura larga, linhas altas; em `@media print` esconde
   `.no-print` e evita quebrar linha entre páginas.
@@ -171,7 +173,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-r9 \
     s50/fvp/4.2/exemplos/r9-lista-de-presenca-print/projeto
 git fetch fvp-r9 fvp/r9-lista-de-presenca-print
-git cherry-pick 311753e
+git cherry-pick 9743dca
 git remote remove fvp-r9
 ```
 
@@ -180,7 +182,7 @@ git remote remove fvp-r9
 ```
 D=s50/fvp/4.2/exemplos/r9-lista-de-presenca-print
 git fetch $D/solucao.bundle fvp/r9-lista-de-presenca-print:fvp-r9
-git cherry-pick 311753e
+git cherry-pick 9743dca
 # opcional, limpa a ref
 git branch -D fvp-r9
 ```
@@ -232,6 +234,9 @@ Arquivos que costumam conflitar e por quê:
 - `window.print()` no Selenium abre um diálogo que trava o teste; o
   Cest troca `window.print` por um espião antes do clique.
 - `SELECT users.*` traria `encrypted_password`; liste as colunas.
+- `(int) $event->capacity` na view esconde dado estranho (`'1abc'`
+  vira 1); para exibir, escape o valor como veio:
+  `htmlspecialchars((string) $event->capacity)`.
 - Sem `ORDER BY`, a ordem é a da tabela pivô (ordem de inscrição):
   ruim para achar o nome na hora de assinar.
 - Rota fora do grupo `admin`: qualquer usuário logado veria e-mails

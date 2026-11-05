@@ -1,4 +1,4 @@
-From 311753e3ba47482b46582c6fb8943f1c1592e9ff Mon Sep 17 00:00:00 2001
+From 9743dca54f21085a51eec86a9ae3cd1903a5cbbf Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:58:09 -0300
 Subject: [PATCH] feat: Add printable attendance list with its own layout
@@ -14,9 +14,9 @@ Subject: [PATCH] feat: Add printable attendance list with its own layout
  public/assets/js/print.js                     | 10 ++++
  .../admin/events/AttendanceListCest.php       | 53 ++++++++++++++++
  tests/Integration/Access/EventsAccessTest.php | 12 +++-
- .../Admin/EventsControllerTest.php            | 52 ++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 53 ++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        | 25 ++++++++
- 12 files changed, 328 insertions(+), 1 deletion(-)
+ 12 files changed, 329 insertions(+), 1 deletion(-)
  create mode 100644 app/views/admin/events/attendance.phtml
  create mode 100644 app/views/layouts/print.phtml
  create mode 100644 public/assets/css/print.css
@@ -101,7 +101,7 @@ index ba66870..b198b80 100644
       */
 diff --git a/app/views/admin/events/attendance.phtml b/app/views/admin/events/attendance.phtml
 new file mode 100644
-index 0000000..d7761e2
+index 0000000..86f985b
 --- /dev/null
 +++ b/app/views/admin/events/attendance.phtml
 @@ -0,0 +1,46 @@
@@ -118,7 +118,7 @@ index 0000000..d7761e2
 +        &nbsp;|&nbsp;
 +        <strong>Local:</strong> <?= htmlspecialchars((string) $event->location) ?>
 +        &nbsp;|&nbsp;
-+        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= (int) $event->capacity ?>
++        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= htmlspecialchars((string) $event->capacity) ?>
 +    </p>
 +</section>
 +
@@ -380,10 +380,10 @@ index 4396d14..f229255 100644
      {
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..d54ca4f 100644
+index bc62d1d..5240bf6 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-@@ -168,6 +168,58 @@ class EventsControllerTest extends ControllerTestCase
+@@ -168,6 +168,59 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
      }
  
@@ -399,6 +399,7 @@ index bc62d1d..d54ca4f 100644
 +        $this->assertMatchesRegularExpression('/<h1>\s*Lista de presença\s*<\/h1>/', $response);
 +        $this->assertStringContainsString('Palestra com Lista', $response);
 +        $this->assertStringContainsString('Auditório Central', $response);
++        $this->assertStringContainsString('<strong>Inscritos:</strong> 2/20', $response);
 +        $this->assertStringContainsString(date('d/m/Y', strtotime('+10 days')), $response);
 +        $this->assertStringContainsString('zeca@example.com', $response);
 +        $this->assertStringContainsString('amanda@example.com', $response);
@@ -443,14 +444,14 @@ index bc62d1d..d54ca4f 100644
      {
          $event = $this->createEvent([
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..27d7408 100644
+index f961b4c..b5766ea 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -490,6 +490,31 @@ class EventTest extends TestCase
          $this->assertEquals(3, $event->availableSpots());
      }
  
-+    /* ------------------- R9: participantes (lista de presença) ------------------- */
++    /* ------------------- participantes (lista de presença) ------------------- */
 +
 +    public function test_participants_should_list_the_enrolled_users_ordered_by_name(): void
 +    {

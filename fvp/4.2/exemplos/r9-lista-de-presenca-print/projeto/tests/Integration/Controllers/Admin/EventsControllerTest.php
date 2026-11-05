@@ -180,6 +180,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertMatchesRegularExpression('/<h1>\s*Lista de presença\s*<\/h1>/', $response);
         $this->assertStringContainsString('Palestra com Lista', $response);
         $this->assertStringContainsString('Auditório Central', $response);
+        $this->assertStringContainsString('<strong>Inscritos:</strong> 2/20', $response);
         $this->assertStringContainsString(date('d/m/Y', strtotime('+10 days')), $response);
         $this->assertStringContainsString('zeca@example.com', $response);
         $this->assertStringContainsString('amanda@example.com', $response);

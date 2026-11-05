@@ -11,7 +11,7 @@
         &nbsp;|&nbsp;
         <strong>Local:</strong> <?= htmlspecialchars((string) $event->location) ?>
         &nbsp;|&nbsp;
-        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= (int) $event->capacity ?>
+        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= htmlspecialchars((string) $event->capacity) ?>
     </p>
 </section>
 
