@@ -1,0 +1,227 @@
+From 879d905b38cf5dc0c02f145c4d1627f5c437e8ea Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:41:13 -0300
+Subject: [PATCH] feat: Validate that the event creator exists and is an admin
+
+Add a generic Validations::exists that checks the attribute is the id of a record of the given model, with optional extra conditions. Event::validates uses it for user_id and then requires the creator to be an admin, so an unknown user_id is a validation error instead of a foreign key PDOException.
+---
+ app/Models/Event.php                          | 20 +++++
+ lib/Validations.php                           | 21 +++++
+ .../Lib/Validations/ExistsValidationsTest.php | 87 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 36 ++++++++
+ 4 files changed, 164 insertions(+)
+ create mode 100644 tests/Unit/Lib/Validations/ExistsValidationsTest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..5f3b7c1 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -59,6 +59,11 @@ class Event extends Model
+ 
+     public function validates(): void
+     {
++        // Criador: precisa existir (sem isso a FK dá PDOException -> 500) e ser Administrador.
++        Validations::notEmpty('user_id', $this) &&
++            Validations::exists('user_id', User::class, $this) &&
++            $this->validatesCreatorIsAdmin();
++
+         Validations::notEmpty('title', $this);
+         Validations::notEmpty('description', $this);
+         Validations::notEmpty('location', $this);
+@@ -81,6 +86,21 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Só Administrador cria Evento: o user_id (já conferido por Validations::exists) deve ser admin.
++     */
++    private function validatesCreatorIsAdmin(): bool
++    {
++        $creator = User::findById((int) $this->user_id);
++
++        if ($creator === null || !$creator->isAdmin()) {
++            $this->addError('user_id', 'deve ser um administrador!');
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..0244592 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -72,6 +72,27 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * O valor do atributo deve ser o id de um registro de $modelClass (ex.: user_id -> User).
++     * $conditions acrescenta filtros de igualdade à busca (ex.: ['role' => 'admin']).
++     * A consulta é a do próprio model (Model::exists), sem SQL aqui.
++     *
++     * @param class-string<\Core\Database\ActiveRecord\Model> $modelClass
++     * @param array<string, mixed> $conditions
++     */
++    public static function exists(string $attribute, string $modelClass, $obj, array $conditions = [])
++    {
++        $value = $obj->$attribute;
++        $id = is_int($value) || is_string($value) ? filter_var($value, FILTER_VALIDATE_INT) : false;
++
++        if ($id === false || !$modelClass::exists(['id' => $id] + $conditions)) {
++            $obj->addError($attribute, 'não existe!');
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * O valor deve ser um número inteiro maior ou igual a $min (aceita string numérica, como vem de um form).
+      */
+diff --git a/tests/Unit/Lib/Validations/ExistsValidationsTest.php b/tests/Unit/Lib/Validations/ExistsValidationsTest.php
+new file mode 100644
+index 0000000..e5c26b1
+--- /dev/null
++++ b/tests/Unit/Lib/Validations/ExistsValidationsTest.php
+@@ -0,0 +1,87 @@
++<?php
++
++namespace Tests\Unit\Lib\Validations;
++
++use App\Models\User;
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++use Tests\TestCase;
++
++/**
++ * Validations::exists: o atributo deve ser o id de um registro do model informado (aqui, User).
++ */
++class ExistsValidationsTest extends TestCase
++{
++    private Model $model;
++    private User $admin;
++    private User $participant;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->model = new class () extends Model {
++            protected static array $columns = ['user_id'];
++        };
++
++        $this->admin = $this->createUser('admin@example.com', 'admin');
++        $this->participant = $this->createUser('participante@example.com', 'participant');
++    }
++
++    private function createUser(string $email, string $role): User
++    {
++        $user = new User([
++            'name' => 'Usuário',
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    public function test_exists_should_accept_an_existing_id(): void
++    {
++        $this->model->user_id = $this->admin->id; // @phpstan-ignore-line
++
++        $this->assertTrue(Validations::exists('user_id', User::class, $this->model));
++        $this->assertNull($this->model->errors('user_id'));
++    }
++
++    public function test_exists_should_accept_a_numeric_string_id(): void
++    {
++        $this->model->user_id = (string) $this->admin->id; // @phpstan-ignore-line
++
++        $this->assertTrue(Validations::exists('user_id', User::class, $this->model));
++    }
++
++    public function test_exists_should_reject_an_unknown_id(): void
++    {
++        $this->model->user_id = 9999; // @phpstan-ignore-line
++
++        $this->assertFalse(Validations::exists('user_id', User::class, $this->model));
++        $this->assertEquals('não existe!', $this->model->errors('user_id'));
++    }
++
++    public function test_exists_should_reject_null_text_and_array_values(): void
++    {
++        $this->assertFalse(Validations::exists('user_id', User::class, $this->model));
++
++        $this->model->user_id = 'abc'; // @phpstan-ignore-line
++        $this->assertFalse(Validations::exists('user_id', User::class, $this->model));
++
++        $this->model->user_id = [$this->admin->id]; // @phpstan-ignore-line
++        $this->assertFalse(Validations::exists('user_id', User::class, $this->model));
++    }
++
++    public function test_exists_should_apply_extra_conditions(): void
++    {
++        $this->model->user_id = $this->participant->id; // @phpstan-ignore-line
++        $this->assertFalse(Validations::exists('user_id', User::class, $this->model, ['role' => 'admin']));
++
++        $this->model->user_id = $this->admin->id; // @phpstan-ignore-line
++        $this->assertTrue(Validations::exists('user_id', User::class, $this->model, ['role' => 'admin']));
++    }
++}
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..a112c84 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -95,6 +95,42 @@ class EventTest extends TestCase
+         }
+     }
+ 
++    public function test_user_id_should_be_required(): void
++    {
++        $event = new Event($this->params(['user_id' => null]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode ser vazio!', $event->errors('user_id'));
++    }
++
++    public function test_unknown_user_id_should_be_invalid_instead_of_a_foreign_key_error(): void
++    {
++        $event = new Event($this->params(['user_id' => 9999]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('não existe!', $event->errors('user_id'));
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_participant_as_creator_should_be_invalid(): void
++    {
++        $participant = $this->createUser('Participante', 'participante@example.com');
++        $event = new Event($this->params(['user_id' => $participant->id]));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ser um administrador!', $event->errors('user_id'));
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_admin_as_creator_should_be_valid(): void
++    {
++        $event = new Event($this->params(['user_id' => (string) $this->admin->id]));
++
++        $this->assertTrue($event->isValid());
++        $this->assertNull($event->errors('user_id'));
++    }
++
+     /**
+      * @return array<string, array{string}>
+      */
+-- 
+2.54.0 (Apple Git-157)
+
