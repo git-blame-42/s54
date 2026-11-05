@@ -13,7 +13,7 @@ use Core\Database\ActiveRecord\Model;
  * @property string $encrypted_password
  * @property string $role
  * @property string|null $last_login_at
- * @property int|string|null $login_code código de acesso pendente (P12)
+ * @property int|string|null $login_code código de acesso pendente do login
  * @property string|null $login_code_expires_at
  */
 class User extends Model

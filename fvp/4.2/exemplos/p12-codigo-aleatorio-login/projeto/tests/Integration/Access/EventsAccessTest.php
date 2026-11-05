@@ -74,7 +74,7 @@ class EventsAccessTest extends TestCase
         $this->assertEquals(302, $response->getStatusCode());
         $this->assertEquals('/login/code', $response->getHeaderLine('Location'));
 
-        // P12: o segundo passo usa o código gravado no banco para este usuário.
+        // Login em dois passos: o segundo usa o código gravado no banco para este usuário.
         $code = (string) User::findById($user->id)?->login_code;
         $response = $client->post('/login/code', ['form_params' => ['code' => $code]]);
         $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));

@@ -14,7 +14,7 @@ Branch no clone: `fvp/p12-codigo-aleatorio-login`, a partir de `main`
 
 Commit:
 
-- `967540a` `feat: Require a random access code after the password on
+- `a6c901c` `feat: Require a random access code after the password on
   login`
 
 ## O que mudou
@@ -158,7 +158,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p12 \
     s50/fvp/4.2/exemplos/p12-codigo-aleatorio-login/projeto
 git fetch fvp-p12 fvp/p12-codigo-aleatorio-login
-git cherry-pick 967540a
+git cherry-pick a6c901c
 git remote remove fvp-p12
 ```
 
@@ -169,7 +169,7 @@ git fetch \
     s50/fvp/4.2/exemplos/p12-codigo-aleatorio-login/solucao.bundle \
     fvp/p12-codigo-aleatorio-login:fvp-p12
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 967540a
+git cherry-pick a6c901c
 # opcional, limpa a ref
 git branch -D fvp-p12
 ```

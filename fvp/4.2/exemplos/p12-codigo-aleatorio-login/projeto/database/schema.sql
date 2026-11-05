@@ -11,7 +11,7 @@ CREATE TABLE users (
     encrypted_password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
     last_login_at TIMESTAMP NULL,
-    -- P12: código de acesso de 4 dígitos pedido após a senha; vale 5 minutos e é apagado ao ser usado.
+    -- Código de acesso de 4 dígitos pedido após a senha; vale 5 minutos e é apagado ao ser usado.
     login_code SMALLINT UNSIGNED NULL,
     login_code_expires_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

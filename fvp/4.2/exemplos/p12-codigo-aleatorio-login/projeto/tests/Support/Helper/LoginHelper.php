@@ -14,7 +14,7 @@ class LoginHelper extends Module
         $page = $this->getModule('WebDriver');
         $this->submitCredentials($username, $password);
 
-        // P12: com a senha certa vem a tela do código; o código chega no flash (simulação do envio).
+        // Com a senha certa vem a tela do código; o código chega no flash (simulação do envio).
         if ($page->grabFromCurrentUrl() === '/login/code') {
             $page->fillField('code', $this->grabLoginCode());
             $page->click('Confirmar');

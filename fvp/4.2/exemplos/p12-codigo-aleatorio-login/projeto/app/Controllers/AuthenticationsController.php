@@ -22,7 +22,7 @@ class AuthenticationsController extends Controller
         $user = User::findByEmail($params['email']);
 
         if ($user && $user->authenticate($params['password'])) {
-            // P12: a senha certa ainda não loga; o login termina em verifyCode, com o código.
+            // A senha certa ainda não loga; o login termina em verifyCode, com o código.
             $code = $user->generateLoginCode();
             $_SESSION['pending_user_id'] = $user->id;
             // Simula o envio do código (não há e-mail no projeto): o backend o devolve no flash.

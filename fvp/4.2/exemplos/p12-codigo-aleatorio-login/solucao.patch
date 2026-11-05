@@ -1,4 +1,4 @@
-From 967540a9e424124b7fc9494f803d5d04112c49bf Mon Sep 17 00:00:00 2001
+From a6c901cca0805010369444973a598bd967fd06e9 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:16:27 -0300
 Subject: [PATCH] feat: Require a random access code after the password on
@@ -21,14 +21,14 @@ A correct password no longer logs in: the user model generates a 4-digit code (1
  create mode 100644 app/views/authentications/code.phtml
 
 diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
-index cc159e5..510dab0 100644
+index cc159e5..2b7ed31 100644
 --- a/app/Controllers/AuthenticationsController.php
 +++ b/app/Controllers/AuthenticationsController.php
 @@ -22,12 +22,48 @@ class AuthenticationsController extends Controller
          $user = User::findByEmail($params['email']);
  
          if ($user && $user->authenticate($params['password'])) {
-+            // P12: a senha certa ainda não loga; o login termina em verifyCode, com o código.
++            // A senha certa ainda não loga; o login termina em verifyCode, com o código.
 +            $code = $user->generateLoginCode();
 +            $_SESSION['pending_user_id'] = $user->id;
 +            // Simula o envio do código (não há e-mail no projeto): o backend o devolve no flash.
@@ -91,14 +91,14 @@ index cc159e5..510dab0 100644
 +    }
  }
 diff --git a/app/Models/User.php b/app/Models/User.php
-index ed68286..84c6cbd 100644
+index ed68286..8d1dcf8 100644
 --- a/app/Models/User.php
 +++ b/app/Models/User.php
 @@ -13,11 +13,24 @@ use Core\Database\ActiveRecord\Model;
   * @property string $encrypted_password
   * @property string $role
   * @property string|null $last_login_at
-+ * @property int|string|null $login_code código de acesso pendente (P12)
++ * @property int|string|null $login_code código de acesso pendente do login
 + * @property string|null $login_code_expires_at
   */
  class User extends Model
@@ -193,14 +193,14 @@ index 9ee0c90..f8f465f 100644
  
  // Área do usuário (somente autenticados)
 diff --git a/database/schema.sql b/database/schema.sql
-index fe7f1d6..58b606d 100644
+index fe7f1d6..a0a2404 100644
 --- a/database/schema.sql
 +++ b/database/schema.sql
 @@ -11,6 +11,9 @@ CREATE TABLE users (
      encrypted_password VARCHAR(255) NOT NULL,
      role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
      last_login_at TIMESTAMP NULL,
-+    -- P12: código de acesso de 4 dígitos pedido após a senha; vale 5 minutos e é apagado ao ser usado.
++    -- Código de acesso de 4 dígitos pedido após a senha; vale 5 minutos e é apagado ao ser usado.
 +    login_code SMALLINT UNSIGNED NULL,
 +    login_code_expires_at TIMESTAMP NULL,
      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -256,7 +256,7 @@ index 04eca11..6ef4632 100644
      {
          $page->login('fulano@example.com', '123456');
 diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
-index 4396d14..cf0efbf 100644
+index 4396d14..ed552fc 100644
 --- a/tests/Integration/Access/EventsAccessTest.php
 +++ b/tests/Integration/Access/EventsAccessTest.php
 @@ -72,6 +72,11 @@ class EventsAccessTest extends TestCase
@@ -265,7 +265,7 @@ index 4396d14..cf0efbf 100644
          $this->assertEquals(302, $response->getStatusCode());
 +        $this->assertEquals('/login/code', $response->getHeaderLine('Location'));
 +
-+        // P12: o segundo passo usa o código gravado no banco para este usuário.
++        // Login em dois passos: o segundo usa o código gravado no banco para este usuário.
 +        $code = (string) User::findById($user->id)?->login_code;
 +        $response = $client->post('/login/code', ['form_params' => ['code' => $code]]);
          $this->assertEquals('/dashboard', $response->getHeaderLine('Location'));
@@ -417,7 +417,7 @@ index a7b3eb5..990581f 100644
   * @SuppressWarnings(PHPMD)
   */
 diff --git a/tests/Support/Helper/LoginHelper.php b/tests/Support/Helper/LoginHelper.php
-index 729b7a1..dae396a 100644
+index 729b7a1..0f9df55 100644
 --- a/tests/Support/Helper/LoginHelper.php
 +++ b/tests/Support/Helper/LoginHelper.php
 @@ -9,6 +9,22 @@ use Codeception\Module;
@@ -429,7 +429,7 @@ index 729b7a1..dae396a 100644
 +        $page = $this->getModule('WebDriver');
 +        $this->submitCredentials($username, $password);
 +
-+        // P12: com a senha certa vem a tela do código; o código chega no flash (simulação do envio).
++        // Com a senha certa vem a tela do código; o código chega no flash (simulação do envio).
 +        if ($page->grabFromCurrentUrl() === '/login/code') {
 +            $page->fillField('code', $this->grabLoginCode());
 +            $page->click('Confirmar');
