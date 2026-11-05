@@ -57,7 +57,7 @@ Branch no clone: `fvp/n7-painel-resumo`, a partir de `main`
 - Zeros a partir de `KINDS`: o `GROUP BY` não devolve tipo sem Evento;
   sem o preenchimento, a linha some da tabela.
 - `upcoming` em vez de `nextEvents` (nome do passo do catálogo): é o
-  nome pedido nesta rodada e o mesmo do N5, que o catálogo cita como
+  nome pedido no enunciado e o mesmo do N5, que o catálogo cita como
   base. Se o N5 já estiver aplicado com outro formato, use um só.
 - `starts_on >= hoje`: Evento de hoje ainda é "próximo" (mesma regra
   de "hoje" do `notPastDate`). Desempate pelo `id` deixa a ordem
