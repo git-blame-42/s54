@@ -182,8 +182,10 @@ no `_Sidebar`.
   pt-BR).
 - Não invente endpoints: rota citada e não registrada é o primeiro
   defeito que aparece ao abrir o caminho no navegador.
-- `./run test` aceita opções antes do caminho (`--filter full`); o
-  `./run test:browser` aceita só o caminho do Cest.
+- `./run test` repassa opções do PHPUnit antes do caminho
+  (`--filter full`). O `./run test:browser` também repassa os
+  argumentos, mas ao Codeception: use os filtros dele (caminho do
+  Cest, `Arquivo.php:metodo`), não o `--filter` do PHPUnit.
 - Wiki é outro repositório: editar `wiki/` no projeto não muda a wiki
   oficial, e vice-versa.
 - Credenciais: só as do populate (`admin@example.com` / `123456`), já
