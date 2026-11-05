@@ -9,7 +9,7 @@ Chance: média-baixa. Tempo estimado: 25-35 min. Catálogo:
 só no login).
 
 Branch no clone: `fvp/q5-token-csrf`, empilhada sobre O9
-(`fvp/o9-method-so-via-post`, do agente F, mesmo SHA), que parte de
+(`fvp/o9-method-so-via-post`, mesmo SHA do exemplo do O9), que parte de
 `main` (`f31006b`). Base: `main` → O9 → Q5.
 
 | Commit    | Mensagem                                                 |
@@ -128,8 +128,13 @@ funcionando.
   middleware, só no `authenticate`. Se os dois forem aplicados, mantenha
   uma classe só e ponha o login no grupo `csrf` (fora do `auth`) ou
   mantenha a conferência do A15 no controller.
-- A7/A17 da 4.1 (ordem dos middlewares): explica por que o `csrf` fica
-  por fora.
+- A17 da 4.1 (ordem dos middlewares corrigida no core): o A17 troca o
+  `addMiddleware` por um *prepend*, e o grupo **externo** passa a rodar
+  primeiro. Com o A17 aplicado, este `csrf` por fora rodaria **antes**
+  do `auth`: um POST sem sessão daria 403 em vez de `/login`, e os
+  testes de acesso de "sem sessão → /login" para POST/PUT/DELETE
+  quebram. Com A17, ponha o `csrf` como o grupo **mais interno**
+  (dentro do `admin`), para que rode por último.
 - P5, P6, P16, P17, P2...: cada form novo (cancelar, duplicar, remover
   com código, inscrever-se) precisa de `<?= csrf_field() ?>`; sem ele,
   o botão passa a dar 403.
@@ -214,9 +219,12 @@ Arquivos que costumam conflitar neste cenário e por quê:
 
 ## Armadilhas
 
-- `csrf` por dentro do `auth` (ou só no grupo `admin`): roda antes da
-  autenticação e um POST sem sessão vira 403 em vez de `/login`; os
-  testes de acesso existentes quebram.
+- `csrf` por dentro do `auth` (ou só no grupo `admin`), no core atual:
+  roda antes da autenticação e um POST sem sessão vira 403 em vez de
+  `/login`; os testes de acesso existentes quebram.
+- Com o A17 da 4.1 aplicado, é o inverso: o grupo externo roda
+  primeiro, então o `csrf` tem de ser o grupo mais interno. Confira
+  sempre em que ordem o seu core roda os grupos antes de decidir.
 - Barrar `GET` também: a listagem e os links deixam de funcionar.
   Só métodos que alteram estado.
 - Ler `_token` com `getParam` (que usa `$_REQUEST`): aceita token na
