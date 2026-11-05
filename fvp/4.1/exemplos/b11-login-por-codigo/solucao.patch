@@ -1,0 +1,943 @@
+From e4709a6af886753ace864c80737126587b5c07de Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 01/13] feat: Add login code columns to users table
+
+---
+ database/schema.sql | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/database/schema.sql b/database/schema.sql
+index 517dbf9..415a173 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -9,6 +9,14 @@ CREATE TABLE users (
+     encrypted_password VARCHAR(255) NOT NULL,
+     role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
+     last_login_at TIMESTAMP NULL,
++    -- Login por código (FVP B11). O código nunca fica em texto puro: só o hash
++    -- (mesmo idioma de encrypted_password), a validade e o contador de tentativas.
++    -- "Não há pedido" = login_code_digest NULL. attempts é NOT NULL: como entra em
++    -- $columns, o construtor do model precisa dar o padrão 0 (mesma lição do role).
++    -- Próximo passo: app/Models/User.php ($columns, construtor e os métodos do código).
++    login_code_digest VARCHAR(255) NULL,
++    login_code_expires_at DATETIME NULL,
++    login_code_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     UNIQUE KEY uq_users_email (email)
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 5b04a044fe68a916b5501f2241218113efecc806 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 02/13] feat: Generate and validate login codes in User
+
+---
+ app/Models/User.php | 111 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 110 insertions(+), 1 deletion(-)
+
+diff --git a/app/Models/User.php b/app/Models/User.php
+index 9ae08a0..d26be41 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -12,11 +12,31 @@ use Core\Database\ActiveRecord\Model;
+  * @property string $encrypted_password
+  * @property string $role
+  * @property string|null $last_login_at
++ * @property string|null $login_code_digest
++ * @property string|null $login_code_expires_at
++ * @property int|string|null $login_code_attempts
+  */
+ class User extends Model
+ {
++    /**
++     * Login por código (FVP B11): validade do código em segundos e número máximo de
++     * tentativas erradas antes de o código morrer. Constantes no model, não no
++     * controller: são regra de domínio, e os testes unitários as usam.
++     */
++    public const LOGIN_CODE_TTL = 300;
++    public const LOGIN_CODE_MAX_ATTEMPTS = 3;
++
+     protected static string $table = 'users';
+-    protected static array $columns = ['name', 'email', 'encrypted_password', 'role', 'last_login_at'];
++    protected static array $columns = [
++        'name',
++        'email',
++        'encrypted_password',
++        'role',
++        'last_login_at',
++        'login_code_digest',
++        'login_code_expires_at',
++        'login_code_attempts',
++    ];
+ 
+     protected ?string $password = null;
+     protected ?string $password_confirmation = null;
+@@ -31,6 +51,12 @@ class User extends Model
+         if ($this->role === null) {
+             $this->role = 'participant';
+         }
++
++        // save() envia todas as colunas de $columns; NULL em login_code_attempts
++        // (NOT NULL) faria o INSERT falhar. Mesma lição do padrão de role, acima.
++        if ($this->login_code_attempts === null) {
++            $this->login_code_attempts = 0;
++        }
+     }
+ 
+     public function validates(): void
+@@ -69,6 +95,89 @@ class User extends Model
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+     }
+ 
++    /* ------------------- Login por código (FVP B11) ------------------- */
++
++    /**
++     * Sorteia um código de 4 dígitos (1000 a 9999), grava só o hash e a validade,
++     * zera as tentativas e devolve o código em texto puro: é o único momento em que
++     * ele existe fora do navegador (o controller o mostra na tela; em produção iria
++     * por e-mail). Pedir um código novo invalida o anterior (hash sobrescrito).
++     *
++     * Só para Usuário já salvo: update() precisa do id. random_int é o gerador
++     * criptográfico; é a única linha sobre "geração", o resto deste bloco é validação.
++     * Próximo passo: hasPendingLoginCode() e authenticateWithLoginCode(), abaixo.
++     */
++    public function generateLoginCode(): string
++    {
++        $code = (string) random_int(1000, 9999);
++
++        $this->update([
++            'login_code_digest' => password_hash($code, PASSWORD_DEFAULT),
++            'login_code_expires_at' => date('Y-m-d H:i:s', time() + self::LOGIN_CODE_TTL),
++            'login_code_attempts' => 0,
++        ]);
++
++        return $code;
++    }
++
++    /**
++     * Há código gravado, dentro da validade e com tentativas sobrando? Três das
++     * verificações do login por código num só lugar; o controller também usa para
++     * decidir entre "tente de novo" e "peça outro código". Validade comparada em PHP
++     * (mesmo relógio que a gerou), nunca com NOW() do MySQL.
++     */
++    public function hasPendingLoginCode(): bool
++    {
++        return $this->login_code_digest !== null
++            && strtotime((string) $this->login_code_expires_at) > time()
++            && (int) $this->login_code_attempts < self::LOGIN_CODE_MAX_ATTEMPTS;
++    }
++
++    /**
++     * A validação do login por código. Devolve true uma única vez por código.
++     *
++     * 1. existe código pendente, 2. dentro da validade, 3. tentativas < máximo
++     *    (hasPendingLoginCode); se falhar, limpa o que sobrou e recusa;
++     * 4. forma: exatamente 4 dígitos (rejeita '12345', ' 1234', 'abcd' sem rodar bcrypt);
++     * 5. hash confere (password_verify: tempo constante; nunca ==, que converte '1e3');
++     * 6. erro conta tentativa no banco (sobrevive à troca de navegador); na última, limpa;
++     * 7. sucesso limpa o código antes de devolver: uso único.
++     * A oitava verificação, "este navegador pediu este código", fica em Auth
++     * (lib/Authentication/Auth.php), que é quem cuida da sessão.
++     * Próximo passo: tests/Unit/Models/Users/UserTest.php.
++     */
++    public function authenticateWithLoginCode(string $code): bool
++    {
++        if (!$this->hasPendingLoginCode()) {
++            $this->clearLoginCode();
++            return false;
++        }
++
++        $wellFormed = preg_match('/^\d{4}$/', $code) === 1;
++        if (!$wellFormed || !password_verify($code, (string) $this->login_code_digest)) {
++            $attempts = (int) $this->login_code_attempts + 1;
++            if ($attempts >= self::LOGIN_CODE_MAX_ATTEMPTS) {
++                $this->clearLoginCode();
++            } else {
++                $this->update(['login_code_attempts' => $attempts]);
++            }
++            return false;
++        }
++
++        $this->clearLoginCode();
++        return true;
++    }
++
++    /** Apaga o código pendente: "não há pedido" é digest NULL, sem coluna extra. */
++    private function clearLoginCode(): void
++    {
++        $this->update([
++            'login_code_digest' => null,
++            'login_code_expires_at' => null,
++            'login_code_attempts' => 0,
++        ]);
++    }
++
+     public function __set(string $property, mixed $value): void
+     {
+         parent::__set($property, $value);
+-- 
+2.54.0 (Apple Git-157)
+
+
+From c7a1d5b2fdbaffbd1591095b734615698f292bc2 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 03/13] test: Cover login code generation and validation in
+ UserTest
+
+---
+ tests/Unit/Models/Users/UserTest.php | 78 ++++++++++++++++++++++++++++
+ 1 file changed, 78 insertions(+)
+
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..2e6a75b 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -165,4 +165,82 @@ class UserTest extends TestCase
+         $this->assertTrue($this->user->authenticate('123456'));
+         $this->assertFalse($this->user->authenticate('654321'));
+     }
++
++    /* ------------------- Login por código (FVP B11) ------------------- */
++    // Cada teste cobre um dos pontos de validação do model. $this->user é o usuário
++    // salvo no setUp. Próximo passo: lib/Authentication/Auth.php (pedido na sessão).
++
++    public function test_generate_login_code_should_return_four_digits_and_store_only_a_digest(): void
++    {
++        $code = $this->user->generateLoginCode();
++        $stored = User::findById($this->user->id);
++
++        $this->assertMatchesRegularExpression('/^\d{4}$/', $code);
++        $this->assertGreaterThanOrEqual(1000, (int) $code);
++        $this->assertLessThanOrEqual(9999, (int) $code);
++        // Nunca em texto puro no banco: só o hash, que confere com o código.
++        $this->assertNotEquals($code, $stored->login_code_digest);
++        $this->assertTrue(password_verify($code, (string) $stored->login_code_digest));
++        $this->assertGreaterThan(time(), strtotime((string) $stored->login_code_expires_at));
++        $this->assertEquals(0, $stored->login_code_attempts);
++        $this->assertTrue($stored->hasPendingLoginCode());
++    }
++
++    public function test_authenticate_with_login_code_should_accept_the_code_only_once(): void
++    {
++        $code = $this->user->generateLoginCode();
++
++        $this->assertTrue($this->user->authenticateWithLoginCode($code));
++        $this->assertNull(User::findById($this->user->id)->login_code_digest);
++        $this->assertFalse($this->user->authenticateWithLoginCode($code));
++    }
++
++    public function test_authenticate_with_login_code_should_reject_a_wrong_code_and_count_the_attempt(): void
++    {
++        $code = $this->user->generateLoginCode();
++
++        $this->assertFalse($this->user->authenticateWithLoginCode($this->wrongCode($code)));
++        $this->assertEquals(1, User::findById($this->user->id)->login_code_attempts);
++        // O código certo ainda vale enquanto sobram tentativas.
++        $this->assertTrue($this->user->authenticateWithLoginCode($code));
++    }
++
++    public function test_authenticate_with_login_code_should_lock_after_three_wrong_attempts(): void
++    {
++        $code = $this->user->generateLoginCode();
++
++        for ($i = 0; $i < User::LOGIN_CODE_MAX_ATTEMPTS; $i++) {
++            $this->assertFalse($this->user->authenticateWithLoginCode($this->wrongCode($code)));
++        }
++
++        $this->assertFalse($this->user->hasPendingLoginCode());
++        $this->assertNull(User::findById($this->user->id)->login_code_digest);
++        $this->assertFalse($this->user->authenticateWithLoginCode($code));
++    }
++
++    public function test_authenticate_with_login_code_should_reject_an_expired_code(): void
++    {
++        $code = $this->user->generateLoginCode();
++        // update() não valida: serve para plantar a validade no passado.
++        $this->user->update(['login_code_expires_at' => date('Y-m-d H:i:s', time() - 1)]);
++
++        $this->assertFalse($this->user->authenticateWithLoginCode($code));
++        $this->assertNull(User::findById($this->user->id)->login_code_digest);
++    }
++
++    public function test_authenticate_with_login_code_should_reject_malformed_input_and_no_pending_code(): void
++    {
++        $this->assertFalse($this->user->authenticateWithLoginCode('1234'));
++
++        $this->user->generateLoginCode();
++        foreach (['', '12', '12345', 'abcd', ' 1234'] as $bad) {
++            $this->assertFalse($this->user->authenticateWithLoginCode($bad), var_export($bad, true));
++        }
++    }
++
++    /** Um código certamente diferente do sorteado, ainda com 4 dígitos. */
++    private function wrongCode(string $code): string
++    {
++        return $code === '1000' ? '1001' : '1000';
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From bc9d6afb43c0fc527c276cef047444c5bf2ea32a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 04/13] feat: Keep the pending login code request in the
+ session
+
+---
+ lib/Authentication/Auth.php | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/lib/Authentication/Auth.php b/lib/Authentication/Auth.php
+index 0970484..f3ea441 100644
+--- a/lib/Authentication/Auth.php
++++ b/lib/Authentication/Auth.php
+@@ -31,4 +31,37 @@ class Auth
+     {
+         unset($_SESSION['user']['id']);
+     }
++
++    /* ------------------- Login por código (FVP B11) ------------------- */
++
++    /**
++     * Registra na sessão que ESTE navegador pediu um código para este Usuário.
++     * É a oitava verificação do login por código: quem não pediu o código aqui não
++     * chega nem ao formulário de verificação. Só o id vai para a sessão; o código
++     * (em hash) fica no banco, no model User. Toda escrita em $_SESSION mora nesta
++     * classe, como login() e logout().
++     * Próximo passo: tests/Unit/Lib/Authentication/AuthTest.php; depois config/routes.php.
++     */
++    public static function startLoginCode(User $user): void
++    {
++        $_SESSION['login_code']['user_id'] = $user->id;
++    }
++
++    /**
++     * O Usuário do pedido pendente neste navegador, ou null se não há pedido.
++     *
++     * @phpstan-impure lê a sessão; o resultado muda depois de startLoginCode()
++     */
++    public static function loginCodeUser(): ?User
++    {
++        $id = $_SESSION['login_code']['user_id'] ?? null;
++
++        return $id === null ? null : User::findById((int) $id);
++    }
++
++    /** Encerra o pedido: no sucesso do login e quando o código morre. */
++    public static function clearLoginCode(): void
++    {
++        unset($_SESSION['login_code']);
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 191b037f1aa0846682f3974d4936b49919e8b330 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 05/13] test: Cover the login code session helpers in AuthTest
+
+---
+ tests/Unit/Lib/Authentication/AuthTest.php | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/tests/Unit/Lib/Authentication/AuthTest.php b/tests/Unit/Lib/Authentication/AuthTest.php
+index 1394c4e..1419576 100644
+--- a/tests/Unit/Lib/Authentication/AuthTest.php
++++ b/tests/Unit/Lib/Authentication/AuthTest.php
+@@ -60,4 +60,20 @@ class AuthTest extends TestCase
+ 
+         $this->assertFalse(Auth::check());
+     }
++
++    // Login por código (FVP B11): o pedido vive na sessão até ser encerrado e não loga
++    // ninguém sozinho. Próximo passo: config/routes.php.
++    public function test_login_code_request_should_live_in_the_session_until_cleared(): void
++    {
++        $this->assertNull(Auth::loginCodeUser());
++
++        Auth::startLoginCode($this->user);
++
++        $this->assertEquals($this->user->id, Auth::loginCodeUser()?->id);
++        $this->assertFalse(Auth::check());
++
++        Auth::clearLoginCode();
++
++        $this->assertNull(Auth::loginCodeUser());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 40816158236ed1ea0740beaee8bd0ac1883adb43 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 06/13] feat: Add login code routes
+
+---
+ config/routes.php | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/config/routes.php b/config/routes.php
+index f627ea5..120bb5b 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -4,6 +4,7 @@ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\LoginCodesController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -13,6 +14,16 @@ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.log
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
+ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
++// Login por código (FVP B11). Rotas públicas, como /login: ficam fora dos grupos de
++// middleware. Nomes login_codes.* no padrão recurso.ação; /login/code tem dois
++// segmentos e /login um, então o roteador não confunde as duas. GET mostra o
++// formulário, POST processa (new/create para o pedido, verify/authenticate para o código).
++// Próximo passo: app/Controllers/LoginCodesController.php (as quatro ações).
++Route::get('/login/code', [LoginCodesController::class, 'new'])->name('login_codes.new');
++Route::post('/login/code', [LoginCodesController::class, 'create'])->name('login_codes.create');
++Route::get('/login/code/verify', [LoginCodesController::class, 'verify'])->name('login_codes.verify');
++Route::post('/login/code/verify', [LoginCodesController::class, 'authenticate'])->name('login_codes.authenticate');
++
+ // Área do usuário (somente autenticados)
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 17b252828b55945fa816afc9f0abaa68df799cb3 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:39 -0300
+Subject: [PATCH 07/13] feat: Add LoginCodesController
+
+---
+ app/Controllers/LoginCodesController.php | 109 +++++++++++++++++++++++
+ 1 file changed, 109 insertions(+)
+ create mode 100644 app/Controllers/LoginCodesController.php
+
+diff --git a/app/Controllers/LoginCodesController.php b/app/Controllers/LoginCodesController.php
+new file mode 100644
+index 0000000..3ff3d3c
+--- /dev/null
++++ b/app/Controllers/LoginCodesController.php
+@@ -0,0 +1,109 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\User;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++/**
++ * Login por código (FVP B11), em duas etapas:
++ *   GET  /login/code         new           formulário de e-mail
++ *   POST /login/code         create        gera o código (User), guarda o pedido (Auth), mostra o código
++ *   GET  /login/code/verify  verify        formulário do código (só com pedido pendente)
++ *   POST /login/code/verify  authenticate  User::authenticateWithLoginCode -> Auth::login
++ *
++ * Controller fino: nenhuma regra aqui. Quem decide se o código vale é o model
++ * (authenticateWithLoginCode, hasPendingLoginCode); quem cuida da sessão é o Auth.
++ * Este controller só lê o Request, chama os dois e escolhe flash + redirect (PRG).
++ * O return depois de cada redirectTo existe porque, nos testes de controller, o
++ * redirectTo é trocado por um echo e não encerra a ação.
++ * Próximo passo: app/views/login_codes/new.phtml e verify.phtml.
++ */
++class LoginCodesController extends Controller
++{
++    public function new(): void
++    {
++        $title = 'Entrar com código';
++        $this->render('login_codes/new', compact('title'));
++    }
++
++    public function create(Request $request): void
++    {
++        $email = $this->field($request, 'email');
++        $user = $email === '' ? null : User::findByEmail($email);
++
++        if ($user === null) {
++            // Sem envio de e-mail no projeto, o código vai para a tela; por isso é
++            // preciso saber quem é. Em produção a mensagem seria neutra.
++            FlashMessage::danger('E-mail não cadastrado!');
++            $this->redirectTo(route('login_codes.new'));
++            return;
++        }
++
++        $code = $user->generateLoginCode();
++        Auth::startLoginCode($user);
++
++        // Único momento em que o código existe em texto puro fora do navegador.
++        FlashMessage::success("Seu código de acesso é {$code}. Vale por 5 minutos.");
++        $this->redirectTo(route('login_codes.verify'));
++    }
++
++    public function verify(): void
++    {
++        if (Auth::loginCodeUser() === null) {
++            FlashMessage::danger('Informe o e-mail para receber um código.');
++            $this->redirectTo(route('login_codes.new'));
++            return;
++        }
++
++        $title = 'Informe o código';
++        $this->render('login_codes/verify', compact('title'));
++    }
++
++    public function authenticate(Request $request): void
++    {
++        // Verificação 8: só quem pediu o código neste navegador chega aqui.
++        $user = Auth::loginCodeUser();
++        if ($user === null) {
++            FlashMessage::danger('Informe o e-mail para receber um código.');
++            $this->redirectTo(route('login_codes.new'));
++            return;
++        }
++
++        // Verificações 1 a 7: todas no model. Sucesso = código consumido (uso único).
++        if ($user->authenticateWithLoginCode($this->field($request, 'code'))) {
++            Auth::clearLoginCode();
++            Auth::login($user);
++            FlashMessage::success('Login realizado com sucesso!');
++            $this->redirectTo(route('dashboard.index'));
++            return;
++        }
++
++        // Falhou e não sobrou código válido (expirou ou esgotou): peça outro.
++        if (!$user->hasPendingLoginCode()) {
++            Auth::clearLoginCode();
++            FlashMessage::danger('Código expirado ou tentativas esgotadas. Peça outro.');
++            $this->redirectTo(route('login_codes.new'));
++            return;
++        }
++
++        // Falhou, mas ainda há tentativas: volta ao formulário do código.
++        FlashMessage::danger('Código inválido!');
++        $this->redirectTo(route('login_codes.verify'));
++    }
++
++    /**
++     * Lê login_code[campo] como string, sem warning se o formulário vier vazio ou
++     * forjado (nunca $_POST; nunca $params['x'] direto num array que pode ser null).
++     */
++    private function field(Request $request, string $name): string
++    {
++        $params = $request->getParam('login_code', []);
++        $value = is_array($params) ? ($params[$name] ?? '') : '';
++
++        return is_scalar($value) ? trim((string) $value) : '';
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 0396b5d645bcb470f084658afb63db28c871b9a6 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 08/13] feat: Add the login code request form
+
+---
+ app/views/login_codes/new.phtml | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+ create mode 100644 app/views/login_codes/new.phtml
+
+diff --git a/app/views/login_codes/new.phtml b/app/views/login_codes/new.phtml
+new file mode 100644
+index 0000000..be1ecb4
+--- /dev/null
++++ b/app/views/login_codes/new.phtml
+@@ -0,0 +1,20 @@
++<?php
++/**
++ * Passo 1 do login por código (FVP B11): pede o e-mail. Campos name="login_code[...]"
++ * chegam ao controller como um array em getParam('login_code'). novalidate: quem
++ * valida é o servidor (LoginCodesController::create). URL só por route().
++ * Próximo passo: verify.phtml (passo 2).
++ */
++?>
++<div class="card login mx-auto">
++    <div class="card-body">
++        <form action="<?= route('login_codes.create') ?>" method="post" novalidate>
++            <div class="mb-3">
++                <label for="login_code_email" class="form-label">E-mail</label>
++                <input type="email" class="form-control" id="login_code_email" name="login_code[email]">
++            </div>
++            <button type="submit" class="btn btn-primary">Receber código</button>
++            <a class="btn btn-link" href="<?= route('users.login') ?>">Entrar com senha</a>
++        </form>
++    </div>
++</div>
+-- 
+2.54.0 (Apple Git-157)
+
+
+From f2f36e3ec0574f0d3a422d2dd884f172c7a9e0da Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 09/13] feat: Add the login code verification form
+
+---
+ app/views/login_codes/verify.phtml | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+ create mode 100644 app/views/login_codes/verify.phtml
+
+diff --git a/app/views/login_codes/verify.phtml b/app/views/login_codes/verify.phtml
+new file mode 100644
+index 0000000..9fa3912
+--- /dev/null
++++ b/app/views/login_codes/verify.phtml
+@@ -0,0 +1,22 @@
++<?php
++/**
++ * Passo 2 do login por código (FVP B11): pede o código. O flash acima do formulário
++ * mostra o código recém-gerado (não há envio de e-mail no projeto); o campo é texto
++ * numérico de 4 dígitos. O POST vai para login_codes.authenticate; quem valida é o
++ * model, e o formulário nunca recebe o código de volta.
++ * Próximo passo: app/views/authentications/new.phtml (link para esta entrada).
++ */
++?>
++<div class="card login mx-auto">
++    <div class="card-body">
++        <form action="<?= route('login_codes.authenticate') ?>" method="post" novalidate>
++            <div class="mb-3">
++                <label for="login_code_code" class="form-label">Código (4 dígitos)</label>
++                <input type="text" inputmode="numeric" maxlength="4" autocomplete="one-time-code"
++                    class="form-control" id="login_code_code" name="login_code[code]">
++            </div>
++            <button type="submit" class="btn btn-primary">Entrar</button>
++            <a class="btn btn-link" href="<?= route('login_codes.new') ?>">Pedir outro código</a>
++        </form>
++    </div>
++</div>
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 43274dabdc62c488b66ddb1b1167ab270f98ba53 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 10/13] feat: Link the login page to the login by code
+
+---
+ app/views/authentications/new.phtml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/app/views/authentications/new.phtml b/app/views/authentications/new.phtml
+index 42c41a2..8847341 100644
+--- a/app/views/authentications/new.phtml
++++ b/app/views/authentications/new.phtml
+@@ -10,6 +10,8 @@
+                 <input type="password" class="form-control" id="user_password" name="user[password]" required>
+             </div>
+             <button type="submit" class="btn btn-primary">Entrar</button>
++            <?php // Login por código (FVP B11): entrada sem senha. Próximo passo: os testes de controller. ?>
++            <a class="btn btn-link" href="<?= route('login_codes.new') ?>">Entrar com código</a>
+         </form>
+     </div>
+ </div>
+-- 
+2.54.0 (Apple Git-157)
+
+
+From c4d9964bd8e3f5685df19ce8559f4e69aef607a1 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 11/13] test: Cover LoginCodesController actions
+
+---
+ .../Controllers/LoginCodesControllerTest.php  | 120 ++++++++++++++++++
+ 1 file changed, 120 insertions(+)
+ create mode 100644 tests/Integration/Controllers/LoginCodesControllerTest.php
+
+diff --git a/tests/Integration/Controllers/LoginCodesControllerTest.php b/tests/Integration/Controllers/LoginCodesControllerTest.php
+new file mode 100644
+index 0000000..b3e9f71
+--- /dev/null
++++ b/tests/Integration/Controllers/LoginCodesControllerTest.php
+@@ -0,0 +1,120 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++/**
++ * Ações do login por código (FVP B11), chamadas direto (sem HTTP nem middleware): o
++ * redirectTo da base vira "echo Location: ...", por isso as ações têm return depois
++ * dele e o teste compara a string inteira.
++ * Próximo passo: tests/Integration/Access/LoginCodesAccessTest.php.
++ */
++class LoginCodesControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\LoginCodesController';
++
++    private User $user;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++        $this->user = new User([
++            'name' => 'User 1',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $this->user->save();
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        unset($_SESSION['login_code']);
++        parent::tearDown();
++    }
++
++    public function test_new_should_render_the_email_form(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Entrar com código\s*<\/h1>/', $response);
++        $this->assertStringContainsString('name="login_code[email]"', $response);
++        $this->assertStringContainsString('Receber código', $response);
++    }
++
++    public function test_create_should_generate_a_code_and_redirect_to_verify(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['login_code' => ['email' => 'fulano@example.com']]
++        );
++
++        $this->assertSame('Location: /login/code/verify', $response);
++        $this->assertEquals($this->user->id, Auth::loginCodeUser()?->id);
++        $this->assertTrue(User::findById($this->user->id)->hasPendingLoginCode());
++        $this->assertMatchesRegularExpression('/\d{4}/', (string) $_SESSION['flash']['success']);
++        $this->assertFalse(Auth::check());
++    }
++
++    public function test_create_with_unknown_email_should_redirect_back(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['login_code' => ['email' => 'ninguem@example.com']]
++        );
++
++        $this->assertSame('Location: /login/code', $response);
++        $this->assertNull(Auth::loginCodeUser());
++        $this->assertEquals('E-mail não cadastrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_authenticate_with_the_right_code_should_login(): void
++    {
++        $code = $this->user->generateLoginCode();
++        Auth::startLoginCode($this->user);
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: self::CONTROLLER,
++            params: ['login_code' => ['code' => $code]]
++        );
++
++        $this->assertTrue(Auth::check());
++        $this->assertNull(Auth::loginCodeUser());
++        $this->assertSame('Location: /dashboard', $response);
++    }
++
++    public function test_authenticate_with_a_wrong_code_should_not_login(): void
++    {
++        $code = $this->user->generateLoginCode();
++        Auth::startLoginCode($this->user);
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: self::CONTROLLER,
++            params: ['login_code' => ['code' => $code === '1000' ? '1001' : '1000']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login/code/verify', $response);
++        $this->assertEquals('Código inválido!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_authenticate_without_a_pending_request_should_redirect_to_new(): void
++    {
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: self::CONTROLLER,
++            params: ['login_code' => ['code' => '1234']]
++        );
++
++        $this->assertFalse(Auth::check());
++        $this->assertSame('Location: /login/code', $response);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 45e909779a7aaf4fa58ceb73ca244252823e046a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 12/13] test: Cover login code routes access
+
+---
+ .../Access/LoginCodesAccessTest.php           | 42 +++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+ create mode 100644 tests/Integration/Access/LoginCodesAccessTest.php
+
+diff --git a/tests/Integration/Access/LoginCodesAccessTest.php b/tests/Integration/Access/LoginCodesAccessTest.php
+new file mode 100644
+index 0000000..ca84c33
+--- /dev/null
++++ b/tests/Integration/Access/LoginCodesAccessTest.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use GuzzleHttp\Client;
++use PHPUnit\Framework\TestCase;
++
++/**
++ * Rotas do login por código (FVP B11) por HTTP real (nginx -> php_test -> Router):
++ * são públicas (200), e a verificação sem pedido pendente volta para o formulário
++ * de e-mail (302).
++ * Próximo passo: tests/Acceptance/authentications/LoginByCodeCest.php.
++ */
++class LoginCodesAccessTest extends TestCase
++{
++    private Client $client;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $this->client = new Client([
++            'allow_redirects' => false,
++            'base_uri' => 'http://web:8080'
++        ]);
++    }
++
++    public function test_login_code_form_should_be_public(): void
++    {
++        $response = $this->client->get('/login/code');
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Receber código', (string) $response->getBody());
++    }
++
++    public function test_verify_form_without_a_pending_request_should_redirect_to_the_email_form(): void
++    {
++        $response = $this->client->get('/login/code/verify');
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login/code', $response->getHeaderLine('Location'));
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 062920e0acd9c62aeefc8dea381643fc50f085b6 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 18:54:40 -0300
+Subject: [PATCH 13/13] test: Cover login by code in the browser
+
+---
+ .../authentications/LoginByCodeCest.php       | 63 +++++++++++++++++++
+ 1 file changed, 63 insertions(+)
+ create mode 100644 tests/Acceptance/authentications/LoginByCodeCest.php
+
+diff --git a/tests/Acceptance/authentications/LoginByCodeCest.php b/tests/Acceptance/authentications/LoginByCodeCest.php
+new file mode 100644
+index 0000000..cf80937
+--- /dev/null
++++ b/tests/Acceptance/authentications/LoginByCodeCest.php
+@@ -0,0 +1,63 @@
++<?php
++
++namespace Tests\Acceptance\authentications;
++
++use App\Models\User;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Login por código (FVP B11) no navegador: pede o código pelo e-mail, lê o código do
++ * flash na tela (não há envio de e-mail no projeto) e entra com ele; depois, o caso
++ * do código errado. Último passo da solução; a partir daqui: ./run phpcs,
++ * ./run phpstan, ./run test e ./run test:browser (e ./run db:reset, pois o schema mudou).
++ */
++class LoginByCodeCest extends BaseAcceptanceCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++        $user = new User([
++            'name' => 'Fulano',
++            'email' => 'fulano@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456'
++        ]);
++        $user->save();
++    }
++
++    public function loginWithAValidCode(AcceptanceTester $page): void
++    {
++        $this->requestCode($page);
++
++        $page->seeCurrentUrlEquals('/login/code/verify');
++        // O código só existe em texto puro na tela: é de lá que o teste o lê.
++        $text = (string) $page->grabTextFrom('.alert-success');
++        $code = preg_match('/\d{4}/', $text, $match) === 1 ? $match[0] : '';
++        $page->fillField('login_code[code]', $code);
++        $page->click('Entrar');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Login realizado com sucesso!');
++        $page->see('fulano@example.com');
++    }
++
++    public function loginWithAWrongCode(AcceptanceTester $page): void
++    {
++        $this->requestCode($page);
++
++        // 0000 está fora de 1000..9999: nunca coincide com o código sorteado.
++        $page->fillField('login_code[code]', '0000');
++        $page->click('Entrar');
++
++        $page->seeCurrentUrlEquals('/login/code/verify');
++        $page->see('Código inválido!');
++    }
++
++    private function requestCode(AcceptanceTester $page): void
++    {
++        $page->amOnPage('/login/code');
++        $page->fillField('login_code[email]', 'fulano@example.com');
++        $page->click('Receber código');
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
