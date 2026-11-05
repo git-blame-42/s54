@@ -1,0 +1,443 @@
+From 8883f05716c38accf65a63d82a93dc48ed4d23ea Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:10:59 -0300
+Subject: [PATCH] feat: Choose the responsible admin for an event
+
+user_id now comes from the form: a select lists User::admins(), with
+the logged admin as default. Event::validates() requires an existing
+admin, so a forged participant or unknown id is rejected instead of
+breaking the foreign key. The show page displays the responsible.
+---
+ app/Controllers/Admin/EventsController.php    |  13 ++-
+ app/Models/Event.php                          |  17 ++-
+ app/Models/User.php                           |  10 ++
+ app/views/admin/events/_form.phtml            |  13 +++
+ app/views/admin/events/show.phtml             |   3 +
+ .../admin/events/ChooseResponsibleCest.php    |  38 +++++++
+ .../Admin/EventsControllerTest.php            | 103 +++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        |  57 +++++++++-
+ 8 files changed, 247 insertions(+), 7 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/ChooseResponsibleCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8a4c0f4 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -41,6 +41,8 @@ class EventsController extends Controller
+     public function new(): void
+     {
+         $event = new Event();
++        // O formulário abre com o admin logado como responsável.
++        $event->user_id = $this->currentUser()?->id;
+ 
+         $title = 'Novo Evento';
+         $this->render('admin/events/new', compact('event', 'title'));
+@@ -49,8 +51,9 @@ class EventsController extends Controller
+     public function create(Request $request): void
+     {
+         $event = new Event();
+-        $this->fill($event, $request);
++        // Padrão: o admin logado; fill() troca pelo responsável escolhido no formulário, se vier.
+         $event->user_id = $this->currentUser()?->id;
++        $this->fill($event, $request);
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento cadastrado com sucesso!');
+@@ -111,7 +114,8 @@ class EventsController extends Controller
+     }
+ 
+     /**
+-     * Copia para o Evento só os campos do formulário (nunca user_id nem id).
++     * Copia para o Evento só os campos do formulário (nunca id). O responsável (user_id) só é trocado se vier
++     * preenchido; ausente, fica o atual (o logado no create, o gravado no update). Quem valida é o model.
+      */
+     private function fill(Event $event, Request $request): void
+     {
+@@ -125,6 +129,11 @@ class EventsController extends Controller
+             $event->$field = is_scalar($value) ? (string) $value : null;
+         }
+ 
++        $userId = $params['user_id'] ?? null;
++        if (is_scalar($userId) && (string) $userId !== '') {
++            $event->user_id = (string) $userId;
++        }
++
+         $audience = $params['audience'] ?? [];
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..c5b6d45 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -9,7 +9,7 @@ use PDOException;
+ 
+ /**
+  * @property int $id
+- * @property int $user_id
++ * @property int|string|null $user_id responsável pelo Evento (administrador), escolhido no formulário
+  * @property string $title
+  * @property string $description
+  * @property string $kind
+@@ -59,6 +59,8 @@ class Event extends Model
+ 
+     public function validates(): void
+     {
++        Validations::notEmpty('user_id', $this) && $this->validatesUserIsAdmin();
++
+         Validations::notEmpty('title', $this);
+         Validations::notEmpty('description', $this);
+         Validations::notEmpty('location', $this);
+@@ -81,6 +83,19 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * O responsável (user_id) vem do formulário: tem de existir e ser administrador. Sem isso, um POST
++     * forjado poderia dar o Evento a um Participante, e um id inexistente estouraria a FK (500).
++     */
++    private function validatesUserIsAdmin(): void
++    {
++        $user = User::findById((int) $this->user_id);
++
++        if ($user === null || !$user->isAdmin()) {
++            $this->addError('user_id', 'deve ser um administrador existente!');
++        }
++    }
++
+     /**
+      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ed68286..49ce35e 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -68,6 +68,16 @@ class User extends Model
+         return User::findBy(['email' => $email]);
+     }
+ 
++    /**
++     * Administradores, para a escolha do responsável por um Evento.
++     *
++     * @return array<static>
++     */
++    public static function admins(): array
++    {
++        return self::where(['role' => 'admin']);
++    }
++
+     public function isAdmin(): bool
+     {
+         return $this->role === 'admin';
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..3a34428 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -7,6 +7,7 @@
+  * @var bool $isUpdate quando true, envia _method=PUT
+  */
+ use App\Models\Event;
++use App\Models\User;
+ 
+ $invalid = fn(string $field): string => $event->errors($field) !== null ? ' is-invalid' : '';
+ $feedback = fn(string $field, string $extra = ''): string => $event->errors($field) !== null
+@@ -43,6 +44,18 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <?= $feedback('kind') ?>
+     </div>
+ 
++    <div class="mb-3">
++        <label for="event_user_id" class="form-label">Responsável</label>
++        <select class="form-select<?= $invalid('user_id') ?>" id="event_user_id" name="event[user_id]">
++            <?php foreach (User::admins() as $admin) : ?>
++                <option value="<?= $admin->id ?>" <?= (int) $event->user_id === $admin->id ? 'selected' : '' ?>>
++                    <?= htmlspecialchars($admin->name) ?>
++                </option>
++            <?php endforeach; ?>
++        </select>
++        <?= $feedback('user_id') ?>
++    </div>
++
+     <fieldset class="mb-3">
+         <legend class="form-label fs-6">Modalidade</legend>
+         <?php foreach (Event::MODALITIES as $value => $label) : ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..b9453ac 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -7,6 +7,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dt class="col-sm-3">Título</dt>
+     <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
+ 
++    <dt class="col-sm-3">Responsável</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->user()->get()->name) ?></dd>
++
+     <dt class="col-sm-3">Descrição</dt>
+     <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
+ 
+diff --git a/tests/Acceptance/admin/events/ChooseResponsibleCest.php b/tests/Acceptance/admin/events/ChooseResponsibleCest.php
+new file mode 100644
+index 0000000..5aae5af
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ChooseResponsibleCest.php
+@@ -0,0 +1,38 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++class ChooseResponsibleCest extends BaseEventsCest
++{
++    public function createEventForAnotherAdmin(AcceptanceTester $page): void
++    {
++        $other = $this->createUser('Administradora Dois', 'admin2@example.com', 'admin');
++        $data = $this->validEventData(['title' => 'Evento da Administradora Dois']);
++
++        $page->wantTo('Cadastrar um Evento escolhendo outro administrador como responsável');
++        $page->amOnPage('/admin/events/new');
++
++        // Só administradores no select; o logado vem selecionado.
++        $page->seeOptionIsSelected('#event_user_id', 'Administrador');
++        $page->dontSee('Participante 1', '#event_user_id');
++
++        $this->fillEventForm($page, $data);
++        $page->selectOption('#event_user_id', 'Administradora Dois');
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('Administradora Dois', '//dt[normalize-space(.)="Responsável"]/following-sibling::dd[1]');
++
++        $event = Event::findBy(['title' => $data['title']]);
++        Assert::assertNotNull($event);
++        Assert::assertEquals($other->id, $event->user_id);
++
++        // Na edição, o responsável gravado vem selecionado.
++        $page->click('Editar');
++        $page->seeOptionIsSelected('#event_user_id', 'Administradora Dois');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..5ae7a65 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -98,19 +98,104 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Evento cadastrado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+-    public function test_create_ignores_user_id_sent_by_the_form(): void
++    public function test_create_with_unknown_user_id_renders_form_with_error(): void
+     {
+-        $this->post(
++        // Antes o controller ignorava user_id do formulário; agora ele vem do form e o model valida.
++        $response = $this->post(
+             action: 'create',
+             controllerName: self::CONTROLLER,
+             params: ['event' => $this->validParams(['user_id' => '999'])]
+         );
+ 
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString('class="form-select is-invalid" id="event_user_id"', $response);
++        $this->assertStringContainsString('deve ser um administrador existente!', $response);
++    }
++
++    public function test_create_with_another_admin_saves_that_admin_as_responsible(): void
++    {
++        $other = $this->createAdmin('Outra Administradora', 'outra@example.com');
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['user_id' => (string) $other->id])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertEquals($other->id, $event->user_id);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertMatchesRegularExpression('/>Responsável<\/dt>\s*<dd[^>]*>Outra Administradora<\/dd>/', $show);
++    }
++
++    public function test_create_with_participant_as_responsible_is_rejected(): void
++    {
++        $participant = new User([
++            'name' => 'Participante',
++            'email' => 'participante@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]);
++        $participant->save();
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['user_id' => (string) $participant->id])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('deve ser um administrador existente!', $response);
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
++    public function test_create_without_user_id_uses_logged_admin(): void
++    {
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
+         $event = Event::findBy(['title' => 'Oficina de Testes']);
+         $this->assertNotNull($event);
+         $this->assertEquals($this->admin->id, $event->user_id);
+     }
+ 
++    public function test_new_form_lists_only_admins_with_logged_admin_selected(): void
++    {
++        $other = $this->createAdmin('Outra Administradora', 'outra@example.com');
++        (new User([
++            'name' => 'Participante Fora',
++            'email' => 'fora@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]))->save();
++
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('name="event[user_id]"', $response);
++        $selected = '/<option value="' . $this->admin->id . '" selected>\s*Admin\s*<\/option>/';
++        $notSelected = '/<option value="' . $other->id . '" >\s*Outra Administradora\s*<\/option>/';
++        $this->assertMatchesRegularExpression($selected, $response);
++        $this->assertMatchesRegularExpression($notSelected, $response);
++        $this->assertStringNotContainsString('Participante Fora', $response);
++    }
++
++    public function test_update_can_change_the_responsible_admin(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createAdmin('Outra Administradora', 'outra@example.com');
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['user_id' => (string) $other->id])]
++        );
++
++        $this->assertEquals($other->id, Event::findById($event->id)?->user_id);
++    }
++
+     public function test_create_with_invalid_data_renders_form_with_errors_and_values(): void
+     {
+         $response = $this->post(
+@@ -299,6 +384,20 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
++    private function createAdmin(string $name, string $email): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
+     private function enroll(Event $event, string $email = 'participante@example.com'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..ce85009 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -90,7 +90,8 @@ class EventTest extends TestCase
+         $this->assertFalse($event->isValid());
+         $this->assertFalse($event->save());
+ 
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['user_id', 'title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'];
++        foreach ($fields as $field) {
+             $this->assertEquals('não pode ser vazio!', $event->errors($field), $field);
+         }
+     }
+@@ -101,6 +102,7 @@ class EventTest extends TestCase
+     public static function requiredFieldsProvider(): array
+     {
+         return [
++            'user_id' => ['user_id'],
+             'title' => ['title'],
+             'description' => ['description'],
+             'location' => ['location'],
+@@ -128,7 +130,8 @@ class EventTest extends TestCase
+     private function errorsOf(Event $event): array
+     {
+         $errors = [];
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['user_id', 'title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'];
++        foreach ($fields as $field) {
+             if ($event->errors($field) !== null) {
+                 $errors[$field] = $event->errors($field);
+             }
+@@ -137,6 +140,56 @@ class EventTest extends TestCase
+         return $errors;
+     }
+ 
++    /* ------------------- responsável (user_id) ------------------- */
++
++    public function test_user_id_of_another_admin_should_be_valid(): void
++    {
++        $other = $this->createUser('Outra Administradora', 'other@example.com', 'admin');
++        $event = $this->createEvent(['user_id' => $other->id]);
++
++        $this->assertEquals($other->id, Event::findById($event->id)?->user_id);
++    }
++
++    public function test_user_id_of_participant_should_be_invalid(): void
++    {
++        $participant = $this->createUser('Participante', 'p@example.com');
++        $event = new Event($this->params(['user_id' => $participant->id]));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_unknown_user_id_should_be_invalid_instead_of_breaking_the_fk(): void
++    {
++        $event = new Event($this->params(['user_id' => 999999]));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ser um administrador existente!', $event->errors('user_id'));
++    }
++
++    public function test_changing_user_id_to_participant_on_update_should_be_invalid(): void
++    {
++        $event = $this->createEvent();
++        $participant = $this->createUser('Participante', 'p@example.com');
++
++        $event->user_id = $participant->id;
++
++        $this->assertFalse($event->save());
++        $this->assertEquals($this->admin->id, Event::findById($event->id)?->user_id);
++    }
++
++    public function test_admins_should_return_only_admins(): void
++    {
++        $other = $this->createUser('Outra Administradora', 'other@example.com', 'admin');
++        $this->createUser('Participante', 'p@example.com');
++
++        $ids = array_map(fn(User $user) => $user->id, User::admins());
++
++        $this->assertEquals([$this->admin->id, $other->id], $ids);
++    }
++
+     public function test_kind_should_accept_every_enum_value(): void
+     {
+         foreach (array_keys(Event::KINDS) as $kind) {
+-- 
+2.54.0 (Apple Git-157)
+
