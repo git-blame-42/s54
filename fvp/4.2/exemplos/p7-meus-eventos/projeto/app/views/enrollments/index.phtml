@@ -1,0 +1,28 @@
+<?php if (empty($enrollments)) : ?>
+    <p>Você não está inscrito em nenhum evento.</p>
+    <a class="btn btn-primary" href="<?= route('events.index') ?>">Ver eventos</a>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($enrollments as $enrollment) : ?>
+                <?php $event = $enrollment->event()->get(); ?>
+                <tr>
+                    <td><?= htmlspecialchars($event->title) ?></td>
+                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                    <td><?= htmlspecialchars($event->location) ?></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>

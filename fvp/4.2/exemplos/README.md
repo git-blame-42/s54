@@ -89,6 +89,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P5. Status do Evento: cancelar e encerrar
   `p5-status-cancelar-encerrar/`
   - feat: Add Event status with cancel and finish actions
+- P7. "Meus eventos" do Participante
+  `p7-meus-eventos/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Add my events page for participants
 - P8. Exportar a listagem em CSV
   `p8-exportar-csv/`
   - feat: Export events listing as CSV
