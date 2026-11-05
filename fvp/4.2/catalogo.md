@@ -7297,6 +7297,8 @@ Prova: `ConfirmationCodeTest`, `ECT`; no navegador, errar três vezes
 
 Chance: média-baixa. Tempo: 35-45 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p25-historico-alteracoes`.
+
 Pedido típico: "guarde quem alterou o quê e quando em cada Evento, e
 mostre o histórico no detalhe" (ou "quero auditoria das edições").
 Vale para qualquer CRUD. Hoje nada fica registrado: o `save()` reescreve
@@ -7582,8 +7584,11 @@ Armadilhas:
   `save()` (passo 4). Os `findById` das validações (`EV:91`,
   `EV:131`) só leem e podem ficar fora.
 - Sem mexer no core: `save()` primeiro e as linhas depois, sem
-  transação. Se uma linha falhar, o Evento fica salvo sem histórico;
-  diga isso se o professor perguntar.
+  transação. Se uma linha falhar, o Evento fica salvo sem histórico
+  ou com só parte dele (as linhas anteriores à falha ficam). Lance
+  exceção nesse caso, não devolva `false`: com `false` o controller
+  mostra "dados incorretos" com o Evento já salvo. Diga isso se o
+  professor perguntar.
 - `changedFields()` antes do `save()`: depois dele o banco já tem o
   valor novo e o diff sai sempre vazio.
 - `save()` grava todas as colunas (`MODEL:160-180`): não dá para
