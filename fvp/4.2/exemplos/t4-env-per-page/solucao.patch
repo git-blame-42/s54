@@ -1,0 +1,413 @@
+From d89aa720622ecd8d22d29fe7a062c4df93156a32 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:26:12 -0300
+Subject: [PATCH] feat: Read events per page and max capacity from .env
+
+Add Lib\Config::int() to read an integer from $_ENV with a default and
+an allowed range (digits only), Validations::integerMax(), and use them
+for EVENTS_PER_PAGE (1-100, default 5) in the admin events listing and
+MAX_CAPACITY (1-100000, default 1000) in Event::validates().
+---
+ .env.example                                  |  5 +-
+ app/Controllers/Admin/EventsController.php    |  4 +-
+ app/Models/Event.php                          | 10 +++-
+ lib/Config.php                                | 26 +++++++++
+ lib/Validations.php                           | 21 +++++++
+ .../Admin/EventsControllerTest.php            | 50 ++++++++++++++++
+ tests/Unit/Lib/ConfigTest.php                 | 58 +++++++++++++++++++
+ .../NumberAndDateValidationsTest.php          | 30 ++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 50 ++++++++++++++++
+ 9 files changed, 251 insertions(+), 3 deletions(-)
+ create mode 100644 lib/Config.php
+ create mode 100644 tests/Unit/Lib/ConfigTest.php
+
+diff --git a/.env.example b/.env.example
+index ec6a156..6a81f57 100644
+--- a/.env.example
++++ b/.env.example
+@@ -4,4 +4,7 @@ DB_HOST=db
+ DB_PORT=3306
+ DB_DATABASE=eventos_development
+ DB_USERNAME=eventos-user
+-DB_PASSWORD=eventos-pwd
+\ No newline at end of file
++DB_PASSWORD=eventos-pwd
++
++EVENTS_PER_PAGE=5
++MAX_CAPACITY=1000
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..67ab2f7 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -5,10 +5,12 @@ namespace App\Controllers\Admin;
+ use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
++use Lib\Config;
+ use Lib\FlashMessage;
+ 
+ class EventsController extends Controller
+ {
++    /** Padrão de EVENTS_PER_PAGE (.env), usado quando a chave falta ou é inválida. */
+     private const PER_PAGE = 5;
+ 
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+@@ -17,7 +19,7 @@ class EventsController extends Controller
+     {
+         $paginator = Event::paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
++            per_page: Config::int('EVENTS_PER_PAGE', self::PER_PAGE, 1, 100),
+             route: 'admin.events.paginate'
+         );
+         $events = $paginator->registers();
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..22d00cc 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\Config;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -44,6 +45,9 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Padrão de MAX_CAPACITY (.env), usado quando a chave falta ou é inválida. */
++    public const MAX_CAPACITY = 1000;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -76,7 +80,11 @@ class Event extends Model
+             Validations::validDate('starts_on', $this) &&
+             $this->validatesStartsOnNotPast();
+ 
+-        if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
++        if (
++            Validations::notEmpty('capacity', $this) &&
++            Validations::integerMin('capacity', $this, 1) &&
++            Validations::integerMax('capacity', $this, Config::int('MAX_CAPACITY', self::MAX_CAPACITY, 1, 100000))
++        ) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
+     }
+diff --git a/lib/Config.php b/lib/Config.php
+new file mode 100644
+index 0000000..72841ee
+--- /dev/null
++++ b/lib/Config.php
+@@ -0,0 +1,26 @@
++<?php
++
++namespace Lib;
++
++/**
++ * Leitura de configurações do .env (gravadas em $_ENV pelo EnvLoader).
++ */
++class Config
++{
++    /**
++     * Inteiro da chave $key entre $min e $max. O valor do .env é sempre string ("" para chave vazia):
++     * só aceita dígitos; ausente, vazio, não numérico ou fora da faixa devolve $default.
++     */
++    public static function int(string $key, int $default, int $min, int $max): int
++    {
++        $value = $_ENV[$key] ?? null;
++
++        if (!is_string($value) || !ctype_digit($value)) {
++            return $default;
++        }
++
++        $number = (int) $value;
++
++        return ($number >= $min && $number <= $max) ? $number : $default;
++    }
++}
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..3ac7979 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -93,6 +93,27 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * O valor deve ser um número inteiro menor ou igual a $max (aceita string numérica, como vem de um form).
++     */
++    public static function integerMax($attribute, $obj, int $max)
++    {
++        $value = $obj->$attribute;
++        $number = is_int($value) || is_string($value) ? filter_var($value, FILTER_VALIDATE_INT) : false;
++
++        if ($number === false) {
++            $obj->addError($attribute, 'deve ser um número inteiro!');
++            return false;
++        }
++
++        if ($number > $max) {
++            $obj->addError($attribute, "deve ser menor ou igual a {$max}!");
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * A data deve existir no calendário e estar no formato $format (padrão Y-m-d).
+      */
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..0fc3692 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -33,6 +34,7 @@ class EventsControllerTest extends ControllerTestCase
+     public function tearDown(): void
+     {
+         unset($_SESSION['flash']);
++        unset($_ENV['EVENTS_PER_PAGE']);
+         parent::tearDown();
+     }
+ 
+@@ -56,6 +58,54 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_uses_events_per_page_from_env(): void
++    {
++        $_ENV['EVENTS_PER_PAGE'] = '10';
++        for ($i = 1; $i <= 12; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('Evento 01', $page1);
++        $this->assertStringContainsString('Evento 10', $page1);
++        $this->assertStringNotContainsString('Evento 11', $page1);
++        $this->assertStringContainsString('/admin/events/page/2', $page1);
++        $this->assertStringNotContainsString('/admin/events/page/3', $page1);
++        $this->assertStringContainsString('Evento 11', $page2);
++        $this->assertStringContainsString('Evento 12', $page2);
++        $this->assertStringNotContainsString('Evento 10', $page2);
++    }
++
++    #[DataProvider('invalidPerPageEnvProvider')]
++    public function test_index_falls_back_to_five_per_page_when_env_is_invalid(string $value): void
++    {
++        $_ENV['EVENTS_PER_PAGE'] = $value;
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Evento 05', $page1);
++        $this->assertStringNotContainsString('Evento 06', $page1);
++        $this->assertStringContainsString('/admin/events/page/2', $page1);
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function invalidPerPageEnvProvider(): array
++    {
++        return [
++            'zero' => ['0'],
++            'texto' => ['abc'],
++            'acima de 100' => ['500'],
++            'vazio' => [''],
++        ];
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Lib/ConfigTest.php b/tests/Unit/Lib/ConfigTest.php
+new file mode 100644
+index 0000000..f7609c2
+--- /dev/null
++++ b/tests/Unit/Lib/ConfigTest.php
+@@ -0,0 +1,58 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use Lib\Config;
++use PHPUnit\Framework\Attributes\DataProvider;
++use PHPUnit\Framework\TestCase;
++
++class ConfigTest extends TestCase
++{
++    private const KEY = 'CONFIG_TEST_NUMBER';
++
++    public function tearDown(): void
++    {
++        unset($_ENV[self::KEY]);
++    }
++
++    public function test_int_should_return_the_default_without_the_key(): void
++    {
++        $this->assertSame(5, Config::int(self::KEY, 5, 1, 100));
++    }
++
++    public function test_int_should_convert_digits_within_the_range(): void
++    {
++        foreach (['1' => 1, '10' => 10, '100' => 100, '007' => 7] as $value => $expected) {
++            $_ENV[self::KEY] = (string) $value;
++
++            $this->assertSame($expected, Config::int(self::KEY, 5, 1, 100), (string) $value);
++        }
++    }
++
++    #[DataProvider('invalidValuesProvider')]
++    public function test_int_should_return_the_default_for_invalid_values(mixed $value): void
++    {
++        $_ENV[self::KEY] = $value;
++
++        $this->assertSame(5, Config::int(self::KEY, 5, 1, 100));
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function invalidValuesProvider(): array
++    {
++        return [
++            'zero' => ['0'],
++            'abaixo do mínimo' => ['0000'],
++            'acima do máximo' => ['101'],
++            'texto' => ['abc'],
++            'negativo' => ['-5'],
++            'decimal' => ['2.5'],
++            'com espaço' => [' 10'],
++            'vazio' => [''],
++            'inteiro, não string' => [10],
++            'booleano' => [true],
++        ];
++    }
++}
+diff --git a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+index 4d2a626..24a9716 100644
+--- a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
++++ b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+@@ -57,6 +57,36 @@ class NumberAndDateValidationsTest extends TestCase
+         }
+     }
+ 
++    public function test_integer_max_should_accept_integers_and_numeric_strings_up_to_the_maximum(): void
++    {
++        foreach ([500, 499, 1, 0, -3, '500', '25'] as $value) {
++            $this->model->quantity = $value; // @phpstan-ignore-line
++
++            $this->assertTrue(Validations::integerMax('quantity', $this->model, 500), (string) $value);
++        }
++        $this->assertFalse($this->model->hasErrors());
++    }
++
++    public function test_integer_max_should_reject_values_above_the_maximum(): void
++    {
++        foreach ([501, 1000, '501', '2147483648'] as $value) {
++            $this->model->quantity = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::integerMax('quantity', $this->model, 500), (string) $value);
++            $this->assertEquals('deve ser menor ou igual a 500!', $this->model->errors('quantity'));
++        }
++    }
++
++    public function test_integer_max_should_reject_non_integers(): void
++    {
++        foreach ([null, '', 'abc', '2.5', 2.5, '1e3', [1], true] as $value) {
++            $this->model->quantity = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::integerMax('quantity', $this->model, 500), var_export($value, true));
++            $this->assertEquals('deve ser um número inteiro!', $this->model->errors('quantity'));
++        }
++    }
++
+     public function test_valid_date_should_accept_real_dates(): void
+     {
+         foreach (['2030-12-31', '2028-02-29', '1999-01-01'] as $value) {
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..148da08 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -20,6 +20,12 @@ class EventTest extends TestCase
+         $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
+     }
+ 
++    public function tearDown(): void
++    {
++        unset($_ENV['MAX_CAPACITY']);
++        parent::tearDown();
++    }
++
+     private function createUser(string $name, string $email, string $role = 'participant'): User
+     {
+         $user = new User([
+@@ -207,6 +213,50 @@ class EventTest extends TestCase
+         $this->assertTrue($event->isValid());
+     }
+ 
++    public function test_capacity_should_be_at_most_the_default_max_capacity_without_env(): void
++    {
++        $event = new Event($this->params(['capacity' => 1001]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('deve ser menor ou igual a 1000!', $event->errors('capacity'));
++
++        $event->capacity = '1000';
++        $this->assertTrue($event->isValid());
++    }
++
++    public function test_capacity_should_be_at_most_max_capacity_from_env(): void
++    {
++        $_ENV['MAX_CAPACITY'] = '100';
++
++        $event = new Event($this->params(['capacity' => '101']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('deve ser menor ou igual a 100!', $event->errors('capacity'));
++
++        $event->capacity = 100;
++        $this->assertTrue($event->isValid());
++    }
++
++    public function test_capacity_should_use_the_default_max_when_env_is_invalid(): void
++    {
++        $_ENV['MAX_CAPACITY'] = '0';
++
++        $event = new Event($this->params(['capacity' => 1000]));
++        $this->assertTrue($event->isValid());
++
++        $event->capacity = 1001;
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('deve ser menor ou igual a 1000!', $event->errors('capacity'));
++    }
++
++    public function test_capacity_above_int_column_limit_should_be_invalid_instead_of_breaking_the_insert(): void
++    {
++        $event = new Event($this->params(['capacity' => '2147483648']));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ser menor ou igual a 1000!', $event->errors('capacity'));
++    }
++
+     public function test_starts_on_should_be_a_valid_date(): void
+     {
+         foreach (['amanhã', '2030-02-31', '2030-13-01', '30/12/2030', '2030-1-5'] as $value) {
+-- 
+2.54.0 (Apple Git-157)
+

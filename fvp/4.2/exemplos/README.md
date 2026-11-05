@@ -154,6 +154,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O10. `Route::resource` e `Route::prefix` no core
   `o10-route-resource-prefix/`
   - feat: Add Route::resource and Route::prefix to the router
+- O11. Página 404 amigável, sem stack trace fora de development
+  `o11-404-amigavel/`
+  - feat: Show friendly 404/500 pages without stack trace outside
 - O2. Listagem e detalhe de Eventos para o Participante
   `o2-eventos-para-participante/`
   - feat: Add events listing and details for participants
@@ -328,3 +331,6 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - T2. `phpcs`, `phpstan` e CI verdes
   `t2-phpcs-phpstan-verdes/`
   - (sem código; só README)
+- T4. Itens por página e capacidade máxima no `.env`
+  `t4-env-per-page/`
+  - feat: Read events per page and max capacity from .env
