@@ -118,12 +118,13 @@ tmux, zsh como shell padrão, verificação do que o framework precisa
 teste do framework sem modificações num diretório temporário,
 instalação do projeto Eventos do Câmpus, preparo da FVP (branches
 das soluções e atalhos), PHP nativo com phpcs e phpstan, Neovim com
-LazyVim e a configuração da disciplina e, opcionais, VS Code e
-IntelliJ. Um script por tarefa; só `-h` e `-z` (desfaz o que aquele
-script fez, sem tocar no que já existia). `scripts/00-run-all.sh`
-roda tudo em ordem, inclusive o 14, menos os opcionais (11 e 12,
-IDEs; 13, rootless) e o 15, que só verifica. Ordem e detalhes em
-`scripts/README.md`.
+LazyVim e a configuração da disciplina e, opcionais, VS Code,
+IntelliJ IDEA (snap unificado) e a configuração da disciplina para o
+IntelliJ (12-1). Um script por tarefa; só `-h` e `-z` (desfaz o que
+aquele script fez, sem tocar no que já existia).
+`scripts/00-run-all.sh` roda tudo em ordem, inclusive o 14, menos os
+opcionais (11, 12 e 12-1, IDEs; 13, rootless) e o 15, que só
+verifica. Ordem e detalhes em `scripts/README.md`.
 
 ## Convenções
 
