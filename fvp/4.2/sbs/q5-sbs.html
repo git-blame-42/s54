@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>q5-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="q5-passo-a-passo-token-csrf-nos-formulários-de-evento">Q5 passo
+a passo: Token CSRF nos formulários de Evento</h1>
+<p>Pedido típico: "protejam criar, editar e remover Evento contra CSRF:
+todo POST/PUT/DELETE da área logada só pode ser aceito com um token
+gerado pelo servidor. Usem um middleware" (variante do A15 da 4.1, agora
+no CRUD). Chance: média-baixa. Tempo: 25-35 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/q5-token-csrf/</code> (patch,
+bundle e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo
+em formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisito: O9
+(<code>fvp/4.2/exemplos/o9-method-so-via-post/</code>) aplicado. O patch
+traz dois commits: o 1º é a base O9
+(<code>fix: Accept _method override only from POST body</code>); este
+guia cobre só o 2º. O que o O9 deixa pronto:</p>
+<ul>
+<li><code>core/Http/Request.php</code>: <code>_method</code> só troca o
+método se a requisição real é <code>POST</code> e o valor vem de
+<code>$_POST</code> (lista fechada
+<code>PUT</code>/<code>DELETE</code>).
+<code>GET /admin/events/16?_method=DELETE</code> cai no
+<code>show</code>, não no <code>destroy</code>.</li>
+<li><code>EventsAccessTest</code> tem
+<code>test_admin_should_destroy_event_with_method_delete_in_post_body</code>
+(este guia passa a mandar o token nele).</li>
+</ul>
+<p>O9 fecha o CSRF por <code>&lt;img&gt;</code>/link; Q5 fecha o form
+forjado em outro site. Schema não muda.</p>
+<p>Ordem = fluxo da requisição: lib (token) -&gt; helper -&gt;
+middleware -&gt; alias -&gt; rotas -&gt; views -&gt; testes. Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Csrf.php</code> (novo)</li>
+<li><code>core/helpers.php</code></li>
+<li><code>app/Middleware/VerifyCsrf.php</code> (novo)</li>
+<li><code>config/App.php</code></li>
+<li><code>config/routes.php</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>tests/Unit/Lib/CsrfTest.php</code> (novo)</li>
+<li><code>tests/Unit/App/Middleware/VerifyCsrfDouble.php</code>
+(novo)</li>
+<li><code>tests/Unit/App/Middleware/VerifyCsrfTest.php</code>
+(novo)</li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+</ol>
+<p>Depois: <code>./run composer dump-autoload -o --strict-psr</code>
+(classes novas), suíte, <code>./run phpcs</code>.</p>
+<h2 id="1-libcsrfphp-novo">1. <code>lib/Csrf.php</code> (novo)</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Lib<span class="ot">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * Token CSRF por sessão.</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"> *</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * token() gera 32 bytes aleatórios (64 caracteres hex) na primeira chamada e guarda em</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"> * $_SESSION[&#39;_token&#39;]; as chamadas seguintes devolvem o mesmo valor. check() compara com</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * hash_equals (tempo constante).</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Csrf</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">FIELD</span> <span class="op">=</span> <span class="st">&#39;_token&#39;</span><span class="ot">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> token()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$token</span> <span class="op">=</span> <span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">FIELD</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="fu">is_string</span>(<span class="va">$token</span>) <span class="op">||</span> <span class="va">$token</span> <span class="op">===</span> <span class="st">&#39;&#39;</span>) {</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>            <span class="va">$token</span> <span class="op">=</span> <span class="fu">bin2hex</span>(<span class="fu">random_bytes</span>(<span class="dv">32</span>))<span class="ot">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>            <span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">FIELD</span>] <span class="op">=</span> <span class="va">$token</span><span class="ot">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$token</span><span class="ot">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co">     * true só se há token na sessão e o valor enviado é uma string igual a ele.</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> check(<span class="dt">mixed</span> <span class="va">$token</span>)<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$expected</span> <span class="op">=</span> <span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">FIELD</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="fu">is_string</span>(<span class="va">$expected</span>) <span class="op">||</span> <span class="va">$expected</span> <span class="op">===</span> <span class="st">&#39;&#39;</span> <span class="op">||</span> <span class="op">!</span><span class="fu">is_string</span>(<span class="va">$token</span>)) {</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">hash_equals</span>(<span class="va">$expected</span><span class="ot">,</span> <span class="va">$token</span>)<span class="ot">;</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>lib/</code> = namespace <code>Lib\</code> (PSR-4), mesmo lugar
+de <code>FlashMessage</code> e <code>Validations</code>. Regra
+reaproveitável sai do controller.</li>
+<li>Token por <strong>sessão</strong>, gerado uma vez: várias abas
+funcionam. Gerar a cada <code>token()</code> invalida a aba
+anterior.</li>
+<li><code>random_bytes</code> (criptográfico), não
+<code>rand</code>/<code>uniqid</code>.</li>
+<li><code>hash_equals</code>: comparação em tempo constante.
+<code>===</code> funciona, mas vaza tempo; é o que o professor espera
+ver.</li>
+<li><code>check(mixed)</code>: o POST pode trazer array
+(<code>_token[]=x</code>); <code>is_string</code> barra antes do
+<code>hash_equals</code> (que exige string).</li>
+<li>Sem token na sessão -&gt; <code>false</code>: nunca aceita
+<code>'' === ''</code>.</li>
+<li><code>FIELD</code> constante: helper, middleware e testes usam o
+mesmo nome.</li>
+</ul>
+<h2 id="2-corehelpersphp">2. <code>core/helpers.php</code></h2>
+<p>Depois do bloco <code>if (!function_exists('dd')) { ... }</code>,
+antes do de <code>route</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span><span class="fu">function_exists</span>(<span class="st">&#39;csrf_field&#39;</span>)) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE.</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> csrf_field()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&#39;&lt;input type=&quot;hidden&quot; name=&quot;&#39;</span> <span class="op">.</span> \Lib\Csrf::<span class="cn">FIELD</span> <span class="op">.</span> <span class="st">&#39;&quot; value=&quot;&#39;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span> <span class="fu">htmlspecialchars</span>(\Lib\Csrf::token()) <span class="op">.</span> <span class="st">&#39;&quot;&gt;&#39;</span><span class="ot">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>core/helpers.php</code> está em <code>autoload.files</code> do
+<code>composer.json</code>: função global, disponível em toda view
+(igual a <code>route()</code>).</li>
+<li>View burra: só <code>&lt;?= csrf_field() ?&gt;</code>, sem montar
+HTML nem chamar sessão.</li>
+<li><code>htmlspecialchars</code> no <code>value</code>: escape sempre
+(rubrica cobra).</li>
+<li><code>function_exists</code>: padrão do arquivo, evita
+redeclarar.</li>
+</ul>
+<h2 id="3-appmiddlewareverifycsrfphp-novo">3.
+<code>app/Middleware/VerifyCsrf.php</code> (novo)</h2>
+<p>Modelo: <code>app/Middleware/Admin.php</code> (mesma interface).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> App\Middleware<span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Middleware\Middleware<span class="ot">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Request<span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Csrf<span class="ot">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * Requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"> * sessão. GET passa direto. Sem token ou com token errado: 403.</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VerifyCsrf <span class="kw">implements</span> Middleware</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">SAFE_METHODS</span> <span class="op">=</span> [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;HEAD&#39;</span>]<span class="ot">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> handle(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">in_array</span>(<span class="va">$request</span>-&gt;getMethod()<span class="ot">,</span> <span class="kw">self</span>::<span class="cn">SAFE_METHODS</span><span class="ot">,</span> <span class="kw">true</span>)) {</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Só do corpo do POST (como o _method, que também só vale no corpo): token na query string vaza em log e Referer.</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span>Csrf::check(<span class="va">$_POST</span>[Csrf::<span class="cn">FIELD</span>] <span class="op">??</span> <span class="kw">null</span>)) {</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;deny()<span class="ot">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="co">     * protected para o teste unitário trocar o exit por um registro (dublê).</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> deny()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="fu">http_response_code</span>(<span class="dv">403</span>)<span class="ot">;</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="kw">echo</span> <span class="st">&#39;&lt;h1&gt;403 - Formulário expirado ou inválido&lt;/h1&gt;&#39;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>            <span class="op">.</span> <span class="st">&#39;&lt;p&gt;Volte à página anterior, recarregue e envie de novo.&lt;/p&gt;&#39;</span><span class="ot">;</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">exit</span><span class="ot">;</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Middleware e não <code>if</code> em cada ação: vale para toda rota
+do grupo, inclusive as que vierem depois (P5, P6, P16...).</li>
+<li><code>GET</code>/<code>HEAD</code> passam: barrar <code>GET</code>
+quebra listagem e links.</li>
+<li><code>$request-&gt;getMethod()</code> já vem resolvido pelo O9
+(<code>POST</code> + <code>_method</code> no corpo -&gt;
+<code>PUT</code>/<code>DELETE</code>): PUT e DELETE também exigem
+token.</li>
+<li>Token lido de <code>$_POST</code>, não <code>getParam</code> (que lê
+<code>$_REQUEST</code>, com query string). Exceção à regra "parâmetro só
+via <code>getParam</code>".</li>
+<li>403 e <code>exit</code>, não redirect: falha de segurança, não de
+preenchimento; o <code>Referer</code> pode faltar. Alternativa aceita:
+<code>FlashMessage::danger( 'Sessão expirada, tente de novo.')</code> +
+redirect (padrão de <code>Admin.php</code>).</li>
+<li><code>deny()</code> <code>protected</code>: o dublê do teste troca o
+<code>exit</code> por um flag.</li>
+</ul>
+<p>Armadilha: <code>deny()</code> <code>private</code> com
+<code>exit</code> -&gt; o teste unitário do middleware não roda (o
+<code>exit</code> mata o PHPUnit).</p>
+<h2 id="4-configappphp">4. <code>config/App.php</code></h2>
+<p>Em <code>$middlewareAliases</code>, depois de
+<code>'admin'</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;admin&#39;</span> =&gt; \App\Middleware\Admin::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;csrf&#39;</span> =&gt; \App\Middleware\VerifyCsrf::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>Route::middleware('csrf')</code> procura o nome aqui
+(<code>RouteWrapperMiddleware::middlewareInstance()</code> faz
+<code>new $class()</code>). Sem o alias,
+<code>App::$middlewareAliases['csrf']</code> não existe e a carga das
+rotas falha.</p>
+<h2 id="5-configroutesphp">5. <code>config/routes.php</code></h2>
+<p>Envolva o grupo <code>auth</code> inteiro (que já contém o
+<code>admin</code>) com um grupo <code>csrf</code> <strong>por
+fora</strong>. Login e logout ficam fora (antes do bloco). Todo o miolo
+ganha um nível de indentação; nenhuma rota muda.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>Route::get(<span class="st">&#39;/logout&#39;</span><span class="ot">,</span> [AuthenticationsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])-&gt;name(<span class="st">&#39;users.logout&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do &#39;auth&#39;: o</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// RouteWrapperMiddleware acrescenta os middlewares quando cada grupo fecha, então o grupo interno roda</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// primeiro. Assim auth e admin decidem antes (sem sessão -&gt; /login; Participante -&gt; /dashboard) e o</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// csrf só confere quem já pode estar ali.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>Route::middleware(<span class="st">&#39;csrf&#39;</span>)-&gt;group(<span class="kw">function</span> () {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Área do usuário (somente autenticados)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    Route::middleware(<span class="st">&#39;auth&#39;</span>)-&gt;group(<span class="kw">function</span> () {</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/dashboard&#39;</span><span class="ot">,</span> [DashboardController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;index&#39;</span>])-&gt;name(<span class="st">&#39;dashboard.index&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Área administrativa (somente autenticados com perfil admin)</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        Route::middleware(<span class="st">&#39;admin&#39;</span>)-&gt;group(<span class="kw">function</span> () {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            Route::get(<span class="st">&#39;/admin&#39;</span><span class="ot">,</span> [AdminDashboardController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;index&#39;</span>])-&gt;name(<span class="st">&#39;admin.dashboard.index&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="co">// ... rotas admin.events.* iguais, só reindentadas ...</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            Route::delete(<span class="st">&#39;/admin/events/{id}&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                -&gt;name(<span class="st">&#39;admin.events.destroy&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        })<span class="ot">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    })<span class="ot">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>})<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>RouteWrapperMiddleware::group()</code> roda o callback e
+<strong>depois</strong> faz <code>addMiddleware</code> nas rotas
+criadas. O grupo interno fecha primeiro, então seus middlewares entram
+(e rodam) primeiro.</li>
+<li>Rota admin roda <code>admin</code> -&gt; <code>auth</code> -&gt;
+<code>csrf</code>. Sem sessão continua indo para <code>/login</code>;
+Participante para <code>/dashboard</code>; testes de acesso existentes
+não mudam. Só depois o token é conferido.</li>
+<li>Login fora: o A15 da 4.1 cobre; logout é <code>GET</code>.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>csrf</code> por dentro do <code>auth</code> (ou só no
+<code>admin</code>), no core atual: roda antes da autenticação; POST sem
+sessão vira 403 em vez de <code>/login</code> e os testes de acesso
+(<code>ACC:130-137</code>) quebram.</li>
+<li>Com o A17 da 4.1 aplicado (grupo externo roda primeiro): inverta,
+<code>csrf</code> como grupo <strong>mais interno</strong>. Confira a
+ordem do seu core antes.</li>
+</ul>
+<h2 id="6-appviewsadminevents_formphtml">6.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Logo depois da abertura do <code>&lt;form&gt;</code> (linha ~16),
+antes do <code>_method</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>form action<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$action</span><span class="st"> ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span> novalidate<span class="op">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> csrf_field() <span class="kw">?&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">if</span> (<span class="va">$isUpdate</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;PUT&quot;</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: o mesmo partial serve <code>new</code> (POST) e
+<code>edit</code> (PUT via <code>_method</code>). Uma linha cobre os
+dois.</p>
+<h2 id="7-appviewsadmineventsindexphtml">7.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>No form "Remover" de cada linha (linhas ~30-33), antes do
+<code>_method</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.destroy&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> csrf_field() <span class="kw">?&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;DELETE&quot;</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: remover é <code>DELETE</code> (altera estado). Sem o campo,
+o botão passa a dar 403.</p>
+<p>Armadilha: todo form <code>method="post"</code> precisa do
+<code>csrf_field()</code>, inclusive os de outros cenários (P5, P6, P16,
+P17, P2...).</p>
+<h2 id="8-testsunitlibcsrftestphp-novo">8.
+<code>tests/Unit/Lib/CsrfTest.php</code> (novo)</h2>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Unit\Lib<span class="ot">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Csrf<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\TestCase<span class="ot">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CsrfTest <span class="kw">extends</span> TestCase</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;_token&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> tearDown()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;_token&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_token_should_be_generated_and_stored_in_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$token</span> <span class="op">=</span> Csrf::token()<span class="ot">;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/^[0-9a-f]{64}$/&#39;</span><span class="ot">,</span> <span class="va">$token</span>)<span class="ot">;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$token</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;_token&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_token_should_be_stable_within_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(Csrf::token()<span class="ot">,</span> Csrf::token())<span class="ot">;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_with_session_token_should_return_true()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Csrf::check(Csrf::token()))<span class="ot">;</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_with_wrong_token_should_return_false()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$token</span> <span class="op">=</span> Csrf::token()<span class="ot">;</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="fu">strrev</span>(<span class="va">$token</span>)))<span class="ot">;</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="fu">substr</span>(<span class="va">$token</span><span class="ot">,</span> <span class="dv">0</span><span class="ot">,</span> <span class="dv">63</span>)))<span class="ot">;</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_without_token_should_return_false()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>        Csrf::token()<span class="ot">;</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="kw">null</span>))<span class="ot">;</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="st">&#39;&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check([Csrf::token()]))<span class="ot">;</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_without_session_token_should_return_false()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="st">&#39;&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Csrf::check(<span class="st">&#39;abc&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_csrf_field_should_render_a_hidden_input_with_the_token()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(</span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;&lt;input type=&quot;hidden&quot; name=&quot;_token&quot; value=&quot;&#39;</span> <span class="op">.</span> Csrf::token() <span class="op">.</span> <span class="st">&#39;&quot;&gt;&#39;</span><span class="ot">,</span></span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>            csrf_field()</span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>7 testes: gera e guarda; estável; certo -&gt; <code>true</code>;
+errado/truncado, <code>null</code>/vazio/array, sem sessão -&gt;
+<code>false</code>; helper renderiza o campo.</li>
+<li><code>setUp</code>/<code>tearDown</code> limpam
+<code>$_SESSION['_token']</code>: sem isso um teste herda o token do
+anterior.</li>
+<li>"Estável na sessão" pega quem gera token novo a cada chamada.</li>
+</ul>
+<h2 id="9-testsunitappmiddlewareverifycsrfdoublephp-novo">9.
+<code>tests/Unit/App/Middleware/VerifyCsrfDouble.php</code> (novo)</h2>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Unit\App\Middleware<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Middleware\VerifyCsrf<span class="ot">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * Dublê do VerifyCsrf: registra a recusa em vez de responder 403 e dar exit.</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VerifyCsrfDouble <span class="kw">extends</span> VerifyCsrf</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="dt">bool</span> <span class="va">$denied</span> <span class="op">=</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> deny()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;denied <span class="op">=</span> <span class="kw">true</span><span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê: o <code>deny()</code> real dá <code>exit</code>. O dublê
+(padrão do F2 da 4.1) troca por um flag que o teste lê. Só funciona
+porque <code>deny()</code> é <code>protected</code>. Arquivo próprio:
+PSR-4 estrito exige uma classe por arquivo.</p>
+<h2 id="10-testsunitappmiddlewareverifycsrftestphp-novo">10.
+<code>tests/Unit/App/Middleware/VerifyCsrfTest.php</code> (novo)</h2>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Unit\App\Middleware<span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Request<span class="ot">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Csrf<span class="ot">;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\TestCase<span class="ot">;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VerifyCsrfTest <span class="kw">extends</span> TestCase</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_SERVER</span>[<span class="st">&#39;REQUEST_URI&#39;</span>] <span class="op">=</span> <span class="st">&#39;/admin/events&#39;</span><span class="ot">;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_POST</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_GET</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_REQUEST</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;_token&#39;</span>])<span class="ot">;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> tearDown()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SERVER</span>[<span class="st">&#39;REQUEST_METHOD&#39;</span>]<span class="ot">,</span> <span class="va">$_SERVER</span>[<span class="st">&#39;REQUEST_URI&#39;</span>]<span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;_token&#39;</span>])<span class="ot">;</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_POST</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_GET</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_REQUEST</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $post</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $get</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> handle(<span class="dt">string</span> <span class="va">$method</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$post</span> <span class="op">=</span> []<span class="ot">,</span> <span class="dt">array</span> <span class="va">$get</span> <span class="op">=</span> [])<span class="ot">:</span> VerifyCsrfDouble</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_SERVER</span>[<span class="st">&#39;REQUEST_METHOD&#39;</span>] <span class="op">=</span> <span class="va">$method</span><span class="ot">;</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_POST</span> <span class="op">=</span> <span class="va">$post</span><span class="ot">;</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_GET</span> <span class="op">=</span> <span class="va">$get</span><span class="ot">;</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_REQUEST</span> <span class="op">=</span> <span class="fu">array_merge</span>(<span class="va">$get</span><span class="ot">,</span> <span class="va">$post</span>)<span class="ot">;</span></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$middleware</span> <span class="op">=</span> <span class="kw">new</span> VerifyCsrfDouble()<span class="ot">;</span></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$middleware</span>-&gt;handle(<span class="kw">new</span> Request())<span class="ot">;</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$middleware</span><span class="ot">;</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_get_should_pass_without_token()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;GET&#39;</span>)-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_post_without_token_should_be_denied()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>        Csrf::token()<span class="ot">;</span></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span>)-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_post_with_wrong_token_should_be_denied()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>        Csrf::token()<span class="ot">;</span></span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> [<span class="st">&#39;_token&#39;</span> =&gt; <span class="st">&#39;errado&#39;</span>])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_post_with_session_token_should_pass()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> [<span class="st">&#39;_token&#39;</span> =&gt; Csrf::token()])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_put_and_delete_via_method_override_should_require_the_token()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$token</span> <span class="op">=</span> Csrf::token()<span class="ot">;</span></span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span>])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;_token&#39;</span> =&gt; <span class="va">$token</span>])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_token_only_in_query_string_should_be_denied()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;handle(<span class="st">&#39;POST&#39;</span><span class="ot">,</span> []<span class="ot">,</span> [<span class="st">&#39;_token&#39;</span> =&gt; Csrf::token()])-&gt;denied)<span class="ot">;</span></span>
+<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>handle()</code> monta
+<code>$_SERVER</code>/<code>$_POST</code>/<code>$_GET</code>/<code>$_REQUEST</code>
+como o PHP faria e cria um <code>Request</code> real: testa o middleware
+sem servidor.</li>
+<li><code>$_REQUEST = array_merge($get, $post)</code>: simula a mistura
+real; o último teste prova que token só na query string é recusado.</li>
+<li>PUT/DELETE via <code>_method</code> dependem do <code>Request</code>
+do O9.</li>
+<li><code>tearDown</code> limpa tudo: superglobais vazam entre
+testes.</li>
+</ul>
+<h2 id="11-testsintegrationcontrollersadmineventscontrollertestphp">11.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Três asserts, um por form:</p>
+<p>a) <code>test_index_lists_five_events_per_page</code>, depois de
+<code>assertStringContainsString('Evento 6', $page2);</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O form &quot;Remover&quot; de cada linha traz o token CSRF.</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;_token&quot; value=&quot;&#39;</span> <span class="op">.</span> \Lib\Csrf::token() <span class="op">.</span> <span class="st">&#39;&quot;&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>test_new_renders_form</code>, depois de
+<code>assertStringNotContainsString('name="_method"', $response);</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O form traz o token CSRF da sessão.</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;_token&quot; value=&quot;&#39;</span> <span class="op">.</span> \Lib\Csrf::token() <span class="op">.</span> <span class="st">&#39;&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span></code></pre></div>
+<p>c) <code>test_edit_renders_form_filled</code>, depois de
+<code>assertStringContainsString('name="_method" value="PUT"', $response);</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;_token&quot; value=&quot;&#39;</span> <span class="op">.</span> \Lib\Csrf::token() <span class="op">.</span> <span class="st">&#39;&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Teste de controller chama a ação direto, <strong>sem Router</strong>
+(<code>ControllerTestCase:70-84</code>): não roda middleware e não
+precisa de token para POST. Serve só para provar que as views trazem o
+campo.</li>
+<li>Mesma sessão do teste: <code>Csrf::token()</code> devolve o mesmo
+valor que a view imprimiu.</li>
+</ul>
+<h2 id="12-testsintegrationaccesseventsaccesstestphp">12.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) Teste do O9
+<code>test_admin_should_destroy_event_with_method_delete_in_post_body</code>:
+passa a mandar o token (senão agora dá 403):</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;_token&#39;</span> =&gt; <span class="va">$this</span>-&gt;csrfToken(<span class="va">$client</span>)<span class="ot">,</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        ]])<span class="ot">;</span></span></code></pre></div>
+<p>b) Logo depois desse teste, antes de
+<code>test_admin_should_access_events_index_and_new</code>, helpers e
+testes novos (<code>Client</code> e <code>DataProvider</code> já estão
+nos <code>use</code>):</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- token CSRF ------------------- */</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * Lê o token CSRF da sessão do cliente na página do formulário (como o navegador faria).</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> csrfToken(Client <span class="va">$client</span>)<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$body</span> <span class="op">=</span> <span class="dt">(string)</span> <span class="va">$client</span>-&gt;get(<span class="st">&#39;/admin/events/new&#39;</span>)-&gt;getBody()<span class="ot">;</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="fu">preg_match</span>(<span class="st">&#39;/name=&quot;_token&quot; value=&quot;([0-9a-f]{64})&quot;/&#39;</span><span class="ot">,</span> <span class="va">$body</span><span class="ot">,</span> <span class="va">$matches</span>))<span class="ot">;</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$matches</span>[<span class="dv">1</span>]<span class="ot">;</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, mixed</span><span class="kw">&gt;</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> newEventParams()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [<span class="st">&#39;event&#39;</span> =&gt; [</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento via POST&#39;</span><span class="ot">,</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&#39;Criado no teste de CSRF.&#39;</span><span class="ot">,</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span><span class="ot">,</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;online&#39;</span><span class="ot">,</span></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; [<span class="st">&#39;students&#39;</span>]<span class="ot">,</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Online&#39;</span><span class="ot">,</span></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="st">&#39;5&#39;</span><span class="ot">,</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>        ]]<span class="ot">;</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a><span class="co">     * Rotas que alteram estado, como o navegador as envia (POST, com _method quando é PUT/DELETE).</span></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{string, array&lt;string, string</span><span class="kw">&gt;</span><span class="co">}&gt;</span></span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> stateChangingRoutes()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.create&#39;</span> =&gt; [<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.update&#39;</span> =&gt; [<span class="st">&#39;/admin/events/1&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.destroy&#39;</span> =&gt; [<span class="st">&#39;/admin/events/1&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, string&gt; $params</span></span>
+<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;stateChangingRoutes&#39;</span>)<span class="at">]</span></span>
+<span id="cb15-49"><a href="#cb15-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_request_without_csrf_token_should_be_forbidden(<span class="dt">string</span> <span class="va">$uri</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$params</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-50"><a href="#cb15-50" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-51"><a href="#cb15-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb15-52"><a href="#cb15-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-53"><a href="#cb15-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="va">$uri</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; <span class="va">$params</span> <span class="op">+</span> <span class="va">$this</span>-&gt;newEventParams()<span class="ot">,</span> <span class="st">&#39;http_errors&#39;</span> =&gt; <span class="kw">false</span>])<span class="ot">;</span></span>
+<span id="cb15-54"><a href="#cb15-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-55"><a href="#cb15-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">403</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-56"><a href="#cb15-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb15-57"><a href="#cb15-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Palestra de Acesso&#39;</span><span class="ot">,</span> Event::findById((<span class="dt">int</span>) <span class="va">$this</span>-&gt;event-&gt;id)<span class="ot">?</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb15-58"><a href="#cb15-58" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-59"><a href="#cb15-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-60"><a href="#cb15-60" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_request_with_wrong_csrf_token_should_be_forbidden()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-61"><a href="#cb15-61" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-62"><a href="#cb15-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;csrfToken(<span class="va">$client</span>)<span class="ot">;</span></span>
+<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> [</span>
+<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;_token&#39;</span> =&gt; <span class="fu">str_repeat</span>(<span class="st">&#39;0&#39;</span><span class="ot">,</span> <span class="dv">64</span>)]<span class="ot">,</span></span>
+<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;http_errors&#39;</span> =&gt; <span class="kw">false</span><span class="ot">,</span></span>
+<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb15-69"><a href="#cb15-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">403</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById((<span class="dt">int</span>) <span class="va">$this</span>-&gt;event-&gt;id))<span class="ot">;</span></span>
+<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-73"><a href="#cb15-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-74"><a href="#cb15-74" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_create_event_with_csrf_token()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-75"><a href="#cb15-75" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-76"><a href="#cb15-76" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb15-77"><a href="#cb15-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-78"><a href="#cb15-78" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> [</span>
+<span id="cb15-79"><a href="#cb15-79" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_token&#39;</span> =&gt; <span class="va">$this</span>-&gt;csrfToken(<span class="va">$client</span>)] <span class="op">+</span> <span class="va">$this</span>-&gt;newEventParams()<span class="ot">,</span></span>
+<span id="cb15-80"><a href="#cb15-80" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb15-81"><a href="#cb15-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-82"><a href="#cb15-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-83"><a href="#cb15-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento via POST&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb15-84"><a href="#cb15-84" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-85"><a href="#cb15-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-86"><a href="#cb15-86" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_csrf_token_from_another_session_should_be_forbidden()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-87"><a href="#cb15-87" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-88"><a href="#cb15-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb15-89"><a href="#cb15-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">$token</span> <span class="op">=</span> <span class="va">$this</span>-&gt;csrfToken(<span class="va">$other</span>)<span class="ot">;</span></span>
+<span id="cb15-90"><a href="#cb15-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb15-91"><a href="#cb15-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-92"><a href="#cb15-92" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> [</span>
+<span id="cb15-93"><a href="#cb15-93" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;_token&#39;</span> =&gt; <span class="va">$token</span>]<span class="ot">,</span></span>
+<span id="cb15-94"><a href="#cb15-94" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;http_errors&#39;</span> =&gt; <span class="kw">false</span><span class="ot">,</span></span>
+<span id="cb15-95"><a href="#cb15-95" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb15-96"><a href="#cb15-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-97"><a href="#cb15-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">403</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-98"><a href="#cb15-98" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById((<span class="dt">int</span>) <span class="va">$this</span>-&gt;event-&gt;id))<span class="ot">;</span></span>
+<span id="cb15-99"><a href="#cb15-99" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Teste de acesso sobe HTTP real (Guzzle -&gt; <code>web:8080</code>)
+e passa pelo Router: é a única prova de que o middleware está ligado na
+rota certa.</li>
+<li><code>csrfToken()</code> lê o token da página <code>new</code>, como
+o navegador. O cliente tem cookie (<code>'cookies' =&gt; true</code>):
+mesma sessão.</li>
+<li>Provider: create, update, destroy sem token -&gt; 403 e nada
+muda.</li>
+<li><code>'http_errors' =&gt; false</code>: sem isso o Guzzle lança
+exceção no 403.</li>
+<li>Token de outra sessão -&gt; 403: prova que o token é por
+sessão.</li>
+<li>Testes "sem sessão -&gt; /login" já existentes continuam verdes:
+prova de que o <code>csrf</code> roda depois do <code>auth</code>.</li>
+</ul>
+<p>Armadilha: <code>loggedClient</code> posta <code>/login</code>. Se o
+login também exigir token (A15), o helper precisa buscar a página
+antes.</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Lib/CsrfTest.php</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/App/Middleware/VerifyCsrfTest.php</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/EventsAccessTest.php</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># Cests passam sem mudança: o form já leva o token</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Sem mudança de schema: não precisa <code>./run db:populate</code>.
+Esperado: Unit 178, Integration 55, Acceptance 23 (com só O9: 165 / 49 /
+23).</p>
+<p>Sem token, de dentro da rede do compose:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose exec web curl <span class="at">-s</span> <span class="at">-c</span> /tmp/c <span class="dt">\</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">-d</span> <span class="st">&#39;user[email]=admin@example.com&amp;user[password]=123456&#39;</span> <span class="dt">\</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    http://localhost/login</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose exec web curl <span class="at">-s</span> <span class="at">-o</span> /dev/null <span class="at">-w</span> <span class="st">&#39;%{http_code}\n&#39;</span> <span class="dt">\</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">-b</span> /tmp/c <span class="at">-d</span> <span class="st">&#39;_method=DELETE&#39;</span> http://localhost/admin/events/16</span></code></pre></div>
+<p>Resposta: <code>403</code>.</p>
+<p>No navegador (admin): criar, editar e remover pela listagem continuam
+funcionando. Ver código-fonte do form:
+<code>&lt;input type="hidden" name="_token" value="...64 hex..."&gt;</code>.</p>
+<p>Commit (inglês):
+<code>feat: Protect Event forms with a CSRF token</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Ordem: <code>csrf</code> por dentro do <code>auth</code>, no core
+atual, roda antes da autenticação; POST anônimo dá 403 em vez de
+<code>/login</code>.</li>
+<li>Com o A17 da 4.1 (grupo de fora roda primeiro): <code>csrf</code>
+como grupo mais interno.</li>
+<li><code>EventsControllerTest</code> não passa pelo Router
+(<code>CTC:70-84</code>): não vê o middleware; a prova é por HTTP
+(<code>EventsAccessTest</code>) e por Cest.</li>
+<li><code>loggedClient</code> (<code>ACC:67-78</code>) posta
+<code>/login</code>: se o login exigir token, buscar a página antes (A15
+da 4.1).</li>
+<li>Token por sessão, não por requisição: abas múltiplas funcionam.</li>
+<li>Ler <code>_token</code> de <code>$_POST</code>;
+<code>getParam</code> lê <code>$_REQUEST</code> (aceita query string).
+Combine com O9.</li>
+<li>Barrar <code>GET</code> também: listagem e links quebram.</li>
+<li><code>===</code> em vez de <code>hash_equals</code>: vaza tempo de
+comparação.</li>
+<li>Esquecer <code>csrf_field()</code> em algum form: o botão dá
+403.</li>
+<li><code>deny()</code> <code>private</code> com <code>exit</code>:
+teste unitário do middleware não roda.</li>
+</ul>
+</body>
+</html>
