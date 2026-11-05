@@ -1,0 +1,22 @@
+<?php
+/**
+ * Passo 2 do login por código (FVP B11): pede o código. O flash acima do formulário
+ * mostra o código recém-gerado (não há envio de e-mail no projeto); o campo é texto
+ * numérico de 4 dígitos. O POST vai para login_codes.authenticate; quem valida é o
+ * model, e o formulário nunca recebe o código de volta.
+ * Próximo passo: app/views/authentications/new.phtml (link para esta entrada).
+ */
+?>
+<div class="card login mx-auto">
+    <div class="card-body">
+        <form action="<?= route('login_codes.authenticate') ?>" method="post" novalidate>
+            <div class="mb-3">
+                <label for="login_code_code" class="form-label">Código (4 dígitos)</label>
+                <input type="text" inputmode="numeric" maxlength="4" autocomplete="one-time-code"
+                    class="form-control" id="login_code_code" name="login_code[code]">
+            </div>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+            <a class="btn btn-link" href="<?= route('login_codes.new') ?>">Pedir outro código</a>
+        </form>
+    </div>
+</div>
