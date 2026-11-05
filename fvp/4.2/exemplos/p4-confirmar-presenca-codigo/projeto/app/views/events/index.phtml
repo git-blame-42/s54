@@ -21,7 +21,8 @@
                     <td><?= htmlspecialchars($event->location) ?></td>
                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
                     <td>
-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-secondary"
+                            href="<?= route('events.show', ['id' => $event->id]) ?>">Ver</a>
                     </td>
                 </tr>
             <?php endforeach; ?>

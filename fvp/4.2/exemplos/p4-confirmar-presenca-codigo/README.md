@@ -12,25 +12,25 @@ precisa da inscrição (P2, que depende de O2) e do código (P1).
 
 - base: `fvp/p2-inscricao-participante` (O2 → P2), sobre `main`
   (`f31006b`);
-- P1 trazido por cherry-pick (`bb5bf0e` na branch
-  `fvp/p1-codigo-checkin-aleatorio` virou `d6f79fc` aqui; aplicou
+- P1 trazido por cherry-pick (`ca2e157` na branch
+  `fvp/p1-codigo-checkin-aleatorio` virou `26e3f8a` aqui; aplicou
   sem conflito);
 - P4 por cima.
 
 Commits (`main..fvp/p4-confirmar-presenca-codigo`):
 
-- `9d7c82f` `feat: Add events listing and details for participants`
+- `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
-- `95e5e82` `feat: Allow participants to enroll in events`
+- `458a05b` `feat: Allow participants to enroll in events`
   (base, P2)
-- `d6f79fc` `feat: Generate a random check-in code for each Event`
-  (base, P1 cherry-picked de `bb5bf0e`)
-- `cac1915` `feat: Confirm event presence with the check-in code`
+- `26e3f8a` `feat: Generate a random check-in code for each Event`
+  (base, P1 cherry-picked de `ca2e157`)
+- `3e53118` `feat: Confirm event presence with the check-in code`
   (este cenário)
 
 ## O que mudou
 
-Só o último commit (`cac1915`):
+Só o último commit (`3e53118`):
 
 - `database/schema.sql`: `confirmed_at TIMESTAMP NULL DEFAULT NULL`
   em `event_user` (NULL = presença não confirmada).
@@ -156,9 +156,9 @@ Primeiro decida o que o alvo já tem:
 
 - nada (só `main`): a pilha toda, por intervalo
   (`main..fvp/p4-confirmar-presenca-codigo`, 4 commits);
-- O2 e P2, sem P1: `d6f79fc cac1915`;
-- O2, P2 e P1: só o topo, `cac1915`;
-- P1 sem O2/P2: `9d7c82f 95e5e82 cac1915`.
+- O2 e P2, sem P1: `26e3f8a 3e53118`;
+- O2, P2 e P1: só o topo, `3e53118`;
+- P1 sem O2/P2: `0669a19 458a05b 3e53118`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -170,7 +170,7 @@ git fetch fvp-p4 main fvp/p4-confirmar-presenca-codigo
 git cherry-pick \
     fvp-p4/main..fvp-p4/fvp/p4-confirmar-presenca-codigo
 # alvo que já tem O2, P2 e P1: só o topo
-git cherry-pick cac1915
+git cherry-pick 3e53118
 git remote remove fvp-p4
 ```
 
@@ -180,9 +180,9 @@ git remote remove fvp-p4
 git fetch <caminho>/solucao.bundle \
     fvp/p4-confirmar-presenca-codigo:fvp-p4
 # alvo só com main
-git cherry-pick 9d7c82f 95e5e82 d6f79fc cac1915
+git cherry-pick 0669a19 458a05b 26e3f8a 3e53118
 # alvo que já tem O2, P2 e P1
-git cherry-pick cac1915
+git cherry-pick 3e53118
 # opcional, limpa a ref
 git branch -D fvp-p4
 ```
