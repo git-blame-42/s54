@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * P6: duplicar um Evento pela listagem abre a edição da cópia.
+ * Duplicar um Evento pela listagem abre a edição da cópia.
  */
 class DuplicateEventCest extends BaseEventsCest
 {

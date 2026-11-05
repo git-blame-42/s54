@@ -265,7 +265,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- P6: duplicar ------------------- */
+    /* ------------------- duplicar ------------------- */
 
     public function test_index_has_a_duplicate_button(): void
     {
