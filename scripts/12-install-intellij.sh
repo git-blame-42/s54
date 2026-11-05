@@ -20,8 +20,34 @@ Ultimate). Serve para Java/Kotlin e edição genérica. Para PHP use o
 11 (VS Code + Intelephense) ou o 10 (Neovim).
 
   -h  mostra esta ajuda
-  -z  desfaz: remove o snap e o snapd, só se este script os instalou
+  -z  desfaz: remove o snap do IntelliJ, os snaps que vieram junto
+      (core22, snapd...) e o pacote snapd, só o que este script instalou
 USAGE
+}
+
+snap_names() { # snaps instalados, separados por espaço
+  command -v snap >/dev/null 2>&1 || return 0
+  snap list 2>/dev/null | awk 'NR > 1 {print $1}' | xargs
+}
+
+# Remove os snaps dados, na ordem que o snapd aceita: aplicativos,
+# depois bases (core*, bare) e por último o próprio snapd. Um snap que
+# outro ainda usa (base de um snap que já existia) fica, com aviso.
+remove_snaps() { # nomes...
+  local s order=() cur
+  cur=" $(snap_names) "
+  for s in "$@"; do case "$s" in core*|bare|snapd) ;; *) order+=("$s") ;;
+    esac; done
+  for s in "$@"; do case "$s" in core*|bare) order+=("$s") ;; esac; done
+  for s in "$@"; do [[ "$s" == snapd ]] && order+=("$s"); done
+  for s in "${order[@]}"; do
+    [[ "$cur" == *" $s "* ]] || continue
+    if sudo snap remove --purge "$s" >/dev/null 2>&1; then
+      ok "snap $s removido"
+    else
+      warn "snap $s mantido (outro snap ainda depende dele)"
+    fi
+  done
 }
 
 idea_present() {
@@ -54,6 +80,10 @@ run() {
   fi
   if [[ -e "$HOME/snap" ]]; then state_set snap_dir_preexisting 1
   else state_set snap_dir_preexisting 0; fi
+  if [[ -z "$(state_get snaps_recorded)" ]]; then
+    state_set snaps_before "$(snap_names)"
+    state_set snaps_recorded 1
+  fi
   step "snap install $SNAP --classic (download grande)"
   if snap list "$SNAP" >/dev/null 2>&1; then
     ok "já instalado numa execução anterior"
@@ -61,6 +91,14 @@ run() {
     sudo snap install "$SNAP" --classic
     state_set snap_installed 1
   fi
+  # Snaps que vieram junto (core22, snapd...): o -z tira também.
+  local before s added=""
+  before=" $(state_get snaps_before) "
+  for s in $(snap_names); do
+    [[ "$before" == *" $s "* ]] || added="$added $s"
+  done
+  state_set snaps_added "${added# }"
+  info "snaps novos: ${added# }"
   step "Teste"
   snap list "$SNAP" | tail -1
   ok "binário: $(command -v "$SNAP" || echo /snap/bin/$SNAP)"
@@ -77,7 +115,14 @@ undo() {
     state_remove
     return 0
   fi
-  if [[ "$(state_get snap_installed)" == 1 ]]; then
+  local added
+  added="$(state_get snaps_added)"
+  if [[ -n "$added" ]] && command -v snap >/dev/null 2>&1; then
+    step "Removendo os snaps que este script instalou: $added"
+    require_sudo
+    # shellcheck disable=SC2086  # lista de nomes separada por espaço
+    remove_snaps $added
+  elif [[ "$(state_get snap_installed)" == 1 ]]; then
     step "snap remove --purge $SNAP"
     require_sudo
     sudo snap remove --purge "$SNAP"

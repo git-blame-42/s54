@@ -247,7 +247,9 @@ snapd, se faltar, rastreado). Se já houver `idea`, o snap, ou o
 JetBrains Toolbox em `~/.local/share/JetBrains/Toolbox`, não instala
 nada e o `-z` não faz nada. A edição Community não tem o plugin de
 PHP (só PhpStorm ou Ultimate): serve para Java/Kotlin; para PHP use
-o 11 ou o 10. O `-z` remove o snap e o snapd só se o script os
+o 11 ou o 10. Anota os snaps que já existiam; o `-z` remove o snap
+do IntelliJ e os que vieram junto com ele (`core22`, `snapd`...), na
+ordem que o snapd aceita, e o pacote snapd, tudo só se o script
 instalou.
 
 ### 13-setup-docker-rootless.sh
