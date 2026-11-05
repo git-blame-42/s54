@@ -47,6 +47,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M5. Validação condicional por modalidade
   `m5-validacao-condicional-modalidade/`
   - feat: Require location only for in-person events and link for
+- M6. Unicidade (título único na mesma data)
+  `m6-unicidade-titulo-data/`
+  - feat: Require unique event title on the same date
 - N1. Filtro por tipo com `where`, mantido na paginação
   `n1-filtro-por-tipo-paginacao/`
   - feat: Filter events by kind keeping the filter in pagination

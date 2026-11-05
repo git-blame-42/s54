@@ -1,0 +1,219 @@
+From c7a5b74ee21b372bfaea51a07510177004235c9b Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:11:14 -0300
+Subject: [PATCH] feat: Require unique event title on the same date
+
+---
+ app/Models/Event.php                          |  6 ++
+ .../admin/events/CreateDuplicateEventCest.php | 46 ++++++++++++
+ .../Admin/EventsControllerTest.php            | 34 +++++++++
+ tests/Unit/Models/Events/EventTest.php        | 71 +++++++++++++++++++
+ 4 files changed, 157 insertions(+)
+ create mode 100644 tests/Acceptance/admin/events/CreateDuplicateEventCest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..57a346b 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -79,6 +79,12 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        // Título único na mesma data. Só confere se os dois campos já estão válidos:
++        // cada campo guarda uma mensagem só, e a última vence.
++        if ($this->errors('title') === null && $this->errors('starts_on') === null) {
++            Validations::uniqueness(['title', 'starts_on'], $this);
++        }
+     }
+ 
+     /**
+diff --git a/tests/Acceptance/admin/events/CreateDuplicateEventCest.php b/tests/Acceptance/admin/events/CreateDuplicateEventCest.php
+new file mode 100644
+index 0000000..e9b7f8c
+--- /dev/null
++++ b/tests/Acceptance/admin/events/CreateDuplicateEventCest.php
+@@ -0,0 +1,46 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Título único na mesma data: "Evento 01" já existe na data startsOn(1).
++ */
++class CreateDuplicateEventCest extends BaseEventsCest
++{
++    public function createWithSameTitleAndDate(AcceptanceTester $page): void
++    {
++        $page->wantTo('Tentativa de cadastro com título e data de um Evento existente');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData([
++            'title' => $this->title(1),
++            'starts_on' => $this->startsOn(1),
++        ]));
++        $page->click('Salvar');
++
++        $page->see('Existem dados incorretos! Por favor, verifique!');
++        $page->seeElement('#event_title.is-invalid');
++        $page->see('já existe um registro com esse dado', '#event_title ~ .invalid-feedback');
++        $page->seeInField('#event_title', $this->title(1));
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++
++    public function createWithSameTitleOnAnotherDate(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastro com o título de um Evento existente em outra data');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData([
++            'title' => $this->title(1),
++            'starts_on' => $this->startsOn(2),
++        ]));
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..3e7520f 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -137,6 +137,26 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_create_with_same_title_and_date_renders_form_with_error(): void
++    {
++        $this->createEvent();
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams()]
++        );
++
++        $this->assertCount(1, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertMatchesRegularExpression('/id="event_title"[^>]*is-invalid|is-invalid[^>]*id="event_title"/', $response);
++        $this->assertStringContainsString(
++            '<div class="invalid-feedback">já existe um registro com esse dado</div>',
++            $response
++        );
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
+     public function test_create_without_audience_marks_audience_field(): void
+     {
+         $params = $this->validParams();
+@@ -223,6 +243,20 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_update_without_changes_keeps_working_with_uniqueness(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams()]
++        );
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
++    }
++
+     public function test_update_capacity_below_enrollments_is_rejected(): void
+     {
+         $event = $this->createEvent(['capacity' => 5]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..adbf45f 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -241,6 +241,77 @@ class EventTest extends TestCase
+         $this->assertCount(0, Event::all());
+     }
+ 
++    /* ------------------- unicidade: título + data ------------------- */
++
++    public function test_same_title_on_the_same_date_should_be_invalid(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $duplicate = new Event($this->params(['title' => 'Oficina de Git']));
++
++        $this->assertFalse($duplicate->save());
++        $this->assertEquals('já existe um registro com esse dado', $duplicate->errors('title'));
++        $this->assertEquals('já existe um registro com esse dado', $duplicate->errors('starts_on'));
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_same_title_on_another_date_should_be_valid(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $other = new Event($this->params([
++            'title' => 'Oficina de Git',
++            'starts_on' => date('Y-m-d', strtotime('+31 days')),
++        ]));
++
++        $this->assertTrue($other->save());
++        $this->assertCount(2, Event::all());
++    }
++
++    public function test_title_uniqueness_ignores_case_and_accents(): void
++    {
++        // Collation do MySQL (utf8mb4_0900_ai_ci): "a" = "A" e "e" = "ê".
++        $this->createEvent(['title' => 'Semana Acadêmica']);
++
++        $duplicate = new Event($this->params(['title' => 'SEMANA ACADEMICA']));
++
++        $this->assertFalse($duplicate->isValid());
++        $this->assertEquals('já existe um registro com esse dado', $duplicate->errors('title'));
++    }
++
++    public function test_event_can_be_updated_keeping_its_own_title_and_date(): void
++    {
++        $event = $this->createEvent(['title' => 'Oficina de Git']);
++
++        $event->description = 'Descrição nova.';
++
++        $this->assertTrue($event->save());
++        $this->assertEquals('Descrição nova.', Event::findById($event->id)->description);
++    }
++
++    public function test_update_to_title_and_date_of_another_event_should_be_invalid(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++        $event = $this->createEvent(['title' => 'Oficina de Docker']);
++
++        $event->title = 'Oficina de Git';
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('já existe um registro com esse dado', $event->errors('title'));
++        $this->assertEquals('Oficina de Docker', Event::findById($event->id)->title);
++    }
++
++    public function test_uniqueness_should_not_replace_a_more_specific_starts_on_error(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $event = new Event($this->params(['title' => 'Oficina de Git', 'starts_on' => '2030-02-30']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
++        $this->assertNull($event->errors('title'));
++    }
++
+     /* ------------------- audience (SET) ------------------- */
+ 
+     public function test_audience_list_should_return_an_array(): void
+-- 
+2.54.0 (Apple Git-157)
+
