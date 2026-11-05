@@ -1,4 +1,4 @@
-From 40ed7e44081a4b96cfd08a8ff70232918f9dfbaa Mon Sep 17 00:00:00 2001
+From 32ad27aa4a129135c573f35301b0704b873845f2 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:55:22 -0300
 Subject: [PATCH] feat: Admin enrolls and removes participants from event show
@@ -9,27 +9,27 @@ Enrollment::validates() (user exists and is a participant, event exists
 and has spots, no duplicates) and list enrollments with a remove button
 and a participant select on the admin event show page.
 ---
- .../Admin/EnrollmentsController.php           |  72 +++++
- app/Models/Enrollment.php                     |  68 +++++
+ .../Admin/EnrollmentsController.php           |  83 +++++
+ app/Models/Enrollment.php                     |  68 ++++
  app/Models/Event.php                          |  29 ++
  app/views/admin/events/show.phtml             |  59 ++++
  config/routes.php                             |   7 +
  .../admin/events/ManageEnrollmentsCest.php    |  76 +++++
  tests/Integration/Access/EventsAccessTest.php |  40 ++-
- .../Admin/EnrollmentsControllerTest.php       | 261 ++++++++++++++++++
+ .../Admin/EnrollmentsControllerTest.php       | 290 ++++++++++++++++++
  tests/Unit/Models/Events/EnrollmentTest.php   | 107 ++++++-
  tests/Unit/Models/Events/EventTest.php        |  29 ++
- 10 files changed, 746 insertions(+), 2 deletions(-)
+ 10 files changed, 786 insertions(+), 2 deletions(-)
  create mode 100644 app/Controllers/Admin/EnrollmentsController.php
  create mode 100644 tests/Acceptance/admin/events/ManageEnrollmentsCest.php
  create mode 100644 tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
 
 diff --git a/app/Controllers/Admin/EnrollmentsController.php b/app/Controllers/Admin/EnrollmentsController.php
 new file mode 100644
-index 0000000..8f8730b
+index 0000000..8c90763
 --- /dev/null
 +++ b/app/Controllers/Admin/EnrollmentsController.php
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,83 @@
 +<?php
 +
 +namespace App\Controllers\Admin;
@@ -41,7 +41,7 @@ index 0000000..8f8730b
 +use Lib\FlashMessage;
 +
 +/**
-+ * Inscrições de um Evento gerenciadas pelo Administrador (P13), a partir do show do Evento.
++ * Inscrições de um Evento gerenciadas pelo Administrador a partir do show do Evento.
 + */
 +class EnrollmentsController extends Controller
 +{
@@ -77,10 +77,8 @@ index 0000000..8f8730b
 +        }
 +
 +        // Busca pelo id da Inscrição E pelo Evento da rota: não remove Inscrição de outro Evento.
-+        $enrollment = Enrollment::findBy([
-+            'id' => (int) $request->getParam('id'),
-+            'event_id' => $event->id,
-+        ]);
++        $id = $this->routeId($request, 'id');
++        $enrollment = $id === null ? null : Enrollment::findBy(['id' => $id, 'event_id' => $event->id]);
 +
 +        if ($enrollment !== null && $enrollment->destroy()) {
 +            FlashMessage::success('Inscrição removida com sucesso!');
@@ -93,7 +91,20 @@ index 0000000..8f8730b
 +
 +    private function findEvent(Request $request): ?Event
 +    {
-+        return Event::findById((int) $request->getParam('event_id'));
++        $id = $this->routeId($request, 'event_id');
++
++        return $id === null ? null : Event::findById($id);
++    }
++
++    /**
++     * Id vindo da rota só se for formado apenas por dígitos: '1abc' não vira 1, como faria o (int).
++     */
++    private function routeId(Request $request, string $key): ?int
++    {
++        $value = $request->getParam($key);
++        $digits = is_scalar($value) ? (string) $value : '';
++
++        return ctype_digit($digits) ? (int) $digits : null;
 +    }
 +
 +    private function eventNotFound(): void
@@ -103,7 +114,7 @@ index 0000000..8f8730b
 +    }
 +}
 diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
-index 3afd7c5..9b02ee2 100644
+index 3afd7c5..7e01eec 100644
 --- a/app/Models/Enrollment.php
 +++ b/app/Models/Enrollment.php
 @@ -4,6 +4,7 @@ namespace App\Models;
@@ -119,7 +130,7 @@ index 3afd7c5..9b02ee2 100644
      protected static array $columns = ['event_id', 'user_id'];
  
 +    /**
-+     * Regras da Inscrição (P13): o usuário existe e é Participante, o Evento existe e tem vaga
++     * Regras da Inscrição: o usuário existe e é Participante, o Evento existe e tem vaga
 +     * e o Participante ainda não está inscrito nele. O user_id pode vir de um formulário, então
 +     * é conferido aqui, e não no controller.
 +     */
@@ -330,7 +341,7 @@ index 9ee0c90..54b891b 100644
  });
 diff --git a/tests/Acceptance/admin/events/ManageEnrollmentsCest.php b/tests/Acceptance/admin/events/ManageEnrollmentsCest.php
 new file mode 100644
-index 0000000..6e55f15
+index 0000000..41ac263
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/ManageEnrollmentsCest.php
 @@ -0,0 +1,76 @@
@@ -343,7 +354,7 @@ index 0000000..6e55f15
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P13: o Administrador inscreve e remove Participantes pelo show do Evento.
++ * O Administrador inscreve e remove Participantes pelo show do Evento.
 + */
 +class ManageEnrollmentsCest extends BaseEventsCest
 +{
@@ -411,7 +422,7 @@ index 0000000..6e55f15
 +    }
 +}
 diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
-index 4396d14..0ef3571 100644
+index 4396d14..fc793b9 100644
 --- a/tests/Integration/Access/EventsAccessTest.php
 +++ b/tests/Integration/Access/EventsAccessTest.php
 @@ -2,6 +2,7 @@
@@ -427,7 +438,7 @@ index 4396d14..0ef3571 100644
  
      /**
 -     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
-+     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy e, do P13,
++     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy,
 +     * enrollments.create e enrollments.destroy).
       *
       * @return array<string, array{string, string}>
@@ -491,10 +502,10 @@ index 4396d14..0ef3571 100644
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
 new file mode 100644
-index 0000000..020f9cc
+index 0000000..49b9125
 --- /dev/null
 +++ b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
-@@ -0,0 +1,261 @@
+@@ -0,0 +1,290 @@
 +<?php
 +
 +namespace Tests\Integration\Controllers\Admin;
@@ -668,6 +679,35 @@ index 0000000..020f9cc
 +
 +        $this->assertSame('Location: /admin/events', $response);
 +        $this->assertEquals('Evento não encontrado!', $this->flash('danger'));
++    }
++
++    public function test_create_with_non_numeric_event_id_redirects_to_index(): void
++    {
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: [
++            'event_id' => "{$this->event->id}abc",
++            'enrollment' => ['user_id' => (string) $this->participant->id],
++        ]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $this->flash('danger'));
++        $this->assertCount(0, Enrollment::all());
++    }
++
++    public function test_destroy_with_non_numeric_id_keeps_the_enrollment(): void
++    {
++        $this->createEnrollment($this->event->id, $this->participant->id);
++        $enrollment = Enrollment::findBy(['event_id' => $this->event->id]);
++        $this->assertNotNull($enrollment);
++        $this->clearFlash();
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: [
++            'event_id' => (string) $this->event->id,
++            'id' => "{$enrollment->id}abc",
++        ]);
++
++        $this->assertSame("Location: /admin/events/{$this->event->id}", $response);
++        $this->assertEquals('Inscrição não encontrada!', $this->flash('danger'));
++        $this->assertCount(1, Enrollment::all());
 +    }
 +
 +    public function test_show_lists_enrolled_and_offers_only_free_participants(): void

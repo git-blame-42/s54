@@ -9,7 +9,7 @@ use Core\Http\Request;
 use Lib\FlashMessage;
 
 /**
- * Inscrições de um Evento gerenciadas pelo Administrador (P13), a partir do show do Evento.
+ * Inscrições de um Evento gerenciadas pelo Administrador a partir do show do Evento.
  */
 class EnrollmentsController extends Controller
 {
@@ -45,10 +45,8 @@ class EnrollmentsController extends Controller
         }
 
         // Busca pelo id da Inscrição E pelo Evento da rota: não remove Inscrição de outro Evento.
-        $enrollment = Enrollment::findBy([
-            'id' => (int) $request->getParam('id'),
-            'event_id' => $event->id,
-        ]);
+        $id = $this->routeId($request, 'id');
+        $enrollment = $id === null ? null : Enrollment::findBy(['id' => $id, 'event_id' => $event->id]);
 
         if ($enrollment !== null && $enrollment->destroy()) {
             FlashMessage::success('Inscrição removida com sucesso!');
@@ -61,7 +59,20 @@ class EnrollmentsController extends Controller
 
     private function findEvent(Request $request): ?Event
     {
-        return Event::findById((int) $request->getParam('event_id'));
+        $id = $this->routeId($request, 'event_id');
+
+        return $id === null ? null : Event::findById($id);
+    }
+
+    /**
+     * Id vindo da rota só se for formado apenas por dígitos: '1abc' não vira 1, como faria o (int).
+     */
+    private function routeId(Request $request, string $key): ?int
+    {
+        $value = $request->getParam($key);
+        $digits = is_scalar($value) ? (string) $value : '';
+
+        return ctype_digit($digits) ? (int) $digits : null;
     }
 
     private function eventNotFound(): void

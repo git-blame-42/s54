@@ -173,6 +173,35 @@ class EnrollmentsControllerTest extends ControllerTestCase
         $this->assertEquals('Evento não encontrado!', $this->flash('danger'));
     }
 
+    public function test_create_with_non_numeric_event_id_redirects_to_index(): void
+    {
+        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: [
+            'event_id' => "{$this->event->id}abc",
+            'enrollment' => ['user_id' => (string) $this->participant->id],
+        ]);
+
+        $this->assertSame('Location: /admin/events', $response);
+        $this->assertEquals('Evento não encontrado!', $this->flash('danger'));
+        $this->assertCount(0, Enrollment::all());
+    }
+
+    public function test_destroy_with_non_numeric_id_keeps_the_enrollment(): void
+    {
+        $this->createEnrollment($this->event->id, $this->participant->id);
+        $enrollment = Enrollment::findBy(['event_id' => $this->event->id]);
+        $this->assertNotNull($enrollment);
+        $this->clearFlash();
+
+        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: [
+            'event_id' => (string) $this->event->id,
+            'id' => "{$enrollment->id}abc",
+        ]);
+
+        $this->assertSame("Location: /admin/events/{$this->event->id}", $response);
+        $this->assertEquals('Inscrição não encontrada!', $this->flash('danger'));
+        $this->assertCount(1, Enrollment::all());
+    }
+
     public function test_show_lists_enrolled_and_offers_only_free_participants(): void
     {
         $this->createUser('Bruno <b>Lima</b>', 'bruno@example.com');

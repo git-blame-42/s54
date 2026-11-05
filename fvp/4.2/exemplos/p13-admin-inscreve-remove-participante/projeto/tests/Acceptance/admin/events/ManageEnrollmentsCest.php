@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * P13: o Administrador inscreve e remove Participantes pelo show do Evento.
+ * O Administrador inscreve e remove Participantes pelo show do Evento.
  */
 class ManageEnrollmentsCest extends BaseEventsCest
 {

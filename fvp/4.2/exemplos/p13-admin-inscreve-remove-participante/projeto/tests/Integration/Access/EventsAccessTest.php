@@ -79,7 +79,7 @@ class EventsAccessTest extends TestCase
     }
 
     /**
-     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy e, do P13,
+     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy,
      * enrollments.create e enrollments.destroy).
      *
      * @return array<string, array{string, string}>

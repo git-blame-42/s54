@@ -19,7 +19,7 @@ class Enrollment extends Model
     protected static array $columns = ['event_id', 'user_id'];
 
     /**
-     * Regras da Inscrição (P13): o usuário existe e é Participante, o Evento existe e tem vaga
+     * Regras da Inscrição: o usuário existe e é Participante, o Evento existe e tem vaga
      * e o Participante ainda não está inscrito nele. O user_id pode vir de um formulário, então
      * é conferido aqui, e não no controller.
      */

@@ -14,7 +14,7 @@ de `main` (`f31006b`).
 
 | Commit | Mensagem |
 |--------|----------|
-| `40ed7e4` | `feat: Admin enrolls and removes participants from event show` |
+| `32ad27a` | `feat: Admin enrolls and removes participants from event show` |
 
 ## O que mudou
 
@@ -34,6 +34,9 @@ de `main` (`f31006b`).
   - `destroy`: `Enrollment::findBy(['id' => ..., 'event_id' => ...])`
     com os dois ids da rota; achou, `destroy()` e "Inscrição removida
     com sucesso!"; senão "Inscrição não encontrada!".
+  - `routeId()` (privado): lê `event_id` ou `id` da rota e só devolve
+    o inteiro se o valor tiver apenas dígitos (`ctype_digit`); senão
+    `null`, tratado como "não encontrado".
 - `app/Models/Enrollment.php`: `validates()` novo. `notEmpty` em
   `event_id` e `user_id`; só ao criar: usuário existe (id inteiro via
   `filter_var`), tem `role` `participant`, Evento existe, não há
@@ -54,10 +57,11 @@ de `main` (`f31006b`).
     validação; lotado, última vaga, admin recusado, usuário inexistente
     (9999, `'abc'`, `'1abc'`), Evento inexistente, campos vazios.
   - `EventTest`: `enrollments()` e `enrollableParticipants()`.
-  - `EnrollmentsControllerTest` (novo, 14 testes): create ok,
+  - `EnrollmentsControllerTest` (novo, 16 testes): create ok,
     `event_id` do form ignorado, duplicata, admin, usuário inexistente,
-    lotado, select vazio, `user_id` array, Evento inexistente; destroy
-    ok, Inscrição de outro Evento não sai, Evento inexistente; show com
+    lotado, select vazio, `user_id` array, Evento inexistente,
+    `event_id` `'1abc'`; destroy ok, Inscrição de outro Evento não sai,
+    Evento inexistente, `id` `'1abc'` não remove; show com
     lista, botão e select (com `htmlspecialchars`).
   - `EventsAccessTest`: as 2 rotas em `eventRoutes()` e a de DELETE em
     `methodOverrideRoutes()`; Participante logado não inscreve nem
@@ -81,6 +85,11 @@ de `main` (`f31006b`).
   removeria uma Inscrição do Evento B só trocando o número.
 - `filter_var(..., FILTER_VALIDATE_INT)` em vez de `(int)`: `'1abc'`
   viraria 1 e inscreveria o usuário 1.
+- Pelo mesmo motivo, os ids da rota passam por `ctype_digit` antes do
+  `(int)`: `DELETE /admin/events/1/enrollments/1abc` não remove a
+  Inscrição 1. `ctype_digit` só recebe string (com `int` ele é
+  depreciado no PHP 8.1), por isso `routeId()` converte o escalar para
+  string antes; no teste de controller os ids chegam como `int`.
 - Mensagens em `base` (minúsculas, como as do `safeDestroy`), porque a
   tela mostra o erro na flash, não embaixo de um campo.
 - Select só com Participantes não inscritos: o Admin não precisa
@@ -99,7 +108,7 @@ docker compose stop selenium
 ./run db:populate
 ```
 
-Resultado obtido: Unit 170 testes, Integration 66, Acceptance 26
+Resultado obtido: Unit 170 testes, Integration 68, Acceptance 26
 (base 159 / 45 / 23). PHPCS e PHPStan sem erros; schema não mudou;
 `db:populate` sem erro.
 
@@ -148,7 +157,7 @@ mensagem.
 cd /caminho/do/seu/repositorio
 git remote add fvp-p13 <caminho>/projeto
 git fetch fvp-p13 fvp/p13-admin-inscreve-remove-participante
-git cherry-pick 40ed7e4
+git cherry-pick 32ad27a
 git remote remove fvp-p13
 ```
 
@@ -157,7 +166,7 @@ git remote remove fvp-p13
 ```
 git fetch <caminho>/solucao.bundle \
     fvp/p13-admin-inscreve-remove-participante:fvp-p13
-git cherry-pick 40ed7e4
+git cherry-pick 32ad27a
 # opcional, limpa a ref
 git branch -D fvp-p13
 ```
