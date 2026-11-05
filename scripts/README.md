@@ -39,13 +39,15 @@ scripts/06-install-docker.sh             # Docker CE + compose v2 (se faltar)
 scripts/05-check-requirements.sh         # deve ficar sem FALHA
 scripts/07-test-framework.sh             # prova que o framework roda aqui
 scripts/08-install-eventos-do-campus.sh  # nosso projeto em localhost
+scripts/14-fvp-prep.sh                   # soluções FVP como branches
 scripts/09-install-php.sh                # PHP nativo + phpcs/phpstan
 scripts/10-install-neovim.sh             # Neovim + LazyVim + PHP
 ```
 
-Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 10 nessa
-ordem (sem os opcionais 11 a 13). Depois do 06 ele roda o 05, o 07
-e o 08 dentro de `sg docker`, então não precisa relogar no meio;
+Tudo de uma vez: `scripts/00-run-all.sh` roda do 01 ao 10 e o 14
+(logo depois do 08), sem os opcionais 11 a 13 e sem o 15. Depois do
+06 ele roda o 05, o 07 e o 08 dentro de `sg docker`, então não
+precisa relogar no meio;
 faça logout/login no fim. Se um script falhar, ele para; rodar de
 novo continua de onde parou. O `-z` dele desfaz, na ordem inversa,
 só o que ele rodou.
@@ -58,7 +60,7 @@ estiver errada).
 
 | Script                            | Faz                               | sudo |
 |-----------------------------------|-----------------------------------|------|
-| `00-run-all.sh`                   | roda 01 a 10 em ordem             | sim  |
+| `00-run-all.sh`                   | roda 01 a 10 e 14 em ordem        | sim  |
 | `01-install-tools.sh`             | apt: git, curl, tmux, zsh, micro  | sim  |
 | `02-install-tmux-conf.sh`         | `~/.tmux.conf` de `files/`        | não  |
 | `03-install-ohmyzsh.sh`           | oh-my-zsh + plugin tmux, `.zshrc` | não  |
@@ -72,12 +74,14 @@ estiver errada).
 | `11-install-vscode.sh`            | opcional: VS Code + Intelephense  | sim  |
 | `12-install-intellij.sh`          | opcional: IntelliJ Community snap | sim  |
 | `13-setup-docker-rootless.sh`     | opcional: daemon rootless         | sim  |
+| `14-fvp-prep.sh`                  | soluções FVP como branches; `fvp` | não  |
+| `15-fvp-check.sh`                 | só verifica: o que aplica no main | não  |
 
 `*` usa sudo, se houver, só para o dono de `public/assets/uploads`.
 
 ### 00-run-all.sh
 
-Roda 01, 02, 03, 04, 05, 06, 05 de novo, 07, 08, 09 e 10, nessa
+Roda 01, 02, 03, 04, 05, 06, 05 de novo, 07, 08, 14, 09 e 10, nessa
 ordem, cada um com as próprias regras (sudo, senha do chsh, recusa se
 já concluiu). Não roda os opcionais 11, 12 e 13. Um script que já
 estava concluído antes é pulado e fica fora do `-z` deste. O primeiro
@@ -168,6 +172,11 @@ existir. Mostra URL e credenciais do populate
 derruba os containers, apaga volumes, imagens que não existiam antes
 e o diretório.
 
+Com `FULL=1` na frente, roda também `./run test tests/Integration` e
+`./run test:browser` (o selenium já sobe com o `./run up -d`); leva
+cerca de 1 minuto a mais. No fim, além dos comandos do projeto, lista
+os próximos passos da FVP (14, `fvp`, 15 e `fvp-aplicar`).
+
 ### 09-install-php.sh
 
 PHP fora do Docker, para lint, LSP e linha de comando. Instala com
@@ -248,6 +257,54 @@ Docker rootful (usuário no grupo docker). Este script existe para
 quem precisar do rootless por outro motivo; `05-check-requirements.sh`
 avisa quando o rootless está ativo.
 
+### 14-fvp-prep.sh
+
+Prepara a FVP sem rede. Importa cada
+`fvp/<escopo>/exemplos/<cenario>/solucao.bundle` como o branch
+`fvp/<escopo>/<cenario>` no clone do projeto (o que o 08 criou; outro:
+`EVENTOS_DIR=/caminho`) e põe no `~/.zshrc` e no `~/.bashrc` os
+atalhos `fvp` (o `fvp.sh` da raiz) e `fvp-aplicar` (o
+`fvp/aplicar.sh`). Não troca o branch atual nem mexe na árvore. Um
+branch que já existia com o mesmo nome fica como está e fora do
+`-z`. O `-z` apaga só os branches que ele criou (menos o branch
+atual, com aviso) e tira os atalhos. Para ver a solução de um
+cenário: `git log --oneline -p main..fvp/4.2/p1-codigo-checkin-aleatorio`.
+
+### 15-fvp-check.sh
+
+Só lê. Para cada cenário de chance alta ou média-alta do escopo 4.2
+(`fvp.sh -c 4.2`), simula o cherry-pick da solução contra o `main`
+ATUAL do clone do projeto e diz se aplica, conflita (com os
+arquivos), já está aplicado ou é só de README. Usa
+`fvp/aplicar.sh --dry-run`, que simula com `git merge-tree` (git 2.38
+ou mais novo; o Ubuntu 24.04 traz o 2.43): não toca branch, árvore
+nem índice. Outro escopo ou ref: `FVP_ESCOPO=4.1`, `FVP_BASE=<ref>`.
+O `-z` não tem o que desfazer.
+
+### fvp/aplicar.sh (fora de scripts/)
+
+Aplica, no branch atual do clone do projeto, a solução pronta de um
+cenário. Rode de dentro do clone: `fvp-aplicar P1` (ou
+`~/s50/fvp/aplicar.sh P1`).
+
+1. acha o exemplo do ID (`fvp/<escopo>/exemplos/<id>-...`; `--escopo`
+   se precisar escolher);
+2. lê o `solucao.bundle` (offline) e lista os commits do cenário,
+   marcando os que o branch já tem (mesmo patch, como a base de um
+   cenário empilhado), que são pulados;
+3. faz o cherry-pick dos que faltam; em conflito, desfaz tudo
+   (`--abort`), lista os arquivos e aponta a seção "Se der conflito"
+   do README do cenário;
+4. roda `./run phpcs`, `./run phpstan` e os comandos `./run` do bloco
+   "Como verificar" do README do cenário (testes, `db:populate`,
+   selenium), e mostra um resumo OK/FALHA.
+
+`--dry-run` só diz se aplica (não muda nada; `--base <ref>` testa
+contra outro ref); `--sem-testes` aplica e pula o passo 4. Precisa de
+`git config user.name` e `user.email` e de árvore sem alterações não
+commitadas. Para desfazer uma aplicação, ele imprime o
+`git reset --hard <sha>` certo.
+
 ## Como foram testados
 
 VM Ubuntu 24.04.5 minimal (clone limpo, 4 vCPU, 6 GB), usuário comum
@@ -282,3 +339,13 @@ container Ubuntu 24.04 (arm64): 09, 10 e 11 com retomada simulada e
 com nvim 0.9, `~/.config/nvim`, dados do nvim, `~/.npm`,
 `~/.config/composer` e VS Code já existentes; o `-z` devolve o que
 era do usuário e mantém, avisando, as pastas que já existiam.
+
+Os scripts da FVP (14, 15, `fvp/aplicar.sh` e o 08 com `FULL=1`)
+passaram numa VM Ubuntu 24.04 (git 2.43) com o projeto em `f31006b`:
+o 14 importou os 154 bundles em 11 s; o 15 listou os 29 cenários
+(28 aplicam, T2 só de README) em 2 s e, contra um branch com o N1,
+apontou os 6 que conflitam (N3, N4, N10, O5, P16, Q1) com os arquivos;
+`fvp-aplicar P1` aplicou e passou phpcs, phpstan, Unit, Integration e
+navegador; `fvp-aplicar N2` sobre o N1 conflitou e voltou o HEAD; o
+`-z` do 14 apagou os 154 branches e devolveu o `.bashrc` byte a byte.
+`FULL=1` no 08: 13/13 etapas (Integration 16 s, navegador 42 s).

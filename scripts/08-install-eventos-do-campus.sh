@@ -5,6 +5,8 @@
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FULL="${FULL:-0}"
 REPO_URL="${REPO_URL:-https://github.com/VitorThorvi/tsi34d-backend}"
 PROJECT_DIR="${EVENTOS_DIR:-$HOME/eventos-do-campus}"
 PORTS=(80 8080 4444 5900)
@@ -18,12 +20,15 @@ Baixa e sobe o projeto Eventos do Câmpus:
      (outro lugar: EVENTOS_DIR=/caminho $(basename "$0"))
   2. cp .env.example .env; ./run composer install; ./run up -d --build
   3. ./run db:reset; ./run db:populate; ./run codecept build
-  4. ./run test tests/Unit (tem de passar)
+  4. ./run test tests/Unit (tem de passar); com FULL=1, também
+     ./run test tests/Integration e ./run test:browser
   5. ajusta o dono de public/assets/uploads (se existir e houver sudo)
 
 Repositório padrão: https://github.com/VitorThorvi/tsi34d-backend
 Outro (fork da equipe, URL ssh...):
   REPO_URL=https://github.com/ORG/REPO $(basename "$0")
+Suíte inteira (Unit, Integration e navegador; leva alguns minutos):
+  FULL=1 $(basename "$0")
 
 Precisa de docker funcionando sem sudo e das portas ${PORTS[*]} livres.
 Se $PROJECT_DIR já existir, o script para e não toca nele.
@@ -77,6 +82,13 @@ run() {
   fi
   if (( ! failed )); then
     run_step "./run test tests/Unit" ./run test tests/Unit || failed=1
+  fi
+  if (( ! failed )) && [[ "$FULL" == 1 ]]; then
+    run_step "./run test tests/Integration" ./run test tests/Integration \
+      || failed=1
+    run_step "./run test:browser" ./run test:browser || failed=1
+  fi
+  if (( ! failed )); then
     run_step "Dono de public/assets/uploads" fix_uploads_owner || true
   fi
 
@@ -99,6 +111,12 @@ run() {
   info "  ./run test tests/Unit    testes unitários"
   info "  ./run phpcs              estilo;  ./run phpstan  análise"
   info "  ./run db:reset && ./run db:populate   recriar o banco"
+  info
+  info "Próximos passos FVP (detalhes: scripts/README.md, seção FVP):"
+  info "  $SCRIPTS_DIR/14-fvp-prep.sh   soluções como branches; atalhos"
+  info "  fvp -c 4.2               cenários por chance (fvp.sh)"
+  info "  $SCRIPTS_DIR/15-fvp-check.sh  quais aplicam no seu main"
+  info "  fvp-aplicar --dry-run P1   testa; fvp-aplicar P1 aplica e testa"
 }
 
 undo() {
