@@ -1,4 +1,4 @@
-From fb395890cb0675e9c817f23647c858ba824c5667 Mon Sep 17 00:00:00 2001
+From 0f76294287f6218abdde980539f8d1c3decc8eee Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:10:29 -0300
 Subject: [PATCH] feat: Add comments to events
@@ -323,7 +323,7 @@ index 0000000..9086652
 +
 +<?php require __DIR__ . '/_comments.phtml'; ?>
 diff --git a/config/routes.php b/config/routes.php
-index 9ee0c90..8a21917 100644
+index 9ee0c90..1e26fff 100644
 --- a/config/routes.php
 +++ b/config/routes.php
 @@ -3,7 +3,9 @@
@@ -340,7 +340,7 @@ index 9ee0c90..8a21917 100644
  Route::middleware('auth')->group(function () {
      Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
  
-+    // Tela do Evento e comentários (P10): qualquer usuário logado vê e comenta.
++    // Tela do Evento e comentários: qualquer usuário logado vê e comenta.
 +    Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
 +    Route::post('/events/{id}/comments', [CommentsController::class, 'create'])->name('events.comments.create');
 +
@@ -348,7 +348,7 @@ index 9ee0c90..8a21917 100644
      Route::middleware('admin')->group(function () {
          Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
 diff --git a/database/Populate/populate.php b/database/Populate/populate.php
-index e383040..f9e1990 100644
+index e383040..7661730 100644
 --- a/database/Populate/populate.php
 +++ b/database/Populate/populate.php
 @@ -2,6 +2,7 @@
@@ -364,7 +364,7 @@ index e383040..f9e1990 100644
  
  echo "$total Inscrições criadas em " . count($enrollments) . " Eventos\n";
 +
-+// Comentários (P10): índice do Evento => [índice do autor (null = Administrador), texto].
++// Comentários: índice do Evento => [índice do autor (null = Administrador), texto].
 +$comments = [
 +    0 => [[0, 'Haverá certificado de participação?'], [null, 'Sim, enviado por e-mail ao fim da semana.']],
 +    1 => [[1, 'A palestra ficará gravada?']],
@@ -388,7 +388,7 @@ index e383040..f9e1990 100644
 +
 +echo "$totalComments Comentários criados em " . count($comments) . " Eventos\n";
 diff --git a/database/schema.sql b/database/schema.sql
-index fe7f1d6..27f2fb1 100644
+index fe7f1d6..fd0da9f 100644
 --- a/database/schema.sql
 +++ b/database/schema.sql
 @@ -1,5 +1,6 @@
@@ -402,7 +402,7 @@ index fe7f1d6..27f2fb1 100644
          ON DELETE RESTRICT ON UPDATE CASCADE
  );
  
-+-- Comentário: filho 1xN de events (P10). Ao remover o Evento, os comentários vão junto (CASCADE).
++-- Comentário: filho 1xN de events. Ao remover o Evento, os comentários vão junto (CASCADE).
 +CREATE TABLE comments (
 +    id         INT AUTO_INCREMENT PRIMARY KEY,
 +    event_id   INT NOT NULL,
@@ -444,7 +444,7 @@ index f456148..ef008be 100644
       */
 diff --git a/tests/Acceptance/events/CommentsCest.php b/tests/Acceptance/events/CommentsCest.php
 new file mode 100644
-index 0000000..b44ac22
+index 0000000..0439aec
 --- /dev/null
 +++ b/tests/Acceptance/events/CommentsCest.php
 @@ -0,0 +1,79 @@
@@ -457,7 +457,7 @@ index 0000000..b44ac22
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P10: Participante comenta na tela do Evento (/events/{id}); o Administrador vê o comentário
++ * Participante comenta na tela do Evento (/events/{id}); o Administrador vê o comentário
 + * no show da Área Administrativa e também pode comentar.
 + */
 +class CommentsCest extends BaseEventsCest

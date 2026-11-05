@@ -7,7 +7,7 @@ use Tests\Acceptance\admin\events\BaseEventsCest;
 use Tests\Support\AcceptanceTester;
 
 /**
- * P10: Participante comenta na tela do Evento (/events/{id}); o Administrador vê o comentário
+ * Participante comenta na tela do Evento (/events/{id}); o Administrador vê o comentário
  * no show da Área Administrativa e também pode comentar.
  */
 class CommentsCest extends BaseEventsCest

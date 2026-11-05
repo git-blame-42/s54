@@ -20,7 +20,7 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
-    // Tela do Evento e comentários (P10): qualquer usuário logado vê e comenta.
+    // Tela do Evento e comentários: qualquer usuário logado vê e comenta.
     Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
     Route::post('/events/{id}/comments', [CommentsController::class, 'create'])->name('events.comments.create');
 

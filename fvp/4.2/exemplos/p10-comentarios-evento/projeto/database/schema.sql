@@ -53,7 +53,7 @@ CREATE TABLE event_user (
         ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- Comentário: filho 1xN de events (P10). Ao remover o Evento, os comentários vão junto (CASCADE).
+-- Comentário: filho 1xN de events. Ao remover o Evento, os comentários vão junto (CASCADE).
 CREATE TABLE comments (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     event_id   INT NOT NULL,

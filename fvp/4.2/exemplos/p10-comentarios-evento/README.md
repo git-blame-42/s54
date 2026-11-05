@@ -14,7 +14,7 @@ Branch no clone: `fvp/p10-comentarios-evento`, a partir de `main`
 
 | Commit    | Mensagem                       |
 |-----------|--------------------------------|
-| `fb39589` | `feat: Add comments to events` |
+| `0f76294` | `feat: Add comments to events` |
 
 ## O que mudou
 
@@ -167,7 +167,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p10 \
     s50/fvp/4.2/exemplos/p10-comentarios-evento/projeto
 git fetch fvp-p10 fvp/p10-comentarios-evento
-git cherry-pick fb39589
+git cherry-pick 0f76294
 git remote remove fvp-p10
 ```
 
@@ -178,7 +178,7 @@ git fetch \
     s50/fvp/4.2/exemplos/p10-comentarios-evento/solucao.bundle \
     fvp/p10-comentarios-evento:fvp-p10
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick fb39589
+git cherry-pick 0f76294
 # opcional, limpa a ref
 git branch -D fvp-p10
 ```

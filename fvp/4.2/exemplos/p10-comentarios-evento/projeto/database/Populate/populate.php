@@ -179,7 +179,7 @@ foreach ($enrollments as $eventIndex => $participantIndexes) {
 
 echo "$total Inscrições criadas em " . count($enrollments) . " Eventos\n";
 
-// Comentários (P10): índice do Evento => [índice do autor (null = Administrador), texto].
+// Comentários: índice do Evento => [índice do autor (null = Administrador), texto].
 $comments = [
     0 => [[0, 'Haverá certificado de participação?'], [null, 'Sim, enviado por e-mail ao fim da semana.']],
     1 => [[1, 'A palestra ficará gravada?']],
