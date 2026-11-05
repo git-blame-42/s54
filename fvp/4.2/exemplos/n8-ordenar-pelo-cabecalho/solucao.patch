@@ -1,0 +1,664 @@
+From e49c968ed5e35a0529c4ede1969d2d954722e4c4 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:51:55 -0300
+Subject: [PATCH] feat: Sort events listing by clicking the table header
+
+Paginator and Model::paginate accept an ORDER BY clause built from a closed list of columns and extra query params kept in the page links.
+---
+ app/Controllers/Admin/EventsController.php    |  10 +-
+ app/Models/Event.php                          |  35 +++++
+ app/views/admin/events/index.phtml            |  26 +++-
+ app/views/paginator/_pages.phtml              |  10 +-
+ core/Database/ActiveRecord/Model.php          |  17 ++-
+ lib/Paginator.php                             |  20 ++-
+ .../admin/events/BaseEventsCest.php           |   4 +-
+ .../admin/events/CreateSuccessfullyCest.php   |   8 +-
+ .../admin/events/SortEventsCest.php           |  60 +++++++++
+ .../Admin/EventsControllerTest.php            | 123 ++++++++++++++++++
+ tests/Unit/Lib/PaginatorTest.php              | 111 ++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        |  19 +++
+ 12 files changed, 426 insertions(+), 17 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/SortEventsCest.php
+ create mode 100644 tests/Unit/Lib/PaginatorTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..c4bccc8 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,15 +15,21 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
++        [$sort, $dir] = Event::normalizeSort($request->getParam('sort'), $request->getParam('dir'));
++        $isDefaultSort = $sort === Event::DEFAULT_SORT && $dir === Event::DEFAULT_DIR;
++
+         $paginator = Event::paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+             per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
++            route: 'admin.events.paginate',
++            orderBy: Event::orderByClause($sort, $dir),
++            // Mantém a ordenação nos links de página (a padrão não precisa ir na URL).
++            queryParams: $isDefaultSort ? [] : ['sort' => $sort, 'dir' => $dir]
+         );
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'title', 'sort', 'dir'));
+     }
+ 
+     public function show(Request $request): void
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..b4f2ed7 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -44,6 +44,16 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Colunas pelas quais a listagem pode ser ordenada (lista fechada), com o rótulo do cabeçalho. */
++    public const SORTABLE = [
++        'title' => 'Título',
++        'starts_on' => 'Data',
++        'capacity' => 'Vagas',
++    ];
++
++    public const DEFAULT_SORT = 'starts_on';
++    public const DEFAULT_DIR = 'asc';
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -114,6 +124,31 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Ordenação pedida pela listagem, validada contra a lista fechada. Valor inválido cai no padrão.
++     *
++     * @return array{string, string} [coluna, direção]
++     */
++    public static function normalizeSort(mixed $sort, mixed $dir): array
++    {
++        $sort = is_string($sort) && array_key_exists($sort, self::SORTABLE) ? $sort : self::DEFAULT_SORT;
++        $dir = $dir === 'asc' || $dir === 'desc' ? $dir : self::DEFAULT_DIR;
++
++        return [$sort, $dir];
++    }
++
++    /**
++     * Cláusula ORDER BY para o Paginator. Só monta SQL com valores da lista fechada; o id desempata
++     * (sempre crescente) para a ordem não mudar entre páginas.
++     */
++    public static function orderByClause(mixed $sort, mixed $dir): string
++    {
++        [$sort, $dir] = self::normalizeSort($sort, $dir);
++        $direction = $dir === 'desc' ? 'DESC' : 'ASC';
++
++        return "{$sort} {$direction}, id ASC";
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..4c8675a 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,3 +1,21 @@
++<?php
++use App\Models\Event;
++
++/**
++ * Cabeçalho ordenável: link para ordenar pela coluna; clicar de novo na coluna ativa inverte a direção.
++ *
++ * @var string $sort
++ * @var string $dir
++ */
++$sortHeader = function (string $column) use ($sort, $dir): string {
++    $active = $column === $sort;
++    $nextDir = $active && $dir === 'asc' ? 'desc' : 'asc';
++    $arrow = $active ? ($dir === 'asc' ? ' ▲' : ' ▼') : '';
++    $url = route('admin.events.index', ['sort' => $column, 'dir' => $nextDir]);
++
++    return '<a class="link-dark" href="' . htmlspecialchars($url) . '">' . Event::SORTABLE[$column] . $arrow . '</a>';
++};
++?>
+ <div class="mb-3">
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+@@ -8,11 +26,11 @@
+     <table class="table table-striped align-middle">
+         <thead>
+             <tr>
+-                <th>Título</th>
++                <th><?= $sortHeader('title') ?></th>
+                 <th>Tipo</th>
+-                <th>Data</th>
++                <th><?= $sortHeader('starts_on') ?></th>
+                 <th>Local</th>
+-                <th>Vagas</th>
++                <th><?= $sortHeader('capacity') ?></th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -20,7 +38,7 @@
+             <?php foreach ($events as $event) : ?>
+                 <tr>
+                     <td><?= htmlspecialchars($event->title) ?></td>
+-                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                    <td><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..725dcc2 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -1,9 +1,13 @@
++<?php
++// URL de cada link: a página mais os parâmetros extras guardados no Paginator (ex.: sort e dir).
++$pageUrl = fn (int $p) => route($paginator->getRouteName(), array_merge(['page' => $p], $paginator->queryParams()));
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +17,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..6a9f2df 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -281,15 +281,26 @@ abstract class Model
+         return $models;
+     }
+ 
+-    public static function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
+-    {
++    /**
++     * @param string|null $orderBy cláusula ORDER BY montada pelo código (nunca com valor da requisição)
++     * @param array<string, mixed> $queryParams parâmetros extras mantidos nos links de página
++     */
++    public static function paginate(
++        int $page = 1,
++        int $per_page = 10,
++        string $route = null,
++        ?string $orderBy = null,
++        array $queryParams = []
++    ): Paginator {
+         return new Paginator(
+             class: static::class,
+             page: $page,
+             per_page: $per_page,
+             table: static::$table,
+             attributes: static::$columns,
+-            route: $route
++            route: $route,
++            orderBy: $orderBy,
++            queryParams: $queryParams
+         );
+     }
+ 
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..5682a30 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -15,6 +15,11 @@ class Paginator
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions
++     * @param string|null $orderBy cláusula ORDER BY montada pelo código (lista fechada), nunca pela requisição
++     * @param array<string, mixed> $queryParams parâmetros extras repassados aos links de página (ex.: sort, dir)
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,7 +27,9 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private ?string $orderBy = null,
++        private array $queryParams = []
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -38,6 +45,14 @@ class Paginator
+         return $this->per_page;
+     }
+ 
++    /**
++     * @return array<string, mixed>
++     */
++    public function queryParams(): array
++    {
++        return $this->queryParams;
++    }
++
+     public function totalOfRegistersOfPage(): int
+     {
+         return $this->totalOfRegistersOfPage;
+@@ -120,10 +135,13 @@ class Paginator
+         $this->offset = $this->per_page * ($this->page - 1);
+ 
+         $attributes = implode(', ', $this->attributes);
++        // ORDER BY não aceita bind: $orderBy vem sempre do código, nunca da requisição.
++        $order = $this->orderBy !== null ? "ORDER BY {$this->orderBy}" : '';
+ 
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$order}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..89f334e 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -71,8 +71,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+     }
+ 
+     /**
+-     * Cria os Eventos em ordem de data crescente. A listagem segue a ordem do banco (id), sem ORDER BY
+-     * (contrato-ui-eventos.md), então aqui a ordem de id coincide com a de starts_on, como no populate.
++     * Cria os Eventos em ordem de data crescente. A listagem é ordenada por starts_on por padrão (desempate
++     * por id), e aqui a ordem de id coincide com a de data, como no populate.
+      */
+     private function seedEvents(): void
+     {
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..da15bd8 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -29,9 +29,13 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+-        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
++        // A listagem é ordenada por data por padrão (N8): o Evento novo (amanhã) é o mais próximo e abre
++        // a 1ª página, antes do Evento 01 (hoje + 14 dias). Sem ORDER BY ele ficaria no fim (4ª página).
++        $page->amOnPage('/admin/events');
++        $page->see($data['title'], 'table tbody tr:first-child');
++        $page->see('Mostrando 1 - 5 de 17');
+         $page->amOnPage('/admin/events/page/4');
+-        $page->see($data['title'], 'table');
++        $page->dontSee($data['title'], 'table');
+         $page->see('Mostrando 16 - 17 de 17');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+diff --git a/tests/Acceptance/admin/events/SortEventsCest.php b/tests/Acceptance/admin/events/SortEventsCest.php
+new file mode 100644
+index 0000000..875cd84
+--- /dev/null
++++ b/tests/Acceptance/admin/events/SortEventsCest.php
+@@ -0,0 +1,60 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Ordenar a listagem clicando no cabeçalho. Base: "Evento 01".."Evento 16", datas crescentes,
++ * vagas 3 (Evento 01) e 20 + N (demais).
++ */
++class SortEventsCest extends BaseEventsCest
++{
++    public function sortByTitleClickingTheHeaderAndKeepItOnPage2(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ordenar por título clicando no cabeçalho e manter a ordem na página 2');
++        $page->amOnPage('/admin/events');
++        $page->see('Data ▲', 'thead');
++
++        $page->click('Título', 'thead');
++        $page->seeCurrentUrlEquals('/admin/events?sort=title&dir=asc');
++        $page->see('Título ▲', 'thead');
++        $page->see($this->title(1), 'table tbody tr:first-child');
++
++        // Clicar de novo na coluna ativa inverte a direção.
++        $page->click('Título ▲', 'thead');
++        $page->seeCurrentUrlEquals('/admin/events?sort=title&dir=desc');
++        $page->see('Título ▼', 'thead');
++        $page->see($this->title(16), 'table tbody tr:first-child');
++        $page->dontSee($this->title(11), 'table');
++
++        $page->click('2', '.pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/2?sort=title&dir=desc');
++        $page->see('Título ▼', 'thead');
++        $page->see($this->title(11), 'table tbody tr:first-child');
++        $page->see($this->title(7), 'table tbody tr:last-child');
++    }
++
++    public function sortByCapacity(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ordenar por vagas');
++        $page->amOnPage('/admin/events');
++
++        $page->click('Vagas', 'thead');
++        $page->see('Vagas ▲', 'thead');
++        $page->see($this->title(1), 'table tbody tr:first-child');
++
++        $page->click('Vagas ▲', 'thead');
++        $page->see('Vagas ▼', 'thead');
++        $page->see($this->title(16), 'table tbody tr:first-child');
++    }
++
++    public function invalidSortFallsBackToDate(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ordenação inválida na URL cai no padrão (data crescente)');
++        $page->amOnPage('/admin/events?sort=password&dir=sideways');
++
++        $page->see('Data ▲', 'thead');
++        $page->see($this->title(1), 'table tbody tr:first-child');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..4ca1c50 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,129 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    /* ------------------- N8: ordenar pelo cabeçalho ------------------- */
++
++    /**
++     * Confere que os textos aparecem na resposta nesta ordem.
++     *
++     * @param array<int, string> $texts
++     */
++    private function assertInOrder(string $response, array $texts): void
++    {
++        $previous = -1;
++        foreach ($texts as $text) {
++            $position = strpos($response, $text);
++            $this->assertNotFalse($position, "{$text} não aparece");
++            $this->assertGreaterThan($previous, $position, "{$text} fora de ordem");
++            $previous = $position;
++        }
++    }
++
++    private function createSortableEvents(): void
++    {
++        // [título, dias a partir de hoje, vagas], cadastrados fora de qualquer ordem.
++        foreach ([['Delta', 4, 30], ['Alfa', 2, 50], ['Charlie', 1, 10], ['Bravo', 3, 40]] as [$title, $days, $capacity]) {
++            $this->createEvent([
++                'title' => $title,
++                'starts_on' => date('Y-m-d', strtotime("+{$days} days")),
++                'capacity' => (string) $capacity,
++            ]);
++        }
++    }
++
++    public function test_index_orders_by_starts_on_asc_by_default(): void
++    {
++        $this->createSortableEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertInOrder($response, ['Charlie', 'Alfa', 'Bravo', 'Delta']);
++        $this->assertStringContainsString('Data ▲', $response);
++    }
++
++    public function test_index_orders_by_title_asc_and_desc(): void
++    {
++        $this->createSortableEvents();
++
++        $asc = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'title', 'dir' => 'asc']);
++        $desc = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'title', 'dir' => 'desc']);
++
++        $this->assertInOrder($asc, ['Alfa', 'Bravo', 'Charlie', 'Delta']);
++        $this->assertStringContainsString('Título ▲', $asc);
++        $this->assertInOrder($desc, ['Delta', 'Charlie', 'Bravo', 'Alfa']);
++        $this->assertStringContainsString('Título ▼', $desc);
++    }
++
++    public function test_index_orders_by_capacity_desc(): void
++    {
++        $this->createSortableEvents();
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['sort' => 'capacity', 'dir' => 'desc']
++        );
++
++        $this->assertInOrder($response, ['Alfa', 'Bravo', 'Delta', 'Charlie']);
++    }
++
++    public function test_index_with_invalid_sort_falls_back_to_default(): void
++    {
++        $this->createSortableEvents();
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['sort' => 'title; DROP TABLE events', 'dir' => 'sideways']
++        );
++
++        $this->assertInOrder($response, ['Charlie', 'Alfa', 'Bravo', 'Delta']);
++        $this->assertStringContainsString('Data ▲', $response);
++        $this->assertCount(4, Event::all());
++    }
++
++    public function test_index_header_links_toggle_the_direction_of_the_active_column(): void
++    {
++        $this->createSortableEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'title', 'dir' => 'asc']);
++
++        $this->assertStringContainsString('href="/admin/events?sort=title&amp;dir=desc"', $response);
++        $this->assertStringContainsString('href="/admin/events?sort=starts_on&amp;dir=asc"', $response);
++        $this->assertStringContainsString('href="/admin/events?sort=capacity&amp;dir=asc"', $response);
++    }
++
++    public function test_index_keeps_sort_in_the_page_links(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['sort' => 'title', 'dir' => 'desc']);
++        $page2 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['sort' => 'title', 'dir' => 'desc', 'page' => 2]
++        );
++
++        $this->assertStringContainsString('href="/admin/events/page/2?sort=title&dir=desc"', $page1);
++        // Desc: 7, 6, 5, 4, 3 na página 1; 2 e 1 na página 2.
++        $this->assertInOrder($page1, ['Evento 7', 'Evento 6', 'Evento 5', 'Evento 4', 'Evento 3']);
++        $this->assertStringNotContainsString('Evento 2', $page1);
++        $this->assertInOrder($page2, ['Evento 2', 'Evento 1']);
++    }
++
++    public function test_index_with_default_sort_keeps_page_links_without_query(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('href="/admin/events/page/2"', $response);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Lib/PaginatorTest.php b/tests/Unit/Lib/PaginatorTest.php
+new file mode 100644
+index 0000000..4b660eb
+--- /dev/null
++++ b/tests/Unit/Lib/PaginatorTest.php
+@@ -0,0 +1,111 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use App\Models\Event;
++use App\Models\User;
++use Core\Constants\Constants;
++use Core\Router\Router;
++use Tests\TestCase;
++
++class PaginatorTest extends TestCase
++{
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        // Os links de página usam route(): carrega as rotas, como o ControllerTestCase.
++        Router::reset();
++        require Constants::rootPath()->join('config/routes.php');
++
++        $this->admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $this->admin->save();
++
++        // Cadastrados fora da ordem alfabética: a ordem de id não coincide com a de título.
++        foreach (['Delta', 'Alfa', 'Eco', 'Charlie', 'Bravo'] as $title) {
++            $event = new Event([
++                'user_id' => $this->admin->id,
++                'title' => $title,
++                'description' => 'Descrição.',
++                'kind' => 'lecture',
++                'modality' => 'in_person',
++                'audience' => 'students',
++                'starts_on' => date('Y-m-d', strtotime('+10 days')),
++                'location' => 'Sala 1',
++                'capacity' => 10,
++            ]);
++            $event->save();
++        }
++    }
++
++    /**
++     * @param array<int, Event> $events
++     * @return array<int, string>
++     */
++    private function titles(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_without_order_by_should_keep_the_database_order(): void
++    {
++        $paginator = Event::paginate(1, 3);
++
++        $this->assertSame(['Delta', 'Alfa', 'Eco'], $this->titles($paginator->registers()));
++    }
++
++    public function test_order_by_should_be_applied_before_the_limit(): void
++    {
++        $page1 = Event::paginate(1, 3, orderBy: 'title ASC, id ASC');
++        $page2 = Event::paginate(2, 3, orderBy: 'title ASC, id ASC');
++
++        $this->assertSame(['Alfa', 'Bravo', 'Charlie'], $this->titles($page1->registers()));
++        $this->assertSame(['Delta', 'Eco'], $this->titles($page2->registers()));
++        $this->assertEquals(5, $page1->totalOfRegisters());
++    }
++
++    public function test_order_by_desc(): void
++    {
++        $paginator = Event::paginate(1, 2, orderBy: 'title DESC, id ASC');
++
++        $this->assertSame(['Eco', 'Delta'], $this->titles($paginator->registers()));
++    }
++
++    public function test_query_params_should_default_to_empty(): void
++    {
++        $this->assertSame([], Event::paginate(1, 3)->queryParams());
++    }
++
++    public function test_query_params_should_be_kept_in_the_page_links(): void
++    {
++        $paginator = Event::paginate(
++            1,
++            2,
++            'admin.events.paginate',
++            'title DESC, id ASC',
++            ['sort' => 'title', 'dir' => 'desc']
++        );
++
++        $this->assertSame(['sort' => 'title', 'dir' => 'desc'], $paginator->queryParams());
++
++        $html = $this->getOutput(fn() => $paginator->renderPagesNavigation());
++
++        $this->assertStringContainsString('href="/admin/events/page/2?sort=title&dir=desc"', $html);
++        $this->assertStringContainsString('href="/admin/events/page/3?sort=title&dir=desc"', $html);
++    }
++
++    public function test_page_links_without_query_params_stay_unchanged(): void
++    {
++        $html = $this->getOutput(fn() => Event::paginate(1, 2, 'admin.events.paginate')->renderPagesNavigation());
++
++        $this->assertStringContainsString('href="/admin/events/page/2"', $html);
++        $this->assertStringNotContainsString('?', $html);
++    }
++}
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..3cce164 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,25 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    /* ------------------- N8: ordenação da listagem ------------------- */
++
++    public function test_normalize_sort_should_accept_only_the_allowed_columns_and_directions(): void
++    {
++        $this->assertSame(['title', 'desc'], Event::normalizeSort('title', 'desc'));
++        $this->assertSame(['capacity', 'asc'], Event::normalizeSort('capacity', 'asc'));
++        $this->assertSame(['starts_on', 'asc'], Event::normalizeSort(null, null));
++        $this->assertSame(['starts_on', 'asc'], Event::normalizeSort('description', 'desc; DROP TABLE events'));
++        $this->assertSame(['starts_on', 'asc'], Event::normalizeSort('id; DROP TABLE events', 'up'));
++        $this->assertSame(['starts_on', 'asc'], Event::normalizeSort(['title'], ['desc']));
++        $this->assertSame(['title', 'asc'], Event::normalizeSort('title', 'DESC'));
++    }
++
++    public function test_order_by_clause_should_break_ties_by_id(): void
++    {
++        $this->assertSame('title DESC, id ASC', Event::orderByClause('title', 'desc'));
++        $this->assertSame('starts_on ASC, id ASC', Event::orderByClause('1=1', 'x'));
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+

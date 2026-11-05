@@ -93,6 +93,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N7. Painel administrativo com resumo
   `n7-painel-resumo/`
   - feat: Show event summary on the admin dashboard
+- N8. Ordenar clicando no cabeçalho
+  `n8-ordenar-pelo-cabecalho/`
+  - feat: Sort events listing by clicking the table header
 - N9. Filtro por período (de/até) validado, mantido na paginação
   `n9-filtro-por-periodo/`
   - feat: Filter events by period keeping it in pagination
