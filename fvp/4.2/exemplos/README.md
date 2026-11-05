@@ -195,6 +195,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `q2-bloquear-passado-cancelado/`
   - feat: Add Event status with cancel and finish actions
   - feat: Block editing and removing past or canceled Events
+- Q3. Ação só para Participante: admin não se inscreve
+  `q3-acao-so-participante/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Restrict enrollment to participants
 - Q4. Perfil Organizador
   `q4-perfil-organizador/`
   - feat: Add organizer role with its own events area
