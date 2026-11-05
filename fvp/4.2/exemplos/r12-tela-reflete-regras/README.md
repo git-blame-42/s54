@@ -14,8 +14,14 @@ Branch no clone: `fvp/r12-tela-reflete-regras`, a partir de `main`
 |-----------|---------------------------------------------------------|
 | `7505f60` | `feat: Reflect enrollment rules in the events screens`  |
 
-Corpo do commit: `Event::isRemovable` (mesma regra do `safeDestroy`)
-e `Event::minCapacity`; as regras do servidor continuam no model.
+Corpo do commit:
+
+```
+Hide the Remove button of events with enrollments (Event::isRemovable,
+same rule as safeDestroy) and set the capacity field minimum to the
+enrollments count (Event::minCapacity), with a hint when there are
+enrollments. The server-side rules stay in the model.
+```
 
 ## O que mudou
 
