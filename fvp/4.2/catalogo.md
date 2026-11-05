@@ -687,6 +687,8 @@ inalterados para o usuário.
 
 Chance: média. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m9-slug-unico-gerado`.
+
 Pedido típico: "o Evento ganha um identificador legível (`slug`) gerado
 a partir do título, único, usado na URL `/events/{slug}`". Mesmo padrão
 de P1 (valor gerado e validado no servidor), com texto em vez de número.
@@ -748,6 +750,8 @@ abre o detalhe e o admin vê a URL no `show`.
 ### M10. Campo que não muda depois de haver inscrições
 
 Chance: média. Tempo: 15-25 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m10-campo-imutavel-com-inscricoes`.
 
 Pedido típico: "depois que alguém se inscreve, a data (ou o tipo, ou a
 modalidade) do Evento não pode mais mudar". Regra entre o registro
@@ -811,6 +815,8 @@ populate (3 inscritos) não aceita nova data.
 ### M11. Validar `user_id` no model
 
 Chance: média. Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m11-validar-user-id`.
 
 Pedido típico: "o Evento só pode pertencer a um usuário existente e
 administrador; hoje um `user_id` inválido estoura a FK (500)".
@@ -1361,6 +1367,8 @@ Prova: teste de controller; o primeiro Evento mostra "Lotado".
 
 Chance: média. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n7-painel-resumo`.
+
 Pedido típico: "no painel administrativo mostre quantos Eventos há por
 tipo, os próximos três e o total de Inscrições" (agregação no model).
 
@@ -1538,6 +1546,8 @@ depois digitar uma data inválida.
 
 Chance: média-alta. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n10-pagina-id-invalido`.
+
 Pedido típico: "`/admin/events/page/abc` e `/admin/events/page/999` não
 podem mostrar lixo; `/admin/events/abc/edit` não pode virar `id = 0`
 por mágica" (issue 4.2 do grupo 5: conversão silenciosa com `(int)`).
@@ -1612,6 +1622,8 @@ Prova: `EventsControllerTest`, `PaginateEventsCest`; no navegador,
 ### N11. `Model::count()` no framework
 
 Chance: média. Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/n11-model-count`.
 
 Pedido típico: "a listagem faz uma consulta por linha para contar
 inscritos (`count(Enrollment::where(...))`); crie `count()` no
@@ -2043,6 +2055,8 @@ Prova: teste de controller;
 ### O5. Admin vê e lista só os próprios Eventos
 
 Chance: média-alta. Tempo: 15-25 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/o5-admin-lista-so-proprios`.
 
 Pedido típico: "cada Administrador só enxerga e cadastra os Eventos
 dele" (Q1 fecha editar/remover; aqui a listagem e a criação). Usa
@@ -3457,6 +3471,8 @@ em `localhost/events/2/enrollments`.
 
 Chance: média-alta. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p16-remover-com-codigo-confirmacao`.
+
 Pedido típico: "para remover um Evento o sistema mostra um código de 4
 dígitos gerado na hora; o admin digita o código e só então a remoção
 acontece". É a FVP real da 4.1 (P12) aplicada à remoção.
@@ -4158,6 +4174,8 @@ Prova: Cest ajustado; navegador.
 
 Chance: média. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r5-created-updated-at`.
+
 Pedido típico: "mostre quando o Evento foi cadastrado e alterado pela
 última vez". As colunas existem (`SCH:32-33`) mas não estão em
 `$columns`, então o ActiveRecord nem as lê.
@@ -4174,7 +4192,7 @@ Passos:
 1. Testes: `EVT`: após `save()`, `timestamps()` devolve `created_at` e
    `updated_at` não nulos e iguais; após `update(...)`, `updated_at`
    muda (ou, sem esperar 1 s, só confira que não é nulo). `ECT`: `show`
-   contém "Cadastrado em".
+   contém "Criado em".
 2. Forma 1 (SQL no model, sem mexer em `$columns`):
 
    ```php
@@ -4201,7 +4219,14 @@ Passos:
    em `Model`, incluído no `SELECT` de `findById`/`all`/`where`/`Paginator`
    mas excluído do `INSERT`/`UPDATE`; `Event::$readOnly = ['created_at',
    'updated_at']`. Mais trabalho, elimina a consulta extra.
-4. `SHOW`: "Cadastrado em dd/mm/aaaa hh:mm" e "Alterado em ...";
+   Forma 3 (a do exemplo pronto, sem consulta extra nem mudança no core):
+   as duas colunas entram em `$columns` e `Event` sobrescreve `save()`
+   (`created_at = date('Y-m-d H:i:s')` só se `newRecord()`, `updated_at`
+   sempre; se `parent::save()` falhar, restaura os dois valores) e
+   `update(array $data)` (acrescenta `updated_at` se não vier). Nada vai
+   `NULL`, e a hora é a do PHP em tudo, como `last_login_at`. No
+   `EVT`, prove que a edição muda `updated_at` e mantém `created_at`.
+4. `SHOW`: "Criado em dd/mm/aaaa hh:mm" e "Atualizado em ...";
    formate com `DateTimeImmutable` (R3).
 
 Armadilhas:
@@ -4210,7 +4235,8 @@ Armadilhas:
   e o MySQL 8 (`explicit_defaults_for_timestamp` ligado) recusa
   `NOT NULL`; preencher no construtor com `date()` funciona, mas então
   `updated_at` para de atualizar sozinho (o `UPDATE` reenvia o valor
-  antigo e o `ON UPDATE` só age quando a coluna não é escrita).
+  antigo e o `ON UPDATE` só age quando a coluna não é escrita). A
+  Forma 3 resolve isso preenchendo `updated_at` em `save()`/`update()`.
 - Fuso: `TIMESTAMP` é convertido pelo fuso da sessão do MySQL (UTC no
   contêiner) e o PHP está em São Paulo: a hora exibida pode vir 3 h
   "adiantada" em relação a `last_login_at` (gravado por `date()` do PHP,
