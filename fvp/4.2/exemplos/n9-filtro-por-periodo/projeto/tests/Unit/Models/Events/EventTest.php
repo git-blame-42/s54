@@ -682,7 +682,7 @@ class EventTest extends TestCase
         $event->destroy();
     }
 
-    /* ------------------- filtro por período (N9) ------------------- */
+    /* ------------------- filtro por período ------------------- */
 
     private function day(int $days): string
     {

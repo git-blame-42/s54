@@ -13,7 +13,7 @@ Branch no clone: `fvp/n9-filtro-por-periodo`, a partir de `main`
 
 | Commit | Mensagem |
 |--------|----------|
-| `3133ba9` | `feat: Filter events by period keeping it in pagination` |
+| `5c58645` | `feat: Filter events by period keeping it in pagination` |
 
 ## O que mudou
 
@@ -150,7 +150,7 @@ abaixo: `s50/fvp/4.2/exemplos/n9-filtro-por-periodo`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-n9 s50/fvp/4.2/exemplos/n9-filtro-por-periodo/projeto
 git fetch fvp-n9 fvp/n9-filtro-por-periodo
-git cherry-pick 3133ba9
+git cherry-pick 5c58645
 git remote remove fvp-n9
 ```
 
@@ -159,7 +159,7 @@ git remote remove fvp-n9
 ```
 git fetch s50/fvp/4.2/exemplos/n9-filtro-por-periodo/solucao.bundle \
     fvp/n9-filtro-por-periodo:fvp-n9
-git cherry-pick 3133ba9
+git cherry-pick 5c58645
 # opcional, limpa a ref
 git branch -D fvp-n9
 ```

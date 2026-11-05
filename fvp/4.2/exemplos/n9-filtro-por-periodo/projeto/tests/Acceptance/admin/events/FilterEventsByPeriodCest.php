@@ -5,7 +5,7 @@ namespace Tests\Acceptance\admin\events;
 use Tests\Support\AcceptanceTester;
 
 /**
- * N9: filtro da listagem por período (de/até), mantido na paginação.
+ * Filtro da listagem por período (de/até), mantido na paginação.
  * No BaseEventsCest o "Evento NN" começa em hoje + (13 + NN) dias.
  */
 class FilterEventsByPeriodCest extends BaseEventsCest

@@ -1,4 +1,4 @@
-From 3133ba963394a56ff0ad479ca00382dd4d1ac9a6 Mon Sep 17 00:00:00 2001
+From 5c58645bfd398d7f5f541e481d919818146a9f2f Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:51:42 -0300
 Subject: [PATCH] feat: Filter events by period keeping it in pagination
@@ -318,7 +318,7 @@ index 065ee46..1e0f9da 100644
  }
 diff --git a/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php b/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php
 new file mode 100644
-index 0000000..50cb8e2
+index 0000000..0b1fbdf
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php
 @@ -0,0 +1,76 @@
@@ -329,7 +329,7 @@ index 0000000..50cb8e2
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * N9: filtro da listagem por período (de/até), mantido na paginação.
++ * Filtro da listagem por período (de/até), mantido na paginação.
 + * No BaseEventsCest o "Evento NN" começa em hoje + (13 + NN) dias.
 + */
 +class FilterEventsByPeriodCest extends BaseEventsCest
@@ -541,7 +541,7 @@ index bc62d1d..a8111e7 100644
      {
          $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..1fc1b09 100644
+index f961b4c..308b138 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -681,4 +681,73 @@ class EventTest extends TestCase
@@ -549,7 +549,7 @@ index f961b4c..1fc1b09 100644
          $event->destroy();
      }
 +
-+    /* ------------------- filtro por período (N9) ------------------- */
++    /* ------------------- filtro por período ------------------- */
 +
 +    private function day(int $days): string
 +    {
