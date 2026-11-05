@@ -1,0 +1,1052 @@
+From b6e1df096cd6bba9b7aae56dba55ed8e29bcbfdf Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:57:43 -0300
+Subject: [PATCH] feat: Add organizer role with its own events area
+
+Organizers log in to /organizer/events and manage only the events they own. The organizer controller extends the admin one, swapping the route prefix and the event lookup (currentUser()->events()). The populate gets organizador@example.com, owner of two events.
+---
+ app/Controllers/Admin/EventsController.php    |  53 +++--
+ app/Controllers/AuthenticationsController.php |   3 +-
+ .../Organizer/EventsController.php            |  56 +++++
+ app/Middleware/Organizer.php                  |  28 +++
+ app/Models/User.php                           |  10 +-
+ app/views/admin/events/_form.phtml            |   2 +-
+ app/views/admin/events/edit.phtml             |   2 +-
+ app/views/admin/events/index.phtml            |  10 +-
+ app/views/admin/events/new.phtml              |   2 +-
+ app/views/admin/events/show.phtml             |   4 +-
+ app/views/layouts/_navbar.phtml               |   5 +
+ config/App.php                                |   1 +
+ config/routes.php                             |  18 ++
+ database/Populate/populate.php                |  23 +-
+ database/schema.sql                           |   2 +-
+ .../organizer/OrganizerEventsCest.php         | 112 ++++++++++
+ .../Access/OrganizerEventsAccessTest.php      | 158 +++++++++++++
+ .../AuthenticationsControllerTest.php         |  21 ++
+ .../Organizer/EventsControllerTest.php        | 210 ++++++++++++++++++
+ tests/Unit/Models/Users/UserTest.php          |  26 +++
+ 20 files changed, 716 insertions(+), 30 deletions(-)
+ create mode 100644 app/Controllers/Organizer/EventsController.php
+ create mode 100644 app/Middleware/Organizer.php
+ create mode 100644 tests/Acceptance/organizer/OrganizerEventsCest.php
+ create mode 100644 tests/Integration/Access/OrganizerEventsAccessTest.php
+ create mode 100644 tests/Integration/Controllers/Organizer/EventsControllerTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..cc267f0 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -6,20 +6,24 @@ use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
+ use Lib\FlashMessage;
++use Lib\Paginator;
+ 
++/**
++ * CRUD de Eventos do Administrador (todos os Eventos). O Organizador reaproveita esta classe
++ * (App\Controllers\Organizer\EventsController) trocando o prefixo das rotas e a busca dos Eventos.
++ */
+ class EventsController extends Controller
+ {
+-    private const PER_PAGE = 5;
++    protected const PER_PAGE = 5;
++
++    /** Prefixo dos nomes de rota (admin.events.index, admin.events.show...), usado também nas views. */
++    protected const ROUTE_PREFIX = 'admin.events';
+ 
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
++        $paginator = $this->paginateEvents(max(1, (int) $request->getParam('page', 1)));
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+@@ -40,7 +44,7 @@ class EventsController extends Controller
+ 
+     public function new(): void
+     {
+-        $event = new Event();
++        $event = $this->newEvent();
+ 
+         $title = 'Novo Evento';
+         $this->render('admin/events/new', compact('event', 'title'));
+@@ -48,13 +52,12 @@ class EventsController extends Controller
+ 
+     public function create(Request $request): void
+     {
+-        $event = new Event();
++        $event = $this->newEvent();
+         $this->fill($event, $request);
+-        $event->user_id = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento cadastrado com sucesso!');
+-            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++            $this->redirectTo($this->eventRoute('show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
+             $title = 'Novo Evento';
+@@ -85,7 +88,7 @@ class EventsController extends Controller
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+-            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++            $this->redirectTo($this->eventRoute('show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
+             $title = 'Editar Evento';
+@@ -107,7 +110,7 @@ class EventsController extends Controller
+             FlashMessage::danger($event->errors('base') ?? 'Não foi possível remover o evento!');
+         }
+ 
+-        $this->redirectTo(route('admin.events.index'));
++        $this->redirectTo($this->eventRoute('index'));
+     }
+ 
+     /**
+@@ -129,7 +132,29 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
+-    private function findEvent(Request $request): ?Event
++    /**
++     * URL da ação do CRUD com o prefixo deste controller. As views chamam `$this->eventRoute('edit', [...])`.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function eventRoute(string $action, array $params = []): string
++    {
++        return route(static::ROUTE_PREFIX . ".{$action}", $params);
++    }
++
++    /** Página da listagem: o Administrador vê todos os Eventos. */
++    protected function paginateEvents(int $page): Paginator
++    {
++        return Event::paginate(page: $page, per_page: static::PER_PAGE, route: static::ROUTE_PREFIX . '.paginate');
++    }
++
++    /** Evento novo, já com o usuário logado como dono. */
++    protected function newEvent(): Event
++    {
++        return new Event(['user_id' => $this->currentUser()?->id]);
++    }
++
++    protected function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+     }
+@@ -137,6 +162,6 @@ class EventsController extends Controller
+     private function eventNotFound(): void
+     {
+         FlashMessage::danger('Evento não encontrado!');
+-        $this->redirectTo(route('admin.events.index'));
++        $this->redirectTo($this->eventRoute('index'));
+     }
+ }
+diff --git a/app/Controllers/AuthenticationsController.php b/app/Controllers/AuthenticationsController.php
+index cc159e5..e4ba214 100644
+--- a/app/Controllers/AuthenticationsController.php
++++ b/app/Controllers/AuthenticationsController.php
+@@ -24,7 +24,8 @@ class AuthenticationsController extends Controller
+         if ($user && $user->authenticate($params['password'])) {
+             Auth::login($user);
+             FlashMessage::success('Login realizado com sucesso!');
+-            $this->redirectTo(route('dashboard.index'));
++            // Organizador cai direto nos próprios Eventos; os demais perfis, no painel.
++            $this->redirectTo($user->isOrganizer() ? route('organizer.events.index') : route('dashboard.index'));
+         } else {
+             FlashMessage::danger('E-mail ou senha inválidos!');
+             $this->redirectTo(route('users.login'));
+diff --git a/app/Controllers/Organizer/EventsController.php b/app/Controllers/Organizer/EventsController.php
+new file mode 100644
+index 0000000..50c8672
+--- /dev/null
++++ b/app/Controllers/Organizer/EventsController.php
+@@ -0,0 +1,56 @@
++<?php
++
++namespace App\Controllers\Organizer;
++
++use App\Controllers\Admin\EventsController as AdminEventsController;
++use App\Models\Event;
++use App\Models\User;
++use Core\Http\Request;
++use LogicException;
++use Lib\Paginator;
++
++/**
++ * CRUD de Eventos do Organizador: o mesmo do Administrador (ações, views e validações), mas
++ * só com os Eventos dele (user_id = id do logado), pela relação User::events().
++ */
++class EventsController extends AdminEventsController
++{
++    protected const ROUTE_PREFIX = 'organizer.events';
++
++    protected function paginateEvents(int $page): Paginator
++    {
++        return $this->owner()->events()->paginate(
++            page: $page,
++            per_page: static::PER_PAGE,
++            route: static::ROUTE_PREFIX . '.paginate'
++        );
++    }
++
++    protected function newEvent(): Event
++    {
++        $event = $this->owner()->events()->new();
++
++        return $event instanceof Event ? $event : new Event();
++    }
++
++    /**
++     * Evento de outro usuário vira null e cai em "Evento não encontrado!" (show, edit, update, destroy).
++     */
++    protected function findEvent(Request $request): ?Event
++    {
++        $event = $this->owner()->events()->findById((int) $request->getParam('id'));
++
++        return $event instanceof Event ? $event : null;
++    }
++
++    private function owner(): User
++    {
++        $user = $this->currentUser();
++        if ($user === null) {
++            // Não acontece: as rotas do Organizador ficam dentro do grupo 'auth'.
++            throw new LogicException('Área do Organizador acessada sem usuário logado.');
++        }
++
++        return $user;
++    }
++}
+diff --git a/app/Middleware/Organizer.php b/app/Middleware/Organizer.php
+new file mode 100644
+index 0000000..a449f7a
+--- /dev/null
++++ b/app/Middleware/Organizer.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace App\Middleware;
++
++use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
++use Lib\Authentication\Auth;
++use Lib\FlashMessage;
++
++class Organizer implements Middleware
++{
++    public function handle(Request $request): void
++    {
++        $user = Auth::user();
++
++        // Sem usuário logado, quem redireciona é o middleware Authenticate (o grupo 'auth' vem antes).
++        if ($user !== null && !$user->isOrganizer()) {
++            FlashMessage::danger('Acesso restrito a organizadores');
++            $this->redirectTo(route('dashboard.index'));
++        }
++    }
++
++    private function redirectTo(string $location): void
++    {
++        header('Location: ' . $location);
++        exit;
++    }
++}
+diff --git a/app/Models/User.php b/app/Models/User.php
+index ed68286..4b5842a 100644
+--- a/app/Models/User.php
++++ b/app/Models/User.php
+@@ -47,7 +47,7 @@ class User extends Model
+     }
+ 
+     /**
+-     * Eventos criados por este usuário (Administrador).
++     * Eventos criados por este usuário (Administrador ou Organizador).
+      */
+     public function events(): HasMany
+     {
+@@ -73,6 +73,14 @@ class User extends Model
+         return $this->role === 'admin';
+     }
+ 
++    /**
++     * Organizador: cadastra e gerencia só os próprios Eventos, em /organizer/events.
++     */
++    public function isOrganizer(): bool
++    {
++        return $this->role === 'organizer';
++    }
++
+     public function registerLogin(): bool
+     {
+         return $this->update(['last_login_at' => date('Y-m-d H:i:s')]);
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..42ee3cf 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -89,5 +89,5 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </div>
+ 
+     <button type="submit" class="btn btn-primary">Salvar</button>
+-    <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
++    <a class="btn btn-secondary" href="<?= $this->eventRoute('index') ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/edit.phtml b/app/views/admin/events/edit.phtml
+index 5a7f91f..c226a2e 100644
+--- a/app/views/admin/events/edit.phtml
++++ b/app/views/admin/events/edit.phtml
+@@ -1,4 +1,4 @@
+ <?php
+-$action = route('admin.events.update', ['id' => $event->id]);
++$action = $this->eventRoute('update', ['id' => $event->id]);
+ $isUpdate = true;
+ require __DIR__ . '/_form.phtml';
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..05fd962 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,5 +1,5 @@
+ <div class="mb-3">
+-    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
++    <a class="btn btn-primary" href="<?= $this->eventRoute('new') ?>">Novo Evento</a>
+ </div>
+ 
+ <?php if (empty($events)) : ?>
+@@ -25,9 +25,11 @@
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                     <td>
+-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+-                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                        <a class="btn btn-sm btn-outline-secondary"
++                            href="<?= $this->eventRoute('show', ['id' => $event->id]) ?>">Ver</a>
++                        <a class="btn btn-sm btn-outline-primary"
++                            href="<?= $this->eventRoute('edit', ['id' => $event->id]) ?>">Editar</a>
++                        <form class="d-inline" action="<?= $this->eventRoute('destroy', ['id' => $event->id]) ?>" method="post">
+                             <input type="hidden" name="_method" value="DELETE">
+                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                         </form>
+diff --git a/app/views/admin/events/new.phtml b/app/views/admin/events/new.phtml
+index e7ea1d1..5481bf7 100644
+--- a/app/views/admin/events/new.phtml
++++ b/app/views/admin/events/new.phtml
+@@ -1,4 +1,4 @@
+ <?php
+-$action = route('admin.events.create');
++$action = $this->eventRoute('create');
+ $isUpdate = false;
+ require __DIR__ . '/_form.phtml';
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..9349541 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,5 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
+-<a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-<a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++<a class="btn btn-primary" href="<?= $this->eventRoute('edit', ['id' => $event->id]) ?>">Editar</a>
++<a class="btn btn-secondary" href="<?= $this->eventRoute('index') ?>">Voltar</a>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index 12172e5..7419f8d 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -18,6 +18,11 @@
+                         <a class="nav-link" href="<?= route('admin.events.index') ?>">Eventos</a>
+                     </li>
+                 <?php endif; ?>
++                <?php if ($this->currentUser()->isOrganizer()) : ?>
++                    <li class="nav-item">
++                        <a class="nav-link" href="<?= route('organizer.events.index') ?>">Meus Eventos</a>
++                    </li>
++                <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                         <?= $this->currentUser()->email ?>
+diff --git a/config/App.php b/config/App.php
+index b58901e..95a9127 100644
+--- a/config/App.php
++++ b/config/App.php
+@@ -7,5 +7,6 @@ class App
+     public static array $middlewareAliases = [
+         'auth' => \App\Middleware\Authenticate::class,
+         'admin' => \App\Middleware\Admin::class,
++        'organizer' => \App\Middleware\Organizer::class,
+     ];
+ }
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..0be6198 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -5,6 +5,7 @@ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+ use App\Controllers\HomeController;
++use App\Controllers\Organizer\EventsController as OrganizerEventsController;
+ use Core\Router\Route;
+ 
+ Route::get('/', [HomeController::class, 'index'])->name('root');
+@@ -34,4 +35,21 @@ Route::middleware('auth')->group(function () {
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
+     });
++
++    // Área do Organizador (autenticado com perfil organizer): CRUD só dos próprios Eventos.
++    // Fica dentro do grupo 'auth': sem login, quem redireciona para /login é o Authenticate.
++    Route::middleware('organizer')->group(function () {
++        Route::get('/organizer/events', [OrganizerEventsController::class, 'index'])->name('organizer.events.index');
++        Route::get('/organizer/events/page/{page}', [OrganizerEventsController::class, 'index'])
++            ->name('organizer.events.paginate');
++        Route::get('/organizer/events/new', [OrganizerEventsController::class, 'new'])->name('organizer.events.new');
++        Route::post('/organizer/events', [OrganizerEventsController::class, 'create'])->name('organizer.events.create');
++        Route::get('/organizer/events/{id}', [OrganizerEventsController::class, 'show'])->name('organizer.events.show');
++        Route::get('/organizer/events/{id}/edit', [OrganizerEventsController::class, 'edit'])
++            ->name('organizer.events.edit');
++        Route::put('/organizer/events/{id}', [OrganizerEventsController::class, 'update'])
++            ->name('organizer.events.update');
++        Route::delete('/organizer/events/{id}', [OrganizerEventsController::class, 'destroy'])
++            ->name('organizer.events.destroy');
++    });
+ });
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..d0886d3 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -26,7 +26,17 @@ $user = new User([
+ ]);
+ $user->save();
+ 
+-echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
++$organizer = new User([
++    'name' => 'Organizadora',
++    'email' => 'organizador@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'role' => 'organizer'
++]);
++$organizer->save();
++
++echo "Usuários criados: {$admin->email} (admin), {$organizer->email} (organizer) e {$user->email} (participant), "
++    . "senha 123456\n";
+ 
+ // Participantes extras, para haver Inscrições de mais de uma pessoa.
+ $participants = [$user];
+@@ -129,10 +139,15 @@ $events = [
+     ],
+ ];
+ 
++// Eventos 10 e 13 (índices 9 e 12, sem Inscrições) pertencem ao Organizador; os demais, ao Administrador.
++// O total continua 16, e o Administrador continua vendo todos na listagem dele.
++$organizerEventIndexes = [9, 12];
++
+ $eventModels = [];
+-foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity]) {
++foreach ($events as $index => [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity]) {
++    $owner = in_array($index, $organizerEventIndexes, true) ? $organizer : $admin;
+     $event = new Event([
+-        'user_id' => $admin->id,
++        'user_id' => $owner->id,
+         'title' => $title,
+         'description' => $description,
+         'kind' => $kind,
+@@ -148,7 +163,7 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+     $eventModels[] = $event;
+ }
+ 
+-echo count($eventModels) . " Eventos criados pelo Administrador\n";
++echo count($eventModels) . ' Eventos criados (' . count($organizerEventIndexes) . " do Organizador)\n";
+ 
+ // Inscrições (event_user): índice do Evento => índices dos Participantes.
+ // O Evento 0 tem capacity 3 e três Inscrições (lotado): serve de caso para P02 (capacity >= Inscrições).
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..414dc23 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -9,7 +9,7 @@ CREATE TABLE users (
+     name VARCHAR(255) NOT NULL,
+     email VARCHAR(255) NOT NULL,
+     encrypted_password VARCHAR(255) NOT NULL,
+-    role ENUM('admin', 'participant') NOT NULL DEFAULT 'participant',
++    role ENUM('admin', 'organizer', 'participant') NOT NULL DEFAULT 'participant',
+     last_login_at TIMESTAMP NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Acceptance/organizer/OrganizerEventsCest.php b/tests/Acceptance/organizer/OrganizerEventsCest.php
+new file mode 100644
+index 0000000..e308fa5
+--- /dev/null
++++ b/tests/Acceptance/organizer/OrganizerEventsCest.php
+@@ -0,0 +1,112 @@
++<?php
++
++namespace Tests\Acceptance\organizer;
++
++use App\Models\Event;
++use App\Models\User;
++use PHPUnit\Framework\Assert;
++use Tests\Acceptance\BaseAcceptanceCest;
++use Tests\Support\AcceptanceTester;
++
++class OrganizerEventsCest extends BaseAcceptanceCest
++{
++    private User $organizer;
++
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++
++        $admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->organizer = $this->createUser('Organizadora', 'organizador@example.com', 'organizer');
++
++        $this->createEvent($this->organizer, 'Oficina da Organizadora');
++        $this->createEvent($admin, 'Palestra do Administrador');
++
++        $page->resizeWindow(1280, 2400);
++    }
++
++    public function organizerLoginListsOnlyOwnEvents(AcceptanceTester $page): void
++    {
++        $page->wantTo('Login do Organizador e listagem só dos Eventos dele');
++        $page->login('organizador@example.com', '123456');
++
++        $page->seeCurrentUrlEquals('/organizer/events');
++        $page->see('Login realizado com sucesso!');
++        $page->seeLink('Meus Eventos', '/organizer/events');
++        $page->dontSeeLink('Administração');
++        $page->see('Oficina da Organizadora', 'table');
++        $page->dontSee('Palestra do Administrador');
++        $page->see('Mostrando 1 - 1 de 1');
++    }
++
++    public function organizerCreatesEvent(AcceptanceTester $page): void
++    {
++        $page->wantTo('Organizador cadastra um Evento e ele fica como dono');
++        $page->login('organizador@example.com', '123456');
++
++        $page->click('Novo Evento');
++        $page->seeCurrentUrlEquals('/organizer/events/new');
++        $page->fillField('#event_title', 'Minicurso da Organizadora');
++        $page->fillField('#event_description', 'Criado pela Organizadora.');
++        $page->selectOption('#event_kind', Event::KINDS['short_course']);
++        $page->checkOption('#event_modality_online');
++        $page->checkOption('#event_audience_students');
++        $page->executeJS(
++            "document.getElementById('event_starts_on').value = arguments[0];",
++            [date('Y-m-d', strtotime('+5 days'))]
++        );
++        $page->fillField('#event_location', 'Google Meet');
++        $page->fillField('#event_capacity', '30');
++        $page->click('Salvar');
++
++        $event = Event::findBy(['title' => 'Minicurso da Organizadora']);
++        Assert::assertNotNull($event);
++        Assert::assertEquals($this->organizer->id, $event->user_id);
++        $page->seeCurrentUrlEquals("/organizer/events/{$event->id}");
++        $page->see('Evento cadastrado com sucesso!');
++
++        $page->click('Voltar');
++        $page->seeCurrentUrlEquals('/organizer/events');
++        $page->see('Mostrando 1 - 2 de 2');
++    }
++
++    public function organizerCannotOpenAdminArea(AcceptanceTester $page): void
++    {
++        $page->wantTo('Organizador não entra na Área Administrativa');
++        $page->login('organizador@example.com', '123456');
++        $page->amOnPage('/admin/events');
++
++        $page->seeCurrentUrlEquals('/dashboard');
++        $page->see('Acesso restrito a administradores');
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function createEvent(User $owner, string $title): void
++    {
++        $event = new Event([
++            'user_id' => $owner->id,
++            'title' => $title,
++            'description' => "Descrição de {$title}.",
++            'kind' => 'workshop',
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+20 days')),
++            'location' => 'Sala 1',
++            'capacity' => 20,
++        ]);
++        Assert::assertTrue($event->save());
++    }
++}
+diff --git a/tests/Integration/Access/OrganizerEventsAccessTest.php b/tests/Integration/Access/OrganizerEventsAccessTest.php
+new file mode 100644
+index 0000000..def86b9
+--- /dev/null
++++ b/tests/Integration/Access/OrganizerEventsAccessTest.php
+@@ -0,0 +1,158 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use App\Models\Event;
++use App\Models\User;
++use GuzzleHttp\Client;
++use PHPUnit\Framework\Attributes\DataProvider;
++use Tests\TestCase;
++
++/**
++ * Rotas organizer.events.*: só o Organizador entra. Sem sessão vai para /login; Participante e
++ * Administrador são barrados e vão para /dashboard. O Organizador também não entra em /admin.
++ */
++class OrganizerEventsAccessTest extends TestCase
++{
++    private const PASSWORD = '123456';
++
++    /** @var array<string, User> */
++    private array $users = [];
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->users['admin'] = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->users['participant'] = $this->createUser('Participante', 'participante@example.com', 'participant');
++        $this->users['organizer'] = $this->createUser('Organizadora', 'organizador@example.com', 'organizer');
++
++        $this->event = new Event([
++            'user_id' => $this->users['organizer']->id,
++            'title' => 'Evento da Organizadora',
++            'description' => 'Evento usado nos testes de acesso.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Microsoft Teams',
++            'capacity' => 10,
++        ]);
++        $this->event->save();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => self::PASSWORD,
++            'password_confirmation' => self::PASSWORD,
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function newClient(): Client
++    {
++        return new Client(['allow_redirects' => false, 'base_uri' => 'http://web:8080', 'cookies' => true]);
++    }
++
++    private function loggedClient(User $user): Client
++    {
++        $client = $this->newClient();
++        $client->post('/login', [
++            'form_params' => ['user' => ['email' => $user->email, 'password' => self::PASSWORD]],
++        ]);
++
++        return $client;
++    }
++
++    /**
++     * As 8 rotas organizer.events.* (PUT e DELETE com _method, como o navegador envia).
++     *
++     * @return array<string, array{string, string, array<string, string>}>
++     */
++    public static function organizerRoutes(): array
++    {
++        return [
++            'organizer.events.index' => ['GET', '/organizer/events', []],
++            'organizer.events.paginate' => ['GET', '/organizer/events/page/2', []],
++            'organizer.events.new' => ['GET', '/organizer/events/new', []],
++            'organizer.events.create' => ['POST', '/organizer/events', []],
++            'organizer.events.show' => ['GET', '/organizer/events/1', []],
++            'organizer.events.edit' => ['GET', '/organizer/events/1/edit', []],
++            'organizer.events.update' => ['POST', '/organizer/events/1', ['_method' => 'PUT']],
++            'organizer.events.destroy' => ['POST', '/organizer/events/1', ['_method' => 'DELETE']],
++        ];
++    }
++
++    /**
++     * @param array<string, string> $form
++     */
++    #[DataProvider('organizerRoutes')]
++    public function test_organizer_route_should_redirect_to_login_without_session(string $method, string $uri, array $form): void
++    {
++        $response = $this->newClient()->request($method, $uri, ['form_params' => $form]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    /**
++     * @param array<string, string> $form
++     */
++    #[DataProvider('organizerRoutes')]
++    public function test_organizer_route_should_redirect_participant_and_admin_to_dashboard(
++        string $method,
++        string $uri,
++        array $form
++    ): void {
++        foreach (['participant', 'admin'] as $role) {
++            $response = $this->loggedClient($this->users[$role])->request($method, $uri, ['form_params' => $form]);
++
++            $this->assertEquals(302, $response->getStatusCode(), $role);
++            $this->assertEquals('/dashboard', $response->getHeaderLine('Location'), $role);
++        }
++
++        $this->assertEquals('Evento da Organizadora', Event::findById($this->event->id)?->title);
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_organizer_should_access_own_events(): void
++    {
++        $client = $this->loggedClient($this->users['organizer']);
++
++        $index = $client->get('/organizer/events');
++        $this->assertEquals(200, $index->getStatusCode());
++        $this->assertStringContainsString('Evento da Organizadora', (string) $index->getBody());
++        $this->assertStringContainsString('Meus Eventos', (string) $index->getBody());
++
++        $show = $client->get("/organizer/events/{$this->event->id}");
++        $this->assertEquals(200, $show->getStatusCode());
++    }
++
++    public function test_organizer_should_not_access_admin_area(): void
++    {
++        $client = $this->loggedClient($this->users['organizer']);
++
++        foreach (['/admin', '/admin/events', "/admin/events/{$this->event->id}"] as $uri) {
++            $response = $client->get($uri);
++
++            $this->assertEquals(302, $response->getStatusCode(), $uri);
++            $this->assertEquals('/dashboard', $response->getHeaderLine('Location'), $uri);
++        }
++    }
++
++    public function test_organizer_login_should_redirect_to_organizer_events(): void
++    {
++        $response = $this->newClient()->post('/login', [
++            'form_params' => ['user' => ['email' => 'organizador@example.com', 'password' => self::PASSWORD]],
++        ]);
++
++        $this->assertEquals('/organizer/events', $response->getHeaderLine('Location'));
++    }
++}
+diff --git a/tests/Integration/Controllers/AuthenticationsControllerTest.php b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+index 6a368fe..9924336 100644
+--- a/tests/Integration/Controllers/AuthenticationsControllerTest.php
++++ b/tests/Integration/Controllers/AuthenticationsControllerTest.php
+@@ -41,6 +41,27 @@ class AuthenticationsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Location: /dashboard', $response);
+     }
+ 
++    public function test_authenticate_organizer_should_redirect_to_organizer_events(): void
++    {
++        $organizer = new User([
++            'name' => 'Organizadora',
++            'email' => 'organizador@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'organizer',
++        ]);
++        $organizer->save();
++
++        $response = $this->post(
++            action: 'authenticate',
++            controllerName: 'App\Controllers\AuthenticationsController',
++            params: ['user' => ['email' => 'organizador@example.com', 'password' => '123456']]
++        );
++
++        $this->assertTrue(Auth::check());
++        $this->assertSame('Location: /organizer/events', $response);
++    }
++
+     public function test_authenticate_with_invalid_credentials_should_not_login(): void
+     {
+         $response = $this->post(
+diff --git a/tests/Integration/Controllers/Organizer/EventsControllerTest.php b/tests/Integration/Controllers/Organizer/EventsControllerTest.php
+new file mode 100644
+index 0000000..1948e99
+--- /dev/null
++++ b/tests/Integration/Controllers/Organizer/EventsControllerTest.php
+@@ -0,0 +1,210 @@
++<?php
++
++namespace Tests\Integration\Controllers\Organizer;
++
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class EventsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\Organizer\EventsController';
++
++    private User $organizer;
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $this->admin = $this->createUser('Admin', 'admin@example.com', 'admin');
++        $this->organizer = $this->createUser('Organizadora', 'organizador@example.com', 'organizer');
++        Auth::login($this->organizer);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    public function test_index_lists_only_the_organizer_events_with_organizer_links(): void
++    {
++        $mine = $this->createEvent($this->organizer, ['title' => 'Meu Evento']);
++        $this->createEvent($this->admin, ['title' => 'Evento do Admin']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Meu Evento', $response);
++        $this->assertStringNotContainsString('Evento do Admin', $response);
++        $this->assertStringContainsString('Mostrando 1 - 1 de 1', $response);
++        $this->assertStringContainsString('href="/organizer/events/new"', $response);
++        $this->assertStringContainsString("href=\"/organizer/events/{$mine->id}\"", $response);
++        $this->assertStringContainsString("href=\"/organizer/events/{$mine->id}/edit\"", $response);
++        $this->assertStringContainsString("action=\"/organizer/events/{$mine->id}\"", $response);
++        $this->assertStringNotContainsString('/admin/events', $response);
++    }
++
++    public function test_index_paginates_only_the_organizer_events(): void
++    {
++        for ($i = 1; $i <= 3; $i++) {
++            $this->createEvent($this->admin, ['title' => "Alheio {$i}"]);
++        }
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent($this->organizer, ['title' => "Próprio {$i}"]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('Mostrando 1 - 5 de 6', $page1);
++        $this->assertStringContainsString('/organizer/events/page/2', $page1);
++        $this->assertStringContainsString('Mostrando 6 - 6 de 6', $page2);
++        $this->assertStringContainsString('Próprio 6', $page2);
++        $this->assertStringNotContainsString('Alheio', $page1 . $page2);
++    }
++
++    public function test_new_renders_form_posting_to_organizer_route(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString('action="/organizer/events"', $response);
++        $this->assertStringContainsString('href="/organizer/events">Cancelar', $response);
++    }
++
++    public function test_create_saves_event_owned_by_the_organizer(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['user_id' => (string) $this->admin->id])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina do Organizador']);
++        $this->assertInstanceOf(Event::class, $event);
++        $this->assertEquals($this->organizer->id, $event->user_id);
++        $this->assertSame("Location: /organizer/events/{$event->id}", $response);
++        $this->assertEquals('Evento cadastrado com sucesso!', $_SESSION['flash']['success']);
++    }
++
++    public function test_create_with_invalid_data_renders_form_again(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => ''])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('action="/organizer/events"', $response);
++        $this->assertStringContainsString('não pode ser vazio!', $response);
++    }
++
++    public function test_show_edit_and_update_of_own_event(): void
++    {
++        $event = $this->createEvent($this->organizer, ['title' => 'Antes']);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $update = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Depois'])]
++        );
++
++        $this->assertStringContainsString("href=\"/organizer/events/{$event->id}/edit\"", $show);
++        $this->assertStringContainsString("action=\"/organizer/events/{$event->id}\"", $edit);
++        $this->assertSame("Location: /organizer/events/{$event->id}", $update);
++        $this->assertEquals('Depois', Event::findById($event->id)?->title);
++    }
++
++    public function test_destroy_of_own_event_removes_it(): void
++    {
++        $event = $this->createEvent($this->organizer);
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNull(Event::findById($event->id));
++        $this->assertSame('Location: /organizer/events', $response);
++        $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
++    }
++
++    public function test_show_and_edit_of_another_user_event_redirect_to_index(): void
++    {
++        $event = $this->createEvent($this->admin, ['title' => 'Evento do Admin']);
++
++        foreach (['show', 'edit'] as $action) {
++            $response = $this->get(action: $action, controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++            $this->assertSame('Location: /organizer/events', $response, $action);
++            $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger'], $action);
++        }
++    }
++
++    public function test_update_and_destroy_of_another_user_event_do_not_change_it(): void
++    {
++        $event = $this->createEvent($this->admin, ['title' => 'Evento do Admin']);
++
++        $update = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Invadido'])]
++        );
++        $destroy = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame('Location: /organizer/events', $update);
++        $this->assertSame('Location: /organizer/events', $destroy);
++        $this->assertEquals('Evento do Admin', Event::findById($event->id)?->title);
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     * @return array<string, mixed>
++     */
++    private function validParams(array $overrides = []): array
++    {
++        return array_merge([
++            'title' => 'Oficina do Organizador',
++            'description' => 'Oficina criada pelo Organizador.',
++            'kind' => 'workshop',
++            'modality' => 'in_person',
++            'audience' => ['students'],
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Bloco A',
++            'capacity' => '20',
++        ], $overrides);
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createEvent(User $owner, array $overrides = []): Event
++    {
++        $params = array_merge($this->validParams(), $overrides);
++        $audience = $params['audience'];
++        unset($params['audience']);
++
++        $event = new Event($params + ['user_id' => $owner->id]);
++        $event->setAudienceList($audience);
++        $event->save();
++
++        return $event;
++    }
++}
+diff --git a/tests/Unit/Models/Users/UserTest.php b/tests/Unit/Models/Users/UserTest.php
+index 5780e2e..c6d8773 100644
+--- a/tests/Unit/Models/Users/UserTest.php
++++ b/tests/Unit/Models/Users/UserTest.php
+@@ -145,6 +145,32 @@ class UserTest extends TestCase
+         $this->assertTrue(User::findById($this->user->id)->isAdmin());
+     }
+ 
++    public function test_is_organizer_should_return_false_by_default(): void
++    {
++        $this->assertFalse($this->user->isOrganizer());
++    }
++
++    public function test_is_organizer_should_return_true_only_for_organizer_role(): void
++    {
++        $organizer = new User([
++            'name' => 'Organizadora',
++            'email' => 'organizador@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'organizer',
++        ]);
++        $this->assertTrue($organizer->save());
++
++        $found = User::findById($organizer->id);
++        $this->assertNotNull($found);
++        $this->assertSame('organizer', $found->role);
++        $this->assertTrue($found->isOrganizer());
++        $this->assertFalse($found->isAdmin());
++
++        $this->user->role = 'admin';
++        $this->assertFalse($this->user->isOrganizer());
++    }
++
+     public function test_last_login_at_should_be_null_by_default(): void
+     {
+         $this->assertNull(User::findById($this->user->id)->last_login_at);
+-- 
+2.54.0 (Apple Git-157)
+

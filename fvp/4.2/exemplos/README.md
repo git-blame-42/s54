@@ -189,6 +189,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `q2-bloquear-passado-cancelado/`
   - feat: Add Event status with cancel and finish actions
   - feat: Block editing and removing past or canceled Events
+- Q4. Perfil Organizador
+  `q4-perfil-organizador/`
+  - feat: Add organizer role with its own events area
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type
