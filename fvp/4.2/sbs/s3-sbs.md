@@ -35,8 +35,8 @@ Depois: `./run test ... --filter duplicate`, `./run test tests/Unit`,
 
 Seção nova depois do teste
 `test_available_spots_should_be_capacity_minus_enrollments` (linha
-~490) e antes do comentário
-`/* ---...--- starts_on: "não passada" só no create e quando a data muda ---...--- */`.
+~490) e antes do comentário de seção que diz
+`starts_on: "não passada" só no create e quando a data muda`.
 
 Helpers que já existem no topo e serão usados:
 
