@@ -60,6 +60,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M15. Escolher o responsável entre os administradores
   `m15-responsavel-admin/`
   - feat: Choose the responsible admin for an event
+- M17. Campo sim/não por checkbox (`has_certificate`)
+  `m17-checkbox-certificado/`
+  - feat: Add certificate checkbox to events
 - M18. Janela de datas: antecedência mínima e limite máximo
   `m18-janela-de-datas/`
   - feat: Event date window with minimum advance and maximum
@@ -144,6 +147,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O1. Rota RESTful nova com página (lotados)
   `o1-rota-eventos-lotados/`
   - feat: List full events in admin area
+- O10. `Route::resource` e `Route::prefix` no core
+  `o10-route-resource-prefix/`
+  - feat: Add Route::resource and Route::prefix to the router
 - O2. Listagem e detalhe de Eventos para o Participante
   `o2-eventos-para-participante/`
   - feat: Add events listing and details for participants

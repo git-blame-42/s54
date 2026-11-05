@@ -1,0 +1,513 @@
+From 29f34b7ad039ad84e9ce6b1202c5a7304d7aa54f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:30:48 -0300
+Subject: [PATCH] feat: Add certificate checkbox to events
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add has_certificate (TINYINT NOT NULL) to events with a checkbox in the
+admin form. A hidden input with value 0 comes before the checkbox so an
+unchecked box is still posted. The model normalizes null/empty to '0'
+and the int read from the database to '0'/'1' before inclusion(['0','1']),
+so unchecked boxes no longer hit NULL on a NOT NULL column and saved
+events stay valid on edit. List and details show Sim/Não.
+---
+ app/Controllers/Admin/EventsController.php    |   4 +-
+ app/Models/Event.php                          |  34 ++++++
+ app/views/admin/events/_form.phtml            |   9 ++
+ app/views/admin/events/index.phtml            |   2 +
+ app/views/admin/events/show.phtml             |   3 +
+ database/Populate/populate.php                |   2 +
+ database/schema.sql                           |   3 +
+ .../admin/events/BaseEventsCest.php           |  13 +-
+ .../admin/events/CertificateCheckboxCest.php  |  72 +++++++++++
+ .../Admin/EventsControllerTest.php            | 113 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        |  68 +++++++++++
+ 11 files changed, 321 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/CertificateCheckboxCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..78a1b17 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,7 +11,9 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++    private const FIELDS = [
++        'title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity', 'has_certificate',
++    ];
+ 
+     public function index(Request $request): void
+     {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..a6707d6 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string|null $has_certificate '0'/'1' vindo do formulário; o banco (TINYINT) devolve int 0/1
+  */
+ class Event extends Model
+ {
+@@ -55,6 +56,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'has_certificate',
+     ];
+ 
+     public function validates(): void
+@@ -79,6 +81,38 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        $this->normalizeHasCertificate();
++        Validations::inclusion('has_certificate', $this, ['0', '1']);
++    }
++
++    /**
++     * Deixa `has_certificate` como '0' ou '1' (string), o formato que vem do formulário.
++     *
++     * - Checkbox desmarcado não vai no POST: o controller recebe null; sem isso o INSERT manda NULL
++     *   para uma coluna NOT NULL e a página quebra com erro 500. Nulo e vazio viram '0'.
++     * - Evento lido do banco: o TINYINT volta como int (0 ou 1), e o inclusion() compara com ===;
++     *   sem converter, editar e salvar um Evento já gravado seria recusado.
++     *
++     * Outros valores ('2', 'on', 'sim') ficam como estão para o inclusion() recusar.
++     */
++    private function normalizeHasCertificate(): void
++    {
++        $value = $this->has_certificate;
++
++        if ($value === null || $value === '') {
++            $this->has_certificate = '0';
++        } elseif (is_int($value)) {
++            $this->has_certificate = (string) $value;
++        }
++    }
++
++    /**
++     * O Evento emite certificado? Compara como string: o banco devolve int 1, o formulário envia '1'.
++     */
++    public function hasCertificate(): bool
++    {
++        return (string) $this->has_certificate === '1';
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..311a00c 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -88,6 +88,15 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <?= $feedback('capacity') ?>
+     </div>
+ 
++    <div class="mb-3 form-check">
++        <?php /* Checkbox desmarcado não é enviado: o hidden vem ANTES e manda '0'; marcado, o '1' sobrescreve. */ ?>
++        <input type="hidden" name="event[has_certificate]" value="0">
++        <input type="checkbox" class="form-check-input<?= $invalid('has_certificate') ?>" id="event_has_certificate"
++            name="event[has_certificate]" value="1" <?= $event->hasCertificate() ? 'checked' : '' ?>>
++        <label class="form-check-label" for="event_has_certificate">Emite certificado</label>
++        <?= $feedback('has_certificate') ?>
++    </div>
++
+     <button type="submit" class="btn btn-primary">Salvar</button>
+     <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..272f397 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Certificado</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= $event->hasCertificate() ? 'Sim' : 'Não' ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..3d10fe8 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Certificado</dt>
++    <dd class="col-sm-9 certificate"><?= $event->hasCertificate() ? 'Sim' : 'Não' ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..75d44b1 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -140,6 +140,8 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
+         'location' => $location,
+         'capacity' => $capacity,
++        // Palestras não emitem certificado; oficinas, minicursos e semanas acadêmicas emitem.
++        'has_certificate' => $kind === 'lecture' ? '0' : '1',
+     ]);
+     $event->setAudienceList(explode(',', $audience));
+     if (!$event->save()) {
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..8e3f7d3 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,9 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Sim/não do checkbox "Emite certificado". O DEFAULT não socorre o Model::save(), que grava NULL
++    -- quando o atributo é nulo; quem garante 0/1 é a normalização em Event::validates().
++    has_certificate TINYINT(1) NOT NULL DEFAULT 0,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..90a2f49 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -89,6 +89,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+                 'starts_on' => $this->startsOn($number),
+                 'location' => "Sala {$number}",
+                 'capacity' => $number === 1 ? 3 : 20 + $number,
++                // Eventos pares emitem certificado (Evento 02 sim, Evento 01 não).
++                'has_certificate' => $number % 2 === 0 ? '1' : '0',
+             ]);
+             $event->setAudienceList($number % 2 === 1 ? ['students', 'professors'] : ['students']);
+             $event->save();
+@@ -115,7 +117,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+      * Preenche apenas os campos informados. `audience` define exatamente quais checkboxes ficam marcados.
+      *
+      * Chaves aceitas: title, description, kind (rótulo exibido no select), modality (valor do radio: in_person,
+-     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity.
++     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity, has_certificate
++     * (true marca o checkbox, false desmarca).
+      *
+      * @param array<string, mixed> $data
+      */
+@@ -145,6 +148,14 @@ class BaseEventsCest extends BaseAcceptanceCest
+             }
+         }
+ 
++        if (array_key_exists('has_certificate', $data)) {
++            if ($data['has_certificate']) {
++                $page->checkOption('#event_has_certificate');
++            } else {
++                $page->uncheckOption('#event_has_certificate');
++            }
++        }
++
+         if (array_key_exists('starts_on', $data)) {
+             // input[type=date] depende do idioma do navegador ao digitar; definir o valor ISO é determinístico.
+             $page->executeJS(
+diff --git a/tests/Acceptance/admin/events/CertificateCheckboxCest.php b/tests/Acceptance/admin/events/CertificateCheckboxCest.php
+new file mode 100644
+index 0000000..aa9b585
+--- /dev/null
++++ b/tests/Acceptance/admin/events/CertificateCheckboxCest.php
+@@ -0,0 +1,72 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Checkbox "Emite certificado": marcado grava 1, desmarcado grava 0 (o checkbox desmarcado não vai no
++ * POST; o hidden com value=0 antes dele garante o envio).
++ */
++class CertificateCheckboxCest extends BaseEventsCest
++{
++    public function createEventWithCertificate(AcceptanceTester $page): void
++    {
++        $data = $this->validEventData(['has_certificate' => true]);
++
++        $page->wantTo('Cadastrar Evento marcando "Emite certificado"');
++        $page->amOnPage('/admin/events/new');
++        $page->dontSeeCheckboxIsChecked('#event_has_certificate');
++        $this->fillEventForm($page, $data);
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('Sim', '.certificate');
++
++        $stored = Event::findBy(['title' => $data['title']]);
++        Assert::assertInstanceOf(Event::class, $stored);
++        Assert::assertSame(1, $stored->has_certificate);
++    }
++
++    public function createEventWithoutCertificate(AcceptanceTester $page): void
++    {
++        $data = $this->validEventData();
++
++        $page->wantTo('Cadastrar Evento com "Emite certificado" desmarcado');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $data);
++        $page->click('Salvar');
++
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('Não', '.certificate');
++
++        $stored = Event::findBy(['title' => $data['title']]);
++        Assert::assertInstanceOf(Event::class, $stored);
++        Assert::assertSame(0, $stored->has_certificate);
++    }
++
++    public function uncheckCertificateOnEdit(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Desmarcar "Emite certificado" ao editar um Evento');
++        $page->amOnPage('/admin/events');
++        $page->see('Sim', $this->rowOf('Evento 02'));
++        $page->see('Não', $this->rowOf('Evento 01'));
++
++        $page->click('Editar', $this->rowOf('Evento 02'));
++        $page->seeCheckboxIsChecked('#event_has_certificate');
++        $this->fillEventForm($page, ['has_certificate' => false]);
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento atualizado com sucesso!');
++        $page->see('Não', '.certificate');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertInstanceOf(Event::class, $stored);
++        Assert::assertSame(0, $stored->has_certificate);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..6f7c21b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,117 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- has_certificate (checkbox sim/não) ------------------- */
++
++    public function test_form_sends_zero_in_a_hidden_before_the_certificate_checkbox(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        // O hidden precisa vir antes: com nomes repetidos, o PHP fica com o último valor enviado.
++        $this->assertMatchesRegularExpression(
++            '/name="event\[has_certificate\]" value="0">\s*<input type="checkbox"[^>]*'
++                . 'id="event_has_certificate"\s+name="event\[has_certificate\]" value="1"/',
++            $response
++        );
++        $this->assertDoesNotMatchRegularExpression('/id="event_has_certificate"[^>]*checked/', $response);
++        $this->assertStringContainsString('Emite certificado', $response);
++    }
++
++    public function test_create_with_certificate_checked_saves_one_and_show_displays_yes(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['has_certificate' => '1'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertSame(1, $event->has_certificate);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertStringContainsString('<dd class="col-sm-9 certificate">Sim</dd>', $response);
++    }
++
++    public function test_create_with_certificate_unchecked_saves_zero(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['has_certificate' => '0'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertSame(0, $event->has_certificate);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_create_without_the_certificate_field_does_not_break(): void
++    {
++        // POST de um formulário sem o hidden: o checkbox desmarcado simplesmente não vem.
++        $params = $this->validParams();
++        unset($params['has_certificate']);
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $params]);
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertSame(0, $event->has_certificate);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_create_with_invalid_certificate_value_shows_error_below_the_field(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['has_certificate' => '2'])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression(
++            '/class="form-check-input is-invalid" id="event_has_certificate".*?'
++                . '<div class="invalid-feedback">não é uma opção válida!<\/div>/s',
++            $response
++        );
++    }
++
++    public function test_edit_checks_the_certificate_of_a_saved_event(): void
++    {
++        $event = $this->createEvent(['has_certificate' => '1']);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/id="event_has_certificate"[^>]*checked/', $response);
++    }
++
++    public function test_update_with_certificate_unchecked_clears_it(): void
++    {
++        $event = $this->createEvent(['has_certificate' => '1']);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['has_certificate' => '0'])]
++        );
++
++        $this->assertSame(0, Event::findById($event->id)->has_certificate);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_index_shows_whether_each_event_has_certificate(): void
++    {
++        $this->createEvent(['title' => 'Com certificado', 'has_certificate' => '1']);
++        $this->createEvent(['title' => 'Sem certificado', 'has_certificate' => '0']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<th>Certificado</th>', $response);
++        $this->assertMatchesRegularExpression('/Com certificado<\/td>.*?<td>Sim<\/td>/s', $response);
++        $this->assertMatchesRegularExpression('/Sem certificado<\/td>.*?<td>Não<\/td>/s', $response);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+@@ -280,6 +391,8 @@ class EventsControllerTest extends ControllerTestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Bloco A',
+             'capacity' => '20',
++            // O hidden do formulário sempre envia '0'; com o checkbox marcado, chega '1'.
++            'has_certificate' => '0',
+         ], $overrides);
+     }
+ 
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..4335f9f 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -297,6 +297,74 @@ class EventTest extends TestCase
+         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
+     }
+ 
++    /* ------------------- has_certificate (checkbox sim/não) ------------------- */
++
++    public function test_has_certificate_should_accept_zero_and_one(): void
++    {
++        foreach (['0', '1'] as $value) {
++            $this->assertTrue((new Event($this->params(['has_certificate' => $value])))->isValid(), $value);
++        }
++    }
++
++    public function test_unchecked_has_certificate_should_be_saved_as_zero(): void
++    {
++        // Checkbox desmarcado sem o hidden: o atributo chega nulo (ou vazio) e não pode virar NULL no INSERT.
++        foreach ([null, ''] as $value) {
++            $event = new Event($this->params(['has_certificate' => $value]));
++
++            $this->assertTrue($event->save());
++            $this->assertSame('0', $event->has_certificate);
++            $this->assertSame(0, Event::findById($event->id)->has_certificate);
++        }
++    }
++
++    public function test_has_certificate_outside_zero_and_one_should_be_invalid(): void
++    {
++        foreach (['2', 2, 'on', 'sim', '-1', ' 1'] as $value) {
++            $event = new Event($this->params(['has_certificate' => $value]));
++
++            $this->assertFalse($event->isValid(), (string) $value);
++            $this->assertEquals('não é uma opção válida!', $event->errors('has_certificate'), (string) $value);
++        }
++    }
++
++    public function test_has_certificate_from_the_database_is_int_and_event_stays_valid(): void
++    {
++        $event = $this->createEvent(['has_certificate' => '1']);
++
++        $found = Event::findById($event->id);
++
++        // O TINYINT volta como int; o inclusion() usa ===, por isso o model normaliza antes de validar.
++        $this->assertSame(1, $found->has_certificate);
++        $this->assertTrue($found->isValid());
++        $this->assertSame('1', $found->has_certificate);
++        $found->title = 'Título editado';
++        $this->assertTrue($found->save());
++        $this->assertSame(1, Event::findById($event->id)->has_certificate);
++    }
++
++    public function test_has_certificate_can_be_unchecked_on_edit(): void
++    {
++        $event = $this->createEvent(['has_certificate' => '1']);
++
++        $found = Event::findById($event->id);
++        $found->has_certificate = '0';
++        $this->assertTrue($found->save());
++
++        $this->assertSame(0, Event::findById($event->id)->has_certificate);
++    }
++
++    public function test_has_certificate_helper_should_compare_as_string(): void
++    {
++        foreach (['1', 1] as $value) {
++            $this->assertTrue((new Event(['has_certificate' => $value]))->hasCertificate(), var_export($value, true));
++        }
++
++        foreach (['0', 0, null, '', '2', 2] as $value) {
++            $this->assertFalse((new Event(['has_certificate' => $value]))->hasCertificate(), var_export($value, true));
++        }
++    }
++
+     /* ------------------- save / update / destroy / busca ------------------- */
+ 
+     public function test_save_should_create_the_event(): void
+-- 
+2.54.0 (Apple Git-157)
+
