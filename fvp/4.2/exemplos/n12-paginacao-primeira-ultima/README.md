@@ -53,9 +53,40 @@ Commit:
   `hasPreviousPage()`/`hasNextPage()`.
 - `lastPage()` com `max(1, ...)`: com 0 registros o
   `totalOfPages()` é 0 e a janela ficaria `range(1, 0)` = `[1, 0]`.
+- Janela de tamanho fixo que se desloca, não o raio do catálogo. O
+  catálogo sugere `pagesWindow(int $radius = 1)`, que devolve "a
+  atual e 1 de cada lado" cortado nas pontas: `[1, 2]` na página 1,
+  `[3, 4, 5]` no meio. Aqui `$size` é a quantidade de números e a
+  janela anda para caber: `[1, 2, 3]` na página 1, `[2, 3, 4]` na
+  última de 4. Assim, com 3 páginas ou mais, aparecem sempre 3
+  números, a leitura literal de "no máximo 3", e a navegação tem
+  sempre 7 itens (o `PaginateEventsCest` fica simples). Se o professor
+  quiser o raio, troque o corpo pelo do catálogo:
+
+  ```php
+  $from = max(1, $this->page - $radius);
+  $to = min($this->lastPage(), $this->page + $radius);
+
+  return range($from, $to);
+  ```
+
 - `$size` parametrizado com padrão 3: o pedido muda o número sem
   mexer na lógica; tamanho par puxa a janela para a direita
   (`[3, 4, 5, 6]` na página 4 com `$size = 4`).
+- Sem "…" no partial (o catálogo sugere um quando a janela não
+  encosta na primeira/última). Primeira e Última já levam às pontas,
+  e o "…" mudaria o número de itens conforme a página. Se pedirem,
+  ponha antes e depois do `foreach`, com a janela numa variável:
+
+  ```php
+  <?php $window = $paginator->pagesWindow(); ?>
+  <?php if ($window[0] > $paginator->firstPage()) : ?>
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+  <?php endif; ?>
+  ```
+
+  e o mesmo com `end($window) < $paginator->lastPage()` depois do
+  laço. Ajuste a contagem de itens no `PaginateEventsCest`.
 - Closure `$pageUrl` na view: tira a repetição de
   `route($paginator->getRouteName(), ['page' => ...])` e mantém as
   linhas abaixo de 130 colunas.
@@ -181,6 +212,9 @@ para o Cest da paginação.
   para não gerar `range(1, 0)`.
 - `range($start, $end)` com `$start > $end` devolve a lista ao
   contrário, não vazia: por isso o `$start` é limitado antes.
+- `$radius` e `$size` não são a mesma coisa: `pagesWindow(3)` aqui
+  são 3 números; no código do catálogo, `pagesWindow(3)` seriam até 7
+  (3 de cada lado). Confira qual dos dois o seu partial chama.
 - No Cest, `click('2', '.pagination')` só funciona se o 2 estiver na
   janela; na página 4 o "1" não aparece. Use Primeira/Última para
   saltos.
