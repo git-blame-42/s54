@@ -1,4 +1,4 @@
-From 1aa2c910709fb4a03f2fdf7bd34014b084ec2263 Mon Sep 17 00:00:00 2001
+From 37b68a93b92f84dbb3e3d2dc8a650d097fe54772 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:29:55 -0300
 Subject: [PATCH] feat: Warn when saving an event without changes
@@ -11,10 +11,10 @@ breaks). The update action shows a warning flash and skips the save.
  app/Models/Event.php                          | 44 +++++++++++
  lib/FlashMessage.php                          |  5 ++
  .../admin/events/UpdateSuccessfullyCest.php   | 34 +++++++++
- .../Admin/EventsControllerTest.php            | 29 ++++++++
+ .../Admin/EventsControllerTest.php            | 45 +++++++++++
  tests/Unit/Lib/FlashMessageTest.php           |  9 +++
  tests/Unit/Models/Events/EventTest.php        | 74 +++++++++++++++++++
- 7 files changed, 201 insertions(+)
+ 7 files changed, 217 insertions(+)
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
 index ca4ada1..49774ed 100644
@@ -148,10 +148,10 @@ index 0f64d87..9bf9ffb 100644
 +    }
  }
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..faf3bb3 100644
+index bc62d1d..64e65cf 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-@@ -206,6 +206,35 @@ class EventsControllerTest extends ControllerTestCase
+@@ -206,6 +206,51 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
      }
  
@@ -182,6 +182,22 @@ index bc62d1d..faf3bb3 100644
 +        );
 +
 +        $this->assertEquals('Nenhuma alteração foi feita no evento.', $_SESSION['flash']['warning']);
++    }
++
++    public function test_update_changing_only_the_audience_is_a_change(): void
++    {
++        $event = $this->createEvent(['audience' => ['students']]);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['audience' => ['students', 'staff']])]
++        );
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
++        $this->assertArrayNotHasKey('warning', $_SESSION['flash']);
++        $this->assertSame(['students', 'staff'], Event::findById($event->id)?->audienceList());
 +    }
 +
      public function test_update_with_invalid_data_renders_form_and_keeps_record(): void

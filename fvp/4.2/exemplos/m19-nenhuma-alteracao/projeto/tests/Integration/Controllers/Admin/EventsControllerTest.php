@@ -235,6 +235,22 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertEquals('Nenhuma alteração foi feita no evento.', $_SESSION['flash']['warning']);
     }
 
+    public function test_update_changing_only_the_audience_is_a_change(): void
+    {
+        $event = $this->createEvent(['audience' => ['students']]);
+
+        $response = $this->put(
+            action: 'update',
+            controllerName: self::CONTROLLER,
+            params: ['id' => $event->id, 'event' => $this->validParams(['audience' => ['students', 'staff']])]
+        );
+
+        $this->assertSame("Location: /admin/events/{$event->id}", $response);
+        $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
+        $this->assertArrayNotHasKey('warning', $_SESSION['flash']);
+        $this->assertSame(['students', 'staff'], Event::findById($event->id)?->audienceList());
+    }
+
     public function test_update_with_invalid_data_renders_form_and_keeps_record(): void
     {
         $event = $this->createEvent(['title' => 'Original']);
