@@ -14,14 +14,14 @@ PATCH.
 
 Commits (`main..fvp/o7-route-patch`):
 
-- `56398d1` `feat: Add Event status with cancel and finish actions`
+- `8c64e03` `feat: Add Event status with cancel and finish actions`
   (base, P5)
-- `a05ad7e` `feat: Add Route::patch and use it for event cancel and
+- `3fae399` `feat: Add Route::patch and use it for event cancel and
   finish` (este cenário)
 
 ## O que mudou
 
-Só o segundo commit (`a05ad7e`):
+Só o segundo commit (`3fae399`):
 
 - `core/Router/Route.php`: `Route::patch(string $uri, $action)`, ao
   lado de `put()` e `delete()`, mesmo PHPDoc dos vizinhos; cria a
@@ -116,9 +116,9 @@ mensagem.
 
 Primeiro decida: o alvo já tem o P5?
 
-- Não tem: os dois commits (`56398d1` e `a05ad7e`) ou o intervalo
+- Não tem: os dois commits (`8c64e03` e `3fae399`) ou o intervalo
   `main..fvp/o7-route-patch`.
-- Já tem (aplicou o P5 antes): só o topo, `a05ad7e`.
+- Já tem (aplicou o P5 antes): só o topo, `3fae399`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -129,7 +129,7 @@ git fetch fvp-o7 main fvp/o7-route-patch
 # alvo sem P5: os dois, por intervalo
 git cherry-pick fvp-o7/main..fvp-o7/fvp/o7-route-patch
 # alvo que já tem P5: só o topo
-git cherry-pick a05ad7e
+git cherry-pick 3fae399
 git remote remove fvp-o7
 ```
 
@@ -138,9 +138,9 @@ git remote remove fvp-o7
 ```
 git fetch <caminho>/solucao.bundle fvp/o7-route-patch:fvp-o7
 # alvo sem P5
-git cherry-pick 56398d1 a05ad7e
+git cherry-pick 8c64e03 3fae399
 # alvo que já tem P5
-git cherry-pick a05ad7e
+git cherry-pick 3fae399
 # opcional, limpa a ref
 git branch -D fvp-o7
 ```

@@ -1,4 +1,4 @@
-From 56398d195aa3a78b7ed294867bc60da7ff4bda0d Mon Sep 17 00:00:00 2001
+From 8c64e03dcbcb3cb3b87155e5c3682e38c9741d77 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:12:19 -0300
 Subject: [PATCH 1/2] feat: Add Event status with cancel and finish actions
@@ -292,7 +292,7 @@ index fe7f1d6..85050f7 100644
      CONSTRAINT check_events_capacity CHECK (capacity >= 1),
 diff --git a/tests/Acceptance/admin/events/CancelEventCest.php b/tests/Acceptance/admin/events/CancelEventCest.php
 new file mode 100644
-index 0000000..a5bb8c7
+index 0000000..d1a0f48
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/CancelEventCest.php
 @@ -0,0 +1,78 @@
@@ -305,7 +305,7 @@ index 0000000..a5bb8c7
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * P5: situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
++ * Situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
 + */
 +class CancelEventCest extends BaseEventsCest
 +{
@@ -433,14 +433,14 @@ index 4396d14..39264fe 100644
      {
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..d1cedf9 100644
+index bc62d1d..60e1a1d 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -265,6 +265,130 @@ class EventsControllerTest extends ControllerTestCase
          );
      }
  
-+    /* ------------------- P5: status ------------------- */
++    /* ------------------- status ------------------- */
 +
 +    public function test_index_and_show_display_the_status_badge(): void
 +    {
@@ -568,14 +568,14 @@ index bc62d1d..d1cedf9 100644
       * @param array<string, mixed> $overrides
       * @return array<string, mixed>
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..c4ff9fc 100644
+index f961b4c..542db84 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -297,6 +297,91 @@ class EventTest extends TestCase
          $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
      }
  
-+    /* ------------------- P5: status (cancelar / encerrar) ------------------- */
++    /* ------------------- status (cancelar / encerrar) ------------------- */
 +
 +    public function test_new_event_should_be_scheduled(): void
 +    {
@@ -667,7 +667,7 @@ index f961b4c..c4ff9fc 100644
 2.54.0 (Apple Git-157)
 
 
-From a05ad7e8f7cda3a041383e98310c35c39ddea5f4 Mon Sep 17 00:00:00 2001
+From 3fae3997270acdbd993c1930554ee177321de406 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:05:11 -0300
 Subject: [PATCH 2/2] feat: Add Route::patch and use it for event cancel and
@@ -829,7 +829,7 @@ index 39264fe..f1b3d57 100644
          $this->assertEquals(302, $response->getStatusCode());
          $this->assertEquals("/admin/events/{$this->event->id}", $response->getHeaderLine('Location'));
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index d1cedf9..8a8d2ea 100644
+index 60e1a1d..3264e61 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -294,16 +294,17 @@ class EventsControllerTest extends ControllerTestCase
