@@ -24,8 +24,11 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       const data = await response.json();
 
-      document.getElementById("event_spots").textContent = data.enrollments_count + "/" + data.capacity;
-      document.getElementById("event_available").textContent = "(" + data.available_spots + " disponíveis)";
+      // O 404 (Evento não encontrado) não traz contagens: só atualiza quando elas vêm.
+      if ("capacity" in data) {
+        document.getElementById("event_spots").textContent = data.enrollments_count + "/" + data.capacity;
+        document.getElementById("event_available").textContent = "(" + data.available_spots + " disponíveis)";
+      }
 
       if (data.ok) {
         showFeedback("success", data.message);

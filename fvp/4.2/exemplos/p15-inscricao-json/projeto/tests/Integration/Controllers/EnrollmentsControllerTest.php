@@ -21,6 +21,8 @@ class EnrollmentsControllerTest extends ControllerTestCase
     {
         parent::setUp();
         $_SESSION['flash'] = [];
+        // http_response_code() vale no CLI e o status fica no processo do PHPUnit: zera a cada teste.
+        http_response_code(200);
 
         $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
         $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
@@ -121,6 +123,7 @@ class EnrollmentsControllerTest extends ControllerTestCase
         $this->assertSame(3, $json['capacity']);
         $this->assertSame(2, $json['available_spots']);
         $this->assertArrayNotHasKey('errors', $json);
+        $this->assertSame(201, http_response_code());
         $this->assertStringNotContainsString('Location:', $response);
         $this->assertEmpty($_SESSION['flash']);
     }
@@ -137,6 +140,7 @@ class EnrollmentsControllerTest extends ControllerTestCase
         $this->assertEquals('você já está inscrito neste evento!', $json['message']);
         $this->assertEquals(['você já está inscrito neste evento!'], $json['errors']);
         $this->assertArrayNotHasKey('enrollment', $json);
+        $this->assertSame(422, http_response_code());
         $this->assertCount(1, Enrollment::all());
         $this->assertEmpty($_SESSION['flash']);
     }
@@ -164,6 +168,9 @@ class EnrollmentsControllerTest extends ControllerTestCase
 
         $this->assertFalse($json['ok']);
         $this->assertEquals(['Evento não encontrado!'], $json['errors']);
+        $this->assertEquals('Evento não encontrado!', $json['message']);
+        $this->assertArrayNotHasKey('capacity', $json);
+        $this->assertSame(404, http_response_code());
         $this->assertEmpty($_SESSION['flash']);
     }
 

@@ -1185,23 +1185,23 @@ index 5780e2e..2d7f66a 100644
 2.54.0 (Apple Git-157)
 
 
-From 8984b861def50799c169c04d1b4f56dd920f2416 Mon Sep 17 00:00:00 2001
+From 528c297ab8d4321be6e5481f991dfbac5de6e0d6 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:57:53 -0300
 Subject: [PATCH 3/3] feat: Answer enrollment requests with JSON
 
 ---
- app/Controllers/EnrollmentsController.php     | 43 ++++++++-
- app/Models/Enrollment.php                     | 16 ++++
+ app/Controllers/EnrollmentsController.php     | 43 +++++++-
+ app/Models/Enrollment.php                     | 16 +++
  app/views/enrollments/create.json.php         | 28 ++++++
  app/views/events/show.phtml                   |  9 +-
- public/assets/js/enrollments.js               | 45 +++++++++
+ public/assets/js/enrollments.js               | 48 +++++++++
  .../events/ParticipantEnrollCest.php          |  5 +-
- .../events/ParticipantEnrollWithFetchCest.php | 54 +++++++++++
- .../Access/ParticipantEventsAccessTest.php    | 58 ++++++++++++
- .../Controllers/EnrollmentsControllerTest.php | 92 +++++++++++++++++++
+ .../events/ParticipantEnrollWithFetchCest.php | 54 ++++++++++
+ .../Access/ParticipantEventsAccessTest.php    | 58 +++++++++++
+ .../Controllers/EnrollmentsControllerTest.php | 99 +++++++++++++++++++
  tests/Unit/Models/Events/EnrollmentTest.php   | 15 +++
- 10 files changed, 358 insertions(+), 7 deletions(-)
+ 10 files changed, 368 insertions(+), 7 deletions(-)
  create mode 100644 app/views/enrollments/create.json.php
  create mode 100644 public/assets/js/enrollments.js
  create mode 100644 tests/Acceptance/events/ParticipantEnrollWithFetchCest.php
@@ -1337,7 +1337,7 @@ index 0000000..e868b17
 +$json['capacity'] = (int) $event->capacity;
 +$json['available_spots'] = $event->availableSpots();
 diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
-index da39cb1..ab7b398 100644
+index da39cb1..7aff638 100644
 --- a/app/views/events/show.phtml
 +++ b/app/views/events/show.phtml
 @@ -27,19 +27,22 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
@@ -1360,7 +1360,7 @@ index da39cb1..ab7b398 100644
  <?php else : ?>
 -    <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
 +    <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post"
-+        data-enrollment-form data-capacity="<?= (int) $event->capacity ?>">
++        data-enrollment-form>
          <button type="submit" class="btn btn-primary">Inscrever-se</button>
      </form>
  <?php endif; ?>
@@ -1368,10 +1368,10 @@ index da39cb1..ab7b398 100644
 +<script src="/assets/js/enrollments.js" defer></script>
 diff --git a/public/assets/js/enrollments.js b/public/assets/js/enrollments.js
 new file mode 100644
-index 0000000..a772ad0
+index 0000000..29748c7
 --- /dev/null
 +++ b/public/assets/js/enrollments.js
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,48 @@
 +// Inscrição sem recarregar a página (prévia do Ajax da 4.4): o form de "Inscrever-se" do detalhe
 +// do Evento é enviado com fetch() pedindo JSON; sem JavaScript, o form continua funcionando (HTML).
 +document.addEventListener("DOMContentLoaded", function () {
@@ -1398,8 +1398,11 @@ index 0000000..a772ad0
 +      });
 +      const data = await response.json();
 +
-+      document.getElementById("event_spots").textContent = data.enrollments_count + "/" + data.capacity;
-+      document.getElementById("event_available").textContent = "(" + data.available_spots + " disponíveis)";
++      // O 404 (Evento não encontrado) não traz contagens: só atualiza quando elas vêm.
++      if ("capacity" in data) {
++        document.getElementById("event_spots").textContent = data.enrollments_count + "/" + data.capacity;
++        document.getElementById("event_available").textContent = "(" + data.available_spots + " disponíveis)";
++      }
 +
 +      if (data.ok) {
 +        showFeedback("success", data.message);
@@ -1570,10 +1573,19 @@ index e606ad3..9fd4d8a 100644
 +    }
  }
 diff --git a/tests/Integration/Controllers/EnrollmentsControllerTest.php b/tests/Integration/Controllers/EnrollmentsControllerTest.php
-index 8a5a68d..6a89361 100644
+index 8a5a68d..a0a2f1b 100644
 --- a/tests/Integration/Controllers/EnrollmentsControllerTest.php
 +++ b/tests/Integration/Controllers/EnrollmentsControllerTest.php
-@@ -99,6 +99,98 @@ class EnrollmentsControllerTest extends ControllerTestCase
+@@ -21,6 +21,8 @@ class EnrollmentsControllerTest extends ControllerTestCase
+     {
+         parent::setUp();
+         $_SESSION['flash'] = [];
++        // http_response_code() vale no CLI e o status fica no processo do PHPUnit: zera a cada teste.
++        http_response_code(200);
+ 
+         $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
+         $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
+@@ -99,6 +101,103 @@ class EnrollmentsControllerTest extends ControllerTestCase
          $this->assertCount(0, Enrollment::all());
      }
  
@@ -1599,6 +1611,7 @@ index 8a5a68d..6a89361 100644
 +        $this->assertSame(3, $json['capacity']);
 +        $this->assertSame(2, $json['available_spots']);
 +        $this->assertArrayNotHasKey('errors', $json);
++        $this->assertSame(201, http_response_code());
 +        $this->assertStringNotContainsString('Location:', $response);
 +        $this->assertEmpty($_SESSION['flash']);
 +    }
@@ -1615,6 +1628,7 @@ index 8a5a68d..6a89361 100644
 +        $this->assertEquals('você já está inscrito neste evento!', $json['message']);
 +        $this->assertEquals(['você já está inscrito neste evento!'], $json['errors']);
 +        $this->assertArrayNotHasKey('enrollment', $json);
++        $this->assertSame(422, http_response_code());
 +        $this->assertCount(1, Enrollment::all());
 +        $this->assertEmpty($_SESSION['flash']);
 +    }
@@ -1642,6 +1656,9 @@ index 8a5a68d..6a89361 100644
 +
 +        $this->assertFalse($json['ok']);
 +        $this->assertEquals(['Evento não encontrado!'], $json['errors']);
++        $this->assertEquals('Evento não encontrado!', $json['message']);
++        $this->assertArrayNotHasKey('capacity', $json);
++        $this->assertSame(404, http_response_code());
 +        $this->assertEmpty($_SESSION['flash']);
 +    }
 +

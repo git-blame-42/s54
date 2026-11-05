@@ -19,7 +19,7 @@ Commits (os dois primeiros são a base):
 - `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
 - `458a05b` `feat: Allow participants to enroll in events` (base, P2)
-- `8984b86` `feat: Answer enrollment requests with JSON`
+- `528c297` `feat: Answer enrollment requests with JSON`
 
 ## O que mudou
 
@@ -27,9 +27,10 @@ Commits (os dois primeiros são a base):
   - com `$request->acceptJson()`: `http_response_code(201)` se gravou,
     `422` se não, e `renderJson('enrollments/create', ...)`; `return`
     logo depois. Sem flash, sem redirect;
-  - Evento inexistente com JSON: `404` com
-    `{"ok": false, "errors": ["Evento não encontrado!"]}`
-    (`respondJson()`, sem view, porque não há Inscrição);
+  - Evento inexistente com JSON: `404` com `{"ok": false,
+    "message": "Evento não encontrado!", "errors": ["Evento não
+    encontrado!"]}` (`respondJson()`, sem view, porque não há
+    Inscrição; sem as contagens);
   - sem o header: o fluxo HTML do P2, igual;
   - `findEvent()` novo: o `{id}` passa por
     `filter_var(..., FILTER_VALIDATE_INT, min_range 1)` em vez de
@@ -48,15 +49,17 @@ Commits (os dois primeiros são a base):
     `Accept: application/json`, atualiza `#event_spots` ("N/C") e
     `#event_available` ("(N disponíveis)"), mostra a mensagem em
     `#enrollment_feedback` e troca o form por "Você está inscrito
-    neste evento.". Se a resposta não for JSON (ex.: sessão expirou e
-    veio o `/login`), envia o form do jeito normal.
+    neste evento.". O contador só é atualizado quando a resposta traz
+    as contagens (o 404 não traz). Se a resposta não for JSON (ex.:
+    sessão expirou e veio o `/login`), envia o form do jeito normal.
   - `app/views/events/show.phtml`: `span`s com esses ids, a `div`
     `#enrollment_feedback`, o atributo `data-enrollment-form` e o
     `<script src="/assets/js/enrollments.js" defer>`.
 - Testes:
   - `EnrollmentsControllerTest` (+5): JSON de sucesso (corpo
-    completo, sem `Location:`, flash vazia); duplicata e lotado com
-    `errors`; Evento inexistente; ids não numéricos no fluxo HTML.
+    completo, status 201, sem `Location:`, flash vazia); duplicata
+    (422) e lotado com `errors`; Evento inexistente (404, com
+    `message` e sem contagens); ids não numéricos no fluxo HTML.
   - `EnrollmentTest` (+1): `errorMessages()`.
   - `ParticipantEventsAccessTest` (+4, HTTP real): `201` com
     `Content-Type: application/json`; `422` na duplicata; `404`;
@@ -101,7 +104,8 @@ docker compose stop selenium
 
 Resultado obtido: Unit 165 testes, Integration 77, Acceptance 31
 (eram 159 / 45 / 23 na base `f31006b`; 164 / 68 / 29 no P2). PHPCS e
-PHPStan sem erros. Schema não mudou; nenhuma classe nova.
+PHPStan sem erros. Schema não mudou; nenhuma classe nova em `app/`
+(o Cest é novo).
 
 No terminal, sem porta no host (`user@example.com` não está no
 Evento 3 e já está no Evento 1):
@@ -133,7 +137,7 @@ sem recarregar a página.
   JSON pode trazer `status` e a posição na fila; com P3, o mesmo
   padrão vale para o `DELETE` (o `enrollments.js` trocaria o botão de
   volta).
-- P1/P4 (código de check-in e confirmação de presença, agente B): a
+- P1/P4 (código de check-in e confirmação de presença): a
   confirmação de presença é outra boa candidata a responder JSON. Não
   estão implementados aqui.
 
@@ -156,9 +160,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p15 s50/fvp/4.2/exemplos/p15-inscricao-json/projeto
 git fetch fvp-p15 fvp/p15-inscricao-json
 # O2 + P2 + P15 (range)
-git cherry-pick 0669a19^..8984b86
+git cherry-pick 0669a19^..528c297
 # ou só o topo (P15), se já tem O2 e P2
-git cherry-pick 8984b86
+git cherry-pick 528c297
 git remote remove fvp-p15
 ```
 
@@ -170,7 +174,7 @@ git fetch s50/fvp/4.2/exemplos/p15-inscricao-json/solucao.bundle \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p15
 # ou só o topo
-git cherry-pick 8984b86
+git cherry-pick 528c297
 # opcional, limpa a ref
 git branch -D fvp-p15
 ```
@@ -221,10 +225,13 @@ Depois de aplicar: testes e `./run phpcs` de novo.
   */*` não casa. No `fetch()`, defina `Accept` explicitamente.
 - `return` depois do `renderJson()`: sem ele o método segue para a
   flash e o redirect.
-- `http_response_code()` não tem efeito nos testes de controller (CLI);
-  ali confira o corpo. O status é testado no teste de acesso (HTTP
-  real, Guzzle com `http_errors => false` para o 4xx não virar
-  exceção).
+- `http_response_code()` funciona no CLI: a primeira chamada com
+  valor devolve `true` e depois `http_response_code()` devolve 201.
+  O status fica no processo do PHPUnit e passa de um teste para o
+  outro; por isso o `setUp` do `EnrollmentsControllerTest` zera com
+  `http_response_code(200)` e os testes conferem 201/422/404. O teste
+  de acesso confere o status real por HTTP (Guzzle com
+  `http_errors => false` para o 4xx não virar exceção).
 - O header do `renderJson` tem `chartset` (erro de grafia do
   framework, em `core/`); não é seu. `Content-Type` continua começando
   por `application/json`.

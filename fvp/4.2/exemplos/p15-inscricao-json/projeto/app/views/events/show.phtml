@@ -40,7 +40,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
     <p class="text-success">Você está inscrito neste evento.</p>
 <?php else : ?>
     <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post"
-        data-enrollment-form data-capacity="<?= (int) $event->capacity ?>">
+        data-enrollment-form>
         <button type="submit" class="btn btn-primary">Inscrever-se</button>
     </form>
 <?php endif; ?>
