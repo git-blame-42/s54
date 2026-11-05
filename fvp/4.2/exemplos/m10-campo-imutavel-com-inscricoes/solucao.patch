@@ -1,0 +1,364 @@
+From 2041afd97f44949969634829cf3035e68afd2caa Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:41:54 -0300
+Subject: [PATCH] feat: Lock event start date and kind once it has enrollments
+
+---
+ app/Models/Event.php                          | 24 ++++-
+ app/views/admin/events/_form.phtml            | 21 +++-
+ .../events/UpdateEventWithEnrollmentsCest.php | 50 ++++++++++
+ .../Admin/EventsControllerTest.php            | 64 ++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 98 +++++++++++++++++++
+ 5 files changed, 253 insertions(+), 4 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/UpdateEventWithEnrollmentsCest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..f2a2d67 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -64,7 +64,8 @@ class Event extends Model
+         Validations::notEmpty('location', $this);
+ 
+         Validations::notEmpty('kind', $this) &&
+-            Validations::inclusion('kind', $this, array_keys(self::KINDS));
++            Validations::inclusion('kind', $this, array_keys(self::KINDS)) &&
++            $this->validatesUnchangedWithEnrollments('kind');
+ 
+         Validations::notEmpty('modality', $this) &&
+             Validations::inclusion('modality', $this, array_keys(self::MODALITIES));
+@@ -74,6 +75,7 @@ class Event extends Model
+ 
+         Validations::notEmpty('starts_on', $this) &&
+             Validations::validDate('starts_on', $this) &&
++            $this->validatesUnchangedWithEnrollments('starts_on') &&
+             $this->validatesStartsOnNotPast();
+ 
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+@@ -81,6 +83,26 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Com Inscrições, o campo (ex.: `starts_on`, `kind`) não pode mudar: quem se inscreveu contava com ele.
++     * Compara com o valor gravado no banco; Evento novo ou sem Inscrições passa.
++     */
++    private function validatesUnchangedWithEnrollments(string $field): bool
++    {
++        if ($this->newRecord() || !$this->hasEnrollments()) {
++            return true;
++        }
++
++        $original = self::findById($this->id);
++
++        if ($original !== null && $original->$field !== $this->$field) {
++            $this->addError($field, 'não pode mudar: já há inscritos!');
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..e16a9d4 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -8,6 +8,8 @@
+  */
+ use App\Models\Event;
+ 
++// Inscrições já gravadas (0 no new). Só para o aviso: a regra está em Event::validates().
++$enrolled = $event->enrollmentsCount();
+ $invalid = fn(string $field): string => $event->errors($field) !== null ? ' is-invalid' : '';
+ $feedback = fn(string $field, string $extra = ''): string => $event->errors($field) !== null
+     ? '<div class="invalid-feedback' . $extra . '">' . htmlspecialchars($event->errors($field)) . '</div>'
+@@ -34,12 +36,17 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+ 
+     <div class="mb-3">
+         <label for="event_kind" class="form-label">Tipo</label>
+-        <select class="form-select<?= $invalid('kind') ?>" id="event_kind" name="event[kind]">
++        <select class="form-select<?= $invalid('kind') ?>" id="event_kind" name="event[kind]"<?= $enrolled > 0 ? ' disabled' : '' ?>>
+             <option value="">Selecione</option>
+             <?php foreach (Event::KINDS as $value => $label) : ?>
+                 <option value="<?= $value ?>" <?= $event->kind === $value ? 'selected' : '' ?>><?= $label ?></option>
+             <?php endforeach; ?>
+         </select>
++        <?php if ($enrolled > 0) : ?>
++            <?php /* select não tem readonly e o disabled não é enviado: o valor vai pelo campo oculto. */ ?>
++            <input type="hidden" name="event[kind]" value="<?= htmlspecialchars((string) $event->kind) ?>">
++            <div class="form-text" id="event_kind_locked">O tipo não pode mudar: o Evento já tem inscritos.</div>
++        <?php endif; ?>
+         <?= $feedback('kind') ?>
+     </div>
+ 
+@@ -70,7 +77,12 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     <div class="mb-3">
+         <label for="event_starts_on" class="form-label">Data</label>
+         <input type="date" class="form-control<?= $invalid('starts_on') ?>" id="event_starts_on" name="event[starts_on]"
+-            value="<?= htmlspecialchars((string) $event->starts_on) ?>">
++            value="<?= htmlspecialchars((string) $event->starts_on) ?>"<?= $enrolled > 0 ? ' readonly' : '' ?>>
++        <?php if ($enrolled > 0) : ?>
++            <div class="form-text" id="event_starts_on_locked">
++                A data não pode mudar: o Evento já tem <?= $enrolled ?> inscrito(s).
++            </div>
++        <?php endif; ?>
+         <?= $feedback('starts_on') ?>
+     </div>
+ 
+@@ -84,7 +96,10 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     <div class="mb-3">
+         <label for="event_capacity" class="form-label">Vagas</label>
+         <input type="number" class="form-control<?= $invalid('capacity') ?>" id="event_capacity" name="event[capacity]"
+-            min="1" value="<?= htmlspecialchars((string) $event->capacity) ?>">
++            min="<?= max(1, $enrolled) ?>" value="<?= htmlspecialchars((string) $event->capacity) ?>">
++        <?php if ($enrolled > 0) : ?>
++            <div class="form-text">Mínimo: <?= $enrolled ?> (número de inscritos).</div>
++        <?php endif; ?>
+         <?= $feedback('capacity') ?>
+     </div>
+ 
+diff --git a/tests/Acceptance/admin/events/UpdateEventWithEnrollmentsCest.php b/tests/Acceptance/admin/events/UpdateEventWithEnrollmentsCest.php
+new file mode 100644
+index 0000000..f2df95b
+--- /dev/null
++++ b/tests/Acceptance/admin/events/UpdateEventWithEnrollmentsCest.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Evento 01 da base tem 3 Inscrições (3/3): a data e o tipo não podem mudar.
++ */
++class UpdateEventWithEnrollmentsCest extends BaseEventsCest
++{
++    public function startsOnIsLockedAndRejectedWithEnrollments(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++
++        $page->wantTo('Tentar mudar a data de um Evento que já tem inscritos');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->see('A data não pode mudar: o Evento já tem 3 inscrito(s).');
++        $page->seeElement('#event_starts_on[readonly]');
++        $page->seeElement('#event_kind[disabled]');
++        $page->see('O tipo não pode mudar: o Evento já tem inscritos.');
++
++        // O readonly é só aviso: forçar o valor pelo navegador não passa pelo model.
++        $this->fillEventForm($page, ['starts_on' => date('Y-m-d', strtotime('+90 days'))]);
++        $page->click('Salvar');
++
++        $page->see('Existem dados incorretos! Por favor, verifique!');
++        $page->seeElement('#event_starts_on.is-invalid');
++        $page->see('não pode mudar: já há inscritos!', '#event_starts_on ~ .invalid-feedback');
++        Assert::assertSame($event->starts_on, Event::findById($event->id)->starts_on);
++    }
++
++    public function eventWithEnrollmentsCanBeEditedKeepingTheDate(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++
++        $page->wantTo('Editar o título de um Evento com inscritos, sem mudar a data');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->fillField('#event_title', 'Evento 01 Revisado');
++        $page->click('Salvar');
++
++        $page->see('Evento atualizado com sucesso!');
++        $stored = Event::findById($event->id);
++        Assert::assertSame('Evento 01 Revisado', $stored->title);
++        // O tipo foi enviado pelo campo oculto e continua o mesmo.
++        Assert::assertSame($event->kind, $stored->kind);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..aef8e25 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -239,6 +239,70 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
++    public function test_update_starts_on_of_event_with_enrollments_is_rejected(): void
++    {
++        $event = $this->createEvent(['title' => 'Com Inscritos']);
++        $original = $event->starts_on;
++        $this->enroll($event);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams([
++                'title' => 'Título Novo',
++                'starts_on' => date('Y-m-d', strtotime('+40 days')),
++            ])]
++        );
++
++        $stored = Event::findById($event->id);
++        $this->assertEquals($original, $stored->starts_on);
++        $this->assertEquals('Com Inscritos', $stored->title);
++        $this->assertMatchesRegularExpression('/<h1>\s*Editar Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString('não pode mudar: já há inscritos!', $response);
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
++    public function test_update_kind_of_event_with_enrollments_is_rejected(): void
++    {
++        $event = $this->createEvent(['kind' => 'workshop']);
++        $this->enroll($event);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['kind' => 'lecture'])]
++        );
++
++        $this->assertEquals('workshop', Event::findById($event->id)->kind);
++        $this->assertStringContainsString('não pode mudar: já há inscritos!', $response);
++    }
++
++    public function test_edit_shows_starts_on_locked_when_event_has_enrollments(): void
++    {
++        $event = $this->createEvent();
++        $this->enroll($event);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/id="event_starts_on"[^>]*readonly/', $response);
++        $this->assertStringContainsString('A data não pode mudar: o Evento já tem 1 inscrito(s).', $response);
++        $this->assertStringContainsString('min="1"', $response);
++        $this->assertMatchesRegularExpression('/id="event_kind"[^>]*disabled/', $response);
++        $this->assertStringContainsString('<input type="hidden" name="event[kind]" value="workshop">', $response);
++    }
++
++    public function test_edit_does_not_lock_starts_on_without_enrollments(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertDoesNotMatchRegularExpression('/id="event_starts_on"[^>]*readonly/', $response);
++        $this->assertStringNotContainsString('event_starts_on_locked', $response);
++        $this->assertDoesNotMatchRegularExpression('/id="event_kind"[^>]*disabled/', $response);
++        $this->assertStringNotContainsString('type="hidden" name="event[kind]"', $response);
++    }
++
+     public function test_destroy_removes_event_without_enrollments(): void
+     {
+         $event = $this->createEvent();
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..1a19fe7 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -629,6 +629,104 @@ class EventTest extends TestCase
+         $this->assertTrue($event->save());
+     }
+ 
++    /* ------------------- M10: starts_on e kind imutáveis com Inscrições ------------------- */
++
++    public function test_kind_cannot_change_when_the_event_has_enrollments(): void
++    {
++        $event = $this->createEvent(['kind' => 'lecture']);
++        $this->enroll($event, 1);
++
++        $event->kind = 'workshop';
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode mudar: já há inscritos!', $event->errors('kind'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertEquals('lecture', Event::findById($event->id)->kind);
++    }
++
++    public function test_kind_can_change_when_the_event_has_no_enrollments(): void
++    {
++        $event = $this->createEvent(['kind' => 'lecture']);
++
++        $event->kind = 'workshop';
++
++        $this->assertTrue($event->save());
++        $this->assertEquals('workshop', Event::findById($event->id)->kind);
++    }
++
++    public function test_kind_outside_enum_on_event_with_enrollments_keeps_the_enum_message(): void
++    {
++        $event = $this->createEvent();
++        $this->enroll($event, 1);
++
++        $event->kind = 'concert';
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não é uma opção válida!', $event->errors('kind'));
++    }
++
++
++    public function test_starts_on_cannot_change_when_the_event_has_enrollments(): void
++    {
++        $event = $this->createEvent();
++        $original = $event->starts_on;
++        $this->enroll($event, 2);
++
++        $event->starts_on = date('Y-m-d', strtotime('+40 days'));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode mudar: já há inscritos!', $event->errors('starts_on'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertEquals($original, Event::findById($event->id)->starts_on);
++    }
++
++    public function test_starts_on_can_change_when_the_event_has_no_enrollments(): void
++    {
++        $event = $this->createEvent();
++        $future = date('Y-m-d', strtotime('+40 days'));
++
++        $event->starts_on = $future;
++
++        $this->assertTrue($event->save());
++        $this->assertEquals($future, Event::findById($event->id)->starts_on);
++    }
++
++    public function test_event_with_enrollments_can_be_edited_keeping_the_same_starts_on(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 3);
++
++        $event->title = 'Título novo';
++        $event->capacity = 3;
++
++        $this->assertTrue($event->save());
++        $this->assertNull($event->errors('starts_on'));
++    }
++
++    public function test_invalid_starts_on_on_event_with_enrollments_keeps_the_date_message(): void
++    {
++        $event = $this->createEvent();
++        $this->enroll($event, 1);
++
++        $event->starts_on = '2030-02-30';
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
++    }
++
++    public function test_starts_on_and_capacity_errors_together_on_event_with_enrollments(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 3);
++
++        $event->starts_on = date('Y-m-d', strtotime('+40 days'));
++        $event->capacity = 2;
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode mudar: já há inscritos!', $event->errors('starts_on'));
++        $this->assertEquals('não pode ser menor que o total de inscrições (3)!', $event->errors('capacity'));
++    }
++
+     /* ------------------- P03: destroy seguro ------------------- */
+ 
+     public function test_safe_destroy_should_remove_an_event_without_enrollments(): void
+-- 
+2.54.0 (Apple Git-157)
+

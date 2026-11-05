@@ -42,6 +42,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M1. Campo novo em `events` com validação (`workload_hours`)
   `m1-campo-novo-workload-hours/`
   - feat: Add workload hours to events
+- M10. Campo que não muda depois de haver inscrições
+  `m10-campo-imutavel-com-inscricoes/`
+  - feat: Lock event start date and kind once it has enrollments
 - M11. Validar `user_id` no model (existe e é admin)
   `m11-validar-user-id/`
   - feat: Validate that the event creator exists and is an admin
