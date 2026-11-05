@@ -165,4 +165,82 @@ class UserTest extends TestCase
         $this->assertTrue($this->user->authenticate('123456'));
         $this->assertFalse($this->user->authenticate('654321'));
     }
+
+    /* ------------------- Login por código (FVP B11) ------------------- */
+    // Cada teste cobre um dos pontos de validação do model. $this->user é o usuário
+    // salvo no setUp. Próximo passo: lib/Authentication/Auth.php (pedido na sessão).
+
+    public function test_generate_login_code_should_return_four_digits_and_store_only_a_digest(): void
+    {
+        $code = $this->user->generateLoginCode();
+        $stored = User::findById($this->user->id);
+
+        $this->assertMatchesRegularExpression('/^\d{4}$/', $code);
+        $this->assertGreaterThanOrEqual(1000, (int) $code);
+        $this->assertLessThanOrEqual(9999, (int) $code);
+        // Nunca em texto puro no banco: só o hash, que confere com o código.
+        $this->assertNotEquals($code, $stored->login_code_digest);
+        $this->assertTrue(password_verify($code, (string) $stored->login_code_digest));
+        $this->assertGreaterThan(time(), strtotime((string) $stored->login_code_expires_at));
+        $this->assertEquals(0, $stored->login_code_attempts);
+        $this->assertTrue($stored->hasPendingLoginCode());
+    }
+
+    public function test_authenticate_with_login_code_should_accept_the_code_only_once(): void
+    {
+        $code = $this->user->generateLoginCode();
+
+        $this->assertTrue($this->user->authenticateWithLoginCode($code));
+        $this->assertNull(User::findById($this->user->id)->login_code_digest);
+        $this->assertFalse($this->user->authenticateWithLoginCode($code));
+    }
+
+    public function test_authenticate_with_login_code_should_reject_a_wrong_code_and_count_the_attempt(): void
+    {
+        $code = $this->user->generateLoginCode();
+
+        $this->assertFalse($this->user->authenticateWithLoginCode($this->wrongCode($code)));
+        $this->assertEquals(1, User::findById($this->user->id)->login_code_attempts);
+        // O código certo ainda vale enquanto sobram tentativas.
+        $this->assertTrue($this->user->authenticateWithLoginCode($code));
+    }
+
+    public function test_authenticate_with_login_code_should_lock_after_three_wrong_attempts(): void
+    {
+        $code = $this->user->generateLoginCode();
+
+        for ($i = 0; $i < User::LOGIN_CODE_MAX_ATTEMPTS; $i++) {
+            $this->assertFalse($this->user->authenticateWithLoginCode($this->wrongCode($code)));
+        }
+
+        $this->assertFalse($this->user->hasPendingLoginCode());
+        $this->assertNull(User::findById($this->user->id)->login_code_digest);
+        $this->assertFalse($this->user->authenticateWithLoginCode($code));
+    }
+
+    public function test_authenticate_with_login_code_should_reject_an_expired_code(): void
+    {
+        $code = $this->user->generateLoginCode();
+        // update() não valida: serve para plantar a validade no passado.
+        $this->user->update(['login_code_expires_at' => date('Y-m-d H:i:s', time() - 1)]);
+
+        $this->assertFalse($this->user->authenticateWithLoginCode($code));
+        $this->assertNull(User::findById($this->user->id)->login_code_digest);
+    }
+
+    public function test_authenticate_with_login_code_should_reject_malformed_input_and_no_pending_code(): void
+    {
+        $this->assertFalse($this->user->authenticateWithLoginCode('1234'));
+
+        $this->user->generateLoginCode();
+        foreach (['', '12', '12345', 'abcd', ' 1234'] as $bad) {
+            $this->assertFalse($this->user->authenticateWithLoginCode($bad), var_export($bad, true));
+        }
+    }
+
+    /** Um código certamente diferente do sorteado, ainda com 4 dígitos. */
+    private function wrongCode(string $code): string
+    {
+        return $code === '1000' ? '1001' : '1000';
+    }
 }
