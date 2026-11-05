@@ -138,3 +138,6 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - S4. Testes de borda pedidos pelo professor
   `s4-testes-de-borda/`
   - test: Add edge case tests for events
+- T2. `phpcs`, `phpstan` e CI verdes
+  `t2-phpcs-phpstan-verdes/`
+  - (sem código; só README)
