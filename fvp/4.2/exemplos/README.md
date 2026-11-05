@@ -63,6 +63,18 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100
+- M20. Preço em reais com vírgula ("Gratuito" se 0)
+  `m20-preco-em-reais/`
+  - feat: Add price in reais to events
+- M21. Vagas ilimitadas (`capacity NULL`)
+  `m21-vagas-ilimitadas/`
+  - feat: Allow events with unlimited capacity
+- M22. Limite de N Eventos por dia
+  `m22-limite-por-dia/`
+  - feat: Limit events per day
+- M23. Data digitada dd/mm/aaaa
+  `m23-data-dd-mm-aaaa/`
+  - feat: Accept event date typed as dd/mm/yyyy
 - M3. Valor novo em ENUM (tipo Seminário)
   `m3-enum-novo-seminar/`
   - feat: Add seminar to event kinds

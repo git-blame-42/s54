@@ -1,0 +1,644 @@
+From 59fd70ad0c303da1a0faa1c5a4e2814ae77121e0 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:28:06 -0300
+Subject: [PATCH] feat: Add price in reais to events
+
+Price is a DECIMAL(8,2) column. The model accepts comma or dot
+(regex instead of FILTER_VALIDATE_FLOAT, which takes 1e3 and -1),
+normalizes the comma to a dot before saving, and formats the value
+as "R$ 10,50" or "Gratuito" when it is zero.
+---
+ app/Controllers/Admin/EventsController.php    |  2 +-
+ app/Models/Event.php                          | 40 +++++++++++++
+ app/views/admin/events/_form.phtml            |  9 +++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 +
+ database/Populate/populate.php                |  2 +
+ database/schema.sql                           |  2 +
+ lib/Validations.php                           | 22 +++++++
+ .../admin/events/BaseEventsCest.php           |  7 ++-
+ .../admin/events/CreateSuccessfullyCest.php   |  2 +
+ .../events/CreateWithInvalidDataCest.php      | 22 ++++++-
+ .../admin/events/ListEventsCest.php           |  5 ++
+ .../admin/events/UpdateSuccessfullyCest.php   |  4 ++
+ tests/Integration/Access/EventsAccessTest.php |  2 +
+ .../Admin/EventsControllerTest.php            | 50 ++++++++++++++++
+ .../NumberAndDateValidationsTest.php          | 37 ++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   |  1 +
+ tests/Unit/Models/Events/EventTest.php        | 60 ++++++++++++++++++-
+ 18 files changed, 265 insertions(+), 7 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..fb33693 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,7 +11,7 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity', 'price'];
+ 
+     public function index(Request $request): void
+     {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..116566c 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string $price DECIMAL(8,2): o banco devolve "10.50"; o formulário pode mandar "10,50"
+  */
+ class Event extends Model
+ {
+@@ -55,6 +56,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'price',
+     ];
+ 
+     public function validates(): void
+@@ -79,6 +81,11 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        if (Validations::notEmpty('price', $this) && Validations::decimal('price', $this, 6, 2)) {
++            // "10,50" vira "10.50": em DECIMAL o MySQL só aceita ponto ("10,50" daria erro no INSERT).
++            $this->price = str_replace(',', '.', (string) $this->price);
++        }
+     }
+ 
+     /**
+@@ -114,6 +121,39 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Preço para exibir: "Gratuito" quando é 0; senão "R$ 1.234,50" (milhar com ponto, centavos com vírgula).
++     */
++    public function formattedPrice(): string
++    {
++        $price = str_replace(',', '.', (string) $this->price);
++
++        if (!is_numeric($price)) {
++            return '';
++        }
++
++        if ((float) $price === 0.0) {
++            return 'Gratuito';
++        }
++
++        return 'R$ ' . number_format((float) $price, 2, ',', '.');
++    }
++
++    /**
++     * Valor do campo no formulário: "10.50" (banco ou já validado) aparece como "10,50".
++     * Vazio ou inválido (inclusive acima do limite, como "1000000") volta como foi digitado.
++     */
++    public function priceForInput(): string
++    {
++        $price = (string) $this->price;
++
++        if (preg_match('/^\d{1,6}(\.\d{1,2})?$/D', $price) !== 1) {
++            return $price;
++        }
++
++        return number_format((float) $price, 2, ',', '');
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..9559fad 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -88,6 +88,15 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <?= $feedback('capacity') ?>
+     </div>
+ 
++    <div class="mb-3">
++        <label for="event_price" class="form-label">Preço (R$)</label>
++        <input type="text" inputmode="decimal" class="form-control<?= $invalid('price') ?>" id="event_price"
++            name="event[price]" placeholder="10,50" aria-describedby="event_price_help"
++            value="<?= htmlspecialchars($event->priceForInput()) ?>">
++        <?= $feedback('price') ?>
++        <div id="event_price_help" class="form-text">Use vírgula nos centavos. Informe 0 para evento gratuito.</div>
++    </div>
++
+     <button type="submit" class="btn btn-primary">Salvar</button>
+     <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..c537e38 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Preço</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= htmlspecialchars($event->formattedPrice()) ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..680e47c 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Preço</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->formattedPrice()) ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..caaa4a2 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -140,6 +140,8 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
+         'location' => $location,
+         'capacity' => $capacity,
++        // Minicursos são pagos; os demais, gratuitos.
++        'price' => $kind === 'short_course' ? '49.90' : '0',
+     ]);
+     $event->setAudienceList(explode(',', $audience));
+     if (!$event->save()) {
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..31cba87 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,9 +29,11 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    price       DECIMAL(8, 2) NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
++    CONSTRAINT check_events_price CHECK (price >= 0),
+     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
+     INDEX index_events_on_starts_on (starts_on)
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..dbb42d6 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -93,6 +93,28 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * Número decimal não negativo com até $digits dígitos antes e $decimals depois do separador,
++     * que pode ser vírgula ou ponto ("10,50", "10.5", "0"). Sem sinal, sem milhar e sem notação
++     * científica: FILTER_VALIDATE_FLOAT aceitaria "1e3" e "-1". O limite de dígitos acompanha a
++     * coluna DECIMAL(digits + decimals, decimals), para o INSERT não estourar. O modificador D faz
++     * o `$` recusar "10\n" (sem ele, `$` aceita uma quebra de linha no fim).
++     */
++    public static function decimal($attribute, $obj, int $digits, int $decimals)
++    {
++        $value = $obj->$attribute;
++        $pattern = '/^\d{1,' . $digits . '}([.,]\d{1,' . $decimals . '})?$/D';
++        $text = is_int($value) || is_string($value) ? (string) $value : '';
++
++        if (preg_match($pattern, $text) !== 1) {
++            $max = str_repeat('9', $digits) . ',' . str_repeat('9', $decimals);
++            $obj->addError($attribute, "deve ser um valor entre 0 e {$max}, como 10,50!");
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * A data deve existir no calendário e estar no formato $format (padrão Y-m-d).
+      */
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..a6a2ec6 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -89,6 +89,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+                 'starts_on' => $this->startsOn($number),
+                 'location' => "Sala {$number}",
+                 'capacity' => $number === 1 ? 3 : 20 + $number,
++                // Evento 02 é pago; os demais, gratuitos.
++                'price' => $number === 2 ? '10.50' : '0',
+             ]);
+             $event->setAudienceList($number % 2 === 1 ? ['students', 'professors'] : ['students']);
+             $event->save();
+@@ -115,13 +117,13 @@ class BaseEventsCest extends BaseAcceptanceCest
+      * Preenche apenas os campos informados. `audience` define exatamente quais checkboxes ficam marcados.
+      *
+      * Chaves aceitas: title, description, kind (rótulo exibido no select), modality (valor do radio: in_person,
+-     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity.
++     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity, price.
+      *
+      * @param array<string, mixed> $data
+      */
+     protected function fillEventForm(AcceptanceTester $page, array $data): void
+     {
+-        foreach (['title', 'description', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'location', 'capacity', 'price'] as $field) {
+             if (array_key_exists($field, $data)) {
+                 $page->fillField("#event_{$field}", (string) $data[$field]);
+             }
+@@ -171,6 +173,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+             'starts_on' => date('Y-m-d', strtotime('+1 day')),
+             'location' => 'Laboratório B203',
+             'capacity' => '40',
++            'price' => '10,50',
+         ], $overrides);
+     }
+ 
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..bfa9584 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -28,6 +28,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see('Evento cadastrado com sucesso!');
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
++        $page->see('R$ 10,50');
+ 
+         // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+         $page->amOnPage('/admin/events/page/4');
+@@ -43,6 +44,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertSame($data['starts_on'], $event->starts_on);
+         Assert::assertSame($data['location'], $event->location);
+         Assert::assertEquals(40, $event->capacity);
++        Assert::assertSame('10.50', $event->price);
+         Assert::assertSame(0, $event->enrollmentsCount());
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..340072f 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -20,7 +20,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         $page->see(self::FLASH);
+         $page->see('Novo Evento', 'h1');
+-        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity', 'price'] as $field) {
+             $page->seeElement("#event_{$field}.is-invalid");
+             $page->see('não pode ser vazio!', "#event_{$field} ~ .invalid-feedback");
+         }
+@@ -43,6 +43,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->checkOption('#event_audience_staff');
+         $page->fillField('#event_location', 'Laboratório B203');
+         $page->fillField('#event_capacity', '0');
++        $page->fillField('#event_price', '10,5');
+         $this->fillEventForm($page, ['starts_on' => date('Y-m-d', strtotime('-1 day'))]);
+         $page->click('Salvar');
+ 
+@@ -54,7 +55,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->see('não pode estar no passado!', '#event_starts_on ~ .invalid-feedback');
+         $page->seeElement('#event_capacity.is-invalid');
+         $page->see('deve ser maior ou igual a 1!', '#event_capacity ~ .invalid-feedback');
+-        foreach (['title', 'description', 'kind', 'location'] as $field) {
++        foreach (['title', 'description', 'kind', 'location', 'price'] as $field) {
+             $page->dontSeeElement("#event_{$field}.is-invalid");
+         }
+         $page->dontSeeElement('input[name="event[modality]"].is-invalid');
+@@ -70,6 +71,23 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->seeCheckboxIsChecked('#event_audience_staff');
+         $page->dontSeeCheckboxIsChecked('#event_audience_professors');
+         $page->seeInField('#event_location', 'Laboratório B203');
++        $page->seeInField('#event_price', '10,50');
++
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++
++    public function createWithInvalidPriceShowsErrorBelowTheField(AcceptanceTester $page): void
++    {
++        $page->wantTo('Tentativa de cadastro com preço inválido (notação científica)');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData(['price' => '1e3']));
++        $page->click('Salvar');
++
++        $page->see(self::FLASH);
++        $page->seeElement('#event_price.is-invalid');
++        $page->see('deve ser um valor entre 0 e 999999,99, como 10,50!', '#event_price ~ .invalid-feedback');
++        $page->seeInField('#event_price', '1e3');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..8b6d9d9 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -37,6 +37,11 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('0/22', $this->rowOf('Evento 02'));
+         $page->see('1/23', $this->rowOf('Evento 03'));
+ 
++        // Preço: Evento 02 é pago (R$ 10,50); os demais, gratuitos.
++        $page->see('Gratuito', $this->rowOf('Evento 01'));
++        $page->see('R$ 10,50', $this->rowOf('Evento 02'));
++        $page->dontSee('Gratuito', $this->rowOf('Evento 02'));
++
+         // Os demais Eventos ficam nas outras páginas.
+         $page->dontSee($this->title(6));
+         $page->dontSee($this->title(16));
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..dd27fd0 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -19,6 +19,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+             'starts_on' => date('Y-m-d', strtotime('+90 days')),
+             'location' => 'Auditório Central',
+             'capacity' => '60',
++            'price' => '0',
+         ]);
+ 
+         $page->wantTo('Tentativa de atualização bem-sucedida');
+@@ -37,6 +38,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $page->seeInField('#event_starts_on', $event->starts_on);
+         $page->seeInField('#event_location', $event->location);
+         $page->seeInField('#event_capacity', (string) $event->capacity);
++        $page->seeInField('#event_price', '10,50');
+ 
+         $this->fillEventForm($page, $data);
+         $page->click('Salvar');
+@@ -44,6 +46,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+         $page->see('Evento atualizado com sucesso!');
+         $page->see($data['title'], 'h1');
++        $page->see('Gratuito');
+ 
+         $stored = Event::findById((int) $event->id);
+         Assert::assertNotNull($stored);
+@@ -55,6 +58,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         Assert::assertSame($data['starts_on'], $stored->starts_on);
+         Assert::assertSame($data['location'], $stored->location);
+         Assert::assertEquals(60, $stored->capacity);
++        Assert::assertSame('0.00', $stored->price);
+         Assert::assertEquals($this->admin->id, $stored->user_id);
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..6443a7a 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -37,6 +37,7 @@ class EventsAccessTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+30 days')),
+             'location' => 'Microsoft Teams',
+             'capacity' => 10,
++            'price' => '0',
+         ]);
+         $this->event->save();
+     }
+@@ -150,6 +151,7 @@ class EventsAccessTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Qualquer lugar',
+             'capacity' => '5',
++            'price' => '0',
+         ]]]);
+         $client->post($uri, ['form_params' => ['_method' => 'PUT', 'event' => ['title' => 'Título Alterado']]]);
+         $client->post($uri, ['form_params' => ['_method' => 'DELETE']]);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..027fca0 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -188,6 +188,55 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertDoesNotMatchRegularExpression('/id="event_audience_students"[^>]*checked/', $response);
+     }
+ 
++    public function test_create_accepts_price_with_comma_and_shows_it_in_reais(): void
++    {
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertInstanceOf(Event::class, $event);
++        $this->assertSame('10.50', $event->price);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertMatchesRegularExpression('/<dt[^>]*>Preço<\/dt>\s*<dd[^>]*>R\$ 10,50<\/dd>/', $show);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $this->assertStringContainsString('<td>R$ 10,50</td>', $index);
++
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertMatchesRegularExpression('/id="event_price"[^>]*value="10,50"/', $edit);
++    }
++
++    public function test_free_event_shows_gratuito(): void
++    {
++        $event = $this->createEvent(['price' => '0']);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<dt[^>]*>Preço<\/dt>\s*<dd[^>]*>Gratuito<\/dd>/', $show);
++        $this->assertStringContainsString('<td>Gratuito</td>', $index);
++        $this->assertStringNotContainsString('R$', $index);
++    }
++
++    public function test_create_with_invalid_price_shows_error_below_the_field(): void
++    {
++        foreach (['1e3', '1000000', '-5', '10,505'] as $price) {
++            $response = $this->post(
++                action: 'create',
++                controllerName: self::CONTROLLER,
++                params: ['event' => $this->validParams(['price' => $price])]
++            );
++
++            $this->assertCount(0, Event::all(), $price);
++            $this->assertMatchesRegularExpression(
++                '/class="form-control is-invalid" id="event_price"[^>]*value="' . preg_quote($price, '/') . '">\s*'
++                    . '<div class="invalid-feedback">deve ser um valor entre 0 e 999999,99, como 10,50!<\/div>/',
++                $response
++            );
++            $this->assertDoesNotMatchRegularExpression('/is-invalid" id="event_(title|location|capacity)"/', $response);
++        }
++    }
++
+     public function test_update_with_valid_data_changes_event(): void
+     {
+         $event = $this->createEvent();
+@@ -280,6 +329,7 @@ class EventsControllerTest extends ControllerTestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Bloco A',
+             'capacity' => '20',
++            'price' => '10,50',
+         ], $overrides);
+     }
+ 
+diff --git a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+index 4d2a626..1ec39b7 100644
+--- a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
++++ b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+@@ -57,6 +57,43 @@ class NumberAndDateValidationsTest extends TestCase
+         }
+     }
+ 
++    public function test_decimal_should_accept_comma_or_dot_up_to_the_limits(): void
++    {
++        foreach (['0', '10', '10,5', '10,50', '10.50', '999999,99', 7] as $value) {
++            $this->model->quantity = $value; // @phpstan-ignore-line
++
++            $this->assertTrue(Validations::decimal('quantity', $this->model, 6, 2), (string) $value);
++        }
++        $this->assertFalse($this->model->hasErrors());
++    }
++
++    public function test_decimal_should_reject_what_filter_validate_float_would_accept(): void
++    {
++        $invalid = [
++            null, '', 'dez', '1e3', '-1', '+1', '10,505', '1.234,50', '1234567', '10,', ',50', ' 10', "10\n",
++            10.5, [1], true,
++        ];
++
++        foreach ($invalid as $value) {
++            $this->model->quantity = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::decimal('quantity', $this->model, 6, 2), var_export($value, true));
++            $this->assertEquals(
++                'deve ser um valor entre 0 e 999999,99, como 10,50!',
++                $this->model->errors('quantity')
++            );
++        }
++    }
++
++    public function test_decimal_should_use_the_given_digits(): void
++    {
++        $this->model->quantity = '100,5'; // @phpstan-ignore-line
++
++        $this->assertFalse(Validations::decimal('quantity', $this->model, 2, 1));
++        $this->assertEquals('deve ser um valor entre 0 e 99,9, como 10,50!', $this->model->errors('quantity'));
++        $this->assertTrue(Validations::decimal('quantity', $this->model, 3, 1));
++    }
++
+     public function test_valid_date_should_accept_real_dates(): void
+     {
+         foreach (['2030-12-31', '2028-02-29', '1999-01-01'] as $value) {
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..77f5f50 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -45,6 +45,7 @@ class EnrollmentTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Online',
+             'capacity' => 5,
++            'price' => '0',
+         ]);
+         $this->event->save();
+     }
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..f4b680c 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -50,6 +50,7 @@ class EventTest extends TestCase
+             'starts_on' => date('Y-m-d', strtotime('+30 days')),
+             'location' => 'Auditório Central',
+             'capacity' => 10,
++            'price' => '0',
+         ], $overrides);
+     }
+ 
+@@ -90,7 +91,8 @@ class EventTest extends TestCase
+         $this->assertFalse($event->isValid());
+         $this->assertFalse($event->save());
+ 
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity', 'price'];
++        foreach ($fields as $field) {
+             $this->assertEquals('não pode ser vazio!', $event->errors($field), $field);
+         }
+     }
+@@ -109,6 +111,7 @@ class EventTest extends TestCase
+             'audience' => ['audience'],
+             'starts_on' => ['starts_on'],
+             'capacity' => ['capacity'],
++            'price' => ['price'],
+         ];
+     }
+ 
+@@ -128,7 +131,8 @@ class EventTest extends TestCase
+     private function errorsOf(Event $event): array
+     {
+         $errors = [];
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity', 'price'];
++        foreach ($fields as $field) {
+             if ($event->errors($field) !== null) {
+                 $errors[$field] = $event->errors($field);
+             }
+@@ -207,6 +211,58 @@ class EventTest extends TestCase
+         $this->assertTrue($event->isValid());
+     }
+ 
++    public function test_price_should_accept_comma_and_be_saved_with_dot(): void
++    {
++        foreach ([['10,50', '10.50'], ['999999,99', '999999.99'], ['7,5', '7.50'], ['0', '0.00']] as [$typed, $stored]) {
++            $event = $this->createEvent(['price' => $typed]);
++            $this->assertSame(str_replace(',', '.', $typed), $event->price, 'vírgula vira ponto no model');
++
++            $found = Event::findById($event->id);
++            $this->assertInstanceOf(Event::class, $found);
++            $this->assertSame($stored, $found->price, $typed);
++        }
++    }
++
++    public function test_price_should_reject_invalid_values(): void
++    {
++        foreach (['1e3', '-1', '10,505', '1.234,50', '1000000', 'dez'] as $value) {
++            $event = new Event($this->params(['price' => $value]));
++
++            $this->assertFalse($event->save(), $value);
++            $this->assertEquals('deve ser um valor entre 0 e 999999,99, como 10,50!', $event->errors('price'));
++            $this->assertSame($value, $event->price, 'valor inválido não é convertido');
++        }
++
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_formatted_price_should_show_reais_or_free(): void
++    {
++        $event = new Event($this->params());
++
++        $cases = [
++            '0' => 'Gratuito', '0.00' => 'Gratuito', '10.5' => 'R$ 10,50', '10,50' => 'R$ 10,50',
++            '1234.5' => 'R$ 1.234,50', '999999.99' => 'R$ 999.999,99', '' => '',
++        ];
++
++        foreach ($cases as $price => $expected) {
++            $event->price = (string) $price;
++            $this->assertSame($expected, $event->formattedPrice(), (string) $price);
++        }
++    }
++
++    public function test_price_for_input_should_use_comma(): void
++    {
++        $event = new Event($this->params());
++
++        $cases = ['10.50' => '10,50', '0.00' => '0,00', '1234.5' => '1234,50', '' => '', '1e3' => '1e3', '1000000' => '1000000'];
++
++        foreach ($cases as $price => $expected) {
++            $event->price = (string) $price;
++            $this->assertSame($expected, $event->priceForInput(), (string) $price);
++        }
++    }
++
+     public function test_starts_on_should_be_a_valid_date(): void
+     {
+         foreach (['amanhã', '2030-02-31', '2030-13-01', '30/12/2030', '2030-1-5'] as $value) {
+-- 
+2.54.0 (Apple Git-157)
+
