@@ -1,4 +1,4 @@
-From 51e93474f93c612ed3ee984e4f9c299f8909d242 Mon Sep 17 00:00:00 2001
+From 2e39004ed773aa2039531b587a7703fb5dee7609 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:05:48 -0300
 Subject: [PATCH] feat: Require location only for in-person events and link for
@@ -404,7 +404,7 @@ index dab557d..da3e983 100644
          ]);
          $this->event->save();
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..dd1bbdb 100644
+index f961b4c..ef2ab48 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -128,7 +128,8 @@ class EventTest extends TestCase
@@ -484,7 +484,7 @@ index f961b4c..dd1bbdb 100644
      {
          foreach (array_keys(Event::MODALITIES) as $modality) {
 -            $this->assertTrue((new Event($this->params(['modality' => $modality])))->isValid(), $modality);
-+            // Online exige link (M5).
++            // Online exige link.
 +            $params = $this->params(['modality' => $modality, 'link' => 'https://meet.example.com/semana']);
 +
 +            $this->assertTrue((new Event($params))->isValid(), $modality);

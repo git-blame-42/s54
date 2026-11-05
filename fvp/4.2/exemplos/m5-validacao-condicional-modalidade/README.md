@@ -13,7 +13,7 @@ Branch no clone: `fvp/m5-validacao-condicional-modalidade`, a partir de
 
 | Commit    | Mensagem                                                  |
 |-----------|-----------------------------------------------------------|
-| `51e9347` | `feat: Require location only for in-person events and...` |
+| `2e39004` | `feat: Require location only for in-person events and...` |
 
 Mensagem completa: `feat: Require location only for in-person events
 and link for online events` (corpo: coluna `link` nova, `location`
@@ -182,7 +182,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-m5 \
     s50/fvp/4.2/exemplos/m5-validacao-condicional-modalidade/projeto
 git fetch fvp-m5 fvp/m5-validacao-condicional-modalidade
-git cherry-pick 51e9347
+git cherry-pick 2e39004
 git remote remove fvp-m5
 ```
 
@@ -192,7 +192,7 @@ git remote remove fvp-m5
 git fetch \
     s50/fvp/4.2/exemplos/m5-validacao-condicional-modalidade/solucao.bundle \
     fvp/m5-validacao-condicional-modalidade:fvp-m5
-git cherry-pick 51e9347
+git cherry-pick 2e39004
 # opcional, limpa a ref
 git branch -D fvp-m5
 ```

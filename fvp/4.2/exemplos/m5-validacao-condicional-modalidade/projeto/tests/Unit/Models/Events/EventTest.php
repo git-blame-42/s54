@@ -211,7 +211,7 @@ class EventTest extends TestCase
     public function test_modality_should_accept_every_enum_value(): void
     {
         foreach (array_keys(Event::MODALITIES) as $modality) {
-            // Online exige link (M5).
+            // Online exige link.
             $params = $this->params(['modality' => $modality, 'link' => 'https://meet.example.com/semana']);
 
             $this->assertTrue((new Event($params))->isValid(), $modality);
