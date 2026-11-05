@@ -5,9 +5,7 @@ usuário. URL inexistente deve mostrar uma página de não encontrado,
 com link para voltar ao início; em development o trace continua."
 
 Chance: baixa. Tempo estimado: 20-25 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, O11: "`ErrorsHandler::viewFor()` escolhe
-`errors/404` ou `errors/500` fora de development; HTML simples, sem
-layout, com link para `/`".
+`s50/fvp/4.2/catalogo.md`, O11.
 
 Branch no clone: `fvp/o11-404-amigavel`, a partir de `main`
 (`f31006b` do público).
@@ -139,9 +137,10 @@ sem trace; em `development`, o trace de antes.
 
 ## Relação com outros cenários
 
-- O8 (`o8-status-http`): "Evento não encontrado" vira 404 com
-  `render('errors/404', ...)`, dentro do layout. Cria o mesmo arquivo
-  `app/views/errors/404.phtml` (ver "Se der conflito").
+- O8 (`o8-status-http`): "Evento não encontrado" vira 404 com uma
+  view própria, `admin/events/not_found.phtml`, dentro do layout.
+  Não conflita com o `errors/404.phtml` daqui: o O8 trata o Evento
+  inexistente no controller; este, a rota inexistente no handler.
 - N10 (`n10-pagina-id-invalido`): página/id inválidos continuam
   redirect com flash; não passam pelo `ErrorsHandler`.
 - T4 (`t4-env-per-page`): outra leitura de `$_ENV`; vale a mesma
@@ -205,11 +204,6 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar e por quê:
 
-- `app/views/errors/404.phtml` ("both added" com o O8): lá a view é
-  um trecho dentro do layout (via `render`); aqui é uma página
-  completa, sem layout. Não dá para usar a mesma: renomeie a do O8
-  (ex.: `errors/event_not_found`, e troque no `render`) e fique com
-  esta para o `ErrorsHandler`.
 - `core/Errors/ErrorsHandler.php`: outro cenário que mexa no handler
   (raro). Os métodos novos são independentes; mantenha o desvio
   `if ($view !== null)` logo depois do `ob_end_clean()`.
