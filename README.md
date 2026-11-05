@@ -84,6 +84,29 @@ A validação prática (FVP) de cada entrega tem o seu escopo. O diretório
   títulos, com escopo e linha; `./fvp.sh -h` lista as opções. Só bash,
   awk, grep e sort; roda no Ubuntu do laboratório.
 
+- `fvp/aplicar.sh`
+  Aplica no branch atual do clone do projeto a solução pronta de um
+  cenário: `fvp/aplicar.sh P1`, de dentro do clone. Lê o bundle
+  (offline), pula commits que o branch já tem (base de cenário
+  empilhado), faz o cherry-pick e roda phpcs, phpstan e os testes do
+  "Como verificar" do README do cenário. Em conflito, desfaz e aponta
+  "Se der conflito". `--dry-run` só diz se aplica (com `--base <ref>`,
+  testa contra outro ref); `--escopo 4.1`; `--sem-testes`; `-h` lista
+  tudo.
+
+- `scripts/14-fvp-prep.sh`
+  Importa todos os `solucao.bundle` como branches
+  `fvp/<escopo>/<cenario>` no clone do projeto e cria os atalhos
+  `fvp` (`fvp.sh`) e `fvp-aplicar` (`fvp/aplicar.sh`) no zsh e no
+  bash. `-z` apaga os branches e os atalhos. O `00-run-all.sh` roda
+  ele logo depois do 08.
+
+- `scripts/15-fvp-check.sh`
+  Só lê: para cada cenário de chance alta e média-alta da 4.2, diz se
+  a solução aplica sem conflito no `main` atual do clone (e, se não,
+  quais arquivos conflitam). Roteiro do dia da prova:
+  `scripts/runbook.md`, seção "Dia da FVP".
+
 ## Scripts
 
 `scripts/` prepara uma máquina Ubuntu 24.04 do laboratório: git,
@@ -91,12 +114,13 @@ curl, tmux, zsh, micro, ncdu, `.tmux.conf`, oh-my-zsh com plugin
 tmux, zsh como shell padrão, verificação do que o framework precisa
 (Docker, Compose v2, rootless viável ou não), instalação do Docker,
 teste do framework sem modificações num diretório temporário,
-instalação do projeto Eventos do Câmpus, PHP nativo com phpcs e
-phpstan, Neovim com LazyVim e, opcionais, VS Code e IntelliJ. Um
-script por tarefa; só
+instalação do projeto Eventos do Câmpus, preparo da FVP (branches
+das soluções e atalhos), PHP nativo com phpcs e phpstan, Neovim com
+LazyVim e, opcionais, VS Code e IntelliJ. Um script por tarefa; só
 `-h` e `-z` (desfaz o que aquele script fez, sem tocar no que já
-existia). `scripts/00-run-all.sh` roda tudo em ordem, menos o
-rootless. Ordem e detalhes em `scripts/README.md`.
+existia). `scripts/00-run-all.sh` roda tudo em ordem, inclusive o 14,
+menos os opcionais (11 e 12, IDEs; 13, rootless) e o 15, que só
+verifica. Ordem e detalhes em `scripts/README.md`.
 
 ## Convenções
 
