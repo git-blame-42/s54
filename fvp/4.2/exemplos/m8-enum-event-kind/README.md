@@ -5,6 +5,15 @@ Pedido, como o professor faria na hora: "troque a constante
 método `label()` que devolve o texto em português. O select, a
 listagem, o show e a validação passam a usar o enum."
 
+Escopo: só o tipo (`kind`). `Event::MODALITIES` e `Event::AUDIENCES`
+ficaram como estavam, de propósito, porque o pedido cita só `KINDS`.
+Se o professor pedir também a modalidade, repita o molde: um
+`enum EventModality: string` (`InPerson`, `Online`, `Hybrid`) com
+`label()`/`options()`, `tryFrom` na validação, `modalityLabel()` com
+`tryFrom` e os radios do `_form` percorrendo `options()`. O público-
+alvo é SET (vários valores): o enum serve para a lista de opções, mas a
+coluna continua sendo string separada por vírgula.
+
 Chance: média-baixa. Tempo estimado: 25-35 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, M8.
 
@@ -13,7 +22,7 @@ Branch no clone: `fvp/m8-enum-event-kind`, a partir de `main`
 
 | Commit | Mensagem |
 |--------|----------|
-| `f914a63` | `refactor: Replace Event::KINDS with EventKind enum` |
+| `a87be2d` | `refactor: Replace Event::KINDS with EventKind enum` |
 
 ## O que mudou
 
@@ -34,7 +43,9 @@ Branch no clone: `fvp/m8-enum-event-kind`, a partir de `main`
     `EventKind::tryFrom((string) $this->kind) !== null`; senão
     `kind` recebe "não é uma opção válida!" (mesma mensagem do
     `inclusion` de antes).
-  - `kindLabel(): string` = `EventKind::from($this->kind)->label()`.
+  - `kindLabel(): string` =
+    `EventKind::tryFrom((string) $this->kind)?->label()`, e o valor
+    cru se ele não for um case.
 - Views: `_form.phtml` percorre `EventKind::options()`;
   `index.phtml` e `show.phtml` mostram
   `htmlspecialchars($event->kindLabel())`.
@@ -52,7 +63,8 @@ Branch no clone: `fvp/m8-enum-event-kind`, a partir de `main`
     `ValueError`, cases iguais ao ENUM do `schema.sql`.
   - `EventTest`: aceita todos os cases (agora por
     `EventKind::cases()`), recusa `Lecture`/`Palestra`/`ShortCourse`,
-    `kindLabel()`.
+    `kindLabel()` com case válido e com valor fora do enum
+    (`seminar` aparece cru, sem `ValueError`).
   - `EventsControllerTest`: o select do `new` tem cada
     `<option value="...">Rótulo</option>`; o `edit` marca o tipo do
     Evento; listagem e show mostram o rótulo e não o valor cru.
@@ -64,8 +76,12 @@ Branch no clone: `fvp/m8-enum-event-kind`, a partir de `main`
   novo sem rótulo.
 - `tryFrom` na validação: devolve `null` para valor desconhecido, sem
   exceção, e o erro vai para o campo como qualquer outra validação do
-  model. `from` (que lança `ValueError`) só em `kindLabel()`, usado
-  em Evento já salvo (o ENUM do banco garante um valor válido).
+  model.
+- `tryFrom` também na exibição (`kindLabel()`): se um dia houver no
+  banco um valor sem case (case removido do enum, dado antigo, `ALTER`
+  aplicado antes do código), `from()` lançaria `ValueError` e
+  derrubaria a listagem inteira. Com `tryFrom` a tela mostra o valor
+  cru e continua de pé. `from()` não aparece no código de `app/`.
 - `options()` devolve o mesmo formato do antigo `KINDS`
   (`valor => rótulo`), então o `foreach` do select quase não muda.
 - Cases em PascalCase (PSR-12 / PER) e valores iguais ao banco: o
@@ -86,7 +102,7 @@ docker compose stop selenium
 ./run db:populate
 ```
 
-Resultado obtido: Unit 170 testes, Integration 48, Acceptance 23
+Resultado obtido: Unit 171 testes, Integration 48, Acceptance 23
 (base 159 / 45 / 23). PHPCS e PHPStan sem erros; PSR-4 estrito ok;
 schema não mudou; `db:populate` sem erro.
 
@@ -102,9 +118,8 @@ rótulo.
   `EventKindTest` acusa se o schema e o enum divergirem. Se o M3 já
   estiver aplicado (com `KINDS`), mova o valor novo para um case.
 - R3 (formatação na view num só lugar): `kindLabel()` é o mesmo
-  movimento, tirar o `KINDS[...] ?? ...` repetido nas views. O mesmo
-  vale para `MODALITIES` e `AUDIENCES` (aqui não mudaram, fora do
-  pedido).
+  movimento, tirar o `KINDS[...] ?? ...` repetido nas views.
+  `MODALITIES` e `AUDIENCES` ficaram fora (ver "Escopo" no topo).
 
 ## Como aplicar em outro repositório (cherry-pick)
 
@@ -128,7 +143,7 @@ novo (SHA diferente); preserva conteúdo e mensagem.
 cd /caminho/do/seu/repositorio
 git remote add fvp-m8 <caminho>/projeto
 git fetch fvp-m8 fvp/m8-enum-event-kind
-git cherry-pick f914a63
+git cherry-pick a87be2d
 git remote remove fvp-m8
 ```
 
@@ -136,7 +151,7 @@ git remote remove fvp-m8
 
 ```
 git fetch <caminho>/solucao.bundle fvp/m8-enum-event-kind:fvp-m8
-git cherry-pick f914a63
+git cherry-pick a87be2d
 # opcional, limpa a ref
 git branch -D fvp-m8
 ```
@@ -190,8 +205,10 @@ Depois de aplicar: rode `./run phpcs` e os testes de novo.
 - Confira as chaves reais: no schema é `short_course`. Um case
   `'minicourse'` faria o MySQL recusar o INSERT (ENUM) mesmo com a
   validação passando.
-- `from()` lança `ValueError` (não é `Exception`, é `Error`): use em
-  dado já validado. Na validação, `tryFrom()`.
+- `from()` lança `ValueError` (não é `Exception`, é `Error`, e o
+  `catch (Exception)` não pega). Na validação e na exibição use
+  `tryFrom()`; `from()` só onde um valor inválido deve mesmo parar
+  tudo (o teste do enum usa para provar isso).
 - `match` sem `default`: se faltar um case, o PHP lança
   `UnhandledMatchError` em tempo de execução e o phpstan acusa
   `match.unhandled`. Não ponha `default` para calar o aviso.

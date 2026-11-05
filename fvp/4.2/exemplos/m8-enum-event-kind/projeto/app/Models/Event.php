@@ -119,12 +119,12 @@ class Event extends Model
     }
 
     /**
-     * Rótulo do tipo (ex.: "Palestra"). Use em Evento já salvo: from() lança ValueError
-     * se `kind` não for um case de EventKind.
+     * Rótulo do tipo (ex.: "Palestra"). Usa tryFrom() e não from(): um valor fora do enum (dado antigo
+     * no banco, case removido) mostra o valor cru em vez de lançar ValueError e quebrar a página.
      */
     public function kindLabel(): string
     {
-        return EventKind::from($this->kind)->label();
+        return EventKind::tryFrom((string) $this->kind)?->label() ?? (string) $this->kind;
     }
 
     public function user(): BelongsTo

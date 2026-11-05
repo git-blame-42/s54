@@ -169,6 +169,12 @@ class EventTest extends TestCase
         $this->assertSame('Palestra', (new Event($this->params(['kind' => 'lecture'])))->kindLabel());
     }
 
+    public function test_kind_label_should_show_the_raw_value_when_it_is_outside_the_enum(): void
+    {
+        $this->assertSame('seminar', (new Event($this->params(['kind' => 'seminar'])))->kindLabel());
+        $this->assertSame('', (new Event($this->params(['kind' => null])))->kindLabel());
+    }
+
     public function test_modality_should_accept_every_enum_value(): void
     {
         foreach (array_keys(Event::MODALITIES) as $modality) {
