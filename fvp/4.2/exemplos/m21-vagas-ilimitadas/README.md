@@ -84,9 +84,10 @@ if (!$this->hasUnlimitedCapacity() &&
 - `availableSpots()` devolve `null` em vez de um número grande: quem
   usa precisa decidir o que mostrar (o retorno `?int` deixa isso
   explícito). "Ilimitado" não é "0 disponíveis".
-- Regra P02 (vagas não abaixo das Inscrições) continua: só não se
-  aplica quando não há limite. Tirar o limite de um Evento lotado é
-  permitido; voltar a limitar abaixo das Inscrições é barrado.
+- A regra P02 do projeto (`Event.php:102`: vagas não abaixo das
+  Inscrições) continua: só não se aplica quando não há limite. Tirar
+  o limite de um Evento lotado é permitido; voltar a limitar abaixo
+  das Inscrições é barrado.
 - Texto nas views no lugar do `(int) $event->capacity` (ver
   Armadilhas). `capacity` não é texto livre, então não precisa de
   `htmlspecialchars`; o cast `(int)` fica só no ramo com limite.
@@ -281,10 +282,14 @@ Arquivos que costumam conflitar e por quê:
 
 ## Armadilhas
 
-- `(int) null` é `0`. Na base há três pontos com esse cast:
-  `availableSpots()` no model e a célula Vagas no `index.phtml` e no
-  `show.phtml`. Só trocar o schema faz a tela mostrar "2/0" e
-  "(0 disponíveis)" para um Evento sem limite.
+- `(int) null` é `0`. Na base há quatro pontos com esse cast: no
+  model, `availableSpots()` e `validatesCapacityAgainstEnrollments()`
+  (`(int) $this->capacity < $enrolled`), e a célula Vagas no
+  `index.phtml` e no `show.phtml`. Só trocar o schema faz a tela
+  mostrar "2/0" e "(0 disponíveis)" para um Evento sem limite, e a
+  edição de um ilimitado com Inscrições falhar com "não pode ser
+  menor que o total de inscrições". Aqui o `!hasUnlimitedCapacity()`
+  na frente da validação evita o último.
 - `null <= 0` e `!null` são `true` no PHP: qualquer "lotado" escrito
   assim trata o Evento ilimitado como lotado. Compare com `=== 0` ou
   confira `null` antes.
