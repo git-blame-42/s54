@@ -1,0 +1,325 @@
+From 0fe3c48c0320c9fde1bf6fc2f14fe7f0a5b0a752 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:07:49 -0300
+Subject: [PATCH] feat: Filter events by kind keeping the filter in pagination
+
+?kind= is validated against Event::KINDS. Model::paginate now passes
+conditions and extra query params to the Paginator, and page links keep
+?kind= via Paginator::queryParams().
+---
+ app/Controllers/Admin/EventsController.php    | 19 ++++-
+ app/views/admin/events/index.phtml            | 19 ++++-
+ app/views/paginator/_pages.phtml              |  6 +-
+ core/Database/ActiveRecord/Model.php          | 17 ++++-
+ lib/Paginator.php                             | 17 ++++-
+ .../Admin/EventsControllerTest.php            | 70 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 25 +++++++
+ 7 files changed, 163 insertions(+), 10 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..f9e119a 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,15 +15,20 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
++        $kind = $this->kindFilter($request);
++        $filter = $kind !== null ? ['kind' => $kind] : [];
++
+         $paginator = Event::paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+             per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
++            route: 'admin.events.paginate',
++            conditions: $filter,
++            queryParams: $filter
+         );
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'kind', 'title'));
+     }
+ 
+     public function show(Request $request): void
+@@ -129,6 +134,16 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * `?kind=` só vale se for uma das chaves de Event::KINDS; senão, sem filtro.
++     */
++    private function kindFilter(Request $request): ?string
++    {
++        $kind = $request->getParam('kind');
++
++        return is_string($kind) && array_key_exists($kind, Event::KINDS) ? $kind : null;
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..339f019 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -2,8 +2,25 @@
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<form class="row g-2 align-items-center mb-3" method="get" action="<?= route('admin.events.index') ?>">
++    <div class="col-auto">
++        <label class="col-form-label" for="filter_kind">Tipo</label>
++    </div>
++    <div class="col-auto">
++        <select class="form-select" id="filter_kind" name="kind">
++            <option value="">Todos</option>
++            <?php foreach (\App\Models\Event::KINDS as $value => $label) : ?>
++                <option value="<?= $value ?>" <?= $kind === $value ? 'selected' : '' ?>><?= $label ?></option>
++            <?php endforeach; ?>
++        </select>
++    </div>
++    <div class="col-auto">
++        <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
++    </div>
++</form>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= $kind !== null ? 'Nenhum evento deste tipo.' : 'Nenhum evento cadastrado.' ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..82ec7f1 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -3,7 +3,7 @@
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->previousPage()], $paginator->queryParams())) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +13,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $page], $paginator->queryParams())) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->nextPage()], $paginator->queryParams())) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..e9f8d11 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -281,15 +281,26 @@ abstract class Model
+         return $models;
+     }
+ 
+-    public static function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
+-    {
++    /**
++     * @param array<string, mixed> $conditions filtros por igualdade repassados ao Paginator
++     * @param array<string, mixed> $queryParams parâmetros extras mantidos nos links de página
++     */
++    public static function paginate(
++        int $page = 1,
++        int $per_page = 10,
++        string $route = null,
++        array $conditions = [],
++        array $queryParams = []
++    ): Paginator {
+         return new Paginator(
+             class: static::class,
+             page: $page,
+             per_page: $per_page,
+             table: static::$table,
+             attributes: static::$columns,
+-            route: $route
++            conditions: $conditions,
++            route: $route,
++            queryParams: $queryParams
+         );
+     }
+ 
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..245af6d 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -15,6 +15,10 @@ class Paginator
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions filtros por igualdade (WHERE coluna = valor)
++     * @param array<string, mixed> $queryParams parâmetros extras repassados aos links de página (ex.: kind)
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,7 +26,8 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private array $queryParams = []
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -38,6 +43,16 @@ class Paginator
+         return $this->per_page;
+     }
+ 
++    /**
++     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.
++     *
++     * @return array<string, mixed>
++     */
++    public function queryParams(): array
++    {
++        return $this->queryParams;
++    }
++
+     public function totalOfRegistersOfPage(): int
+     {
+         return $this->totalOfRegistersOfPage;
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..9c6afd5 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -56,6 +57,75 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_filters_by_kind_and_keeps_filter_in_page_links(): void
++    {
++        // 7 Palestras e 3 Oficinas intercaladas: sem o filtro, a página 1 misturaria os tipos.
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['kind' => 'lecture', 'title' => sprintf('Palestra %02d', $i)]);
++            if ($i <= 3) {
++                $this->createEvent(['kind' => 'workshop', 'title' => sprintf('Oficina %02d', $i)]);
++            }
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['kind' => 'lecture']);
++        $page2 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['kind' => 'lecture', 'page' => 2]
++        );
++
++        $this->assertStringContainsString('Palestra 01', $page1);
++        $this->assertStringContainsString('Palestra 05', $page1);
++        $this->assertStringNotContainsString('Palestra 06', $page1);
++        $this->assertStringNotContainsString('Oficina 01', $page1);
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
++        $this->assertStringContainsString('href="/admin/events/page/2?kind=lecture"', $page1);
++        $this->assertMatchesRegularExpression('/<option value="lecture"\s+selected>/', $page1);
++
++        $this->assertStringContainsString('Palestra 06', $page2);
++        $this->assertStringContainsString('Palestra 07', $page2);
++        $this->assertStringNotContainsString('Palestra 05', $page2);
++        $this->assertStringNotContainsString('Oficina', strip_tags(explode('<table', $page2)[1]));
++        $this->assertStringContainsString('href="/admin/events/page/1?kind=lecture"', $page2);
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function invalidKindProvider(): array
++    {
++        return [
++            'vazio (Todos)' => [''],
++            'fora da lista' => ['xyz'],
++            'array' => [['lecture']],
++        ];
++    }
++
++    #[DataProvider('invalidKindProvider')]
++    public function test_index_ignores_invalid_kind(mixed $kind): void
++    {
++        $this->createEvent(['kind' => 'lecture', 'title' => 'Palestra 01']);
++        $this->createEvent(['kind' => 'workshop', 'title' => 'Oficina 01']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['kind' => $kind]);
++
++        $this->assertStringContainsString('Palestra 01', $response);
++        $this->assertStringContainsString('Oficina 01', $response);
++        $this->assertStringNotContainsString('?kind=', $response);
++        $this->assertStringContainsString('<option value="">Todos</option>', $response);
++        $this->assertStringNotContainsString('selected', $response);
++    }
++
++    public function test_index_with_kind_without_events_shows_message(): void
++    {
++        $this->createEvent(['kind' => 'lecture', 'title' => 'Palestra 01']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['kind' => 'workshop']);
++
++        $this->assertStringContainsString('Nenhum evento deste tipo.', $response);
++        $this->assertStringNotContainsString('Palestra 01', $response);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..7222744 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,31 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    public function test_paginate_should_filter_by_conditions_and_keep_query_params(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['kind' => 'lecture', 'title' => "Palestra {$i}"]);
++        }
++        $this->createEvent(['kind' => 'workshop', 'title' => 'Oficina 1']);
++
++        $paginator = Event::paginate(
++            page: 2,
++            per_page: 5,
++            route: 'admin.events.paginate',
++            conditions: ['kind' => 'lecture'],
++            queryParams: ['kind' => 'lecture']
++        );
++
++        $this->assertEquals(7, $paginator->totalOfRegisters());
++        $this->assertEquals(2, $paginator->totalOfPages());
++        $this->assertCount(2, $paginator->registers());
++        foreach ($paginator->registers() as $event) {
++            $this->assertEquals('lecture', $event->kind);
++        }
++        $this->assertSame(['kind' => 'lecture'], $paginator->queryParams());
++        $this->assertSame([], Event::paginate(1, 5)->queryParams());
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+

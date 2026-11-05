@@ -1,0 +1,343 @@
+From ca2e157e87c0568f8f0c7f51851b0c833ad6e7cc Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:01:20 -0300
+Subject: [PATCH] feat: Generate a random check-in code for each Event
+
+Adds events.checkin_code (1000-9999, unique). Event::save() fills it with Event::newCheckinCode() when a new record has no code, so it never comes from the form and never changes on update. Shown in the listing and in the show page.
+---
+ app/Models/Event.php                          | 55 +++++++++++
+ app/views/admin/events/index.phtml            |  2 +
+ app/views/admin/events/show.phtml             |  3 +
+ database/schema.sql                           |  3 +
+ .../admin/events/CreateSuccessfullyCest.php   |  5 +
+ .../Admin/EventsControllerTest.php            | 51 +++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 91 +++++++++++++++++++
+ 7 files changed, 210 insertions(+)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..5599881 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string|null $checkin_code gerado por save() via newCheckinCode(), nunca pelo formulário
+  */
+ class Event extends Model
+ {
+@@ -44,6 +45,10 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Faixa do código de check-in. */
++    public const CHECKIN_CODE_MIN = 1000;
++    public const CHECKIN_CODE_MAX = 9999;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -55,6 +60,7 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'checkin_code',
+     ];
+ 
+     public function validates(): void
+@@ -79,6 +85,55 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        // Evento novo sem código é válido: o save() gera o código antes de gravar.
++        if (!$this->newRecord() || !$this->isCheckinCodeBlank()) {
++            Validations::notEmpty('checkin_code', $this) &&
++                Validations::integerMin('checkin_code', $this, self::CHECKIN_CODE_MIN) &&
++                $this->validatesCheckinCodeMax() &&
++                Validations::uniqueness('checkin_code', $this);
++        }
++    }
++
++    /**
++     * Ao criar o Evento, gera o código de check-in se ele ainda não foi definido.
++     * Na edição o código nunca muda.
++     */
++    public function save(): bool
++    {
++        if ($this->newRecord() && $this->isCheckinCodeBlank()) {
++            $this->checkin_code = self::newCheckinCode();
++        }
++
++        return parent::save();
++    }
++
++    /**
++     * Sorteia um código de check-in na faixa 1000–9999 que nenhum outro Evento usa.
++     * Repete o sorteio enquanto o código já existir no banco.
++     */
++    public static function newCheckinCode(): int
++    {
++        do {
++            $code = random_int(self::CHECKIN_CODE_MIN, self::CHECKIN_CODE_MAX);
++        } while (self::exists(['checkin_code' => $code]));
++
++        return $code;
++    }
++
++    private function isCheckinCodeBlank(): bool
++    {
++        return $this->checkin_code === null || $this->checkin_code === '';
++    }
++
++    private function validatesCheckinCodeMax(): bool
++    {
++        if ((int) $this->checkin_code > self::CHECKIN_CODE_MAX) {
++            $this->addError('checkin_code', 'deve ser menor ou igual a ' . self::CHECKIN_CODE_MAX . '!');
++            return false;
++        }
++
++        return true;
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..036bc8e 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -13,6 +13,7 @@
+                 <th>Data</th>
+                 <th>Local</th>
+                 <th>Vagas</th>
++                <th>Código</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+@@ -24,6 +25,7 @@
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td><?= (int) $event->checkin_code ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..2dcfeca 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,6 +30,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Código de check-in</dt>
++    <dd class="col-sm-9" id="event_checkin_code"><?= (int) $event->checkin_code ?></dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..7b34c96 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,9 +29,12 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Código de check-in (1000 a 9999), gerado pelo Event::save() no cadastro; nunca vem do formulário.
++    checkin_code SMALLINT UNSIGNED NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
++    UNIQUE KEY uq_events_checkin_code (checkin_code),
+     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users (id)
+         ON DELETE RESTRICT ON UPDATE CASCADE,
+     INDEX index_events_on_starts_on (starts_on)
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..f8bf995 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -28,6 +28,9 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see('Evento cadastrado com sucesso!');
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
++        // P1: o código de check-in foi gerado pelo sistema e aparece no show.
++        $page->see('Código de check-in');
++        $page->see((string) $event->checkin_code, '#event_checkin_code');
+ 
+         // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+         $page->amOnPage('/admin/events/page/4');
+@@ -44,5 +47,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertSame($data['location'], $event->location);
+         Assert::assertEquals(40, $event->capacity);
+         Assert::assertSame(0, $event->enrollmentsCount());
++        Assert::assertGreaterThanOrEqual(Event::CHECKIN_CODE_MIN, (int) $event->checkin_code);
++        Assert::assertLessThanOrEqual(Event::CHECKIN_CODE_MAX, (int) $event->checkin_code);
+     }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..c6f2d37 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -111,6 +111,57 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals($this->admin->id, $event->user_id);
+     }
+ 
++    public function test_create_generates_the_checkin_code(): void
++    {
++        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++        $this->assertLessThanOrEqual(9999, $event->checkin_code);
++    }
++
++    public function test_create_ignores_checkin_code_sent_by_the_form(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['checkin_code' => '1'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertNotEquals(1, $event->checkin_code);
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++    }
++
++    public function test_update_does_not_change_the_checkin_code(): void
++    {
++        $event = $this->createEvent();
++        $code = $event->checkin_code;
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['checkin_code' => '1234'])]
++        );
++
++        $this->assertEquals($code, Event::findById($event->id)->checkin_code);
++    }
++
++    public function test_index_and_show_display_the_checkin_code(): void
++    {
++        $event = $this->createEvent();
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('<th>Código</th>', $index);
++        $this->assertStringContainsString("<td>{$event->checkin_code}</td>", $index);
++        $this->assertStringContainsString('Código de check-in', $show);
++        $this->assertStringContainsString(">{$event->checkin_code}</dd>", $show);
++    }
++
+     public function test_create_with_invalid_data_renders_form_with_errors_and_values(): void
+     {
+         $response = $this->post(
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..11cd9ab 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -297,6 +297,97 @@ class EventTest extends TestCase
+         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
+     }
+ 
++    /* ------------------- código de check-in ------------------- */
++
++    public function test_new_checkin_code_should_be_between_1000_and_9999(): void
++    {
++        for ($i = 0; $i < 200; $i++) {
++            $code = Event::newCheckinCode();
++
++            $this->assertGreaterThanOrEqual(1000, $code);
++            $this->assertLessThanOrEqual(9999, $code);
++        }
++    }
++
++    public function test_new_checkin_code_should_not_return_a_code_in_use(): void
++    {
++        $codes = [];
++        for ($i = 1; $i <= 20; $i++) {
++            $codes[] = (int) $this->createEvent(['title' => "Evento {$i}"])->checkin_code;
++        }
++
++        $this->assertCount(20, array_unique($codes));
++        for ($i = 0; $i < 200; $i++) {
++            $this->assertNotContains(Event::newCheckinCode(), $codes);
++        }
++    }
++
++    public function test_save_should_generate_the_checkin_code_of_a_new_event(): void
++    {
++        $event = new Event($this->params());
++        $this->assertNull($event->checkin_code);
++        $this->assertTrue($event->isValid());
++
++        $this->assertTrue($event->save());
++
++        $this->assertGreaterThanOrEqual(1000, $event->checkin_code);
++        $this->assertLessThanOrEqual(9999, $event->checkin_code);
++        $this->assertEquals($event->checkin_code, Event::findById($event->id)->checkin_code);
++        $this->assertCount(1, Event::where(['checkin_code' => $event->checkin_code]));
++    }
++
++    public function test_existing_event_with_blank_checkin_code_should_be_invalid(): void
++    {
++        $event = $this->createEvent();
++
++        $event->checkin_code = '';
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser vazio!', $event->errors('checkin_code'));
++    }
++
++    public function test_checkin_code_should_be_unique(): void
++    {
++        $existing = $this->createEvent();
++
++        $event = new Event($this->params(['title' => 'Outro', 'checkin_code' => $existing->checkin_code]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('já existe um registro com esse dado', $event->errors('checkin_code'));
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_checkin_code_outside_the_range_should_be_invalid(): void
++    {
++        $messages = [
++            '999' => 'deve ser maior ou igual a 1000!',
++            '10000' => 'deve ser menor ou igual a 9999!',
++            'abcd' => 'deve ser um número inteiro!',
++        ];
++
++        foreach ($messages as $code => $message) {
++            $event = new Event($this->params(['checkin_code' => (string) $code]));
++
++            $this->assertFalse($event->isValid(), (string) $code);
++            $this->assertEquals($message, $event->errors('checkin_code'), (string) $code);
++        }
++
++        $this->assertTrue((new Event($this->params(['checkin_code' => 1000])))->isValid());
++        $this->assertTrue((new Event($this->params(['checkin_code' => 9999])))->isValid());
++    }
++
++    public function test_existing_event_should_keep_its_checkin_code_when_updated(): void
++    {
++        $event = $this->createEvent();
++        $code = $event->checkin_code;
++
++        $event->title = 'Título novo';
++
++        $this->assertTrue($event->save());
++        $this->assertEquals($code, Event::findById($event->id)->checkin_code);
++    }
++
+     /* ------------------- save / update / destroy / busca ------------------- */
+ 
+     public function test_save_should_create_the_event(): void
+-- 
+2.54.0 (Apple Git-157)
+

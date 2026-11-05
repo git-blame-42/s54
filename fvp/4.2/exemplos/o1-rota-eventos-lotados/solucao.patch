@@ -1,0 +1,239 @@
+From e0962275c9b0b0c8442a4e0823d6d10a2bfdcc36 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 15:59:27 -0300
+Subject: [PATCH] feat: List full events in admin area
+
+Add GET /admin/events/full (admin.events.full) before /admin/events/{id}, Event::full() in the model, the full.phtml view and a link in the events listing.
+---
+ app/Controllers/Admin/EventsController.php    |  8 +++++
+ app/Models/Event.php                          | 13 ++++++++
+ app/views/admin/events/full.phtml             | 32 +++++++++++++++++++
+ app/views/admin/events/index.phtml            |  1 +
+ config/routes.php                             |  3 +-
+ .../admin/events/ListFullEventsCest.php       | 27 ++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 31 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 21 ++++++++++++
+ 8 files changed, 135 insertions(+), 1 deletion(-)
+ create mode 100644 app/views/admin/events/full.phtml
+ create mode 100644 tests/Acceptance/admin/events/ListFullEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8ce8b1f 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -26,6 +26,14 @@ class EventsController extends Controller
+         $this->render('admin/events/index', compact('events', 'paginator', 'title'));
+     }
+ 
++    public function full(): void
++    {
++        $events = Event::full();
++
++        $title = 'Eventos lotados';
++        $this->render('admin/events/full', compact('events', 'title'));
++    }
++
+     public function show(Request $request): void
+     {
+         $event = $this->findEvent($request);
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..dacc109 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -139,6 +139,19 @@ class Event extends Model
+         return max(0, (int) $this->capacity - $this->enrollmentsCount());
+     }
+ 
++    /**
++     * Eventos lotados (sem vagas disponíveis), na ordem do banco.
++     *
++     * @return array<static>
++     */
++    public static function full(): array
++    {
++        return array_values(array_filter(
++            static::all(),
++            fn(Event $event) => $event->availableSpots() === 0
++        ));
++    }
++
+     public function hasEnrollments(): bool
+     {
+         return $this->enrollmentsCount() > 0;
+diff --git a/app/views/admin/events/full.phtml b/app/views/admin/events/full.phtml
+new file mode 100644
+index 0000000..a2136c0
+--- /dev/null
++++ b/app/views/admin/events/full.phtml
+@@ -0,0 +1,32 @@
++<?php if (empty($events)) : ?>
++    <p>Nenhum evento lotado.</p>
++<?php else : ?>
++    <table class="table table-striped align-middle">
++        <thead>
++            <tr>
++                <th>Título</th>
++                <th>Tipo</th>
++                <th>Data</th>
++                <th>Local</th>
++                <th>Vagas</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($events as $event) : ?>
++                <tr>
++                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                    <td><?= htmlspecialchars($event->location) ?></td>
++                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td>
++                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++                    </td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++<?php endif; ?>
++
++<a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..251cf98 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,5 +1,6 @@
+ <div class="mb-3">
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
++    <a class="btn btn-outline-secondary" href="<?= route('admin.events.full') ?>">Eventos lotados</a>
+ </div>
+ 
+ <?php if (empty($events)) : ?>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..6dc09c5 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -22,11 +22,12 @@ Route::middleware('auth')->group(function () {
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+ 
+-        // Eventos (CRUD RESTful). 'new' vem antes de '{id}', senão 'new' seria capturado como id.
++        // Eventos (CRUD RESTful). 'new' e 'full' vêm antes de '{id}', senão seriam capturados como id.
+         Route::get('/admin/events', [AdminEventsController::class, 'index'])->name('admin.events.index');
+         Route::get('/admin/events/page/{page}', [AdminEventsController::class, 'index'])
+             ->name('admin.events.paginate');
+         Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
++        Route::get('/admin/events/full', [AdminEventsController::class, 'full'])->name('admin.events.full');
+         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+         Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
+diff --git a/tests/Acceptance/admin/events/ListFullEventsCest.php b/tests/Acceptance/admin/events/ListFullEventsCest.php
+new file mode 100644
+index 0000000..8985ce9
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ListFullEventsCest.php
+@@ -0,0 +1,27 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++class ListFullEventsCest extends BaseEventsCest
++{
++    public function listOnlyFullEvents(AcceptanceTester $page): void
++    {
++        $page->wantTo('Listagem dos Eventos lotados (sem vagas)');
++        $page->amOnPage('/admin/events');
++
++        $page->click('Eventos lotados');
++
++        $page->seeCurrentUrlEquals('/admin/events/full');
++        $page->see('Eventos lotados', 'h1');
++        // Na base só o Evento 01 está lotado (3/3); o Evento 03 tem Inscrição, mas ainda tem vagas.
++        $page->seeNumberOfElements('table tbody tr', 1);
++        $page->see('3/3', $this->rowOf('Evento 01'));
++        $page->dontSee('Evento 02', 'table');
++        $page->dontSee('Evento 03', 'table');
++
++        $page->click('Voltar');
++        $page->seeCurrentUrlEquals('/admin/events');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..f43723c 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,37 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_full_lists_only_full_events(): void
++    {
++        $full = $this->createEvent(['title' => 'Evento Lotado', 'capacity' => 1]);
++        $this->createEvent(['title' => 'Evento Com Vagas', 'capacity' => 5]);
++        $this->enroll($full);
++
++        $response = $this->get(action: 'full', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Eventos lotados\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Evento Lotado', $response);
++        $this->assertStringContainsString('1/1', $response);
++        $this->assertStringNotContainsString('Evento Com Vagas', $response);
++    }
++
++    public function test_full_without_full_events_shows_empty_message(): void
++    {
++        $this->createEvent(['title' => 'Evento Com Vagas']);
++
++        $response = $this->get(action: 'full', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Nenhum evento lotado.', $response);
++        $this->assertStringNotContainsString('Evento Com Vagas', $response);
++    }
++
++    public function test_index_links_to_full_events(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('href="/admin/events/full"', $response);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..e44717b 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,27 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    public function test_full_should_return_only_events_without_available_spots(): void
++    {
++        $full = $this->createEvent(['title' => 'Lotado', 'capacity' => 2]);
++        $partial = $this->createEvent(['title' => 'Com vagas', 'capacity' => 3]);
++        $this->createEvent(['title' => 'Vazio']);
++        $this->enroll($full, 2);
++        $this->enroll($partial, 2);
++
++        $events = Event::full();
++
++        $this->assertCount(1, $events);
++        $this->assertEquals($full->id, $events[0]->id);
++    }
++
++    public function test_full_should_be_empty_without_full_events(): void
++    {
++        $this->createEvent();
++
++        $this->assertSame([], Event::full());
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+

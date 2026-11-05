@@ -1,0 +1,206 @@
+From 36a426daa811656576b4878ceb86f81e308cf2b7 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:11:33 -0300
+Subject: [PATCH] feat: Show event participants in admin area
+
+Add Event::participants() (BelongsToMany through event_user) and list the enrolled users' name and email on the event show page.
+---
+ app/Models/Event.php                          |  9 +++++
+ app/views/admin/events/show.phtml             | 23 ++++++++++++
+ .../admin/events/ShowParticipantsCest.php     | 36 +++++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 30 ++++++++++++++--
+ tests/Unit/Models/Events/EventTest.php        | 25 +++++++++++++
+ 5 files changed, 121 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/ShowParticipantsCest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..885f6b9 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -3,6 +3,7 @@
+ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\BelongsToMany;
+ use Core\Database\ActiveRecord\Model;
+ use Lib\Validations;
+ use PDOException;
+@@ -119,6 +120,14 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * Participantes inscritos neste Evento (Users ligados pela tabela pivô event_user).
++     */
++    public function participants(): BelongsToMany
++    {
++        return $this->BelongsToMany(User::class, 'event_user', 'event_id', 'user_id');
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..4e7e04d 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,28 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
++<?php $participants = $event->participants()->get(); ?>
++<h2 class="h5">Inscritos</h2>
++<?php if (empty($participants)) : ?>
++    <p>Nenhuma inscrição.</p>
++<?php else : ?>
++    <table class="table table-sm">
++        <thead>
++            <tr>
++                <th>Nome</th>
++                <th>E-mail</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($participants as $participant) : ?>
++                <tr>
++                    <td><?= htmlspecialchars($participant->name) ?></td>
++                    <td><?= htmlspecialchars($participant->email) ?></td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++<?php endif; ?>
++
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/tests/Acceptance/admin/events/ShowParticipantsCest.php b/tests/Acceptance/admin/events/ShowParticipantsCest.php
+new file mode 100644
+index 0000000..d4d52bf
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ShowParticipantsCest.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++class ShowParticipantsCest extends BaseEventsCest
++{
++    public function showListsParticipants(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++
++        $page->wantTo('Visualização do registro (inscritos com nome e e-mail)');
++        $page->amOnPage('/admin/events');
++        $page->click('Ver', $this->rowOf('Evento 01'));
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Inscritos', 'h2');
++        // Evento 01 da base: os 3 Participantes inscritos.
++        for ($i = 1; $i <= 3; $i++) {
++            $page->see("Participante {$i}", 'table');
++            $page->see("participante{$i}@example.com", 'table');
++        }
++    }
++
++    public function showWithoutEnrollments(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Visualização do registro (Evento sem inscritos)');
++        $page->amOnPage("/admin/events/{$event->id}");
++
++        $page->see('Inscritos', 'h2');
++        $page->see('Nenhuma inscrição.');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..227fee9 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,32 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_lists_participants_name_and_email(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra Final']);
++        $this->enroll($event, 'ana@example.com', 'Ana Souza');
++        $this->enroll($event, 'bruno@example.com', 'Bruno <b>Lima</b>');
++        $this->enroll($this->createEvent(['title' => 'Outro']), 'carla@example.com', 'Carla Dias');
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Inscritos', $response);
++        $this->assertStringContainsString('Ana Souza', $response);
++        $this->assertStringContainsString('ana@example.com', $response);
++        $this->assertStringContainsString('Bruno &lt;b&gt;Lima&lt;/b&gt;', $response);
++        $this->assertStringNotContainsString('<b>Lima</b>', $response);
++        $this->assertStringNotContainsString('Carla Dias', $response);
++    }
++
++    public function test_show_without_enrollments_says_so(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Nenhuma inscrição.', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+@@ -299,10 +325,10 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
+-    private function enroll(Event $event, string $email = 'participante@example.com'): void
++    private function enroll(Event $event, string $email = 'participante@example.com', string $name = 'Participante'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+-            'name' => 'Participante',
++            'name' => $name,
+             'email' => $email,
+             'password' => '123456',
+             'password_confirmation' => '123456'
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..daa27a2 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,31 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    public function test_participants_should_return_the_enrolled_users(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createEvent(['title' => 'Outro evento']);
++        $this->enroll($event, 2);
++        $this->enroll($other, 1);
++
++        $participants = $event->participants()->get();
++
++        $this->assertCount(2, $participants);
++        $emails = [];
++        foreach ($participants as $participant) {
++            $this->assertInstanceOf(User::class, $participant);
++            $emails[] = $participant->email;
++        }
++        sort($emails);
++        $this->assertSame(["p{$event->id}-1@example.com", "p{$event->id}-2@example.com"], $emails);
++        $this->assertSame(2, $event->participants()->count());
++    }
++
++    public function test_participants_should_be_empty_without_enrollments(): void
++    {
++        $this->assertSame([], $this->createEvent()->participants()->get());
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+

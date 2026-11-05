@@ -1,0 +1,506 @@
+From 2fa21bcd866f8d774a3448f7cb6e1d9f62eebd30 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:01:51 -0300
+Subject: [PATCH] feat: Show 10 events per page and allow choosing per_page
+
+Closed list [5, 10, 20] for ?per_page= (default 10). The Paginator keeps
+extra query params, passed through Model::paginate, so page links keep
+per_page.
+---
+ app/Controllers/Admin/EventsController.php    | 29 +++++-
+ app/views/admin/events/index.phtml            |  8 ++
+ app/views/paginator/_pages.phtml              |  6 +-
+ core/Database/ActiveRecord/Model.php          | 14 ++-
+ lib/Paginator.php                             | 17 +++-
+ .../admin/events/BaseEventsCest.php           |  4 +-
+ .../admin/events/CreateSuccessfullyCest.php   |  6 +-
+ .../admin/events/ListEventsCest.php           |  6 +-
+ .../admin/events/PaginateEventsCest.php       | 90 ++++++++++++-------
+ .../Admin/EventsControllerTest.php            | 76 +++++++++++++---
+ tests/Unit/Models/Events/EventTest.php        |  8 ++
+ 11 files changed, 204 insertions(+), 60 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..995ad9a 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -9,21 +9,29 @@ use Lib\FlashMessage;
+ 
+ class EventsController extends Controller
+ {
+-    private const PER_PAGE = 5;
++    private const PER_PAGE = 10;
++
++    /** Valores aceitos em `?per_page=` (lista fechada: 0 daria divisão por zero no Paginator). */
++    private const PER_PAGE_OPTIONS = [5, 10, 20];
+ 
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
++        $perPage = $this->perPage($request);
++
+         $paginator = Event::paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
++            per_page: $perPage,
++            route: 'admin.events.paginate',
++            queryParams: $perPage !== self::PER_PAGE ? ['per_page' => $perPage] : []
+         );
+         $events = $paginator->registers();
+ 
++        $perPageOptions = self::PER_PAGE_OPTIONS;
++
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'perPageOptions', 'title'));
+     }
+ 
+     public function show(Request $request): void
+@@ -129,6 +137,19 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * `?per_page=` só vale se estiver na lista fechada; qualquer outro valor (0, texto, array) usa o padrão.
++     */
++    private function perPage(Request $request): int
++    {
++        $perPage = $request->getParam('per_page');
++        if (!is_scalar($perPage) || !ctype_digit((string) $perPage)) {
++            return self::PER_PAGE;
++        }
++
++        return in_array((int) $perPage, self::PER_PAGE_OPTIONS, true) ? (int) $perPage : self::PER_PAGE;
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..257609b 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -37,5 +37,13 @@
+         </tbody>
+     </table>
+ 
++    <div class="per-page mb-2">
++        Por página:
++        <?php foreach ($perPageOptions as $option) : ?>
++            <a class="btn btn-sm btn-outline-secondary <?= $paginator->perPage() === $option ? 'active' : '' ?>"
++               href="<?= route('admin.events.index', ['per_page' => $option]) ?>"><?= $option ?></a>
++        <?php endforeach; ?>
++    </div>
++
+     <?php $paginator->renderPagesNavigation(); ?>
+ <?php endif; ?>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..82ec7f1 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -3,7 +3,7 @@
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->previousPage()], $paginator->queryParams())) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +13,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $page], $paginator->queryParams())) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->nextPage()], $paginator->queryParams())) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..beea91a 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -281,15 +281,23 @@ abstract class Model
+         return $models;
+     }
+ 
+-    public static function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
+-    {
++    /**
++     * @param array<string, mixed> $queryParams parâmetros extras mantidos nos links de página
++     */
++    public static function paginate(
++        int $page = 1,
++        int $per_page = 10,
++        string $route = null,
++        array $queryParams = []
++    ): Paginator {
+         return new Paginator(
+             class: static::class,
+             page: $page,
+             per_page: $per_page,
+             table: static::$table,
+             attributes: static::$columns,
+-            route: $route
++            route: $route,
++            queryParams: $queryParams
+         );
+     }
+ 
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..888f301 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -15,6 +15,10 @@ class Paginator
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions
++     * @param array<string, mixed> $queryParams parâmetros extras repassados aos links de página (ex.: per_page)
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,7 +26,8 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private array $queryParams = []
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -38,6 +43,16 @@ class Paginator
+         return $this->per_page;
+     }
+ 
++    /**
++     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.
++     *
++     * @return array<string, mixed>
++     */
++    public function queryParams(): array
++    {
++        return $this->queryParams;
++    }
++
+     public function totalOfRegistersOfPage(): int
+     {
+         return $this->totalOfRegistersOfPage;
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..421452f 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -11,7 +11,7 @@ use Tests\Support\AcceptanceTester;
+ /**
+  * Base dos cenários do CRUD de Eventos (Área Administrativa).
+  *
+- * Reproduz o formato do populate: 16 Eventos (4 páginas de 5), um Evento lotado (3/3 vagas, caso P02),
++ * Reproduz o formato do populate: 16 Eventos (2 páginas de 10), um Evento lotado (3/3 vagas, caso P02),
+  * Eventos com Inscrições (caso P03) e Eventos sem Inscrições. As datas são relativas a hoje, então os
+  * Eventos nunca ficam no passado. O login é feito como Administrador antes de cada cenário.
+  */
+@@ -20,7 +20,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+     protected const ADMIN_EMAIL = 'admin@example.com';
+     protected const PASSWORD = '123456';
+     protected const TOTAL_EVENTS = 16;
+-    protected const PER_PAGE = 5;
++    protected const PER_PAGE = 10;
+ 
+     protected User $admin;
+ 
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..196d513 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -29,10 +29,10 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+-        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+-        $page->amOnPage('/admin/events/page/4');
++        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 2ª página (10 por página).
++        $page->amOnPage('/admin/events/page/2');
+         $page->see($data['title'], 'table');
+-        $page->see('Mostrando 16 - 17 de 17');
++        $page->see('Mostrando 11 - 17 de 17');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+         Assert::assertEquals($this->admin->id, $event->user_id);
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..7da8f88 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -16,7 +16,7 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('Novo Evento');
+         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
+ 
+-        // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
++        // Primeira página: os 10 primeiros Eventos (ordem do banco, que no populate coincide com a data).
+         $rows = $page->grabMultiple('table tbody tr');
+         foreach ($rows as $index => $row) {
+             $number = $index + 1;
+@@ -38,8 +38,8 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('1/23', $this->rowOf('Evento 03'));
+ 
+         // Os demais Eventos ficam nas outras páginas.
+-        $page->dontSee($this->title(6));
+-        $page->dontSee($this->title(16));
++        $page->dontSee($this->title(self::PER_PAGE + 1));
++        $page->dontSee($this->title(self::TOTAL_EVENTS));
+         $page->see(sprintf('Mostrando 1 - %d de %d', self::PER_PAGE, self::TOTAL_EVENTS));
+     }
+ 
+diff --git a/tests/Acceptance/admin/events/PaginateEventsCest.php b/tests/Acceptance/admin/events/PaginateEventsCest.php
+index b4ee6fc..8ccb3a3 100644
+--- a/tests/Acceptance/admin/events/PaginateEventsCest.php
++++ b/tests/Acceptance/admin/events/PaginateEventsCest.php
+@@ -11,54 +11,82 @@ class PaginateEventsCest extends BaseEventsCest
+         $page->wantTo('Paginação dos registros');
+         $page->amOnPage('/admin/events');
+ 
+-        // Página 1: Eventos 01 a 05.
+-        $this->seeEventsOfPage($page, 1);
+-        $page->see('Mostrando 1 - 5 de 16');
++        // Página 1: Eventos 01 a 10.
++        $this->seeEventsOfPage($page, 1, self::PER_PAGE);
++        $page->see('Mostrando 1 - 10 de 16');
+         $page->seeElement('.pagination');
+-        $page->seeNumberOfElements('.pagination .page-item', 6);
++        // Anterior, 1, 2, Próxima.
++        $page->seeNumberOfElements('.pagination .page-item', 4);
++
++        // Página 2 (última) por "Próxima": Eventos 11 a 16.
++        $page->click('Próxima', '.pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/2');
++        $this->seeEventsOfPage($page, 2, self::PER_PAGE);
++        $page->see('Mostrando 11 - 16 de 16');
++
++        // Volta por "Anterior".
++        $page->click('Anterior', '.pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/1');
++        $this->seeEventsOfPage($page, 1, self::PER_PAGE);
+ 
+         // Página 2 pelo número.
+         $page->click('2', '.pagination');
+         $page->seeCurrentUrlEquals('/admin/events/page/2');
+-        $this->seeEventsOfPage($page, 2);
+-        $page->see('Mostrando 6 - 10 de 16');
++        $this->seeEventsOfPage($page, 2, self::PER_PAGE);
++    }
++
++    public function openPageTwoDirectly(AcceptanceTester $page): void
++    {
++        $page->wantTo('Paginação dos registros (acesso direto à página 2)');
++
++        $page->amOnPage('/admin/events/page/2');
++        $this->seeEventsOfPage($page, 2, self::PER_PAGE);
++        $page->dontSee($this->title(1));
++    }
++
++    public function choosePerPage(AcceptanceTester $page): void
++    {
++        $page->wantTo('Paginação dos registros (usuário escolhe 5 por página)');
++        $page->amOnPage('/admin/events');
++
++        $page->click('5', '.per-page');
++        $page->seeCurrentUrlEquals('/admin/events?per_page=5');
++        $this->seeEventsOfPage($page, 1, 5);
++        $page->see('Mostrando 1 - 5 de 16');
++        // Anterior, 1, 2, 3, 4, Próxima.
++        $page->seeNumberOfElements('.pagination .page-item', 6);
+ 
+-        // Página 3 por "Próxima".
++        // Os links de página mantêm o per_page.
+         $page->click('Próxima', '.pagination');
+-        $page->seeCurrentUrlEquals('/admin/events/page/3');
+-        $this->seeEventsOfPage($page, 3);
+-        $page->see('Mostrando 11 - 15 de 16');
++        $page->seeCurrentUrlEquals('/admin/events/page/2?per_page=5');
++        $this->seeEventsOfPage($page, 2, 5);
++        $page->see('Mostrando 6 - 10 de 16');
+ 
+-        // Última página: só o Evento 16.
+         $page->click('4', '.pagination');
+-        $page->seeCurrentUrlEquals('/admin/events/page/4');
+-        $this->seeEventsOfPage($page, 4);
+-        $page->see('Mostrando 16 - 16 de 16');
++        $page->seeCurrentUrlEquals('/admin/events/page/4?per_page=5');
++        $this->seeEventsOfPage($page, 4, 5);
+ 
+-        // Volta por "Anterior".
+-        $page->click('Anterior', '.pagination');
+-        $page->seeCurrentUrlEquals('/admin/events/page/3');
+-        $this->seeEventsOfPage($page, 3);
++        // 20 por página: tudo numa página só.
++        $page->click('20', '.per-page');
++        $page->seeCurrentUrlEquals('/admin/events?per_page=20');
++        $this->seeEventsOfPage($page, 1, 20);
++        $page->see('Mostrando 1 - 16 de 16');
+     }
+ 
+-    public function openPageTwoAndThreeDirectly(AcceptanceTester $page): void
++    public function invalidPerPageFallsBackToDefault(AcceptanceTester $page): void
+     {
+-        $page->wantTo('Paginação dos registros (acesso direto às páginas 2 e 3)');
+-
+-        $page->amOnPage('/admin/events/page/2');
+-        $this->seeEventsOfPage($page, 2);
+-        $page->dontSee($this->title(1));
++        $page->wantTo('Paginação dos registros (per_page inválido usa o padrão)');
+ 
+-        $page->amOnPage('/admin/events/page/3');
+-        $this->seeEventsOfPage($page, 3);
+-        $page->dontSee($this->title(6));
++        $page->amOnPage('/admin/events?per_page=0');
++        $this->seeEventsOfPage($page, 1, self::PER_PAGE);
++        $page->see('Mostrando 1 - 10 de 16');
+     }
+ 
+-    /** Confere que a página mostra exatamente os Eventos dela (5 por página, ordem de data). */
+-    private function seeEventsOfPage(AcceptanceTester $page, int $number): void
++    /** Confere que a página mostra exatamente os Eventos dela (ordem de data). */
++    private function seeEventsOfPage(AcceptanceTester $page, int $number, int $perPage): void
+     {
+-        $first = ($number - 1) * self::PER_PAGE + 1;
+-        $last = min($number * self::PER_PAGE, self::TOTAL_EVENTS);
++        $first = ($number - 1) * $perPage + 1;
++        $last = min($number * $perPage, self::TOTAL_EVENTS);
+ 
+         $page->see('Eventos', 'h1');
+         $page->seeNumberOfElements('table tbody tr', $last - $first + 1);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..cb46eb0 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -36,10 +37,11 @@ class EventsControllerTest extends ControllerTestCase
+         parent::tearDown();
+     }
+ 
+-    public function test_index_lists_five_events_per_page(): void
++    public function test_index_lists_ten_events_per_page(): void
+     {
+-        for ($i = 1; $i <= 7; $i++) {
+-            $this->createEvent(['title' => "Evento {$i}"]);
++        // Títulos com zero à esquerda: 'Evento 1' casaria com 'Evento 10', 'Evento 11'...
++        for ($i = 1; $i <= 12; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
+         }
+ 
+         $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
+@@ -47,13 +49,67 @@ class EventsControllerTest extends ControllerTestCase
+ 
+         $this->assertMatchesRegularExpression('/<h1>\s*Eventos\s*<\/h1>/', $page1);
+         $this->assertStringContainsString('Novo Evento', $page1);
+-        $this->assertStringContainsString('Evento 1', $page1);
+-        $this->assertStringContainsString('Evento 5', $page1);
+-        $this->assertStringNotContainsString('Evento 6', $page1);
+-        $this->assertStringContainsString('/admin/events/page/2', $page1);
+-        $this->assertStringContainsString('Evento 6', $page2);
+-        $this->assertStringContainsString('Evento 7', $page2);
+-        $this->assertStringNotContainsString('Evento 5', $page2);
++        $this->assertStringContainsString('Evento 01', $page1);
++        $this->assertStringContainsString('Evento 10', $page1);
++        $this->assertStringNotContainsString('Evento 11', $page1);
++        $this->assertStringContainsString('Mostrando 1 - 10 de 12', $page1);
++        $this->assertStringContainsString('href="/admin/events/page/2"', $page1);
++        $this->assertStringContainsString('Evento 11', $page2);
++        $this->assertStringContainsString('Evento 12', $page2);
++        $this->assertStringNotContainsString('Evento 10', $page2);
++    }
++
++    public function test_index_uses_per_page_param_and_keeps_it_in_page_links(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['per_page' => '5']);
++        $page2 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['per_page' => '5', 'page' => 2]
++        );
++
++        $this->assertStringContainsString('Evento 05', $page1);
++        $this->assertStringNotContainsString('Evento 06', $page1);
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
++        $this->assertStringContainsString('href="/admin/events/page/2?per_page=5"', $page1);
++        $this->assertStringContainsString('Evento 06', $page2);
++        $this->assertStringContainsString('Evento 07', $page2);
++        $this->assertStringNotContainsString('Evento 05', $page2);
++        $this->assertStringContainsString('href="/admin/events/page/1?per_page=5"', $page2);
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function invalidPerPageProvider(): array
++    {
++        return [
++            'zero' => ['0'],
++            'fora da lista' => ['7'],
++            'negativo' => ['-5'],
++            'texto' => ['abc'],
++            'array' => [['5']],
++        ];
++    }
++
++    #[DataProvider('invalidPerPageProvider')]
++    public function test_index_ignores_invalid_per_page(mixed $perPage): void
++    {
++        for ($i = 1; $i <= 12; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['per_page' => $perPage]);
++
++        $this->assertStringContainsString('Evento 10', $response);
++        $this->assertStringNotContainsString('Evento 11', $response);
++        $this->assertStringContainsString('Mostrando 1 - 10 de 12', $response);
++        $this->assertStringContainsString('href="/admin/events/page/2"', $response);
++        $this->assertStringNotContainsString('/admin/events/page/2?per_page=', $response);
+     }
+ 
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..cca0301 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,14 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    public function test_paginate_should_keep_the_given_query_params(): void
++    {
++        $paginator = Event::paginate(1, 5, 'admin.events.paginate', ['per_page' => 5]);
++
++        $this->assertSame(['per_page' => 5], $paginator->queryParams());
++        $this->assertSame([], Event::paginate(1, 5)->queryParams());
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+

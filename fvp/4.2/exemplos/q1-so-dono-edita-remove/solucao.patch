@@ -1,0 +1,347 @@
+From be206ca4541c73899edc63375844aa082edf033f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:00:58 -0300
+Subject: [PATCH] feat: Restrict event edit and removal to its owner
+
+Edit, update and destroy look the event up through the logged admin's events, so another admin's event falls into the existing not-found flow. Show stays open to every admin. The list and show pages hide Edit/Remove for events the admin does not own, and the populate adds a second admin owning the last two events.
+---
+ app/Controllers/Admin/EventsController.php    | 11 ++-
+ app/Models/Event.php                          |  8 ++
+ app/views/admin/events/index.phtml            | 12 +--
+ app/views/admin/events/show.phtml             |  4 +-
+ database/Populate/populate.php                | 20 ++++-
+ .../Acceptance/admin/events/OwnerOnlyCest.php | 68 +++++++++++++++
+ .../Admin/EventsControllerTest.php            | 82 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 18 ++++
+ 8 files changed, 212 insertions(+), 11 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/OwnerOnlyCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..a1709ce 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -28,7 +28,8 @@ class EventsController extends Controller
+ 
+     public function show(Request $request): void
+     {
+-        $event = $this->findEvent($request);
++        // Ver continua liberado para qualquer Administrador; só editar e remover exigem ser o dono.
++        $event = Event::findById((int) $request->getParam('id'));
+         if ($event === null) {
+             $this->eventNotFound();
+             return;
+@@ -129,9 +130,15 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * Busca o Evento entre os criados pelo Administrador logado: Evento de outro Administrador
++     * vira null e cai em eventNotFound (edit, update e destroy).
++     */
+     private function findEvent(Request $request): ?Event
+     {
+-        return Event::findById((int) $request->getParam('id'));
++        $event = $this->currentUser()?->events()->findById((int) $request->getParam('id'));
++
++        return $event instanceof Event ? $event : null;
+     }
+ 
+     private function eventNotFound(): void
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..9ec9a37 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -119,6 +119,14 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * O Evento pertence ao usuário (foi criado por ele)? Usado para mostrar Editar/Remover só ao dono.
++     */
++    public function isOwnedBy(?User $user): bool
++    {
++        return $user !== null && (int) $this->user_id === (int) $user->id;
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..11c8a78 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -26,11 +26,13 @@
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+-                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
++                        <?php if ($event->isOwnedBy($this->currentUser())) : ?>
++                            <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++                            <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                                <input type="hidden" name="_method" value="DELETE">
++                                <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++                            </form>
++                        <?php endif; ?>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..1bc1102 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
+-<a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<?php if ($event->isOwnedBy($this->currentUser())) : ?>
++    <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<?php endif; ?>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..af3e941 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -28,6 +28,19 @@ $user->save();
+ 
+ echo "Usuários criados: {$admin->email} (admin) e {$user->email} (participant), senha 123456\n";
+ 
++// Q1: segundo Administrador, dono dos dois últimos Eventos. Logado como admin@, esses dois aparecem
++// sem Editar/Remover; logado como admin2@, só eles têm os botões.
++$otherAdmin = new User([
++    'name' => 'Outra Administradora',
++    'email' => 'admin2@example.com',
++    'password' => '123456',
++    'password_confirmation' => '123456',
++    'role' => 'admin'
++]);
++$otherAdmin->save();
++
++echo "Segundo Administrador criado: {$otherAdmin->email} (admin), senha 123456\n";
++
+ // Participantes extras, para haver Inscrições de mais de uma pessoa.
+ $participants = [$user];
+ foreach (['Mariana Souza' => 'mariana', 'Carlos Pereira' => 'carlos', 'Fernanda Lima' => 'fernanda'] as $name => $nick) {
+@@ -130,9 +143,10 @@ $events = [
+ ];
+ 
+ $eventModels = [];
+-foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity]) {
++foreach ($events as $index => [$title, $description, $kind, $modality, $audience, $daysAhead, $location, $capacity]) {
++    $owner = $index >= count($events) - 2 ? $otherAdmin : $admin;
+     $event = new Event([
+-        'user_id' => $admin->id,
++        'user_id' => $owner->id,
+         'title' => $title,
+         'description' => $description,
+         'kind' => $kind,
+@@ -148,7 +162,7 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+     $eventModels[] = $event;
+ }
+ 
+-echo count($eventModels) . " Eventos criados pelo Administrador\n";
++echo count($eventModels) . " Eventos criados (os dois últimos pela segunda Administradora)\n";
+ 
+ // Inscrições (event_user): índice do Evento => índices dos Participantes.
+ // O Evento 0 tem capacity 3 e três Inscrições (lotado): serve de caso para P02 (capacity >= Inscrições).
+diff --git a/tests/Acceptance/admin/events/OwnerOnlyCest.php b/tests/Acceptance/admin/events/OwnerOnlyCest.php
+new file mode 100644
+index 0000000..f5ff7ec
+--- /dev/null
++++ b/tests/Acceptance/admin/events/OwnerOnlyCest.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Q1: só o Administrador que criou o Evento edita e remove. Os Eventos da base são do
++ * admin@example.com; aqui o login é trocado para um segundo Administrador.
++ */
++class OwnerOnlyCest extends BaseEventsCest
++{
++    private const OTHER_EMAIL = 'outro.admin@example.com';
++
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++
++        $this->createUser('Outro Administrador', self::OTHER_EMAIL, 'admin');
++        $page->amOnPage('/logout');
++        $page->login(self::OTHER_EMAIL, self::PASSWORD);
++    }
++
++    public function otherAdminSeesEventsWithoutEditAndRemove(AcceptanceTester $page): void
++    {
++        $page->wantTo('Listar Eventos de outro Administrador sem os botões Editar e Remover');
++        $page->amOnPage('/admin/events');
++
++        $page->see('Evento 02', $this->rowOf('Evento 02'));
++        $page->see('Ver', $this->rowOf('Evento 02'));
++        $page->dontSee('Editar', $this->rowOf('Evento 02'));
++        $page->dontSee('Remover', $this->rowOf('Evento 02'));
++
++        $page->click('Ver', $this->rowOf('Evento 02'));
++        $page->seeCurrentUrlEquals("/admin/events/{$this->events[2]->id}");
++        $page->see('Evento 02', 'h1');
++        $page->dontSee('Editar', 'main');
++    }
++
++    public function otherAdminCannotOpenEditByUrl(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Abrir a edição de Evento alheio pela URL e ser barrado');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Evento não encontrado!');
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertSame('Evento 02', $stored->title);
++    }
++
++    public function ownEventShowsEditAndRemove(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ver Editar e Remover no Evento criado pelo próprio Administrador');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $this->validEventData(['title' => 'Evento do Outro']));
++        $page->click('Salvar');
++        $page->see('Evento cadastrado com sucesso!');
++
++        $page->amOnPage('/admin/events/page/4');
++        $page->see('Editar', $this->rowOf('Evento do Outro'));
++        $page->see('Remover', $this->rowOf('Evento do Outro'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..c0ed648 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,88 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_show_of_another_admins_event_is_allowed_without_edit_button(): void
++    {
++        $event = $this->createEvent(['title' => 'Evento do Primeiro']);
++        Auth::login($this->otherAdmin());
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Evento do Primeiro', $response);
++        $this->assertStringNotContainsString("/admin/events/{$event->id}/edit", $response);
++    }
++
++    public function test_index_hides_edit_and_remove_of_another_admins_event(): void
++    {
++        $mine = $this->createEvent(['title' => 'Evento do Primeiro']);
++        $other = $this->otherAdmin();
++        $theirs = $this->createEvent(['title' => 'Evento do Outro', 'user_id' => $other->id]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Evento do Outro', $response);
++        $this->assertStringContainsString("/admin/events/{$mine->id}/edit", $response);
++        $this->assertStringNotContainsString("/admin/events/{$theirs->id}/edit", $response);
++        $this->assertStringContainsString("action=\"/admin/events/{$mine->id}\"", $response);
++        $this->assertStringNotContainsString("action=\"/admin/events/{$theirs->id}\"", $response);
++    }
++
++    public function test_edit_of_another_admins_event_redirects_to_index(): void
++    {
++        $event = $this->createEvent();
++        Auth::login($this->otherAdmin());
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_update_of_another_admins_event_keeps_it_intact(): void
++    {
++        $event = $this->createEvent(['title' => 'Original']);
++        Auth::login($this->otherAdmin());
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Invadido'])]
++        );
++
++        $intact = Event::findById($event->id);
++        $this->assertEquals('Original', $intact->title);
++        $this->assertEquals($this->admin->id, $intact->user_id);
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_of_another_admins_event_keeps_it(): void
++    {
++        $event = $this->createEvent();
++        Auth::login($this->otherAdmin());
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++    }
++
++    private function otherAdmin(): User
++    {
++        $other = new User([
++            'name' => 'Outro Admin',
++            'email' => 'outro.admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $other->save();
++
++        return $other;
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..08f61a1 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,22 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    public function test_is_owned_by_should_be_true_only_for_the_creator(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createUser('Outro Administrador', 'outro@example.com', 'admin');
++
++        $this->assertTrue($event->isOwnedBy($this->admin));
++        $this->assertFalse($event->isOwnedBy($other));
++        $this->assertFalse($event->isOwnedBy(null));
++    }
++
++    public function test_is_owned_by_should_work_for_event_loaded_from_the_database(): void
++    {
++        $event = Event::findById($this->createEvent()->id);
++
++        $this->assertNotNull($event);
++        $this->assertTrue($event->isOwnedBy(User::findById($this->admin->id)));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

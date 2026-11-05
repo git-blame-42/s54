@@ -1,0 +1,217 @@
+From 77652e835bb9e0f27e0b84d1ab0a285a643ae37f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 15:59:24 -0300
+Subject: [PATCH] feat: Order events listing by date in the Paginator
+
+Paginator and Model::paginate accept an optional ORDER BY clause set by
+the code (never by the request). The admin listing orders by starts_on,
+with id as tie-breaker.
+---
+ app/Controllers/Admin/EventsController.php    |  4 +-
+ core/Database/ActiveRecord/Model.php          | 11 +++-
+ lib/Paginator.php                             |  6 +-
+ .../admin/events/BaseEventsCest.php           |  4 +-
+ .../admin/events/CreateSuccessfullyCest.php   |  8 ++-
+ .../admin/events/ListEventsCest.php           |  2 +-
+ .../Admin/EventsControllerTest.php            | 59 +++++++++++++++++++
+ 7 files changed, 84 insertions(+), 10 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..c99058e 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -18,7 +18,9 @@ class EventsController extends Controller
+         $paginator = Event::paginate(
+             page: max(1, (int) $request->getParam('page', 1)),
+             per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
++            route: 'admin.events.paginate',
++            // Mais próximos primeiro; id desempata datas iguais (a ordem não muda entre páginas).
++            orderBy: 'starts_on, id'
+         );
+         $events = $paginator->registers();
+ 
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..017f14f 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -281,15 +281,20 @@ abstract class Model
+         return $models;
+     }
+ 
+-    public static function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
+-    {
++    public static function paginate(
++        int $page = 1,
++        int $per_page = 10,
++        string $route = null,
++        ?string $orderBy = null
++    ): Paginator {
+         return new Paginator(
+             class: static::class,
+             page: $page,
+             per_page: $per_page,
+             table: static::$table,
+             attributes: static::$columns,
+-            route: $route
++            route: $route,
++            orderBy: $orderBy
+         );
+     }
+ 
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..31990bd 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -22,7 +22,8 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private ?string $orderBy = null
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -120,10 +121,13 @@ class Paginator
+         $this->offset = $this->per_page * ($this->page - 1);
+ 
+         $attributes = implode(', ', $this->attributes);
++        // $orderBy vem sempre do código (controller), nunca da requisição: não há bind para ORDER BY.
++        $order = $this->orderBy !== null ? "ORDER BY {$this->orderBy}" : '';
+ 
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$order}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..0fccdb9 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -71,8 +71,8 @@ class BaseEventsCest extends BaseAcceptanceCest
+     }
+ 
+     /**
+-     * Cria os Eventos em ordem de data crescente. A listagem segue a ordem do banco (id), sem ORDER BY
+-     * (contrato-ui-eventos.md), então aqui a ordem de id coincide com a de starts_on, como no populate.
++     * Cria os Eventos em ordem de data crescente. A listagem é ordenada por starts_on (desempate por id),
++     * e aqui a ordem de id coincide com a de data, como no populate.
+      */
+     private function seedEvents(): void
+     {
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..5832ca5 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -29,9 +29,13 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+-        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
++        // A listagem é ordenada por data: o Evento novo (amanhã) é o mais próximo e abre a 1ª página,
++        // antes do Evento 01 (hoje + 14 dias). Sem ORDER BY ele ficaria no fim (4ª página).
++        $page->amOnPage('/admin/events');
++        $page->see($data['title'], 'table tbody tr:first-child');
++        $page->see('Mostrando 1 - 5 de 17');
+         $page->amOnPage('/admin/events/page/4');
+-        $page->see($data['title'], 'table');
++        $page->dontSee($data['title'], 'table');
+         $page->see('Mostrando 16 - 17 de 17');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..5e53c75 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -16,7 +16,7 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('Novo Evento');
+         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
+ 
+-        // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
++        // Primeira página: os 5 Eventos mais próximos (ordem de data).
+         $rows = $page->grabMultiple('table tbody tr');
+         foreach ($rows as $index => $row) {
+             $number = $index + 1;
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..2d12f59 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,49 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_orders_events_by_date_across_pages(): void
++    {
++        // Cadastrados fora de ordem: a ordem de id não coincide com a de data.
++        $days = [30, 5, 20, 1, 25, 10, 15];
++        foreach ($days as $day) {
++            $this->createEvent([
++                'title' => sprintf('Evento em %02d dias', $day),
++                'starts_on' => date('Y-m-d', strtotime("+{$day} days")),
++            ]);
++        }
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        // Página 1: os 5 mais próximos, em ordem crescente de data.
++        $this->assertTitlesInOrder($page1, ['01', '05', '10', '15', '20']);
++        $this->assertStringNotContainsString('Evento em 25 dias', $page1);
++        $this->assertStringNotContainsString('Evento em 30 dias', $page1);
++
++        // Página 2: o restante, sem repetir os da página 1 (ordenado no SQL, não na página).
++        $this->assertTitlesInOrder($page2, ['25', '30']);
++        $this->assertStringNotContainsString('Evento em 01 dias', $page2);
++    }
++
++    public function test_index_breaks_date_ties_by_id(): void
++    {
++        $date = date('Y-m-d', strtotime('+3 days'));
++        $this->createEvent(['title' => 'Empate B', 'starts_on' => $date]);
++        $this->createEvent(['title' => 'Empate A', 'starts_on' => $date]);
++        $this->createEvent(['title' => 'Antes de todos', 'starts_on' => date('Y-m-d', strtotime('+1 day'))]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $antes = strpos($response, 'Antes de todos');
++        $empateB = strpos($response, 'Empate B');
++        $empateA = strpos($response, 'Empate A');
++        $this->assertNotFalse($antes);
++        $this->assertNotFalse($empateB);
++        $this->assertNotFalse($empateA);
++        $this->assertLessThan($empateB, $antes);
++        $this->assertLessThan($empateA, $empateB);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+@@ -265,6 +308,22 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /**
++     * Confere que os títulos "Evento em NN dias" aparecem na resposta nesta ordem.
++     *
++     * @param array<int, string> $days
++     */
++    private function assertTitlesInOrder(string $response, array $days): void
++    {
++        $previous = -1;
++        foreach ($days as $day) {
++            $position = strpos($response, "Evento em {$day} dias");
++            $this->assertNotFalse($position, "Evento em {$day} dias não aparece");
++            $this->assertGreaterThan($previous, $position, "Evento em {$day} dias fora de ordem");
++            $previous = $position;
++        }
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+

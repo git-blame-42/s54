@@ -1,0 +1,318 @@
+From a42e0c93802d51a2a601abcbe48a9743b9027c62 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:02:17 -0300
+Subject: [PATCH] feat: Show full badge and admin dashboard totals
+
+Events with no spots left get a "Lotado" badge in the listing and in
+the show page. The admin dashboard shows the total of events and
+enrollments, computed on each request.
+---
+ app/Controllers/Admin/DashboardController.php |  8 +-
+ app/views/admin/dashboard/index.phtml         | 19 ++++
+ app/views/admin/events/index.phtml            |  7 +-
+ app/views/admin/events/show.phtml             |  3 +
+ tests/Acceptance/admin/AdminDashboardCest.php |  4 +
+ .../admin/events/DashboardTotalsCest.php      | 32 +++++++
+ .../admin/events/ListEventsCest.php           |  6 ++
+ .../Admin/DashboardControllerTest.php         | 91 +++++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 30 ++++++
+ 9 files changed, 198 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/DashboardTotalsCest.php
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Admin/DashboardController.php b/app/Controllers/Admin/DashboardController.php
+index 0a3e62f..81a14f3 100644
+--- a/app/Controllers/Admin/DashboardController.php
++++ b/app/Controllers/Admin/DashboardController.php
+@@ -2,13 +2,19 @@
+ 
+ namespace App\Controllers\Admin;
+ 
++use App\Models\Enrollment;
++use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ 
+ class DashboardController extends Controller
+ {
+     public function index(): void
+     {
++        // Totais calculados a cada acesso (não ficam gravados no banco).
++        $total = count(Event::all());
++        $totalEnrollments = count(Enrollment::all());
++
+         $title = 'Painel Administrativo';
+-        $this->render('admin/dashboard/index', compact('title'));
++        $this->render('admin/dashboard/index', compact('title', 'total', 'totalEnrollments'));
+     }
+ }
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index b1f8075..6907947 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1,5 +1,24 @@
+ <p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
+ 
++<div class="row mb-3">
++    <div class="col-sm-6 col-lg-3 mb-2">
++        <div class="card" id="total_events">
++            <div class="card-body">
++                <p class="card-subtitle text-body-secondary mb-1">Eventos</p>
++                <p class="card-title fs-2 mb-0"><?= (int) $total ?></p>
++            </div>
++        </div>
++    </div>
++    <div class="col-sm-6 col-lg-3 mb-2">
++        <div class="card" id="total_enrollments">
++            <div class="card-body">
++                <p class="card-subtitle text-body-secondary mb-1">Inscrições</p>
++                <p class="card-title fs-2 mb-0"><?= (int) $totalEnrollments ?></p>
++            </div>
++        </div>
++    </div>
++</div>
++
+ <div class="list-group">
+     <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
+ </div>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..fcfde07 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -23,7 +23,12 @@
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+-                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td>
++                        <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
++                        <?php if ($event->availableSpots() === 0) : ?>
++                            <span class="badge text-bg-danger">Lotado</span>
++                        <?php endif; ?>
++                    </td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..fbc91a2 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -29,6 +29,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dd class="col-sm-9">
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
++        <?php if ($event->availableSpots() === 0) : ?>
++            <span class="badge text-bg-danger">Lotado</span>
++        <?php endif; ?>
+     </dd>
+ </dl>
+ 
+diff --git a/tests/Acceptance/admin/AdminDashboardCest.php b/tests/Acceptance/admin/AdminDashboardCest.php
+index eb541ec..2585d9d 100644
+--- a/tests/Acceptance/admin/AdminDashboardCest.php
++++ b/tests/Acceptance/admin/AdminDashboardCest.php
+@@ -53,5 +53,9 @@ class AdminDashboardCest extends BaseAcceptanceCest
+ 
+         $page->see('Painel Administrativo', '//h1');
+         $page->see('Olá, Admin!');
++
++        // Totais calculados (o cenário não cria Eventos nem Inscrições).
++        $page->see('0', '#total_events .card-title');
++        $page->see('0', '#total_enrollments .card-title');
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/DashboardTotalsCest.php b/tests/Acceptance/admin/events/DashboardTotalsCest.php
+new file mode 100644
+index 0000000..3b5beaa
+--- /dev/null
++++ b/tests/Acceptance/admin/events/DashboardTotalsCest.php
+@@ -0,0 +1,32 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++class DashboardTotalsCest extends BaseEventsCest
++{
++    public function dashboardShowsTotals(AcceptanceTester $page): void
++    {
++        $page->wantTo('Painel administrativo com o total de Eventos e de Inscrições');
++        $page->amOnPage('/admin');
++
++        $page->see('Painel Administrativo', 'h1');
++        $page->see('Eventos', '#total_events');
++        $page->see((string) self::TOTAL_EVENTS, '#total_events .card-title');
++        // BaseEventsCest: 3 Inscrições no Evento 01 e 1 no Evento 03.
++        $page->see('Inscrições', '#total_enrollments');
++        $page->see('4', '#total_enrollments .card-title');
++    }
++
++    public function fullEventShowsBadgeOnShow(AcceptanceTester $page): void
++    {
++        $page->wantTo('Detalhes do Evento lotado com o badge "Lotado"');
++        $page->amOnPage("/admin/events/{$this->events[1]->id}");
++        $page->see('3/3');
++        $page->see('Lotado', '.badge');
++
++        $page->amOnPage("/admin/events/{$this->events[2]->id}");
++        $page->dontSee('Lotado');
++    }
++}
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..4a497a7 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -37,6 +37,12 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('0/22', $this->rowOf('Evento 02'));
+         $page->see('1/23', $this->rowOf('Evento 03'));
+ 
++        // Badge "Lotado" só no Evento sem vagas (Evento 01).
++        $page->see('Lotado', $this->rowOf('Evento 01') . "//span[contains(@class, 'badge')]");
++        $page->dontSee('Lotado', $this->rowOf('Evento 02'));
++        $page->dontSee('Lotado', $this->rowOf('Evento 03'));
++        $page->seeNumberOfElements('table tbody .badge', 1);
++
+         // Os demais Eventos ficam nas outras páginas.
+         $page->dontSee($this->title(6));
+         $page->dontSee($this->title(16));
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..895267f
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,91 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\Admin\DashboardController';
++
++    private User $admin;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Admin', 'admin@example.com', 'admin');
++        Auth::login($this->admin);
++    }
++
++    public function test_index_shows_zero_totals_without_records(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Painel Administrativo\s*<\/h1>/', $response);
++        $this->assertTotal('total_events', 0, $response);
++        $this->assertTotal('total_enrollments', 0, $response);
++    }
++
++    public function test_index_shows_totals_of_events_and_enrollments(): void
++    {
++        $first = $this->createEvent('Evento A');
++        $second = $this->createEvent('Evento B');
++        $this->createEvent('Evento C');
++
++        $ana = $this->createUser('Ana', 'ana@example.com', 'participant');
++        $bia = $this->createUser('Bia', 'bia@example.com', 'participant');
++        foreach ([[$first, $ana], [$first, $bia], [$second, $ana]] as [$event, $user]) {
++            (new Enrollment(['event_id' => $event->id, 'user_id' => $user->id]))->save();
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertTotal('total_events', 3, $response);
++        $this->assertTotal('total_enrollments', 3, $response);
++    }
++
++    private function assertTotal(string $id, int $expected, string $response): void
++    {
++        $this->assertMatchesRegularExpression(
++            '/id="' . $id . '".*?<p class="card-title[^"]*">' . $expected . '<\/p>/s',
++            $response
++        );
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function createEvent(string $title): Event
++    {
++        $event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => $title,
++            'description' => 'Descrição.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'starts_on' => date('Y-m-d', strtotime('+5 days')),
++            'location' => 'Sala 1',
++            'capacity' => 10,
++        ]);
++        $event->setAudienceList(['students']);
++        $event->save();
++
++        return $event;
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..da884e1 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,36 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_shows_full_badge_only_when_no_spots_left(): void
++    {
++        $full = $this->createEvent(['title' => 'Evento Cheio', 'capacity' => 2]);
++        $this->enroll($full);
++        $this->enroll($full, 'outra@example.com');
++        $this->createEvent(['title' => 'Evento Livre', 'capacity' => 2]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('2/2', $response);
++        $this->assertStringContainsString('0/2', $response);
++        // Um único badge: só o Evento sem vagas.
++        $this->assertSame(1, substr_count($response, '<span class="badge text-bg-danger">Lotado</span>'));
++        $this->assertMatchesRegularExpression('/Evento Cheio.*?2\/2\s*<span class="badge text-bg-danger">Lotado/s', $response);
++    }
++
++    public function test_show_full_event_has_badge(): void
++    {
++        $full = $this->createEvent(['capacity' => 1]);
++        $this->enroll($full);
++        $free = $this->createEvent(['capacity' => 5]);
++
++        $fullResponse = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $full->id]);
++        $freeResponse = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $free->id]);
++
++        $this->assertStringContainsString('Lotado', $fullResponse);
++        $this->assertStringContainsString('(0 disponíveis)', $fullResponse);
++        $this->assertStringNotContainsString('Lotado', $freeResponse);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,281 @@
+From 75e9e86bfb1a7a9036cf62e7b238def0c24693ee Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:04:28 -0300
+Subject: [PATCH] feat: Show event title in flash messages and add warning type
+
+Event flash messages carry the raw title and the flash partial escapes it once with htmlspecialchars. FlashMessage gains warning(), used when removal is blocked by enrollments.
+---
+ app/Controllers/Admin/EventsController.php    | 11 +++--
+ app/views/layouts/_flash_message.phtml        |  2 +-
+ lib/FlashMessage.php                          |  5 +++
+ .../admin/events/CreateSuccessfullyCest.php   |  2 +-
+ .../admin/events/DeleteEventCest.php          | 29 ++++++++++--
+ .../admin/events/UpdateSuccessfullyCest.php   |  6 +--
+ .../Admin/EventsControllerTest.php            | 45 ++++++++++++++++---
+ tests/Unit/Lib/FlashMessageTest.php           |  9 ++++
+ 8 files changed, 92 insertions(+), 17 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..68feb44 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -53,7 +53,8 @@ class EventsController extends Controller
+         $event->user_id = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+-            FlashMessage::success('Evento cadastrado com sucesso!');
++            // Título cru: o escape é feito uma vez só, no partial _flash_message.phtml.
++            FlashMessage::success("Evento \"{$event->title}\" cadastrado com sucesso!");
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
+@@ -84,7 +85,7 @@ class EventsController extends Controller
+         $this->fill($event, $request);
+ 
+         if ($event->save()) {
+-            FlashMessage::success('Evento atualizado com sucesso!');
++            FlashMessage::success("Evento \"{$event->title}\" atualizado com sucesso!");
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
+@@ -102,9 +103,11 @@ class EventsController extends Controller
+         }
+ 
+         if ($event->safeDestroy()) {
+-            FlashMessage::success('Evento removido com sucesso!');
++            FlashMessage::success("Evento \"{$event->title}\" removido com sucesso!");
+         } else {
+-            FlashMessage::danger($event->errors('base') ?? 'Não foi possível remover o evento!');
++            // Remoção barrada por regra de negócio (Inscrições): aviso, não erro do sistema.
++            $reason = $event->errors('base') ?? 'não foi possível remover o evento!';
++            FlashMessage::warning("Evento \"{$event->title}\" não removido: {$reason}");
+         }
+ 
+         $this->redirectTo(route('admin.events.index'));
+diff --git a/app/views/layouts/_flash_message.phtml b/app/views/layouts/_flash_message.phtml
+index 5e38c31..1c56680 100644
+--- a/app/views/layouts/_flash_message.phtml
++++ b/app/views/layouts/_flash_message.phtml
+@@ -1,6 +1,6 @@
+ <?php foreach (\Lib\FlashMessage::get() as $type => $msg) : ?>
+     <div class="alert alert-<?= $type ?> alert-dismissible" role="alert">
+-        <div><?= $msg ?></div>
++        <div><?= htmlspecialchars($msg) ?></div>
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+     </div>
+ <? endforeach; ?>
+diff --git a/lib/FlashMessage.php b/lib/FlashMessage.php
+index 081732f..30b9a6f 100644
+--- a/lib/FlashMessage.php
++++ b/lib/FlashMessage.php
+@@ -14,6 +14,11 @@ class FlashMessage
+         self::message('danger', $value);
+     }
+ 
++    public static function warning(string $value): void
++    {
++        self::message('warning', $value);
++    }
++
+     public static function get(): array
+     {
+         $flash = $_SESSION['flash'] ?? [];
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..6bd242a 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -25,7 +25,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $event = Event::findBy(['title' => $data['title']]);
+         Assert::assertNotNull($event);
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+-        $page->see('Evento cadastrado com sucesso!');
++        $page->see("Evento \"{$data['title']}\" cadastrado com sucesso!", '.alert-success');
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..33c25d7 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -20,7 +20,7 @@ class DeleteEventCest extends BaseEventsCest
+         $this->clickRemove($page, 'Evento 02');
+ 
+         $page->seeCurrentUrlEquals('/admin/events');
+-        $page->see('Evento removido com sucesso!');
++        $page->see('Evento "Evento 02" removido com sucesso!', '.alert-success');
+         $page->see('Eventos', 'h1');
+         $page->dontSee('Evento 02', 'table');
+         Assert::assertNull(Event::findById((int) $event->id));
+@@ -38,8 +38,11 @@ class DeleteEventCest extends BaseEventsCest
+         $this->clickRemove($page, 'Evento 01');
+ 
+         $page->seeCurrentUrlEquals('/admin/events');
+-        $page->see('não é possível remover um evento com inscrições (3)!');
+-        $page->dontSee('Evento removido com sucesso!');
++        $page->see(
++            'Evento "Evento 01" não removido: não é possível remover um evento com inscrições (3)!',
++            '.alert-warning'
++        );
++        $page->dontSee('removido com sucesso!');
+         $page->see('Eventos', 'h1');
+         $page->see('Evento 01', 'table');
+         Assert::assertNotNull(Event::findById((int) $event->id));
+@@ -47,6 +50,26 @@ class DeleteEventCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function flashWithSpecialCharactersInTitleIsEscaped(AcceptanceTester $page): void
++    {
++        $title = 'A & "B" <b>x</b>';
++
++        $page->wantTo('Remover Evento com título especial e ver o título literal no flash');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $this->validEventData(['title' => $title]));
++        $page->click('Salvar');
++        $page->see("Evento \"{$title}\" cadastrado com sucesso!", '.alert-success');
++
++        $page->amOnPage('/admin/events/page/4');
++        $page->click('Remover', "//table//tr[contains(normalize-space(.), 'A & \"B\"')]");
++
++        // Escapado uma vez: o texto aparece literal, sem &amp; nem negrito.
++        $page->see("Evento \"{$title}\" removido com sucesso!", '.alert-success');
++        $page->dontSeeElement('.alert b');
++        $page->dontSee('&amp;');
++        Assert::assertNull(Event::findBy(['title' => $title]));
++    }
++
+     private function clickRemove(AcceptanceTester $page, string $title): void
+     {
+         // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..9d74122 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -42,7 +42,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $page->click('Salvar');
+ 
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+-        $page->see('Evento atualizado com sucesso!');
++        $page->see("Evento \"{$data['title']}\" atualizado com sucesso!", '.alert-success');
+         $page->see($data['title'], 'h1');
+ 
+         $stored = Event::findById((int) $event->id);
+@@ -68,7 +68,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $this->fillEventForm($page, ['title' => 'Evento 01 Lotado', 'capacity' => '3']);
+         $page->click('Salvar');
+ 
+-        $page->see('Evento atualizado com sucesso!');
++        $page->see('Evento "Evento 01 Lotado" atualizado com sucesso!');
+         $stored = Event::findById((int) $event->id);
+         Assert::assertNotNull($stored);
+         Assert::assertSame('Evento 01 Lotado', $stored->title);
+@@ -84,7 +84,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $this->fillEventForm($page, ['capacity' => '10']);
+         $page->click('Salvar');
+ 
+-        $page->see('Evento atualizado com sucesso!');
++        $page->see('Evento "Evento 01" atualizado com sucesso!');
+         $stored = Event::findById((int) $event->id);
+         Assert::assertNotNull($stored);
+         Assert::assertEquals(10, $stored->capacity);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..1132080 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -95,7 +95,7 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals($this->admin->id, $event->user_id);
+         $this->assertEquals(['students', 'staff'], $event->audienceList());
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Evento cadastrado com sucesso!', $_SESSION['flash']['success']);
++        $this->assertEquals('Evento "Oficina de Testes" cadastrado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+     public function test_create_ignores_user_id_sent_by_the_form(): void
+@@ -203,7 +203,7 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals(40, $updated->capacity);
+         $this->assertEquals($this->admin->id, $updated->user_id);
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
++        $this->assertEquals('Evento "Título Novo" atualizado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+     public function test_update_with_invalid_data_renders_form_and_keeps_record(): void
+@@ -247,7 +247,7 @@ class EventsControllerTest extends ControllerTestCase
+ 
+         $this->assertNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+-        $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
++        $this->assertEquals('Evento "Oficina de Testes" removido com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+     public function test_destroy_keeps_event_with_enrollments(): void
+@@ -260,9 +260,44 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertNotNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+         $this->assertEquals(
+-            'não é possível remover um evento com inscrições (1)!',
+-            $_SESSION['flash']['danger']
++            'Evento "Oficina de Testes" não removido: não é possível remover um evento com inscrições (1)!',
++            $_SESSION['flash']['warning']
+         );
++        $this->assertArrayNotHasKey('danger', $_SESSION['flash']);
++    }
++
++    public function test_flash_with_event_title_is_escaped_once_in_the_layout(): void
++    {
++        $event = $this->createEvent(['title' => 'A & "B" <script>alert(1)</script>']);
++        $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        // O flash guarda o título cru; o partial escapa na próxima página.
++        $this->assertEquals(
++            'Evento "A & "B" <script>alert(1)</script>" removido com sucesso!',
++            $_SESSION['flash']['success']
++        );
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString(
++            'Evento &quot;A &amp; &quot;B&quot; &lt;script&gt;alert(1)&lt;/script&gt;&quot; removido com sucesso!',
++            $response
++        );
++        $this->assertStringNotContainsString('<script>alert(1)</script>', $response);
++        $this->assertStringNotContainsString('&amp;amp;', $response);
++        $this->assertStringContainsString('alert alert-success', $response);
++    }
++
++    public function test_warning_flash_uses_the_warning_alert_class(): void
++    {
++        $event = $this->createEvent();
++        $this->enroll($event);
++        $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('alert alert-warning', $response);
++        $this->assertStringContainsString('não é possível remover um evento com inscrições (1)!', $response);
+     }
+ 
+     /**
+diff --git a/tests/Unit/Lib/FlashMessageTest.php b/tests/Unit/Lib/FlashMessageTest.php
+index 5712587..0ba2fdb 100644
+--- a/tests/Unit/Lib/FlashMessageTest.php
++++ b/tests/Unit/Lib/FlashMessageTest.php
+@@ -25,6 +25,15 @@ class FlashMessageTest extends TestCase
+         $this->assertEquals('Danger message', $flash['danger']);
+     }
+ 
++    public function test_warning(): void
++    {
++        FlashMessage::warning('Warning message');
++        $flash = FlashMessage::get();
++
++        $this->assertArrayHasKey('warning', $flash);
++        $this->assertEquals('Warning message', $flash['warning']);
++    }
++
+     public function test_get(): void
+     {
+         FlashMessage::success('Success message');
+-- 
+2.54.0 (Apple Git-157)
+

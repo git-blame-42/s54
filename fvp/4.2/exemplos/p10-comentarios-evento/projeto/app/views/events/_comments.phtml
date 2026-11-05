@@ -1,0 +1,34 @@
+<?php
+use App\Models\Comment;
+
+/** @var \App\Models\Event $event */
+$comments = $event->comments()->get();
+?>
+<section id="comments" class="mt-4">
+    <h2 class="h4">Comentários (<?= count($comments) ?>)</h2>
+
+    <?php if (empty($comments)) : ?>
+        <p class="text-muted">Nenhum comentário ainda.</p>
+    <?php else : ?>
+        <ul class="list-group mb-3">
+            <?php foreach ($comments as $comment) : ?>
+                <li class="list-group-item comment">
+                    <div class="small text-muted">
+                        <strong><?= htmlspecialchars($comment->authorName()) ?></strong>
+                        em <?= date('d/m/Y H:i', strtotime($comment->created_at)) ?>
+                    </div>
+                    <div class="comment-body"><?= nl2br(htmlspecialchars($comment->body)) ?></div>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+
+    <form action="<?= route('events.comments.create', ['id' => $event->id]) ?>" method="post" novalidate>
+        <div class="mb-2">
+            <label for="comment_body" class="form-label">Novo comentário</label>
+            <textarea class="form-control" id="comment_body" name="comment[body]" rows="3"
+                maxlength="<?= Comment::BODY_MAX_LENGTH ?>"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Comentar</button>
+    </form>
+</section>

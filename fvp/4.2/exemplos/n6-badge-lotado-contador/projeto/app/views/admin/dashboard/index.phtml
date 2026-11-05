@@ -1,0 +1,24 @@
+<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
+
+<div class="row mb-3">
+    <div class="col-sm-6 col-lg-3 mb-2">
+        <div class="card" id="total_events">
+            <div class="card-body">
+                <p class="card-subtitle text-body-secondary mb-1">Eventos</p>
+                <p class="card-title fs-2 mb-0"><?= (int) $total ?></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3 mb-2">
+        <div class="card" id="total_enrollments">
+            <div class="card-body">
+                <p class="card-subtitle text-body-secondary mb-1">Inscrições</p>
+                <p class="card-title fs-2 mb-0"><?= (int) $totalEnrollments ?></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="list-group">
+    <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
+</div>

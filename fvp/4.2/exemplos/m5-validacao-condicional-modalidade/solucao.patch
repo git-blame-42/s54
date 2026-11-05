@@ -1,0 +1,496 @@
+From 51e93474f93c612ed3ee984e4f9c299f8909d242 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:05:48 -0300
+Subject: [PATCH] feat: Require location only for in-person events and link for
+ online events
+
+Add nullable link column; location becomes nullable since online events may omit it.
+---
+ app/Controllers/Admin/EventsController.php    |  2 +-
+ app/Models/Event.php                          | 12 +++-
+ app/views/admin/events/_form.phtml            |  9 +++
+ app/views/admin/events/index.phtml            |  2 +-
+ app/views/admin/events/show.phtml             |  5 +-
+ database/Populate/populate.php                |  9 ++-
+ database/schema.sql                           |  3 +-
+ .../admin/events/BaseEventsCest.php           |  8 ++-
+ .../admin/events/CreateByModalityCest.php     | 60 ++++++++++++++++++
+ tests/Integration/Access/EventsAccessTest.php |  2 +
+ .../Admin/EventsControllerTest.php            | 56 +++++++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   |  1 +
+ tests/Unit/Models/Events/EventTest.php        | 63 ++++++++++++++++++-
+ 13 files changed, 219 insertions(+), 13 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/CreateByModalityCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..09b10ed 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,7 +11,7 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'link', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e4e9bda 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -16,7 +16,8 @@ use PDOException;
+  * @property string $modality
+  * @property string|null $audience valores separados por vírgula (tipo SET do MySQL); use audienceList()
+  * @property string $starts_on
+- * @property string $location
++ * @property string|null $location obrigatório se presencial ou híbrido
++ * @property string|null $link obrigatório se online
+  * @property int|string $capacity
+  */
+ class Event extends Model
+@@ -54,6 +55,7 @@ class Event extends Model
+         'audience',
+         'starts_on',
+         'location',
++        'link',
+         'capacity',
+     ];
+ 
+@@ -61,7 +63,13 @@ class Event extends Model
+     {
+         Validations::notEmpty('title', $this);
+         Validations::notEmpty('description', $this);
+-        Validations::notEmpty('location', $this);
++
++        // Online exige link; presencial e híbrido exigem local.
++        if ($this->modality === 'online') {
++            Validations::notEmpty('link', $this);
++        } else {
++            Validations::notEmpty('location', $this);
++        }
+ 
+         Validations::notEmpty('kind', $this) &&
+             Validations::inclusion('kind', $this, array_keys(self::KINDS));
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..db418ef 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -78,9 +78,18 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <label for="event_location" class="form-label">Local</label>
+         <input type="text" class="form-control<?= $invalid('location') ?>" id="event_location" name="event[location]"
+             value="<?= htmlspecialchars((string) $event->location) ?>">
++        <div class="form-text">Obrigatório para Eventos presenciais e híbridos.</div>
+         <?= $feedback('location') ?>
+     </div>
+ 
++    <div class="mb-3">
++        <label for="event_link" class="form-label">Link</label>
++        <input type="url" class="form-control<?= $invalid('link') ?>" id="event_link" name="event[link]"
++            value="<?= htmlspecialchars((string) $event->link) ?>">
++        <div class="form-text">Obrigatório para Eventos online.</div>
++        <?= $feedback('link') ?>
++    </div>
++
+     <div class="mb-3">
+         <label for="event_capacity" class="form-label">Vagas</label>
+         <input type="number" class="form-control<?= $invalid('capacity') ?>" id="event_capacity" name="event[capacity]"
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..b474795 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -22,7 +22,7 @@
+                     <td><?= htmlspecialchars($event->title) ?></td>
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+-                    <td><?= htmlspecialchars($event->location) ?></td>
++                    <td><?= htmlspecialchars((string) $event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..7a11886 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -23,7 +23,10 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dd class="col-sm-9"><?= date('d/m/Y', strtotime($event->starts_on)) ?></dd>
+ 
+     <dt class="col-sm-3">Local</dt>
+-    <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
++    <dd class="col-sm-9"><?= htmlspecialchars((string) $event->location) ?></dd>
++
++    <dt class="col-sm-3">Link</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars((string) $event->link) ?></dd>
+ 
+     <dt class="col-sm-3">Vagas</dt>
+     <dd class="col-sm-9">
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..71baa86 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -44,6 +44,7 @@ foreach (['Mariana Souza' => 'mariana', 'Carlos Pereira' => 'carlos', 'Fernanda
+ echo count($participants) . " Participantes criados (user@, mariana@, carlos@, fernanda@), senha 123456\n";
+ 
+ // Eventos: colunas title, description, kind, modality, audience, dias a partir de hoje, location, capacity.
++// Online sem local (null): o link é gerado no laço abaixo.
+ // As datas são relativas (hoje + N dias, N >= 14) para nunca ficarem no passado, já que a validação
+ // exige starts_on não passado; assim todos os Eventos (inclusive o lotado) continuam editáveis.
+ $events = [
+@@ -55,7 +56,7 @@ $events = [
+     [
+         'Introdução a APIs REST com PHP',
+         'Palestra sobre os princípios do REST, verbos HTTP e boas práticas de projeto de APIs em PHP.',
+-        'lecture', 'online', 'students,professors', 15, 'Microsoft Teams (link enviado aos inscritos)', 80,
++        'lecture', 'online', 'students,professors', 15, null, 80,
+     ],
+     [
+         'Oficina de Git e GitHub para Iniciantes',
+@@ -85,7 +86,7 @@ $events = [
+     [
+         'Minicurso de Testes Automatizados com PHPUnit e Codeception',
+         'Testes de unidade, integração e aceitação em uma aplicação PHP, com execução no GitHub Actions.',
+-        'short_course', 'online', 'students,professors', 36, 'Google Meet (link enviado aos inscritos)', 40,
++        'short_course', 'online', 'students,professors', 36, null, 40,
+     ],
+     [
+         'Palestra: Inteligência Artificial no Ensino de Programação',
+@@ -105,7 +106,7 @@ $events = [
+     [
+         'Palestra: Segurança no Desenvolvimento de Aplicações Web',
+         'Injeção de SQL, XSS, CSRF e armazenamento seguro de senhas, com exemplos de ataques reais.',
+-        'lecture', 'online', 'students,professors,community', 50, 'Microsoft Teams (link enviado aos inscritos)', 100,
++        'lecture', 'online', 'students,professors,community', 50, null, 100,
+     ],
+     [
+         'Oficina de Prototipação no Figma',
+@@ -139,6 +140,8 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
+         'modality' => $modality,
+         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
+         'location' => $location,
++        // Online exige link (o local fica vazio); no híbrido o link é opcional, aqui é a transmissão.
++        'link' => $modality === 'in_person' ? null : 'https://meet.example.com/evento-' . (count($eventModels) + 1),
+         'capacity' => $capacity,
+     ]);
+     $event->setAudienceList(explode(',', $audience));
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..4bd4196 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -27,7 +27,8 @@ CREATE TABLE events (
+     modality    ENUM('in_person', 'online', 'hybrid') NOT NULL DEFAULT 'in_person',
+     audience    SET('students', 'professors', 'staff', 'community') NOT NULL,
+     starts_on   DATE NOT NULL,
+-    location    VARCHAR(255) NOT NULL,
++    location    VARCHAR(255) NULL,
++    link        VARCHAR(255) NULL,
+     capacity    INT NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..a491dd1 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -88,6 +88,9 @@ class BaseEventsCest extends BaseAcceptanceCest
+                 'modality' => $modalities[($number - 1) % count($modalities)],
+                 'starts_on' => $this->startsOn($number),
+                 'location' => "Sala {$number}",
++                'link' => $modalities[($number - 1) % count($modalities)] === 'online'
++                    ? "https://meet.example.com/evento-{$number}"
++                    : null,
+                 'capacity' => $number === 1 ? 3 : 20 + $number,
+             ]);
+             $event->setAudienceList($number % 2 === 1 ? ['students', 'professors'] : ['students']);
+@@ -115,13 +118,13 @@ class BaseEventsCest extends BaseAcceptanceCest
+      * Preenche apenas os campos informados. `audience` define exatamente quais checkboxes ficam marcados.
+      *
+      * Chaves aceitas: title, description, kind (rótulo exibido no select), modality (valor do radio: in_person,
+-     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity.
++     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, link, capacity.
+      *
+      * @param array<string, mixed> $data
+      */
+     protected function fillEventForm(AcceptanceTester $page, array $data): void
+     {
+-        foreach (['title', 'description', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'location', 'link', 'capacity'] as $field) {
+             if (array_key_exists($field, $data)) {
+                 $page->fillField("#event_{$field}", (string) $data[$field]);
+             }
+@@ -170,6 +173,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+             'audience' => ['students', 'staff'],
+             'starts_on' => date('Y-m-d', strtotime('+1 day')),
+             'location' => 'Laboratório B203',
++            'link' => 'https://meet.example.com/testes-automatizados',
+             'capacity' => '40',
+         ], $overrides);
+     }
+diff --git a/tests/Acceptance/admin/events/CreateByModalityCest.php b/tests/Acceptance/admin/events/CreateByModalityCest.php
+new file mode 100644
+index 0000000..f3386a8
+--- /dev/null
++++ b/tests/Acceptance/admin/events/CreateByModalityCest.php
+@@ -0,0 +1,60 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Local obrigatório só para presencial e híbrido; online exige link.
++ */
++class CreateByModalityCest extends BaseEventsCest
++{
++    public function onlineEventRequiresLinkButNotLocation(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastrar Evento online: link obrigatório, local opcional');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData([
++            'title' => 'Live de Boas-Vindas',
++            'modality' => 'online',
++            'location' => '',
++            'link' => '',
++        ]));
++        $page->click('Salvar');
++
++        $page->see('Existem dados incorretos! Por favor, verifique!');
++        $page->seeElement('#event_link.is-invalid');
++        $page->see('não pode ser vazio!', '#event_link ~ .invalid-feedback');
++        $page->dontSeeElement('#event_location.is-invalid');
++
++        $page->fillField('#event_link', 'https://meet.example.com/boas-vindas');
++        $page->click('Salvar');
++
++        $event = Event::findBy(['title' => 'Live de Boas-Vindas']);
++        Assert::assertNotNull($event);
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('https://meet.example.com/boas-vindas');
++        Assert::assertEmpty($event->location);
++    }
++
++    public function inPersonEventRequiresLocation(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastrar Evento presencial sem local');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData([
++            'modality' => 'in_person',
++            'location' => '',
++            'link' => '',
++        ]));
++        $page->click('Salvar');
++
++        $page->seeElement('#event_location.is-invalid');
++        $page->see('não pode ser vazio!', '#event_location ~ .invalid-feedback');
++        $page->dontSeeElement('#event_link.is-invalid');
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..3e2027f 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -36,6 +36,7 @@ class EventsAccessTest extends TestCase
+             'audience' => 'students',
+             'starts_on' => date('Y-m-d', strtotime('+30 days')),
+             'location' => 'Microsoft Teams',
++            'link' => 'https://meet.example.com/acesso',
+             'capacity' => 10,
+         ]);
+         $this->event->save();
+@@ -149,6 +150,7 @@ class EventsAccessTest extends TestCase
+             'audience' => ['students'],
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Qualquer lugar',
++            'link' => 'https://meet.example.com/invasor',
+             'capacity' => '5',
+         ]]]);
+         $client->post($uri, ['form_params' => ['_method' => 'PUT', 'event' => ['title' => 'Título Alterado']]]);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..1ad3ad4 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -137,6 +137,60 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_create_online_event_without_link_marks_link_field(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['modality' => 'online', 'location' => '', 'link' => ''])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/id="event_link"[^>]*is-invalid|is-invalid[^>]*id="event_link"/', $response);
++        $this->assertDoesNotMatchRegularExpression(
++            '/id="event_location"[^>]*is-invalid|is-invalid[^>]*id="event_location"/',
++            $response
++        );
++        $this->assertMatchesRegularExpression('/id="event_modality_online"[^>]*checked/', $response);
++    }
++
++    public function test_create_online_event_with_link_and_without_location_saves_event(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams([
++                'modality' => 'online',
++                'location' => '',
++                'link' => 'https://meet.example.com/testes',
++            ])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertSame('https://meet.example.com/testes', $event->link);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertStringContainsString('https://meet.example.com/testes', $show);
++    }
++
++    public function test_create_in_person_event_without_location_marks_location_field(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['modality' => 'in_person', 'location' => ''])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression(
++            '/id="event_location"[^>]*is-invalid|is-invalid[^>]*id="event_location"/',
++            $response
++        );
++        $this->assertDoesNotMatchRegularExpression('/id="event_link"[^>]*is-invalid|is-invalid[^>]*id="event_link"/', $response);
++    }
++
+     public function test_create_without_audience_marks_audience_field(): void
+     {
+         $params = $this->validParams();
+@@ -173,6 +227,7 @@ class EventsControllerTest extends ControllerTestCase
+         $event = $this->createEvent([
+             'title' => 'Para Editar',
+             'modality' => 'online',
++            'link' => 'https://meet.example.com/editar',
+             'audience' => ['professors', 'staff'],
+         ]);
+ 
+@@ -183,6 +238,7 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("action=\"/admin/events/{$event->id}\"", $response);
+         $this->assertStringContainsString('name="_method" value="PUT"', $response);
+         $this->assertMatchesRegularExpression('/id="event_modality_online"[^>]*checked/', $response);
++        $this->assertStringContainsString('value="https://meet.example.com/editar"', $response);
+         $this->assertMatchesRegularExpression('/id="event_audience_professors"[^>]*checked/', $response);
+         $this->assertMatchesRegularExpression('/id="event_audience_staff"[^>]*checked/', $response);
+         $this->assertDoesNotMatchRegularExpression('/id="event_audience_students"[^>]*checked/', $response);
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..da3e983 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -44,6 +44,7 @@ class EnrollmentTest extends TestCase
+             'audience' => 'students',
+             'starts_on' => date('Y-m-d', strtotime('+10 days')),
+             'location' => 'Online',
++            'link' => 'https://meet.example.com/oficina',
+             'capacity' => 5,
+         ]);
+         $this->event->save();
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..dd1bbdb 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -128,7 +128,8 @@ class EventTest extends TestCase
+     private function errorsOf(Event $event): array
+     {
+         $errors = [];
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        $fields = ['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'link', 'capacity'];
++        foreach ($fields as $field) {
+             if ($event->errors($field) !== null) {
+                 $errors[$field] = $event->errors($field);
+             }
+@@ -137,6 +138,61 @@ class EventTest extends TestCase
+         return $errors;
+     }
+ 
++    /* ------------------- local x link conforme a modalidade ------------------- */
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function modalitiesWithLocationProvider(): array
++    {
++        return [
++            'in_person' => ['in_person'],
++            'hybrid' => ['hybrid'],
++        ];
++    }
++
++    #[DataProvider('modalitiesWithLocationProvider')]
++    public function test_in_person_and_hybrid_events_should_require_location(string $modality): void
++    {
++        $event = new Event($this->params(['modality' => $modality, 'location' => '']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode ser vazio!', $event->errors('location'));
++        $this->assertCount(1, $this->errorsOf($event));
++    }
++
++    #[DataProvider('modalitiesWithLocationProvider')]
++    public function test_in_person_and_hybrid_events_should_not_require_link(string $modality): void
++    {
++        $event = new Event($this->params(['modality' => $modality, 'link' => null]));
++
++        $this->assertTrue($event->isValid());
++    }
++
++    public function test_online_event_should_require_link(): void
++    {
++        $event = new Event($this->params(['modality' => 'online', 'link' => '']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode ser vazio!', $event->errors('link'));
++        $this->assertCount(1, $this->errorsOf($event));
++    }
++
++    public function test_online_event_should_not_require_location(): void
++    {
++        $event = new Event($this->params([
++            'modality' => 'online',
++            'location' => null,
++            'link' => 'https://meet.example.com/semana',
++        ]));
++
++        $this->assertTrue($event->save());
++
++        $found = Event::findById($event->id);
++        $this->assertNull($found->location);
++        $this->assertEquals('https://meet.example.com/semana', $found->link);
++    }
++
+     public function test_kind_should_accept_every_enum_value(): void
+     {
+         foreach (array_keys(Event::KINDS) as $kind) {
+@@ -155,7 +211,10 @@ class EventTest extends TestCase
+     public function test_modality_should_accept_every_enum_value(): void
+     {
+         foreach (array_keys(Event::MODALITIES) as $modality) {
+-            $this->assertTrue((new Event($this->params(['modality' => $modality])))->isValid(), $modality);
++            // Online exige link (M5).
++            $params = $this->params(['modality' => $modality, 'link' => 'https://meet.example.com/semana']);
++
++            $this->assertTrue((new Event($params))->isValid(), $modality);
+         }
+     }
+ 
+-- 
+2.54.0 (Apple Git-157)
+

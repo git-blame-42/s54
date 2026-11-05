@@ -1,0 +1,1034 @@
+From fb395890cb0675e9c817f23647c858ba824c5667 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:10:29 -0300
+Subject: [PATCH] feat: Add comments to events
+
+New comments table (child of events, ON DELETE CASCADE) and Comment model with BelongsTo event and user, validated with notEmpty and the new Validations::maxLength (500). Logged users comment through POST /events/{id}/comments; participants get a minimal GET /events/{id} page and admins see the same list and form in the admin show. Populate seeds a few comments.
+---
+ app/Controllers/CommentsController.php        |  50 +++++
+ app/Controllers/EventsController.php          |  27 +++
+ app/Models/Comment.php                        |  65 ++++++
+ app/Models/Event.php                          |  12 +-
+ app/views/admin/events/show.phtml             |   2 +
+ app/views/events/_comments.phtml              |  34 +++
+ app/views/events/show.phtml                   |  37 ++++
+ config/routes.php                             |   6 +
+ database/Populate/populate.php                |  25 +++
+ database/schema.sql                           |  14 ++
+ lib/Validations.php                           |  15 ++
+ tests/Acceptance/events/CommentsCest.php      |  79 +++++++
+ .../Integration/Access/CommentsAccessTest.php | 118 ++++++++++
+ .../Controllers/CommentsControllerTest.php    | 202 ++++++++++++++++++
+ .../Unit/Lib/Validations/ValidationsTest.php  |  15 ++
+ tests/Unit/Models/Comments/CommentTest.php    | 140 ++++++++++++
+ 16 files changed, 840 insertions(+), 1 deletion(-)
+ create mode 100644 app/Controllers/CommentsController.php
+ create mode 100644 app/Controllers/EventsController.php
+ create mode 100644 app/Models/Comment.php
+ create mode 100644 app/views/events/_comments.phtml
+ create mode 100644 app/views/events/show.phtml
+ create mode 100644 tests/Acceptance/events/CommentsCest.php
+ create mode 100644 tests/Integration/Access/CommentsAccessTest.php
+ create mode 100644 tests/Integration/Controllers/CommentsControllerTest.php
+ create mode 100644 tests/Unit/Models/Comments/CommentTest.php
+
+diff --git a/app/Controllers/CommentsController.php b/app/Controllers/CommentsController.php
+new file mode 100644
+index 0000000..8dcfb87
+--- /dev/null
++++ b/app/Controllers/CommentsController.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Comment;
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++class CommentsController extends Controller
++{
++    public function create(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('dashboard.index'));
++            return;
++        }
++
++        $comment = $event->comments()->new([
++            'user_id' => $this->currentUser()?->id,
++            'body' => $this->body($request),
++        ]);
++
++        if ($comment->save()) {
++            FlashMessage::success('Comentário publicado!');
++        } else {
++            FlashMessage::danger('Comentário ' . $comment->errors('body'));
++        }
++
++        // Administrador comenta pela tela da Área Administrativa; Participante, pela tela do Evento.
++        $route = $this->currentUser()?->isAdmin() ? 'admin.events.show' : 'events.show';
++        $this->redirectTo(route($route, ['id' => $event->id]));
++    }
++
++    /**
++     * Texto do comentário vindo de comment[body]; null se ausente ou não for string (ex.: comment[body][]).
++     */
++    private function body(Request $request): ?string
++    {
++        $params = $request->getParam('comment');
++        if (!is_array($params) || !isset($params['body']) || !is_string($params['body'])) {
++            return null;
++        }
++
++        return trim($params['body']);
++    }
++}
+diff --git a/app/Controllers/EventsController.php b/app/Controllers/EventsController.php
+new file mode 100644
+index 0000000..ad2d731
+--- /dev/null
++++ b/app/Controllers/EventsController.php
+@@ -0,0 +1,27 @@
++<?php
++
++namespace App\Controllers;
++
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++/**
++ * Tela do Evento para qualquer usuário logado (Participante ou Administrador): dados e comentários.
++ */
++class EventsController extends Controller
++{
++    public function show(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('dashboard.index'));
++            return;
++        }
++
++        $title = htmlspecialchars($event->title);
++        $this->render('events/show', compact('event', 'title'));
++    }
++}
+diff --git a/app/Models/Comment.php b/app/Models/Comment.php
+new file mode 100644
+index 0000000..b4c2d17
+--- /dev/null
++++ b/app/Models/Comment.php
+@@ -0,0 +1,65 @@
++<?php
++
++namespace App\Models;
++
++use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++
++/**
++ * Comentário de um usuário em um Evento (filho 1xN de events).
++ *
++ * @property int $id
++ * @property int $event_id
++ * @property int $user_id
++ * @property string $body
++ * @property string $created_at
++ */
++class Comment extends Model
++{
++    public const BODY_MAX_LENGTH = 500;
++
++    protected static string $table = 'comments';
++    protected static array $columns = ['event_id', 'user_id', 'body', 'created_at'];
++
++    /**
++     * `save()` grava todas as colunas de $columns (o DEFAULT do banco não é usado),
++     * então created_at é preenchido aqui quando não vem do banco.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        if ($this->created_at === null) {
++            $this->created_at = date('Y-m-d H:i:s');
++        }
++    }
++
++    public function validates(): void
++    {
++        Validations::notEmpty('event_id', $this);
++        Validations::notEmpty('user_id', $this);
++
++        Validations::notEmpty('body', $this) &&
++            Validations::maxLength('body', $this, self::BODY_MAX_LENGTH);
++    }
++
++    public function event(): BelongsTo
++    {
++        return $this->belongsTo(Event::class, 'event_id');
++    }
++
++    public function user(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'user_id');
++    }
++
++    public function authorName(): string
++    {
++        $user = $this->user()->get();
++
++        return $user instanceof User ? $user->name : '';
++    }
++}
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..c475caa 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -3,6 +3,7 @@
+ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\HasMany;
+ use Core\Database\ActiveRecord\Model;
+ use Lib\Validations;
+ use PDOException;
+@@ -119,6 +120,14 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * Comentários do Evento, na ordem em que foram feitos (id crescente).
++     */
++    public function comments(): HasMany
++    {
++        return $this->hasMany(Comment::class, 'event_id');
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+@@ -146,7 +155,8 @@ class Event extends Model
+ 
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+-     * retorna false e registra o motivo em errors('base').
++     * retorna false e registra o motivo em errors('base'). Comentários não bloqueiam:
++     * o banco os apaga junto (ON DELETE CASCADE em comments.event_id).
+      */
+     public function safeDestroy(): bool
+     {
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..4382d40 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -34,3 +34,5 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++
++<?php require __DIR__ . '/../../events/_comments.phtml'; ?>
+diff --git a/app/views/events/_comments.phtml b/app/views/events/_comments.phtml
+new file mode 100644
+index 0000000..041cffd
+--- /dev/null
++++ b/app/views/events/_comments.phtml
+@@ -0,0 +1,34 @@
++<?php
++use App\Models\Comment;
++
++/** @var \App\Models\Event $event */
++$comments = $event->comments()->get();
++?>
++<section id="comments" class="mt-4">
++    <h2 class="h4">Comentários (<?= count($comments) ?>)</h2>
++
++    <?php if (empty($comments)) : ?>
++        <p class="text-muted">Nenhum comentário ainda.</p>
++    <?php else : ?>
++        <ul class="list-group mb-3">
++            <?php foreach ($comments as $comment) : ?>
++                <li class="list-group-item comment">
++                    <div class="small text-muted">
++                        <strong><?= htmlspecialchars($comment->authorName()) ?></strong>
++                        em <?= date('d/m/Y H:i', strtotime($comment->created_at)) ?>
++                    </div>
++                    <div class="comment-body"><?= nl2br(htmlspecialchars($comment->body)) ?></div>
++                </li>
++            <?php endforeach; ?>
++        </ul>
++    <?php endif; ?>
++
++    <form action="<?= route('events.comments.create', ['id' => $event->id]) ?>" method="post" novalidate>
++        <div class="mb-2">
++            <label for="comment_body" class="form-label">Novo comentário</label>
++            <textarea class="form-control" id="comment_body" name="comment[body]" rows="3"
++                maxlength="<?= Comment::BODY_MAX_LENGTH ?>"></textarea>
++        </div>
++        <button type="submit" class="btn btn-primary">Comentar</button>
++    </form>
++</section>
+diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
+new file mode 100644
+index 0000000..9086652
+--- /dev/null
++++ b/app/views/events/show.phtml
+@@ -0,0 +1,37 @@
++<?php
++use App\Models\Event;
++
++$audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $event->audienceList());
++?>
++<dl class="row">
++    <dt class="col-sm-3">Título</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->title) ?></dd>
++
++    <dt class="col-sm-3">Descrição</dt>
++    <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
++
++    <dt class="col-sm-3">Tipo</dt>
++    <dd class="col-sm-9"><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></dd>
++
++    <dt class="col-sm-3">Modalidade</dt>
++    <dd class="col-sm-9"><?= Event::MODALITIES[$event->modality] ?? htmlspecialchars($event->modality) ?></dd>
++
++    <dt class="col-sm-3">Público-alvo</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars(implode(', ', $audience)) ?></dd>
++
++    <dt class="col-sm-3">Data</dt>
++    <dd class="col-sm-9"><?= date('d/m/Y', strtotime($event->starts_on)) ?></dd>
++
++    <dt class="col-sm-3">Local</dt>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
++
++    <dt class="col-sm-3">Vagas</dt>
++    <dd class="col-sm-9">
++        <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
++        (<?= $event->availableSpots() ?> disponíveis)
++    </dd>
++</dl>
++
++<a class="btn btn-secondary" href="<?= route('dashboard.index') ?>">Voltar</a>
++
++<?php require __DIR__ . '/_comments.phtml'; ?>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..8a21917 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -3,7 +3,9 @@
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
+ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
++use App\Controllers\CommentsController;
+ use App\Controllers\DashboardController;
++use App\Controllers\EventsController;
+ use App\Controllers\HomeController;
+ use Core\Router\Route;
+ 
+@@ -18,6 +20,10 @@ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('user
+ Route::middleware('auth')->group(function () {
+     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
++    // Tela do Evento e comentários (P10): qualquer usuário logado vê e comenta.
++    Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
++    Route::post('/events/{id}/comments', [CommentsController::class, 'create'])->name('events.comments.create');
++
+     // Área administrativa (somente autenticados com perfil admin)
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..f9e1990 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -2,6 +2,7 @@
+ 
+ require __DIR__ . '/../../config/bootstrap.php';
+ 
++use App\Models\Comment;
+ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+@@ -177,3 +178,27 @@ foreach ($enrollments as $eventIndex => $participantIndexes) {
+ }
+ 
+ echo "$total Inscrições criadas em " . count($enrollments) . " Eventos\n";
++
++// Comentários (P10): índice do Evento => [índice do autor (null = Administrador), texto].
++$comments = [
++    0 => [[0, 'Haverá certificado de participação?'], [null, 'Sim, enviado por e-mail ao fim da semana.']],
++    1 => [[1, 'A palestra ficará gravada?']],
++    3 => [[2, 'Preciso levar notebook com Docker instalado?'], [3, 'Também quero saber!']],
++];
++
++$totalComments = 0;
++foreach ($comments as $eventIndex => $eventComments) {
++    foreach ($eventComments as [$authorIndex, $body]) {
++        $comment = new Comment([
++            'event_id' => $eventModels[$eventIndex]->id,
++            'user_id' => $authorIndex === null ? $admin->id : $participants[$authorIndex]->id,
++            'body' => $body,
++        ]);
++        if (!$comment->save()) {
++            throw new RuntimeException('Comentário inválido no populate');
++        }
++        $totalComments++;
++    }
++}
++
++echo "$totalComments Comentários criados em " . count($comments) . " Eventos\n";
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..27f2fb1 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -1,5 +1,6 @@
+ SET foreign_key_checks = 0;
+ 
++DROP TABLE IF EXISTS comments;
+ DROP TABLE IF EXISTS event_user;
+ DROP TABLE IF EXISTS events;
+ DROP TABLE IF EXISTS users;
+@@ -52,4 +53,17 @@ CREATE TABLE event_user (
+         ON DELETE RESTRICT ON UPDATE CASCADE
+ );
+ 
++-- Comentário: filho 1xN de events (P10). Ao remover o Evento, os comentários vão junto (CASCADE).
++CREATE TABLE comments (
++    id         INT AUTO_INCREMENT PRIMARY KEY,
++    event_id   INT NOT NULL,
++    user_id    INT NOT NULL,
++    body       TEXT NOT NULL,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    CONSTRAINT fk_comments_event FOREIGN KEY (event_id) REFERENCES events (id)
++        ON DELETE CASCADE ON UPDATE CASCADE,
++    CONSTRAINT fk_comments_user FOREIGN KEY (user_id) REFERENCES users (id)
++        ON DELETE RESTRICT ON UPDATE CASCADE
++);
++
+ SET foreign_key_checks = 1;
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..ef008be 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -72,6 +72,21 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * O texto não pode passar de $max caracteres (conta caracteres UTF-8, não bytes).
++     */
++    public static function maxLength($attribute, $obj, int $max)
++    {
++        $value = $obj->$attribute;
++
++        if (is_string($value) && mb_strlen($value) > $max) {
++            $obj->addError($attribute, "deve ter no máximo {$max} caracteres!");
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * O valor deve ser um número inteiro maior ou igual a $min (aceita string numérica, como vem de um form).
+      */
+diff --git a/tests/Acceptance/events/CommentsCest.php b/tests/Acceptance/events/CommentsCest.php
+new file mode 100644
+index 0000000..b44ac22
+--- /dev/null
++++ b/tests/Acceptance/events/CommentsCest.php
+@@ -0,0 +1,79 @@
++<?php
++
++namespace Tests\Acceptance\events;
++
++use App\Models\Comment;
++use Tests\Acceptance\admin\events\BaseEventsCest;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * P10: Participante comenta na tela do Evento (/events/{id}); o Administrador vê o comentário
++ * no show da Área Administrativa e também pode comentar.
++ */
++class CommentsCest extends BaseEventsCest
++{
++    public function _before(AcceptanceTester $page): void
++    {
++        parent::_before($page);
++
++        // A base loga como Administrador; aqui o cenário começa como Participante.
++        $page->amOnPage('/logout');
++        $page->login('participante1@example.com', self::PASSWORD);
++    }
++
++    public function participantCommentsOnEvent(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Comentar em um Evento como Participante');
++        $page->amOnPage("/events/{$event->id}");
++        $page->see('Evento 02', 'h1');
++        $page->see('Comentários (0)');
++        $page->see('Nenhum comentário ainda.');
++
++        $page->fillField('#comment_body', 'Haverá certificado? <b>sim</b>');
++        $page->click('Comentar');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('Comentário publicado!', '.alert-success');
++        $page->see('Comentários (1)');
++        $page->see('Participante 1', '.comment');
++        $page->see('Haverá certificado? <b>sim</b>', '.comment-body');
++        $page->dontSeeElement('.comment-body b');
++    }
++
++    public function emptyCommentIsRejected(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Enviar comentário vazio e ver o erro');
++        $page->amOnPage("/events/{$event->id}");
++        $page->click('Comentar');
++
++        $page->seeCurrentUrlEquals("/events/{$event->id}");
++        $page->see('Comentário não pode ser vazio!', '.alert-danger');
++        $page->see('Nenhum comentário ainda.');
++        \PHPUnit\Framework\Assert::assertCount(0, Comment::all());
++    }
++
++    public function adminSeesAndRepliesInAdminShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $page->amOnPage("/events/{$event->id}");
++        $page->fillField('#comment_body', 'Pergunta do Participante');
++        $page->click('Comentar');
++
++        $page->wantTo('Ver e responder o comentário pelo show da Área Administrativa');
++        $page->amOnPage('/logout');
++        $page->login(self::ADMIN_EMAIL, self::PASSWORD);
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->see('Pergunta do Participante', '.comment-body');
++
++        $page->fillField('#comment_body', 'Resposta do Administrador');
++        $page->click('Comentar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Comentários (2)');
++        $page->see('Resposta do Administrador', '.comment-body');
++    }
++}
+diff --git a/tests/Integration/Access/CommentsAccessTest.php b/tests/Integration/Access/CommentsAccessTest.php
+new file mode 100644
+index 0000000..6ebf6e6
+--- /dev/null
++++ b/tests/Integration/Access/CommentsAccessTest.php
+@@ -0,0 +1,118 @@
++<?php
++
++namespace Tests\Integration\Access;
++
++use App\Models\Comment;
++use App\Models\Event;
++use App\Models\User;
++use GuzzleHttp\Client;
++use Tests\TestCase;
++
++/**
++ * Rotas events.show e events.comments.create: só para logados (grupo auth). Participante e
++ * Administrador acessam.
++ */
++class CommentsAccessTest extends TestCase
++{
++    private const PASSWORD = '123456';
++
++    private User $admin;
++    private User $participant;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++
++        $this->event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Palestra Comentada',
++            'description' => 'Evento usado nos testes de acesso.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Microsoft Teams',
++            'capacity' => 10,
++        ]);
++        $this->event->save();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => self::PASSWORD,
++            'password_confirmation' => self::PASSWORD,
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function newClient(): Client
++    {
++        return new Client(['allow_redirects' => false, 'base_uri' => 'http://web:8080', 'cookies' => true]);
++    }
++
++    private function loggedClient(User $user): Client
++    {
++        $client = $this->newClient();
++        $client->post('/login', [
++            'form_params' => ['user' => ['email' => $user->email, 'password' => self::PASSWORD]],
++        ]);
++
++        return $client;
++    }
++
++    public function test_event_page_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->get("/events/{$this->event->id}");
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_comment_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->post("/events/{$this->event->id}/comments", [
++            'form_params' => ['comment' => ['body' => 'Anônimo']],
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++        $this->assertCount(0, Comment::all());
++    }
++
++    public function test_participant_should_see_event_page_and_comment(): void
++    {
++        $client = $this->loggedClient($this->participant);
++
++        $page = $client->get("/events/{$this->event->id}");
++        $this->assertEquals(200, $page->getStatusCode());
++        $this->assertStringContainsString('Palestra Comentada', (string) $page->getBody());
++
++        $response = $client->post("/events/{$this->event->id}/comments", [
++            'form_params' => ['comment' => ['body' => 'Comentário do Participante']],
++        ]);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/events/{$this->event->id}", $response->getHeaderLine('Location'));
++        $this->assertCount(1, Comment::all());
++    }
++
++    public function test_admin_should_comment_and_return_to_admin_page(): void
++    {
++        $response = $this->loggedClient($this->admin)->post("/events/{$this->event->id}/comments", [
++            'form_params' => ['comment' => ['body' => 'Comentário do Administrador']],
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/admin/events/{$this->event->id}", $response->getHeaderLine('Location'));
++        $this->assertCount(1, Comment::all());
++    }
++}
+diff --git a/tests/Integration/Controllers/CommentsControllerTest.php b/tests/Integration/Controllers/CommentsControllerTest.php
+new file mode 100644
+index 0000000..088248f
+--- /dev/null
++++ b/tests/Integration/Controllers/CommentsControllerTest.php
+@@ -0,0 +1,202 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\Comment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class CommentsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\CommentsController';
++    private const EVENTS_CONTROLLER = 'App\Controllers\EventsController';
++
++    private User $admin;
++    private User $participant;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $this->admin = $this->createUser('Admin', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++
++        $this->event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Oficina de Comentários',
++            'description' => 'Descrição',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => 5,
++        ]);
++        $this->event->save();
++
++        Auth::login($this->participant);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $params
++     */
++    private function comment(array $params): string
++    {
++        return $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $this->event->id] + $params
++        );
++    }
++
++    public function test_participant_comment_is_saved_and_redirects_to_event_page(): void
++    {
++        $response = $this->comment(['comment' => ['body' => '  Haverá certificado?  ']]);
++
++        $comments = $this->event->comments()->get();
++        $this->assertCount(1, $comments);
++        $this->assertEquals('Haverá certificado?', $comments[0]->body); // @phpstan-ignore-line
++        $this->assertEquals($this->participant->id, $comments[0]->user_id); // @phpstan-ignore-line
++        $this->assertSame("Location: /events/{$this->event->id}", $response);
++        $this->assertEquals('Comentário publicado!', $_SESSION['flash']['success']);
++    }
++
++    public function test_admin_comment_redirects_to_admin_event_page(): void
++    {
++        Auth::login($this->admin);
++
++        $response = $this->comment(['comment' => ['body' => 'Sim, haverá.']]);
++
++        $this->assertCount(1, Comment::all());
++        $this->assertSame("Location: /admin/events/{$this->event->id}", $response);
++    }
++
++    public function test_user_id_comes_from_session_not_from_form(): void
++    {
++        $this->comment(['comment' => ['body' => 'Oi', 'user_id' => $this->admin->id]]);
++
++        $comment = Comment::all()[0];
++        $this->assertEquals($this->participant->id, $comment->user_id);
++    }
++
++    public function test_empty_comment_is_not_saved(): void
++    {
++        $response = $this->comment(['comment' => ['body' => '   ']]);
++
++        $this->assertCount(0, Comment::all());
++        $this->assertSame("Location: /events/{$this->event->id}", $response);
++        $this->assertEquals('Comentário não pode ser vazio!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_too_long_comment_is_not_saved(): void
++    {
++        $this->comment(['comment' => ['body' => str_repeat('a', 501)]]);
++
++        $this->assertCount(0, Comment::all());
++        $this->assertEquals('Comentário deve ter no máximo 500 caracteres!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_missing_or_array_body_is_rejected(): void
++    {
++        $this->comment([]);
++        $this->comment(['comment' => ['body' => ['x']]]);
++        $this->comment(['comment' => 'texto solto']);
++
++        $this->assertCount(0, Comment::all());
++        $this->assertEquals('Comentário não pode ser vazio!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_comment_on_unknown_event_redirects_to_dashboard(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['id' => 9999, 'comment' => ['body' => 'Oi']]
++        );
++
++        $this->assertCount(0, Comment::all());
++        $this->assertSame('Location: /dashboard', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_event_page_lists_comments_escaped_with_form(): void
++    {
++        (new Comment([
++            'event_id' => $this->event->id,
++            'user_id' => $this->participant->id,
++            'body' => "<script>alert(1)</script>\nsegunda linha",
++        ]))->save();
++
++        $response = $this->get(
++            action: 'show',
++            controllerName: self::EVENTS_CONTROLLER,
++            params: ['id' => $this->event->id]
++        );
++
++        $this->assertStringContainsString('Oficina de Comentários', $response);
++        $this->assertStringContainsString('Comentários (1)', $response);
++        $this->assertStringContainsString('Participante', $response);
++        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;<br />', $response);
++        $this->assertStringNotContainsString('<script>alert(1)</script>', $response);
++        $this->assertStringContainsString("action=\"/events/{$this->event->id}/comments\"", $response);
++        $this->assertStringContainsString('name="comment[body]"', $response);
++        $this->assertStringNotContainsString('/edit', $response);
++    }
++
++    public function test_event_page_without_comments_shows_empty_message(): void
++    {
++        $response = $this->get(
++            action: 'show',
++            controllerName: self::EVENTS_CONTROLLER,
++            params: ['id' => $this->event->id]
++        );
++
++        $this->assertStringContainsString('Nenhum comentário ainda.', $response);
++    }
++
++    public function test_event_page_with_unknown_id_redirects_to_dashboard(): void
++    {
++        $response = $this->get(action: 'show', controllerName: self::EVENTS_CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /dashboard', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_admin_event_page_shows_comments(): void
++    {
++        $this->comment(['comment' => ['body' => 'Comentário visto pelo admin']]);
++        Auth::login($this->admin);
++
++        $response = $this->get(
++            action: 'show',
++            controllerName: 'App\Controllers\Admin\EventsController',
++            params: ['id' => $this->event->id]
++        );
++
++        $this->assertStringContainsString('Comentário visto pelo admin', $response);
++        $this->assertStringContainsString("action=\"/events/{$this->event->id}/comments\"", $response);
++    }
++}
+diff --git a/tests/Unit/Lib/Validations/ValidationsTest.php b/tests/Unit/Lib/Validations/ValidationsTest.php
+index dd52e90..d5a64a4 100644
+--- a/tests/Unit/Lib/Validations/ValidationsTest.php
++++ b/tests/Unit/Lib/Validations/ValidationsTest.php
+@@ -35,4 +35,19 @@ class ValidationsTest extends TestCase
+         $model->password_confirmation = '123456'; // @phpstan-ignore-line
+         $this->assertTrue(Validations::passwordConfirmation($model));
+     }
++
++    public function test_max_length(): void
++    {
++        $model = new class () extends Model {
++            protected static array $columns = ['body'];
++        };
++
++        $model->body = str_repeat('á', 500); // @phpstan-ignore-line
++        $this->assertTrue(Validations::maxLength('body', $model, 500));
++        $this->assertNull($model->errors('body'));
++
++        $model->body = str_repeat('á', 501);
++        $this->assertFalse(Validations::maxLength('body', $model, 500));
++        $this->assertEquals('deve ter no máximo 500 caracteres!', $model->errors('body'));
++    }
+ }
+diff --git a/tests/Unit/Models/Comments/CommentTest.php b/tests/Unit/Models/Comments/CommentTest.php
+new file mode 100644
+index 0000000..1a9a90e
+--- /dev/null
++++ b/tests/Unit/Models/Comments/CommentTest.php
+@@ -0,0 +1,140 @@
++<?php
++
++namespace Tests\Unit\Models\Comments;
++
++use App\Models\Comment;
++use App\Models\Event;
++use App\Models\User;
++use Tests\TestCase;
++
++class CommentTest extends TestCase
++{
++    private User $admin;
++    private User $participant;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com', 'admin');
++        $this->participant = $this->createUser('Participante', 'participante@example.com', 'participant');
++
++        $this->event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Oficina',
++            'description' => 'Descrição',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => 5,
++        ]);
++        $this->event->save();
++    }
++
++    private function createUser(string $name, string $email, string $role): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => $role,
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    private function newComment(string $body = 'Haverá certificado?'): Comment
++    {
++        return new Comment([
++            'event_id' => $this->event->id,
++            'user_id' => $this->participant->id,
++            'body' => $body,
++        ]);
++    }
++
++    public function test_valid_comment_should_be_saved(): void
++    {
++        $comment = $this->newComment();
++
++        $this->assertTrue($comment->save());
++        $this->assertCount(1, Comment::all());
++        $this->assertEquals('comments', Comment::table());
++    }
++
++    public function test_created_at_should_be_filled_on_new_comment(): void
++    {
++        $comment = $this->newComment();
++        $comment->save();
++
++        $stored = Comment::findById($comment->id);
++        $this->assertNotNull($stored);
++        $this->assertNotEmpty($stored->created_at);
++        $this->assertNotFalse(strtotime($stored->created_at));
++    }
++
++    public function test_empty_body_should_be_invalid(): void
++    {
++        $comment = $this->newComment('');
++
++        $this->assertFalse($comment->save());
++        $this->assertEquals('não pode ser vazio!', $comment->errors('body'));
++        $this->assertCount(0, Comment::all());
++    }
++
++    public function test_body_with_500_characters_should_be_valid(): void
++    {
++        $this->assertTrue($this->newComment(str_repeat('a', 500))->isValid());
++    }
++
++    public function test_body_with_501_characters_should_be_invalid(): void
++    {
++        $comment = $this->newComment(str_repeat('a', 501));
++
++        $this->assertFalse($comment->isValid());
++        $this->assertEquals('deve ter no máximo 500 caracteres!', $comment->errors('body'));
++    }
++
++    public function test_event_and_user_should_be_required(): void
++    {
++        $comment = new Comment(['body' => 'Sem dono']);
++
++        $this->assertFalse($comment->isValid());
++        $this->assertNotNull($comment->errors('event_id'));
++        $this->assertNotNull($comment->errors('user_id'));
++    }
++
++    public function test_comment_should_belong_to_event_and_user(): void
++    {
++        $comment = $this->newComment();
++        $comment->save();
++
++        $this->assertEquals($this->event->id, $comment->event()->get()->id);
++        $this->assertEquals($this->participant->id, $comment->user()->get()->id);
++        $this->assertEquals('Participante', $comment->authorName());
++    }
++
++    public function test_event_should_have_many_comments(): void
++    {
++        $this->newComment('Primeiro')->save();
++        $this->newComment('Segundo')->save();
++
++        $comments = $this->event->comments()->get();
++
++        $this->assertCount(2, $comments);
++        $this->assertEquals('Primeiro', $comments[0]->body); // @phpstan-ignore-line
++        $this->assertEquals('Segundo', $comments[1]->body); // @phpstan-ignore-line
++    }
++
++    public function test_safe_destroy_of_event_should_remove_its_comments(): void
++    {
++        $this->newComment()->save();
++
++        $this->assertTrue($this->event->safeDestroy());
++        $this->assertCount(0, Comment::all());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

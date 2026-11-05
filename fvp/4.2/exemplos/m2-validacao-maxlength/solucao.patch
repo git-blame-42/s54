@@ -1,0 +1,165 @@
+From 5b408d18918bc75671a4b024049de7a8a836a75b Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:00:13 -0300
+Subject: [PATCH] feat: Add maxLength validation and limit event title to 100
+ characters
+
+---
+ app/Models/Event.php                          |  3 +-
+ lib/Validations.php                           | 15 +++++++++
+ .../Admin/EventsControllerTest.php            | 19 ++++++++++++
+ .../NumberAndDateValidationsTest.php          | 31 ++++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        | 18 +++++++++++
+ 5 files changed, 84 insertions(+), 2 deletions(-)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..a094a9d 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -59,7 +59,8 @@ class Event extends Model
+ 
+     public function validates(): void
+     {
+-        Validations::notEmpty('title', $this);
++        Validations::notEmpty('title', $this) &&
++            Validations::maxLength('title', $this, 100);
+         Validations::notEmpty('description', $this);
+         Validations::notEmpty('location', $this);
+ 
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..462ace4 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -93,6 +93,21 @@ class Validations
+         return true;
+     }
+ 
++    /**
++     * O texto deve ter no máximo $max caracteres (conta caracteres, não bytes: "ç" vale 1).
++     */
++    public static function maxLength($attribute, $obj, int $max)
++    {
++        $value = $obj->$attribute;
++
++        if (is_scalar($value) && mb_strlen((string) $value) > $max) {
++            $obj->addError($attribute, "deve ter no máximo {$max} caracteres!");
++            return false;
++        }
++
++        return true;
++    }
++
+     /**
+      * A data deve existir no calendário e estar no formato $format (padrão Y-m-d).
+      */
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..e77c73b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -137,6 +137,25 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_create_with_title_above_100_characters_renders_form_with_error(): void
++    {
++        $title = str_repeat('a', 101);
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => $title])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString(
++            '<div class="invalid-feedback">deve ter no máximo 100 caracteres!</div>',
++            $response
++        );
++        $this->assertStringContainsString("value=\"{$title}\"", $response);
++    }
++
+     public function test_create_without_audience_marks_audience_field(): void
+     {
+         $params = $this->validParams();
+diff --git a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+index 4d2a626..e79f661 100644
+--- a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
++++ b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+@@ -13,7 +13,7 @@ class NumberAndDateValidationsTest extends TestCase
+     public function setUp(): void
+     {
+         $this->model = new class () extends Model {
+-            protected static array $columns = ['quantity', 'day'];
++            protected static array $columns = ['quantity', 'day', 'name'];
+         };
+     }
+ 
+@@ -57,6 +57,35 @@ class NumberAndDateValidationsTest extends TestCase
+         }
+     }
+ 
++    public function test_max_length_should_accept_texts_up_to_the_maximum(): void
++    {
++        foreach (['', 'abc', str_repeat('a', 10), str_repeat('ç', 10)] as $value) {
++            $this->model->name = $value; // @phpstan-ignore-line
++
++            $this->assertTrue(Validations::maxLength('name', $this->model, 10), $value);
++        }
++        $this->assertFalse($this->model->hasErrors());
++    }
++
++    public function test_max_length_should_reject_texts_above_the_maximum(): void
++    {
++        foreach ([str_repeat('a', 11), str_repeat('ã', 11), 'Semana Acadêmica'] as $value) {
++            $this->model->name = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::maxLength('name', $this->model, 10), $value);
++            $this->assertEquals('deve ter no máximo 10 caracteres!', $this->model->errors('name'));
++        }
++    }
++
++    public function test_max_length_should_count_characters_not_bytes(): void
++    {
++        // "ção" tem 3 caracteres e 5 bytes: strlen() daria 5 e rejeitaria.
++        $this->model->name = 'ção'; // @phpstan-ignore-line
++
++        $this->assertTrue(Validations::maxLength('name', $this->model, 3));
++        $this->assertFalse(Validations::maxLength('name', $this->model, 2));
++    }
++
+     public function test_valid_date_should_accept_real_dates(): void
+     {
+         foreach (['2030-12-31', '2028-02-29', '1999-01-01'] as $value) {
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..1750ead 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -137,6 +137,24 @@ class EventTest extends TestCase
+         return $errors;
+     }
+ 
++    public function test_title_with_100_characters_should_be_valid(): void
++    {
++        $event = new Event($this->params(['title' => str_repeat('é', 100)]));
++
++        $this->assertTrue($event->isValid());
++    }
++
++    public function test_title_with_more_than_100_characters_should_be_invalid(): void
++    {
++        $event = new Event($this->params(['title' => str_repeat('a', 101)]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ter no máximo 100 caracteres!', $event->errors('title'));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertCount(0, Event::all());
++    }
++
+     public function test_kind_should_accept_every_enum_value(): void
+     {
+         foreach (array_keys(Event::KINDS) as $kind) {
+-- 
+2.54.0 (Apple Git-157)
+
