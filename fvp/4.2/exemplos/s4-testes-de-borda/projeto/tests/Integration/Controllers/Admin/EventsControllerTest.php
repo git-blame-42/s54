@@ -266,7 +266,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- testes de borda (S4) ------------------- */
+    /* ------------------- testes de borda ------------------- */
 
     public function test_create_without_a_required_key_renders_form_with_error(): void
     {

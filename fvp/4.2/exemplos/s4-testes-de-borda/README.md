@@ -13,7 +13,7 @@ nenhum arquivo de `app/`, `core/`, `lib/` ou do schema mudou.
 
 | Commit    | Mensagem                                |
 |-----------|-----------------------------------------|
-| `7328321` | `test: Add edge case tests for events`  |
+| `567f86a` | `test: Add edge case tests for events`  |
 
 ## O que mudou
 
@@ -120,7 +120,7 @@ s50/fvp/recriar.sh s50/fvp/4.2/exemplos/s4-testes-de-borda
 cd /caminho/do/seu/repositorio
 git remote add fvp-s4 s50/fvp/4.2/exemplos/s4-testes-de-borda/projeto
 git fetch fvp-s4 fvp/s4-testes-de-borda
-git cherry-pick 7328321
+git cherry-pick 567f86a
 git remote remove fvp-s4
 ```
 
@@ -129,7 +129,7 @@ git remote remove fvp-s4
 ```
 git fetch s50/fvp/4.2/exemplos/s4-testes-de-borda/solucao.bundle \
     fvp/s4-testes-de-borda:fvp-s4
-git cherry-pick 7328321
+git cherry-pick 567f86a
 # opcional, limpa a ref
 git branch -D fvp-s4
 ```

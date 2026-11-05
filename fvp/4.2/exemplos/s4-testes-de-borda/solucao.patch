@@ -1,4 +1,4 @@
-From 73283215f23e13f562e2d15eea26dd49ae22649a Mon Sep 17 00:00:00 2001
+From 567f86a6735be637985d1530a45e7e4b377b77a2 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:15:17 -0300
 Subject: [PATCH] test: Add edge case tests for events
@@ -62,7 +62,7 @@ index 4396d14..58f5c23 100644
      {
          $client = $this->loggedClient($this->participant);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..4c42120 100644
+index bc62d1d..f7864a9 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -6,6 +6,7 @@ use App\Models\Enrollment;
@@ -77,7 +77,7 @@ index bc62d1d..4c42120 100644
          );
      }
  
-+    /* ------------------- testes de borda (S4) ------------------- */
++    /* ------------------- testes de borda ------------------- */
 +
 +    public function test_create_without_a_required_key_renders_form_with_error(): void
 +    {
@@ -252,14 +252,14 @@ index bc62d1d..4c42120 100644
       * @param array<string, mixed> $overrides
       * @return array<string, mixed>
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..cdc3c0d 100644
+index f961b4c..b238c2e 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -241,6 +241,122 @@ class EventTest extends TestCase
          $this->assertCount(0, Event::all());
      }
  
-+    /* ------------------- testes de borda (S4) ------------------- */
++    /* ------------------- testes de borda ------------------- */
 +
 +    /**
 +     * @return array<string, array{mixed, string}>
@@ -365,7 +365,7 @@ index f961b4c..cdc3c0d 100644
 +    }
 +
 +    /**
-+     * Comportamento atual: não há regra de unicidade (ver cenário M6); dois Eventos iguais são gravados.
++     * Comportamento atual: não há regra de unicidade; dois Eventos iguais são gravados.
 +     */
 +    public function test_duplicate_event_is_accepted(): void
 +    {

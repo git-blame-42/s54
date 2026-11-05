@@ -241,7 +241,7 @@ class EventTest extends TestCase
         $this->assertCount(0, Event::all());
     }
 
-    /* ------------------- testes de borda (S4) ------------------- */
+    /* ------------------- testes de borda ------------------- */
 
     /**
      * @return array<string, array{mixed, string}>
@@ -347,7 +347,7 @@ class EventTest extends TestCase
     }
 
     /**
-     * Comportamento atual: não há regra de unicidade (ver cenário M6); dois Eventos iguais são gravados.
+     * Comportamento atual: não há regra de unicidade; dois Eventos iguais são gravados.
      */
     public function test_duplicate_event_is_accepted(): void
     {
