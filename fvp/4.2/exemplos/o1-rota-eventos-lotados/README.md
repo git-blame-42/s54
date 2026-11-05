@@ -12,7 +12,7 @@ Branch no clone: `fvp/o1-rota-eventos-lotados`, a partir de `main`
 
 | Commit    | Mensagem                                     |
 |-----------|----------------------------------------------|
-| `e096227` | `feat: List full events in admin area`       |
+| `229fa79` | `feat: List full events in admin area`       |
 
 ## O que mudou
 
@@ -121,7 +121,7 @@ commit novo (SHA diferente); preserva conteúdo e mensagem.
 cd /caminho/do/seu/repositorio
 git remote add fvp-o1 <caminho>/projeto
 git fetch fvp-o1 fvp/o1-rota-eventos-lotados
-git cherry-pick e096227
+git cherry-pick 229fa79
 git remote remove fvp-o1
 ```
 
@@ -130,7 +130,7 @@ git remote remove fvp-o1
 ```
 git fetch <caminho>/solucao.bundle \
     fvp/o1-rota-eventos-lotados:fvp-o1
-git cherry-pick e096227
+git cherry-pick 229fa79
 # opcional, limpa a ref
 git branch -D fvp-o1
 ```

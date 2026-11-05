@@ -1,4 +1,4 @@
-From e0962275c9b0b0c8442a4e0823d6d10a2bfdcc36 Mon Sep 17 00:00:00 2001
+From 229fa7906d0f91b740c526cdc05703237a69c400 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 15:59:27 -0300
 Subject: [PATCH] feat: List full events in admin area
@@ -7,13 +7,13 @@ Add GET /admin/events/full (admin.events.full) before /admin/events/{id}, Event:
 ---
  app/Controllers/Admin/EventsController.php    |  8 +++++
  app/Models/Event.php                          | 13 ++++++++
- app/views/admin/events/full.phtml             | 32 +++++++++++++++++++
+ app/views/admin/events/full.phtml             | 33 +++++++++++++++++++
  app/views/admin/events/index.phtml            |  1 +
  config/routes.php                             |  3 +-
- .../admin/events/ListFullEventsCest.php       | 27 ++++++++++++++++
- .../Admin/EventsControllerTest.php            | 31 ++++++++++++++++++
+ .../admin/events/ListFullEventsCest.php       | 27 +++++++++++++++
+ .../Admin/EventsControllerTest.php            | 31 +++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        | 21 ++++++++++++
- 8 files changed, 135 insertions(+), 1 deletion(-)
+ 8 files changed, 136 insertions(+), 1 deletion(-)
  create mode 100644 app/views/admin/events/full.phtml
  create mode 100644 tests/Acceptance/admin/events/ListFullEventsCest.php
 
@@ -62,10 +62,10 @@ index ba66870..dacc109 100644
          return $this->enrollmentsCount() > 0;
 diff --git a/app/views/admin/events/full.phtml b/app/views/admin/events/full.phtml
 new file mode 100644
-index 0000000..a2136c0
+index 0000000..195e373
 --- /dev/null
 +++ b/app/views/admin/events/full.phtml
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,33 @@
 +<?php if (empty($events)) : ?>
 +    <p>Nenhum evento lotado.</p>
 +<?php else : ?>
@@ -89,7 +89,8 @@ index 0000000..a2136c0
 +                    <td><?= htmlspecialchars($event->location) ?></td>
 +                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
 +                    <td>
-+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++                        <a class="btn btn-sm btn-outline-secondary"
++                           href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
 +                    </td>
 +                </tr>
 +            <?php endforeach; ?>
