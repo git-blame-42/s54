@@ -70,6 +70,13 @@ A validação prática (FVP) de cada entrega tem o seu escopo. O diretório
   O mesmo para a Entrega 4.2 (CRUD de Eventos: rotas RESTful,
   `where`, validações, paginação), no mesmo formato.
 
+- `fvp/4.2/sbs/`
+  Passo a passo dos cenários de chance alta e média-alta da 4.2: para
+  cada arquivo tocado, onde mexer, o que digitar e por quê, na ordem
+  de execução. Mesma solução de `fvp/4.2/exemplos/`. O `.md` é a
+  fonte; o `.html` sai dele com `fvp/4.2/sbs/gerar-html.sh` (pandoc),
+  para ler no navegador. Comece pelo `m1-sbs.md`.
+
 - `fvp/recriar.sh`
   Devolve o `.git` ao `projeto/` de um cenário a partir do bundle,
   offline: `fvp/recriar.sh fvp/4.1/exemplos/<cenario>` (caminho
@@ -134,4 +141,7 @@ verifica. Ordem e detalhes em `scripts/README.md`.
   `config/`, `tests/`).
 - "Rubrica" = planilhas "Itens Avaliados" 2026-2 de cada entrega.
 - Formatado para leitura em terminal (micro): linhas de 80 colunas,
-  sem diagramas que dependem de renderização.
+  sem diagramas que dependem de renderização. Exceção: nos guias de
+  `fvp/4.2/sbs/`, o código copiado do projeto fica como está, para
+  não divergir da solução. O `.php` segue o limite de 130 do
+  `phpcs.xml`; as views `.phtml`, que o phpcs não lê, podem passar.
