@@ -1807,3 +1807,444 @@ Armadilhas:
 
 Prova: testes; no navegador, o Evento 16 "passado" perde os botões e a
 URL direta `/admin/events/16/edit` redireciona.
+
+### R1. Flash: texto, título do Evento, tipo `warning`
+
+Chance: média-alta. Tempo: 10-15 min.
+
+Pedido típico: "troque o texto do flash ao remover", "mostre o título
+do Evento na mensagem" ou "um flash de aviso (`warning`)".
+
+Arquivos: `EC:56, 59, 87, 90, 105, 107, 139` (textos), `FLASH:7-15`
+(tipos) e `FLASH:25-28` (um valor por tipo), `app/views/layouts/_flash_message.phtml:3`
+(imprime `$msg` sem escape), `ECT:98, 137, 168, 206, 223, 250, 262-265`
+(asserções de texto), `tests/Unit/Lib/FlashMessageTest.php`,
+`ACT/DeleteEventCest.php:23,41` (textos exatos).
+
+Passos:
+
+1. Ajuste as asserções de `ECT` e veja falhar.
+2. Textos em `EC`. Para o título na mensagem passe o título **cru**:
+   `FlashMessage::success("Evento \"{$event->title}\" removido!")`.
+3. Escape em um lugar só, o partial: `_flash_message.phtml:3` passa a
+   `<div><?= htmlspecialchars($msg) ?></div>`.
+4. Tipo novo: `public static function warning(string $value): void { self::message('warning', $value); }`
+   em `FLASH`; o partial já monta `alert-warning`.
+5. Teste unitário copiando `test_danger`.
+
+Armadilhas:
+
+- O partial imprime sem escape: título com `<script>` vira XSS.
+  Escape no partial **ou** no controller, nunca nos dois (`&amp;amp;`
+  na tela).
+- Um flash por tipo (`FLASH:27`): a segunda mensagem do mesmo tipo na
+  mesma requisição apaga a primeira.
+- Na remoção com Inscrições a mensagem `danger` vem do model
+  (`EC:107` -> `EV:162`); mudar o texto é no model.
+- Create e update redirecionam para o `show` (`EC:57,88`): o flash de
+  sucesso aparece lá.
+- `_flash_message.phtml:6` usa `<? endforeach; ?>` (short tag); não
+  mexa, funciona porque `short_open_tag` está ligado na imagem.
+
+Prova: `EventsControllerTest`, `FlashMessageTest`; no navegador, criar
+um Evento com título `A & "B" <b>x</b>` e removê-lo: o título aparece
+literal, escapado uma vez.
+
+### R2. Nome do criador no `show` e na listagem
+
+Chance: média-alta. Tempo: 10-15 min.
+
+Pedido típico: "mostre quem cadastrou o Evento" (usa a relação
+`BelongsTo`, que a rubrica da 4.3 cobra).
+
+Arquivos: `EV:117-120` (`user(): BelongsTo`),
+`core/Database/ActiveRecord/BelongsTo.php:14` (`get(): Model`),
+`SHOW:6-33`, `IDX:11-26`, `ECT:151-161` (`show`), `EVT:443-449`.
+
+Passos:
+
+1. Teste em `ECT`: `show` contém `Admin` (nome do admin do `setUp`,
+   `ECT:23`).
+2. `SHOW`: par `<dt>Criado por</dt><dd><?= htmlspecialchars($event->user()->get()->name) ?></dd>`.
+3. `IDX`: coluna "Criado por" (opcional; é uma consulta por linha).
+
+Armadilhas:
+
+- `get()` devolve `Model`, não `User`: na view tudo bem; em `app/`
+  use `instanceof User` para o `phpstan` ou crie `EV::creatorName(): string`
+  no model (melhor: regra num só lugar).
+- `__get` mágico permite `$event->user->name` (`MODEL:55-68`); prefira
+  a forma explícita.
+- `user_id` sem usuário (impossível pela FK `SCH:35-36`) daria erro em
+  `get()`; não precisa tratar.
+
+Prova: teste; no navegador, "Administrador" aparece no `show`.
+
+### R3. Formatação na view com helper num só lugar
+
+Chance: média. Tempo: 10-15 min.
+
+Pedido típico: "data por extenso", "descrição truncada em 80
+caracteres na listagem", "badge colorido por tipo" ou "ordem das
+colunas".
+
+Arquivos: `IDX:22-26`, `SHOW:6-33`, `IDX:24` e `SHOW:23`
+(`date('d/m/Y', strtotime(...))` repetido), `core/helpers.php:19-22`
+(`route()`, modelo de helper global), `EV:122-145` (métodos de
+apresentação no model), `ECT:59-68`, `ACT/ListEventsCest.php:28`
+(confere `d/m/Y`).
+
+Passos:
+
+1. Teste em `ECT` com a string esperada.
+2. Método no model: `public function formattedStartsOn(): string { return date('d/m/Y', strtotime($this->starts_on)); }`
+   e `excerpt(int $max = 80): string` com `mb_strimwidth($this->description, 0, $max, '...')`.
+   Use nas duas views.
+3. Badge: `public const KIND_BADGES = ['lecture' => 'primary', ...]`
+   em `EV` ao lado de `KINDS`; na view
+   `<span class="badge text-bg-<?= Event::KIND_BADGES[$event->kind] ?? 'secondary' ?>">`.
+
+Armadilhas:
+
+- Lógica de apresentação duplicada em duas views: o professor cobrou
+  "rótulos num só lugar" (4.1, C8). Model ou helper, uma vez.
+- Data por extenso em pt-BR: `strftime` está deprecado; use
+  `IntlDateFormatter` (extensão `intl` **não** está na imagem; confira
+  com `php -m`) ou um array de meses em pt-BR no model.
+- `mb_strimwidth` com HTML já escapado quebra entidades: trunque antes
+  do `htmlspecialchars`.
+- `ListEventsCest:28` confere `d/m/Y`: se mudar o formato, mude lá.
+
+Prova: teste; navegador.
+
+### R4. Confirmação antes de remover, JS em arquivo próprio
+
+Chance: média. Tempo: 10-15 min.
+
+Pedido típico: "peça confirmação antes de remover". O professor exige
+JS e CSS em arquivos próprios, nunca na view (issues dos grupos 5 e 6).
+
+Arquivos: `IDX:30-33` (form de remoção), `LAYOUT:9`
+(`/assets/js/application.js` já carregado), `public/assets/js/application.js`,
+`ACT/DeleteEventCest.php:50-54` (clica em "Remover" sem `confirm()`).
+
+Passos:
+
+1. `IDX:30-33`: `data-confirm="Remover o evento?"` no `<form>`.
+2. `public/assets/js/events.js` (novo) ou um bloco em
+   `application.js`:
+
+```js
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      if (!window.confirm(form.dataset.confirm)) {
+        event.preventDefault();
+      }
+    });
+  });
+});
+```
+
+3. `LAYOUT:9`: `<script src="/assets/js/events.js"></script>` se for
+   arquivo novo.
+
+Armadilhas:
+
+- `onsubmit="return confirm(...)"` inline na view: é exatamente o que o
+  professor penaliza.
+- O `DeleteEventCest` passa a precisar de `$page->acceptPopup()` depois
+  do clique (Selenium); sem isso o Cest trava no diálogo.
+- `application.js` só age se existir `image_preview_input`
+  (`:2-6`, retorna cedo): coloque o novo código **antes** do `return`
+  ou em arquivo separado.
+- Cache do navegador: `Ctrl+F5` ao testar.
+
+Prova: Cest ajustado; navegador.
+
+### S1. Teste de aceitação da modificação
+
+Chance: alta. Tempo: 20-30 min.
+
+Pedido típico: depois de uma modificação (N1, N3, O1, P2...), "escreva
+o teste de aceitação dela". Os sete cenários do CRUD já têm Cest; o
+que falta é sempre o da coisa nova.
+
+Arquivos (modelos): `ACT/BaseEventsCest.php` (base: 16 Eventos "Evento
+01" a "Evento 16", `_before` com login do admin `:33-47`, `fillEventForm`
+`:122-158`, `validEventData` `:163-175`, `rowOf` `:178-181`),
+`ACT/ListEventsCest.php:10-44`, `ACT/DeleteEventCest.php:11-28` (curto),
+`ACT/CreateSuccessfullyCest.php` (formulário completo),
+`tests/Acceptance/BaseAcceptanceCest.php`, `tests/acceptance.suite.yml`,
+`tests/Support/Helper/LoginHelper.php:11-27`.
+
+Passos:
+
+1. `tests/Acceptance/admin/events/<Nome>Cest.php`, namespace
+   `Tests\Acceptance\admin\events`, `extends BaseEventsCest`. Sem
+   `_before`: a base cria os dados e loga.
+2. Um método por cenário: `$page->wantTo(...)`, `amOnPage`, `click`,
+   `see`, `seeCurrentUrlEquals`. Filtro (N1):
+   `amOnPage('/admin/events?kind=workshop')`, `see('Evento 02', 'table')`,
+   `dontSee('Evento 01', 'table')`.
+3. Formulário: `fillEventForm($page, $this->validEventData(['title' => '...']))`
+   e `click('Salvar')`. A data é definida por `executeJS`
+   (`:148-154`); não digite no `date`.
+4. Cenário de Participante (O2, P2): a base loga o admin; para logar
+   outro, crie uma base própria copiando `_before` com
+   `$page->login('participante1@example.com', self::PASSWORD)`.
+5. `./run test:browser tests/Acceptance/admin/events/<Nome>Cest.php`.
+
+Armadilhas:
+
+- A base define os dados: títulos `Evento %02d` (`:63-66`), tipos em
+  rodízio (`:79-80,87-88`), `PER_PAGE = 5`, `TOTAL_EVENTS = 16`
+  (`:22-23`). Se o pedido muda paginação ou ordem, base e Cests
+  acompanham (N3, N4).
+- `LoginHelper::logout()` clica em `fulano@example.com` fixo
+  (`LoginHelper.php:25`): não use com o admin (cenário F3 da 4.1).
+- A base redimensiona para 1280x2400 (`:45`): o Selenium não clica em
+  elemento fora da tela; copie o padrão.
+- Radio: `checkOption('#event_modality_online')`; select:
+  `selectOption('#event_kind', 'Oficina')` (rótulo ou valor).
+- Selenium de pé (`./run up -d`); o teste demora.
+- Texto conferido é o texto exato do flash (`EC:56,87,105`).
+
+Prova: o teste passa; quebre a funcionalidade e ele deve falhar.
+
+### S2. Teste de acesso por HTTP da rota nova
+
+Chance: alta. Tempo: 15-20 min.
+
+Pedido típico: "prove que quem não é admin não acessa a rota nova" ou
+"que sem login vai para `/login`".
+
+Arquivos: `ACC:85-97` (`eventRoutes()`, data provider das 8 rotas),
+`ACC:104-110` (`methodOverrideRoutes`), `ACC:113-137` (sem sessão ->
+`/login`; Participante -> `/dashboard`; `_method`), `ACC:139-160`
+(Participante não cria, altera nem remove), `ACC:162-183` (admin 200),
+`ACC:58-78` (`newClient` em `http://web:8080`, `loggedClient`),
+`tests/Integration/Access/DashboardAccessTest.php` (rota `auth` sem
+admin).
+
+Passos:
+
+1. Rota admin: uma linha em `eventRoutes()`:
+   `'admin.events.full' => ['GET', '/admin/events/full'],`. Os dois
+   testes com data provider cobrem sem sessão e Participante.
+2. Admin deve ver 200: copie `:162-173` com `loggedClient($this->admin)`
+   e `get('/admin/events/full')`.
+3. Rota `auth` (O2, P2, P7): classe nova em `tests/Integration/Access/`
+   copiando `DashboardAccessTest`: sem sessão 302 `/login`;
+   Participante 200 (ou 302 para o destino esperado após POST).
+4. Rota pública: espere 200 sem sessão.
+
+Armadilhas:
+
+- Esses testes passam pelo Router de verdade (HTTP ao contêiner
+  `web`): pegam rota mal posicionada, diferente do `CTC`.
+- `loggedClient` exige 302 para `/dashboard` após o login
+  (`ACC:74-75`): se o login mudar (P12, ou A4 da 4.1), ajuste.
+- Rotas PUT/DELETE: também em `methodOverrideRoutes` (`:104-110`).
+- O schema é recriado a cada teste (`TestCase.php:10-14`): o `id` do
+  Evento do `setUp` é 1; `eventRoutes()` usa `/1` fixo.
+- Em `./run test tests/Integration` o contêiner `web` precisa estar de
+  pé (`./run up -d`).
+
+Prova: `./run test tests/Integration/Access`.
+
+### S3. Teste unitário do método novo do model
+
+Chance: alta. Tempo: 10-15 min.
+
+Pedido típico: "escreva o teste do método que você criou"
+(`searchByTitle`, `upcoming`, `cancel`, `duplicate`, `participants`).
+
+Arquivos: `EVT:16-76` (helpers: `createUser`, `params`, `createEvent`,
+`enroll`), `EVT:128-138` (`errorsOf`), `EVT:366-376` (`where`),
+`EVT:465-497` (contagens), `EVT:499-509` (`createPastEvent`),
+`tests/Unit/Models/Events/EnrollmentTest.php:17-78`, `tests/TestCase.php`.
+
+Passos:
+
+1. Novo método em `EVT`: `test_<metodo>_should_<efeito>`.
+2. Monte dados com `createEvent([...])` (já faz `assertTrue(save())`),
+   `enroll($event, N)`; para passado, `createPastEvent()`.
+3. Uma asserção principal por teste; para mensagens use
+   `errorsOf($event)` ou `errors('campo')`.
+4. `./run test tests/Unit/Models/Events/EventTest.php --filter <nome>`
+   (o `run test` repassa argumentos ao PHPUnit).
+
+Armadilhas:
+
+- Teste que só chama `isValid()` não prova gravação (M3): use `save()`
+  e `findById` quando o schema mudou.
+- Datas: `+N days` relativo, nunca fixo.
+- Cada teste recria o schema (`TestCase.php:10-14`): não há dados do
+  populate nos testes.
+- Nome do teste em inglês, `snake_case` descritivo (padrão do
+  arquivo).
+
+Prova: `./run test tests/Unit`.
+
+### S4. Testes de borda pedidos pelo professor
+
+Chance: média-alta. Tempo: 15-25 min.
+
+Pedido típico (issue 4.2 do grupo 5): "testes para quantidades
+negativas, valores não numéricos, duplicidade, edição não autorizada,
+atualização sem alteração".
+
+Arquivos: `EVT:185-208` (`capacity` inteiro e >= 1), `EVT:86-126`
+(campos obrigatórios), `ECT:114-138` (create inválido mantém valores),
+`ECT:209-224` (update inválido mantém registro), `ECT:101-112` (ignora
+`user_id` do form), `EVT:580-632` (capacidade x inscrições).
+
+Passos:
+
+1. Negativo e não numérico: `createEvent` não serve (assert dentro);
+   use `new Event($this->params(['capacity' => -1]))` + `assertFalse(isValid())`
+   + `assertSame('deve ser maior ou igual a 1!', $event->errors('capacity'))`;
+   idem `'abc'`, `'1.5'`, `''`.
+2. Duplicidade (M6, P2): dois `save()` iguais, o segundo falso.
+3. Não autorizado (Q1): segundo admin, `update`/`destroy` sem efeito.
+4. Update sem alteração: `update` com os mesmos dados -> `Location`
+   do `show` e registro igual (`assertSame` dos campos).
+5. Parâmetro em formato errado: `params: ['event' => 'texto']`
+   (string em vez de array) -> form renderizado, sem 500 (`EC:118-121`
+   já trata).
+
+Armadilhas:
+
+- `integerMin` aceita `'10'` e `10`, rejeita `'1.5'` e `'1e1'`
+  (`filter_var` com `FILTER_VALIDATE_INT`, `VAL:81`); `' 10 '` com
+  espaços também é rejeitado.
+- Mensagens exatas com `!`.
+- Teste de borda que depende da ordem dos erros: `errors()` guarda uma
+  mensagem por campo (`MODEL:131-134`), a última vence.
+
+Prova: `./run test tests/Unit` e `tests/Integration`.
+
+### T1. Populate: campo novo, mais Eventos, segundo admin
+
+Chance: alta (sempre junto de M1, M3, P1, P5). Tempo: 5-10 min.
+
+Pedido típico: "atualize o populate", "crie 30 Eventos para ver a
+paginação", "um segundo Administrador".
+
+Arquivos: `POP:10` (`migrate()`), `POP:12-19` (admin), `POP:21-42`
+(Participantes), `POP:49-130` (16 Eventos posicionais), `POP:133-149`
+(laço do `new Event`, `:145-147` aborta se inválido), `POP:156-177`
+(Inscrições por índice), `./run` (`db:populate`).
+
+Passos:
+
+1. Campo novo: a chave no `new Event` (`:134-143`), valor igual para
+   todos (`'workload_hours' => 4`). Para variar, acrescente uma 9ª
+   posição em **todas** as linhas de `:49-130` e no `foreach` (`:133`).
+2. Mais Eventos: `for ($i = 17; $i <= 30; $i++)` gerando
+   `sprintf('Evento %02d', $i)` com `+ (80 + $i) days`.
+3. Segundo admin: cópia de `:12-19` com `admin2@example.com`; para Q1,
+   alguns Eventos com `'user_id' => $admin2->id`.
+4. `./run db:populate` e confira as mensagens (`:29,44,151,179`).
+
+Armadilhas:
+
+- `db:populate` apaga tudo (`migrate()` faz `DROP`): não há "adicionar
+  só os novos".
+- Evento inválido aborta com `RuntimeException` (`:145-147`): leia a
+  mensagem, geralmente campo novo faltando.
+- As Inscrições usam índices do array de Eventos (`:156-163`): não
+  reordene as linhas.
+- Data: `+14` em diante (`:47-48`); nunca passado.
+- Não cite a senha em commit público além do que já está (`123456` é
+  dado de demonstração).
+
+Prova: `./run db:populate` sem erro; listagem com o número esperado.
+
+### T2. `phpcs`, `phpstan` e CI verdes
+
+Chance: alta (a CI é item da rubrica da PR). Tempo: 5 min.
+
+Pedido típico: implícito em todo pedido; o professor abre o CI.
+
+Arquivos: `phpcs.xml` (PSR-12, `lineLimit` 130), `phpstan.neon`
+(nível 6, `paths`: `app`, `core`, `tests`; `lib/` fora),
+`.github/workflows/ci.yml` (Unit, Integration, Acceptance), `./run`
+(`phpcs`, `phpcbf`, `phpstan`).
+
+Checklist:
+
+1. `./run phpcbf` e depois `./run phpcs` (zero erros).
+2. `./run phpstan`: `array` sem PHPDoc em `app/`/`core/` ->
+   `@param array<string, mixed> $x` / `@return array<static>`;
+   `?Model` onde se espera `?Event` -> `instanceof`; propriedade
+   mágica desconhecida -> `@property` no model.
+3. `./run test tests/Unit` e `tests/Integration`; `test:browser` só
+   se mexeu em view ou fluxo.
+4. Commit em inglês `type: Title`; branch com o nome pedido.
+
+Armadilhas:
+
+- `lib/` não passa pelo `phpstan`: erro de tipo lá só aparece em
+  teste.
+- `// @phpstan-ignore-line` genérico ou `ignoreErrors` amplo no
+  `phpstan.neon`: penalizado (issue do grupo 6).
+- Linha > 130 colunas: `phpcs` falha; quebre.
+- Código comentado e `use` sem uso: `phpcs` não pega tudo; revise.
+
+## 6. Armadilhas gerais do CRUD de Eventos
+
+- `Model::save()` grava **todas** as colunas de `$columns`
+  (`MODEL:139-187`): coluna sem valor vai como `NULL`, o `DEFAULT` do
+  schema não é usado. Padrões ficam no construtor (`US:28-35`).
+- `Model::update([...])` não valida (`MODEL:189`); `save()` valida.
+- `Model::where` só faz igualdade (`MODEL:309-311`); `all()` e o
+  `Paginator` não ordenam; `paginate` não repassa condições
+  (`MODEL:284-294`); `HasMany::paginate` repassa (`HASMANY:44-55`).
+- `Model::$attributes` é privado (`MODEL:23`): no `Event` acesse as
+  colunas por `$this->$column`.
+- `route('x', ['page' => 2, 'q' => 'a'])` põe o que não está na URI
+  como query string (`core/Router/Router.php:59-72`).
+- O partial de paginação só enxerga `$paginator` e `$this`
+  (`PAG:93-97`). Variável fora do `compact` na view: warning -> 500
+  (`core/Errors/ErrorsHandler.php`).
+- `PUT`/`DELETE` só com `_method` no POST (`core/Http/Request.php:18`).
+- Rota fixa (`new`, `full`, `export`) sempre antes de `{id}`
+  (`ROUTES:29-31`); o teste de controller não pega a ordem errada, o
+  teste HTTP pega.
+- `render` sem `$title`: 500 (`LAYOUT:26`). `render` renderiza;
+  `redirectTo` redireciona; depois de `redirectTo` ponha `return`.
+- `db:populate` refaz o schema inteiro e apaga os dados (`POP:10`);
+  teste passando não prova que o banco de desenvolvimento está
+  atualizado.
+- Os testes conferem strings e o `Location` exato (`ECT:97,167,205,249,261`).
+- Create e update redirecionam para `/admin/events/{id}`; destroy e
+  "não encontrado" para `/admin/events`.
+- Logout ainda é `GET /logout` (`ROUTES:15`, `NAV:26`): o cenário A2
+  da 4.1 (DELETE) continua em aberto e pode ser pedido junto.
+- `phpcs`: 130 colunas, PSR-12; `phpstan` nível 6 em `app`, `core`,
+  `tests`.
+- Parâmetro de query ou de form pode vir array: `is_string`/`is_array`
+  antes de usar; nunca `(int)` silencioso em valor que o model vai
+  validar.
+- SQL só no model; regra de negócio no model; controller com *early
+  return*; nomes `index/new/create/show/edit/update/destroy`.
+- CSS e JS em `public/assets/`, nunca na view.
+
+## 7. Fontes
+
+- Rubrica da 4.2 (`4.2 - CRUD`, itens avaliados 2026-2) e
+  `docs/grading-path.md` §4.2.
+- Issues "Avaliação da Entrega 4.2" de 03/11 (grupos 3, 5 e 6) e
+  "Avaliação da Entrega 4.1" dos nove grupos.
+- Pedido real da FVP da 4.1 (29/10): login por código aleatório
+  1000-9999 gerado e validado no backend.
+- Preparo interno da FVP de 29/10 (M1-M12 originais, convertidos para
+  M1-M3, N1-N6, O1, Q1, R1, S1 deste catálogo).
+- Código do repositório público em `f31006b` (`main`), arquivos
+  listados na tabela de siglas.
+- Levantamento dos repositórios dos outros grupos (05/11): nenhum
+  vestígio da FVP nos repositórios; o guia de preparo do grupo 9
+  esperava campo novo, perfil novo, rota nova, página com controller e
+  view, validação ou middleware, seeds e testes.
