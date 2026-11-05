@@ -163,6 +163,8 @@ infra. A–H são da 4.1.
 
 Chance: alta. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m1-campo-novo-workload-hours`.
+
 Pedido típico: "acrescente a carga horária (`workload_hours`, inteiro
 >= 1, obrigatório) ao Evento". Variantes: `speaker` (texto, opcional),
 `price` (decimal >= 0), `registration_deadline` (data).
@@ -177,8 +179,11 @@ Arquivos (todos mudam):
   (coluna), `SHOW:28-32` (par `dt`/`dd`).
 - `POP:134-143` (array do `new Event`).
 - Testes: `EVT:41-54` (`params()`), `ECT:272-284` (`validParams()`),
-  `ACT/BaseEventsCest.php:84-94` (`seedEvents`) e `:163-175`
-  (`validEventData`), `ACC:28-40` (Evento do `setUp`).
+  `ACT/BaseEventsCest.php:84-94` (`seedEvents`), `:122-158`
+  (`fillEventForm`, senão o Cest nunca envia o campo) e `:163-175`
+  (`validEventData`), `ACC:28-40` (Evento do `setUp`),
+  `tests/Unit/Models/Events/EnrollmentTest.php:37-49` (o `setUp` salva um
+  Evento).
 
 Passos:
 
@@ -198,8 +203,9 @@ Passos:
    `$feedback()` (`FORM:11-14`). Coluna na `IDX`, `dt`/`dd` na `SHOW`.
 6. `POP:134-143`: `'workload_hours' => 4,` (igual para os 16; não mexa
    nas linhas posicionais de `POP:49-130`).
-7. Testes: a chave em `params()`, `validParams()`, `seedEvents` e no
-   `setUp` do `ACC`, senão quase tudo falha por campo vazio.
+7. Testes: a chave em `params()`, `validParams()`, `seedEvents`,
+   `fillEventForm`, no `setUp` do `ACC` e no do `EnrollmentTest`, senão
+   quase tudo falha por campo vazio.
 8. `./run db:populate` e a suíte.
 
 Armadilhas:
@@ -296,6 +302,8 @@ sob o campo e o resto do form preenchido.
 ### M3. Valor novo em ENUM/SET
 
 Chance: média. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m3-enum-novo-seminar`.
 
 Pedido típico: "acrescente o tipo `seminar` (Seminário)" ou "público
 `alumni` (Egressos)".
@@ -402,13 +410,20 @@ o erro sob o campo e mantém os valores.
 
 Chance: média. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m5-validacao-condicional-modalidade`.
+
 Pedido típico: "Evento online não precisa de local" ou "Evento online
 precisa de um link (URL) no campo local".
 
 Arquivos: `EV:64` (`notEmpty('location')`), `EV:33-37` (`MODALITIES`),
 `EV:60-82`, `FORM:77-82`, `EVT:86-126` (os testes de campo obrigatório
 assumem `location` sempre obrigatório: `requiredFieldsProvider`,
-`EVT:101-114`).
+`EVT:101-114`). Se exigir URL nos online, as fixtures online precisam de
+link válido: `EnrollmentTest`, `ACC:28-40` e `:144-153`,
+`ACT/BaseEventsCest.php` (`seedEvents`, `validEventData`),
+`ACT/CreateWithInvalidDataCest.php`, `POP:58,88,108`. O exemplo seguiu
+outro caminho: coluna nova `link VARCHAR(255) NULL`, `location` passa a
+`NULL`, e mexe também em `SCH`, `EC:14`, `IDX`, `SHOW` e `POP`.
 
 Passos:
 
@@ -427,8 +442,9 @@ if ($this->modality === 'online') {
    com `filter_var($this->location, FILTER_VALIDATE_URL) === false` no
    método privado e mensagem "deve ser um link (URL) válido!".
 3. Rótulo do campo no form pode virar "Local ou link".
-4. Ajuste `requiredFieldsProvider` (`EVT:101-114`): `location` deixa de
-   ser sempre obrigatório.
+4. `requiredFieldsProvider` (`EVT:101-114`) só muda se o fixture padrão
+   (`params()`, `in_person`) virar online; com `in_person`, `location`
+   continua obrigatório e o provider fica como está.
 
 Armadilhas:
 
@@ -445,6 +461,8 @@ sem local.
 
 Chance: média. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m6-unicidade-titulo-data`.
+
 Pedido típico: "não pode haver dois Eventos com o mesmo título" ou
 "com o mesmo título na mesma data".
 
@@ -459,7 +477,10 @@ Passos:
 1. Teste em `EVT`: dois Eventos iguais; o segundo `save()` falha e
    `errors('title')` é "já existe um registro com esse dado".
 2. `validates()`: `Validations::uniqueness(['title', 'starts_on'], $this);`
-   (ou só `'title'`).
+   (ou só `'title'`). Como `errors()` guarda uma mensagem por campo (a
+   última vence), chame dentro de
+   `if ($this->errors('title') === null && $this->errors('starts_on') === null)`
+   para não trocar "não pode estar no passado!" por "já existe...".
 3. Teste de controller: `create` duplicado renderiza o form com o erro.
 
 Armadilhas:
@@ -478,6 +499,8 @@ Prova: `EventTest`; no navegador, cadastrar o mesmo título duas vezes.
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
 Chance: média-alta. Tempo: 25-35 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/n1-filtro-por-tipo-paginacao`.
 
 Pedido típico: "na listagem, filtre por tipo: `/admin/events?kind=workshop`".
 A rubrica pede `where`.
@@ -532,8 +555,9 @@ Armadilhas:
 - `$paginator` nulo na `IDX:40` dá 500 (forma 1).
 - `where` só faz igualdade (`MODEL:309-311`): `LIKE` é N2.
 
-Prova: teste de model (cópia de `EVT:366-376`) e de controller (cópia
-de `ECT:39-57` com `params: ['kind' => 'lecture']`, só Palestras na
+Prova: teste de model (forma 1: `EVT:366-376` já cobre `where`; forma 2:
+teste de `paginate` com `conditions:` e `queryParams:`) e de controller
+(cópia de `ECT:39-57` com `params: ['kind' => 'lecture']`, só Palestras na
 resposta; na forma 2, `/admin/events/page/2?kind=lecture` nos links);
 no navegador, filtrar e ir à página 2. O `BaseEventsCest` distribui os
 tipos em rodízio (`:79,87`), útil para um Cest.
@@ -882,6 +906,8 @@ Prova: testes; no navegador, logado como `user@example.com`, abrir
 
 Chance: média. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o3-inscritos-no-show`.
+
 Pedido típico: "no detalhe do Evento, liste quem está inscrito (nome e
 e-mail)".
 
@@ -938,6 +964,8 @@ populate mostra 3 inscritos.
 
 Chance: baixa. Tempo: 20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o4-resposta-json`.
+
 Pedido típico: "a listagem deve responder JSON quando o cliente pede
 `Accept: application/json`" (preparo para o Ajax da 4.4).
 
@@ -978,10 +1006,10 @@ Armadilhas:
 - `acceptJson()` exige igualdade exata: `Accept: application/json, */*`
   não casa. Teste com `curl -H 'Accept: application/json'`.
 - `renderJson` não passa pelo layout e tem o header `chartset` com
-  erro de grafia (`CTRL:52`); não é seu problema, mas saiba.
+  erro de grafia (`CTRL:51`); não é seu problema, mas saiba.
 - Rota com extensão (`/admin/events.json`) não é o padrão do
   framework; use o header.
-- `$json` precisa existir na view (`CTRL:50` inicializa `[]`).
+- `$json` precisa existir na view (`CTRL:49` inicializa `[]`).
 
 Prova: teste de controller;
 `curl -H 'Accept: application/json' -b <cookie> http://localhost/admin/events`.
@@ -1083,6 +1111,8 @@ Evento e ver o código no `show` e na listagem; `db:console` com
 ### P2. Inscrição do Participante (`POST /events/{id}/enrollments`)
 
 Chance: alta. Tempo: 30-40 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/p2-inscricao-participante`.
 
 Pedido típico: "o Participante logado se inscreve em um Evento, se
 houver vaga e se ainda não estiver inscrito". O model `Enrollment` e a
@@ -1207,13 +1237,17 @@ Armadilhas:
 - Admin também pode se inscrever? Decida com o professor; a
   validação não impede.
 
-Prova: testes; no navegador, `user@example.com` abre `/events/<id>`,
-inscreve-se, vê a mensagem; tentar de novo dá "já está inscrito"; no
-Evento 1 (3/3) dá "não há vagas".
+Prova: testes; no navegador, `user@example.com` abre `/events/<id>` de
+um Evento sem inscrição dele (ex.: o 3), inscreve-se, vê a mensagem;
+tentar de novo dá "já está inscrito". Para ver "não há vagas" no Evento 1
+(3/3) entre com `fernanda@example.com`: `user@`, `mariana@` e `carlos@`
+já estão inscritos nele (`POP:156-157`) e receberiam "já está inscrito".
 
 ### P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
 
 Chance: média. Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/p3-cancelar-inscricao`.
 
 Pedido típico: "o Participante pode cancelar a própria inscrição".
 Depende de P2.
@@ -1247,7 +1281,8 @@ Armadilhas:
 
 - Só a própria inscrição: a busca inclui `user_id` do logado; nunca
   `enrollment_id` do form.
-- `DELETE` sem `_method` no POST: 404 (`Request.php:18`).
+- Sem o `_method=DELETE` o POST cai na rota `POST /events/{id}/enrollments`
+  de P2 (`create`), não em `destroy` (`Request.php:18`); sem P2 seria 404.
 - Após P9 (lista de espera), cancelar deve promover o primeiro da
   fila.
 
@@ -1346,6 +1381,8 @@ confirmação.
 
 Chance: alta. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p5-status-cancelar-encerrar`.
+
 Pedido típico: "o administrador pode cancelar um Evento; cancelado
 aparece com destaque, não aceita inscrição nem edição". Variante:
 "encerrar" (`finished`) manualmente ou por data.
@@ -1421,7 +1458,9 @@ public function isCanceled(): bool
    (não confundir com o link "Cancelar" do form, `FORM:92`: renomeie
    para "Cancelar Evento"). `SHOW`: linha "Situação".
 7. Bloqueios: `EN::validates()` (P2) recusa inscrição em cancelado
-   (`addError('base', 'evento cancelado!')`); edição/remoção em Q2.
+   (`addError('base', 'evento cancelado!')`); edição/remoção em Q2. O
+   exemplo já bloqueia `edit`/`update` de cancelado aqui e traz também
+   `finish()` com `PUT /admin/events/{id}/finish` (`admin.events.finish`).
 8. `ACC:85-97`: `'admin.events.cancel' => ['PUT', '/admin/events/1/cancel']`.
 9. `./run db:populate`; `POP` não precisa mudar (construtor dá o
    padrão).
@@ -1521,6 +1560,8 @@ Prova: testes; no navegador, duplicar, ver a edição aberta com
 
 Chance: média-alta. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p7-meus-eventos`.
+
 Pedido típico: "uma página com os Eventos em que o Participante logado
 está inscrito". Depende de P2 (ou do populate, que já tem Inscrições).
 
@@ -1566,12 +1607,14 @@ Prova: testes; no navegador, `user@example.com` vê 4 Eventos.
 
 Chance: média. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p8-exportar-csv`.
+
 Pedido típico: "um botão que baixa os Eventos em CSV" (`GET
 /admin/events/export`).
 
 Arquivos: `ROUTES:26-35` (antes de `{id}`, `:31`), `EC`, `CTRL:32-39`
 (`render`, que **não** será usado), `CTC:70-84` (captura a saída com
-`ob_start`), `IDX:1-3`, `ACC:85-97`.
+`ob_start`), `IDX:1-3`, `ACC:85-97`, `ECT:39-57` (modelo do teste).
 
 Passos:
 
@@ -1631,6 +1674,8 @@ Prova: teste; no navegador, clicar e abrir o arquivo.
 
 Chance: média-baixa. Tempo: 35-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p9-lista-de-espera`.
+
 Pedido típico: "se o Evento estiver lotado, a inscrição entra numa
 lista de espera; quando alguém cancela, o primeiro da fila é
 promovido". Depende de P2 e P3.
@@ -1661,7 +1706,9 @@ Passos:
 
    depois `Enrollment::findById(...)->update(['status' => 'confirmed'])`.
    Chamado por `EnrollmentsController::destroy` (P3) após remover uma
-   inscrição `confirmed`.
+   inscrição `confirmed`; ou, como no exemplo, dentro de
+   `Enrollment::destroy()` sobrescrito (promove quando a removida era
+   `confirmed`), o que dispensa P3 na pilha.
 6. Views: "Você está na lista de espera (posição N)".
 
 Armadilhas:
@@ -1680,6 +1727,8 @@ e ver "lista de espera".
 ### P10. Comentários do Evento (recurso filho 1xN)
 
 Chance: média. Tempo: 35-40 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/p10-comentarios-evento`.
 
 Pedido típico: "o Participante pode deixar um comentário no Evento;
 o detalhe lista os comentários". É um CRUD mínimo aninhado (prévia da
@@ -1733,7 +1782,10 @@ CREATE TABLE comments (
    `errors('body')`.
 6. View do Participante (O2): lista `$event->comments()->get()` (nome
    via `->user()->get()->name`, `nl2br(htmlspecialchars($comment->body))`)
-   e form `<textarea name="comment[body]">`.
+   e form `<textarea name="comment[body]">`. Sem O2, o exemplo cria uma
+   tela mínima própria (`GET /events/{id}`, `events.show`,
+   `app/views/events/show.phtml`): se depois aplicar O2, fique com uma
+   só rota/view desse nome.
 7. Remoção do pai: `ON DELETE CASCADE` apaga comentários; documente em
    `safeDestroy()` ou bloqueie como Inscrições (regra explícita, pedida
    pelo professor ao grupo 6).
@@ -1791,6 +1843,8 @@ Prova: testes; no navegador, arquivar e restaurar.
 ### P12. Código aleatório no login (a FVP real da 4.1)
 
 Chance: média-baixa (já foi pedido na 4.1; o padrão pode voltar em
+
+Exemplo pronto: `fvp/4.2/exemplos/p12-codigo-aleatorio-login`.
 outro lugar, ver P1 e P4). Tempo: 30-40 min.
 
 Pedido real da FVP da 4.1 (29/10): "depois de validar e-mail e senha,
@@ -1979,6 +2033,8 @@ Participante) continua passando.
 
 Chance: média. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/q2-bloquear-passado-cancelado`.
+
 Pedido típico: "Evento que já aconteceu (ou cancelado, P5) não pode
 ser editado nem removido".
 
@@ -2018,8 +2074,13 @@ public function isEditable(): bool
 Armadilhas:
 
 - Contradiz a decisão atual (`EV:84-87`: Evento passado pode ter
-  descrição corrigida) e os testes `EVT:511-547`: remova ou inverta
-  esses testes com o professor ciente.
+  descrição corrigida). Com a regra no controller e nas views (passo 3)
+  os testes `EVT:511-547` continuam verdes, porque `save()` segue
+  aceitando; só se a regra for para `validates()`/`save()` eles quebram
+  e precisam ser removidos ou invertidos com o professor ciente.
+- Texto do flash: com P5, "Encerrado" é o rótulo de `finished`, que
+  `isEditable()` não bloqueia; prefira "Evento passado ou cancelado não
+  pode ser alterado!".
 - Comparação de datas `Y-m-d` como string funciona só com o formato
   garantido pelo banco (`DATE`).
 - Regra no controller em vez do model: coloque a decisão em
@@ -2081,6 +2142,8 @@ literal, escapado uma vez.
 
 Chance: média-alta. Tempo: 10-15 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r2-nome-do-criador`.
+
 Pedido típico: "mostre quem cadastrou o Evento" (usa a relação
 `BelongsTo`, que a rubrica da 4.3 cobra).
 
@@ -2112,6 +2175,8 @@ Prova: teste; no navegador, "Administrador" aparece no `show`.
 
 Chance: média. Tempo: 10-15 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r3-helper-formatacao`.
+
 Pedido típico: "data por extenso", "descrição truncada em 80
 caracteres na listagem", "badge colorido por tipo" ou "ordem das
 colunas".
@@ -2126,7 +2191,9 @@ Passos:
 
 1. Teste em `ECT` com a string esperada.
 2. Métodos no model: `formattedStartsOn(): string` com
-   `date('d/m/Y', strtotime($this->starts_on))` e
+   `date('d/m/Y', strtotime($this->starts_on))` (ou
+   `DateTimeImmutable::createFromFormat('!Y-m-d', ...)`, que devolve
+   `false` em vez de 01/01/1970 quando a data está vazia) e
    `excerpt(int $max = 80): string` com
    `mb_strimwidth($this->description, 0, $max, '...')`.
    Use nas duas views.
@@ -2151,6 +2218,8 @@ Prova: teste; navegador.
 ### R4. Confirmação antes de remover, JS em arquivo próprio
 
 Chance: média. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/r4-confirmacao-js-arquivo`.
 
 Pedido típico: "peça confirmação antes de remover". O professor exige
 JS e CSS em arquivos próprios, nunca na view (issues dos grupos 5 e 6).
@@ -2196,6 +2265,8 @@ Prova: Cest ajustado; navegador.
 ### S1. Teste de aceitação da modificação
 
 Chance: alta. Tempo: 20-30 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/s1-teste-aceitacao-filtro`.
 
 Pedido típico: depois de uma modificação (N1, N3, O1, P2...), "escreva
 o teste de aceitação dela". Os sete cenários do CRUD já têm Cest; o
@@ -2325,6 +2396,8 @@ Prova: `./run test tests/Unit`.
 
 Chance: média-alta. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/s4-testes-de-borda`.
+
 Pedido típico (issue 4.2 do grupo 5): "testes para quantidades
 negativas, valores não numéricos, duplicidade, edição não autorizada,
 atualização sem alteração".
@@ -2338,10 +2411,15 @@ Passos:
 
 1. Negativo e não numérico: `createEvent` não serve (assert dentro);
    use `new Event($this->params(['capacity' => -1]))` + `assertFalse(isValid())`
-   + `assertSame('deve ser maior ou igual a 1!', $event->errors('capacity'))`;
-   idem `'abc'`, `'1.5'`, `''`.
-2. Duplicidade (M6, P2): dois `save()` iguais, o segundo falso.
-3. Não autorizado (Q1): segundo admin, `update`/`destroy` sem efeito.
+   + `assertSame('deve ser maior ou igual a 1!', $event->errors('capacity'))`.
+   Pelo curto-circuito `notEmpty && integerMin` (`EV:79`), `'abc'`,
+   `'1.5'`, `'1e1'` e `'010'` dão "deve ser um número inteiro!" e `''`
+   ou `null` dão "não pode ser vazio!".
+2. Duplicidade (M6, P2): dois `save()` iguais, o segundo falso. Só vale
+   com M6 aplicado; na base o duplicado é aceito (teste documenta isso).
+3. Não autorizado (Q1): segundo admin, `update`/`destroy` sem efeito. Só
+   vale com Q1; na base todo admin edita tudo, então teste o
+   Participante (`ACC:139-160`) e o `user_id` forjado (`ECT:101-112`).
 4. Update sem alteração: `update` com os mesmos dados -> `Location`
    do `show` e registro igual (`assertSame` dos campos).
 5. Parâmetro em formato errado: `params: ['event' => 'texto']`
@@ -2367,6 +2445,8 @@ Prova: `./run test tests/Unit` e `tests/Integration`.
 ### T1. Populate: campo novo, mais Eventos, segundo admin
 
 Chance: alta (sempre junto de M1, M3, P1, P5). Tempo: 5-10 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/t1-populate-campo-eventos-admin`.
 
 Pedido típico: "atualize o populate", "crie 30 Eventos para ver a
 paginação", "um segundo Administrador".
@@ -2404,6 +2484,8 @@ Prova: `./run db:populate` sem erro; listagem com o número esperado.
 ### T2. `phpcs`, `phpstan` e CI verdes
 
 Chance: alta (a CI é item da rubrica da PR). Tempo: 5 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/t2-phpcs-phpstan-verdes`.
 
 Pedido típico: implícito em todo pedido; o professor abre o CI.
 
