@@ -287,6 +287,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `q5-token-csrf/`
   - fix: Accept _method override only from POST body
   - feat: Protect Event forms with a CSRF token
+- Q6. Revisar escape e testar XSS fora dos campos do Evento
+  `q6-escape-xss/`
+  - fix: Escape user data outside event fields
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type

@@ -1,0 +1,291 @@
+From 29252b120949467662ee84f827a910cb41f0db1e Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:43:31 -0300
+Subject: [PATCH] fix: Escape user data outside event fields
+
+Escape the user e-mail in the navbar, the user name in both dashboards
+and the flash type and text. Move the page title escape from
+EventsController::show to the layout, so it is escaped once on output,
+and replace the short open tag in the flash partial.
+---
+ app/Controllers/Admin/EventsController.php    |  2 +-
+ app/views/admin/dashboard/index.phtml         |  2 +-
+ app/views/dashboard/index.phtml               |  2 +-
+ app/views/layouts/_flash_message.phtml        |  6 +-
+ app/views/layouts/_navbar.phtml               |  2 +-
+ app/views/layouts/application.phtml           |  2 +-
+ .../admin/events/ScriptInTitleCest.php        | 39 +++++++++++
+ .../Admin/DashboardControllerTest.php         | 28 ++++++++
+ .../Admin/EventsControllerTest.php            | 64 +++++++++++++++++++
+ .../Controllers/DashboardControllerTest.php   | 26 ++++++++
+ 10 files changed, 165 insertions(+), 8 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/ScriptInTitleCest.php
+ create mode 100644 tests/Integration/Controllers/Admin/DashboardControllerTest.php
+ create mode 100644 tests/Integration/Controllers/DashboardControllerTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..1859216 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -34,7 +34,7 @@ class EventsController extends Controller
+             return;
+         }
+ 
+-        $title = htmlspecialchars($event->title);
++        $title = $event->title;
+         $this->render('admin/events/show', compact('event', 'title'));
+     }
+ 
+diff --git a/app/views/admin/dashboard/index.phtml b/app/views/admin/dashboard/index.phtml
+index b1f8075..fc527bc 100644
+--- a/app/views/admin/dashboard/index.phtml
++++ b/app/views/admin/dashboard/index.phtml
+@@ -1,4 +1,4 @@
+-<p>Olá, <?= $this->currentUser()->name ?>! Esta área só aparece para administradores.</p>
++<p>Olá, <?= htmlspecialchars($this->currentUser()->name) ?>! Esta área só aparece para administradores.</p>
+ 
+ <div class="list-group">
+     <a class="list-group-item list-group-item-action" href="<?= route('admin.events.index') ?>">Eventos</a>
+diff --git a/app/views/dashboard/index.phtml b/app/views/dashboard/index.phtml
+index 0d90364..3297fcc 100644
+--- a/app/views/dashboard/index.phtml
++++ b/app/views/dashboard/index.phtml
+@@ -1 +1 @@
+-<p>Bem-vindo(a), <?= $this->currentUser()->name ?>! Esta área só aparece para usuários autenticados.</p>
++<p>Bem-vindo(a), <?= htmlspecialchars($this->currentUser()->name) ?>! Esta área só aparece para usuários autenticados.</p>
+diff --git a/app/views/layouts/_flash_message.phtml b/app/views/layouts/_flash_message.phtml
+index 5e38c31..63e0249 100644
+--- a/app/views/layouts/_flash_message.phtml
++++ b/app/views/layouts/_flash_message.phtml
+@@ -1,6 +1,6 @@
+ <?php foreach (\Lib\FlashMessage::get() as $type => $msg) : ?>
+-    <div class="alert alert-<?= $type ?> alert-dismissible" role="alert">
+-        <div><?= $msg ?></div>
++    <div class="alert alert-<?= htmlspecialchars($type) ?> alert-dismissible" role="alert">
++        <div><?= htmlspecialchars($msg) ?></div>
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+     </div>
+-<? endforeach; ?>
++<?php endforeach; ?>
+diff --git a/app/views/layouts/_navbar.phtml b/app/views/layouts/_navbar.phtml
+index 12172e5..8623a68 100644
+--- a/app/views/layouts/_navbar.phtml
++++ b/app/views/layouts/_navbar.phtml
+@@ -20,7 +20,7 @@
+                 <?php endif; ?>
+                 <li class="nav-item dropdown">
+                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+-                        <?= $this->currentUser()->email ?>
++                        <?= htmlspecialchars($this->currentUser()->email) ?>
+                     </a>
+                     <ul class="dropdown-menu dropdown-menu-end">
+                         <li><a class="dropdown-item" href="<?= route('users.logout') ?>">Sair</a></li>
+diff --git a/app/views/layouts/application.phtml b/app/views/layouts/application.phtml
+index 5e52801..75a0b75 100644
+--- a/app/views/layouts/application.phtml
++++ b/app/views/layouts/application.phtml
+@@ -23,7 +23,7 @@
+ 
+         <header class="mb-3">
+             <h1>
+-                <?= $title ?>
++                <?= htmlspecialchars($title) ?>
+             </h1>
+         </header>
+ 
+diff --git a/tests/Acceptance/admin/events/ScriptInTitleCest.php b/tests/Acceptance/admin/events/ScriptInTitleCest.php
+new file mode 100644
+index 0000000..4b3e83d
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ScriptInTitleCest.php
+@@ -0,0 +1,39 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Título com HTML aparece como texto em todas as telas e nada executa: se o `<script>` rodasse, o
++ * `alert` abriria um diálogo e o próximo passo do Selenium falharia.
++ */
++class ScriptInTitleCest extends BaseEventsCest
++{
++    private const SCRIPT = '<script>alert(1)</script>';
++
++    public function scriptInTitleIsShownAsText(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastrar Evento com <script> no título e ver o texto literal');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $this->validEventData(['title' => self::SCRIPT]));
++        $page->click('Salvar');
++
++        // O banco guarda o texto como foi digitado; o escape é só na saída.
++        $event = Event::findBy(['title' => self::SCRIPT]);
++        Assert::assertInstanceOf(Event::class, $event);
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see(self::SCRIPT, 'h1');
++        $page->see(self::SCRIPT, 'dl');
++
++        $page->amOnPage('/admin/events/page/4');
++        $page->see(self::SCRIPT, 'table');
++
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->seeInField('#event_title', self::SCRIPT);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/DashboardControllerTest.php b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+new file mode 100644
+index 0000000..2b00c91
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/DashboardControllerTest.php
+@@ -0,0 +1,28 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function test_index_escapes_admin_name(): void
++    {
++        $admin = new User([
++            'name' => '<b>Ana</b>',
++            'email' => 'ana@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++        Auth::login($admin);
++
++        $html = $this->get(action: 'index', controllerName: 'App\Controllers\Admin\DashboardController');
++
++        $this->assertStringContainsString('Olá, &lt;b&gt;Ana&lt;/b&gt;!', $html);
++        $this->assertStringNotContainsString('<b>Ana</b>', $html);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..d8423f8 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use Lib\FlashMessage;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -265,6 +266,69 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_event_title_is_escaped_once(): void
++    {
++        $event = $this->createEvent(['title' => '<b>x</b>']);
++        $pages = [
++            'index' => [],
++            'show' => ['id' => $event->id],
++            'edit' => ['id' => $event->id],
++        ];
++
++        foreach ($pages as $action => $params) {
++            $html = $this->get(action: $action, controllerName: self::CONTROLLER, params: $params);
++
++            $this->assertStringContainsString('&lt;b&gt;x&lt;/b&gt;', $html, $action);
++            $this->assertStringNotContainsString('<b>x</b>', $html, $action);
++            $this->assertStringNotContainsString('&amp;lt;', $html, $action);
++        }
++    }
++
++    public function test_show_escapes_event_title_in_page_heading_once(): void
++    {
++        $event = $this->createEvent(['title' => '<script>alert(1)</script>']);
++
++        $html = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*&lt;script&gt;alert\(1\)&lt;\/script&gt;\s*<\/h1>/', $html);
++        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
++    }
++
++    public function test_navbar_escapes_user_email(): void
++    {
++        $this->admin->update(['email' => '<i>a</i>@example.com']);
++
++        $html = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('&lt;i&gt;a&lt;/i&gt;@example.com', $html);
++        $this->assertStringNotContainsString('<i>a</i>', $html);
++    }
++
++    public function test_flash_message_is_escaped(): void
++    {
++        FlashMessage::danger('<b>x</b>');
++
++        $html = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<div>&lt;b&gt;x&lt;/b&gt;</div>', $html);
++        $this->assertStringNotContainsString('<b>x</b>', $html);
++    }
++
++    public function test_event_title_is_stored_without_escape(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => '<b>x</b>'])]
++        );
++
++        $event = Event::findBy(['title' => '<b>x</b>']);
++        $this->assertInstanceOf(Event::class, $event);
++
++        $html = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $this->assertStringContainsString('value="&lt;b&gt;x&lt;/b&gt;"', $html);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Integration/Controllers/DashboardControllerTest.php b/tests/Integration/Controllers/DashboardControllerTest.php
+new file mode 100644
+index 0000000..0ad606d
+--- /dev/null
++++ b/tests/Integration/Controllers/DashboardControllerTest.php
+@@ -0,0 +1,26 @@
++<?php
++
++namespace Tests\Integration\Controllers;
++
++use App\Models\User;
++use Lib\Authentication\Auth;
++
++class DashboardControllerTest extends ControllerTestCase
++{
++    public function test_index_escapes_user_name(): void
++    {
++        $user = new User([
++            'name' => '<b>Ana</b>',
++            'email' => 'ana@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++        ]);
++        $user->save();
++        Auth::login($user);
++
++        $html = $this->get(action: 'index', controllerName: 'App\Controllers\DashboardController');
++
++        $this->assertStringContainsString('Bem-vindo(a), &lt;b&gt;Ana&lt;/b&gt;!', $html);
++        $this->assertStringNotContainsString('<b>Ana</b>', $html);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
