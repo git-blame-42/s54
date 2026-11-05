@@ -223,7 +223,7 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar e por quê:
 
-- `database/schema.sql` e `$columns` do `Event`: M1 (campo novo) e M8
+- `database/schema.sql` e `$columns` do `Event`: M1 (campo novo) e M3
   (ENUM/SET) mexem no mesmo bloco. Fique com as duas colunas.
 - `EventsController::FIELDS` e `_form.phtml`: outro campo novo na
   mesma linha/ponto; mantenha os dois.

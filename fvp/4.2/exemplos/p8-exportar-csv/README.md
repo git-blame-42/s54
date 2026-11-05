@@ -174,7 +174,7 @@ Arquivos que costumam conflitar e por quê:
 
 - `config/routes.php`: outra rota fixa (O1) no mesmo ponto. Fique com
   as duas linhas, ambas antes de `{id}`.
-- `index.phtml`: outro botão no topo (O1) ou filtro/busca (M3, M4).
+- `index.phtml`: outro botão no topo (O1) ou filtro/busca (N1, N2).
   Fique com os dois.
 - `EventsController.php`, `EventsControllerTest.php`,
   `EventsAccessTest.php` (`eventRoutes()`): métodos e rotas novos no

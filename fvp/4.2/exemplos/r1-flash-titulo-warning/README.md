@@ -6,7 +6,7 @@ barrada por Inscrições, use um flash de aviso (`warning`), não de
 erro. Cuidado com título que tenha HTML."
 
 Chance: média-alta. Tempo estimado: 10-15 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, R1 (detalhes: `e4.2-preparo-fvp.md`, M9).
+`s50/fvp/4.2/catalogo.md`, R1.
 
 Branch no clone: `fvp/r1-flash-titulo-warning`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).

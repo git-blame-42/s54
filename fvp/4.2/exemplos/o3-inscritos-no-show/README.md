@@ -151,7 +151,7 @@ Arquivos que costumam conflitar e por quê:
   `full()` perto de `hasEnrollments()`) ou outro `use` no topo.
   Fique com os dois.
 - `show.phtml`: outro cenário que mexe em Vagas (badge "Lotado",
-  M12). Mantenha os dois trechos; a seção "Inscritos" vem depois do
+  N6). Mantenha os dois trechos; a seção "Inscritos" vem depois do
   `</dl>`.
 - `EventsControllerTest.php`: o helper `enroll()` ganhou `$name`; se
   o alvo mudou o helper, junte as duas assinaturas (parâmetros

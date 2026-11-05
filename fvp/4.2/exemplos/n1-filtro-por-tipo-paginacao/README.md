@@ -5,7 +5,7 @@ permita filtrar por tipo: `/admin/events?kind=workshop`. O filtro tem
 que continuar valendo quando o usuário muda de página."
 
 Chance: média-alta. Tempo estimado: 25-35 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, N1 (seção M3 do preparo da 4.2).
+`s50/fvp/4.2/catalogo.md`, N1.
 
 Branch no clone: `fvp/n1-filtro-por-tipo-paginacao`, a partir de
 `main` (`f31006b` do público; no bundle `5dedab5`, ver README raiz).

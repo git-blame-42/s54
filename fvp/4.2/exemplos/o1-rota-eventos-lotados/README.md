@@ -161,7 +161,7 @@ Arquivos que costumam conflitar e por quê:
 - `config/routes.php`: outro cenário com rota fixa (P8) no mesmo
   ponto. Fique com as duas linhas, ambas antes de `{id}`.
 - `app/views/admin/events/index.phtml`: outro botão no topo (P8) ou
-  filtro/busca (M3, M4). Fique com os dois.
+  filtro/busca (N1, N2). Fique com os dois.
 - `EventsController.php`, `EventTest.php`, `EventsControllerTest.php`:
   métodos novos no mesmo ponto; mantenha os dois blocos.
 

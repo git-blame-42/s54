@@ -5,7 +5,7 @@ Evento pode editar ou remover. Os outros Administradores podem ver, mas
 não alterar. Esconda os botões e barre também o acesso pela URL."
 
 Chance: média-alta. Tempo estimado: 20-30 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, Q1 (detalhes: `e4.2-preparo-fvp.md`, M10).
+`s50/fvp/4.2/catalogo.md`, Q1.
 
 Branch no clone: `fvp/q1-so-dono-edita-remove`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).

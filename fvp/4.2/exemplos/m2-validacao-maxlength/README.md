@@ -217,7 +217,7 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar e por quê:
 
-- `app/Models/Event.php`, `validates()`: M1, M5, M6 e M8 mexem no
+- `app/Models/Event.php`, `validates()`: M1, M3, M4, M5 e M6 mexem no
   mesmo bloco. Fique com as linhas dos dois lados.
 - `lib/Validations.php`: outra validação nova no mesmo ponto (antes
   de `validDate`). Mantenha os dois métodos.

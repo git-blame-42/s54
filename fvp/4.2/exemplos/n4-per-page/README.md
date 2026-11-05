@@ -5,8 +5,7 @@ Depois, deixe o usuário escolher 5, 10 ou 20 por página, sem perder a
 escolha ao trocar de página."
 
 Chance: alta. Tempo estimado: 5-10 min (mais 10 com a escolha pelo
-usuário). Catálogo: `s50/fvp/4.2/catalogo.md`, N4 (seção M6 do
-preparo da 4.2).
+usuário). Catálogo: `s50/fvp/4.2/catalogo.md`, N4.
 
 Branch no clone: `fvp/n4-per-page`, a partir de `main` (`f31006b` do público; no
 bundle `5dedab5`, ver README raiz).

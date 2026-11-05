@@ -5,7 +5,7 @@ mostre 'Lotado' quando o Evento não tiver mais vagas. No painel
 administrativo, mostre quantos Eventos e quantas Inscrições existem."
 
 Chance: média. Tempo estimado: 10-15 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, N6 (seção M12 do preparo da 4.2).
+`s50/fvp/4.2/catalogo.md`, N6.
 
 Branch no clone: `fvp/n6-badge-lotado-contador`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).

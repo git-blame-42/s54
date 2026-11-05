@@ -5,7 +5,7 @@ vir ordenada pela data, os mais próximos primeiro. Faça a ordenação
 no banco, para valer em todas as páginas."
 
 Chance: média-alta. Tempo estimado: 15-25 min. Catálogo:
-`s50/fvp/4.2/catalogo.md`, N3 (seção M5 do preparo da 4.2).
+`s50/fvp/4.2/catalogo.md`, N3.
 
 Branch no clone: `fvp/n3-ordenar-por-data`, a partir de `main`
 (`f31006b` do público; no bundle `5dedab5`, ver README raiz).
@@ -94,7 +94,7 @@ linha da página 1. Sem a ordenação, ele iria para a página 4.
 - N6 (`n6-badge-lotado-contador`), R2 (`r2-nome-do-criador`) e R3
   (`r3-helper-formatacao`) mexem em `index.phtml`, não no controller:
   combinam sem conflito de lógica.
-- Um filtro na listagem (M3 do preparo) também mexe no `Paginator`
+- Um filtro na listagem (N1) também mexe no `Paginator`
   e em `Model::paginate` (condições). Se aplicar os dois, mantenha os
   dois parâmetros (`conditions:` e `orderBy:`) no `paginate()`.
 
