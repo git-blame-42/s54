@@ -1,0 +1,313 @@
+From 7833bae4449bb37c028642aaef8e809a8ce5e776 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:05:32 -0300
+Subject: [PATCH] feat: Add previous and next event links to the show page
+
+Event::previous() and Event::next() find the neighbor by starts_on with
+id as tie-breaker, in SQL inside the model. The admin show page links to
+them and hides the link at the ends.
+---
+ app/Models/Event.php                          | 52 ++++++++++++
+ app/views/admin/events/show.phtml             | 21 +++++
+ .../admin/events/NavigateEventsCest.php       | 39 +++++++++
+ .../Admin/EventsControllerTest.php            | 45 +++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 80 +++++++++++++++++++
+ 5 files changed, 237 insertions(+)
+ create mode 100644 tests/Acceptance/admin/events/NavigateEventsCest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..68704c1 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,8 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use PDO;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -205,6 +207,56 @@ class Event extends Model
+         $this->audience = implode(',', $values);
+     }
+ 
++    /**
++     * Evento imediatamente anterior na ordem da listagem (starts_on, depois id), ou null se este é o primeiro.
++     */
++    public function previous(): ?Event
++    {
++        return $this->neighbor('<', 'DESC');
++    }
++
++    /**
++     * Evento imediatamente seguinte na ordem da listagem (starts_on, depois id), ou null se este é o último.
++     */
++    public function next(): ?Event
++    {
++        return $this->neighbor('>', 'ASC');
++    }
++
++    /**
++     * Vizinho pela data, com desempate por id (datas iguais não pulam nem repetem Eventos).
++     * $operator e $direction vêm só de previous()/next(), nunca da requisição; os valores vão por bindValue.
++     */
++    private function neighbor(string $operator, string $direction): ?Event
++    {
++        if ($this->newRecord()) {
++            return null;
++        }
++
++        $table = static::$table;
++        $attributes = implode(', ', static::$columns);
++        $sql = <<<SQL
++            SELECT id, {$attributes} FROM {$table}
++            WHERE starts_on {$operator} :starts_on
++               OR (starts_on = :same_starts_on AND id {$operator} :id)
++            ORDER BY starts_on {$direction}, id {$direction}
++            LIMIT 1
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':starts_on', $this->starts_on);
++        $stmt->bindValue(':same_starts_on', $this->starts_on);
++        $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
++        $stmt->execute();
++
++        $row = $stmt->fetch(PDO::FETCH_ASSOC);
++        if (!is_array($row)) {
++            return null;
++        }
++
++        return new static($row);
++    }
++
+     public function hasAudience(string $value): bool
+     {
+         return in_array($value, $this->audienceList(), true);
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..22d461a 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -32,5 +32,26 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
++<?php
++$previous = $event->previous();
++$next = $event->next();
++?>
++<nav class="d-flex justify-content-between mb-3" aria-label="Navegação entre Eventos">
++    <div>
++        <?php if ($previous !== null) : ?>
++            <a class="btn btn-outline-secondary" id="previous_event" rel="prev"
++                href="<?= route('admin.events.show', ['id' => $previous->id]) ?>"
++                title="<?= htmlspecialchars($previous->title) ?>">&larr; Anterior</a>
++        <?php endif; ?>
++    </div>
++    <div>
++        <?php if ($next !== null) : ?>
++            <a class="btn btn-outline-secondary" id="next_event" rel="next"
++                href="<?= route('admin.events.show', ['id' => $next->id]) ?>"
++                title="<?= htmlspecialchars($next->title) ?>">Próximo &rarr;</a>
++        <?php endif; ?>
++    </div>
++</nav>
++
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/tests/Acceptance/admin/events/NavigateEventsCest.php b/tests/Acceptance/admin/events/NavigateEventsCest.php
+new file mode 100644
+index 0000000..d968480
+--- /dev/null
++++ b/tests/Acceptance/admin/events/NavigateEventsCest.php
+@@ -0,0 +1,39 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++class NavigateEventsCest extends BaseEventsCest
++{
++    public function navigateToNextAndBack(AcceptanceTester $page): void
++    {
++        $first = $this->events[1];
++        $second = $this->events[2];
++
++        $page->wantTo('Navegar do Evento 01 para o 02 com "Próximo" e voltar com "Anterior"');
++        $page->amOnPage("/admin/events/{$first->id}");
++        $page->see('Evento 01', 'h1');
++        // Evento 01 é o mais próximo: sem "Anterior".
++        $page->dontSeeElement('#previous_event');
++
++        $page->click('#next_event');
++        $page->seeCurrentUrlEquals("/admin/events/{$second->id}");
++        $page->see('Evento 02', 'h1');
++
++        $page->click('#previous_event');
++        $page->seeCurrentUrlEquals("/admin/events/{$first->id}");
++        $page->see('Evento 01', 'h1');
++    }
++
++    public function lastEventHasNoNextLink(AcceptanceTester $page): void
++    {
++        $last = $this->events[self::TOTAL_EVENTS];
++
++        $page->wantTo('O último Evento não mostra "Próximo"');
++        $page->amOnPage("/admin/events/{$last->id}");
++        $page->see($this->title(self::TOTAL_EVENTS), 'h1');
++        $page->dontSeeElement('#next_event');
++        $page->seeElement('#previous_event');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..ddb19a1 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,51 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_links_to_previous_and_next_events_by_date(): void
++    {
++        $last = $this->createEvent(['title' => 'Último', 'starts_on' => date('Y-m-d', strtotime('+30 days'))]);
++        $first = $this->createEvent(['title' => 'Primeiro', 'starts_on' => date('Y-m-d', strtotime('+5 days'))]);
++        $middle = $this->createEvent(['title' => 'Meio', 'starts_on' => date('Y-m-d', strtotime('+15 days'))]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $middle->id]);
++
++        $this->assertMatchesRegularExpression(
++            '/id="previous_event"[^>]*href="\/admin\/events\/' . $first->id . '"[^>]*>&larr; Anterior<\/a>/s',
++            $response
++        );
++        $this->assertMatchesRegularExpression(
++            '/id="next_event"[^>]*href="\/admin\/events\/' . $last->id . '"[^>]*>Próximo &rarr;<\/a>/s',
++            $response
++        );
++    }
++
++    public function test_show_of_first_and_last_events_hide_the_missing_link(): void
++    {
++        $first = $this->createEvent(['title' => 'Primeiro', 'starts_on' => date('Y-m-d', strtotime('+5 days'))]);
++        $last = $this->createEvent(['title' => 'Último', 'starts_on' => date('Y-m-d', strtotime('+30 days'))]);
++
++        $firstPage = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $first->id]);
++        $lastPage = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $last->id]);
++
++        $this->assertStringNotContainsString('Anterior', $firstPage);
++        $this->assertStringContainsString("href=\"/admin/events/{$last->id}\"", $firstPage);
++        $this->assertStringContainsString('Próximo', $firstPage);
++
++        $this->assertStringNotContainsString('Próximo', $lastPage);
++        $this->assertStringContainsString("href=\"/admin/events/{$first->id}\"", $lastPage);
++        $this->assertStringContainsString('Anterior', $lastPage);
++    }
++
++    public function test_show_of_only_event_has_no_navigation_links(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringNotContainsString('previous_event', $response);
++        $this->assertStringNotContainsString('next_event', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..b6f99d6 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -438,6 +438,86 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    /* ------------------- anterior / próximo ------------------- */
++
++    /**
++     * Cria Eventos com os dias informados (a partir de hoje), na ordem do array (que vira a ordem de id).
++     *
++     * @param array<string, int> $daysByTitle
++     * @return array<string, Event>
++     */
++    private function createEventsOn(array $daysByTitle): array
++    {
++        $events = [];
++        foreach ($daysByTitle as $title => $days) {
++            $events[$title] = $this->createEvent([
++                'title' => $title,
++                'starts_on' => date('Y-m-d', strtotime("+{$days} days")),
++            ]);
++        }
++
++        return $events;
++    }
++
++    public function test_previous_and_next_should_follow_starts_on_not_id(): void
++    {
++        // ids: C=1, A=2, B=3; datas: A < B < C.
++        $events = $this->createEventsOn(['C' => 30, 'A' => 10, 'B' => 20]);
++
++        $this->assertSame('B', $events['A']->next()?->title);
++        $this->assertSame('C', $events['B']->next()?->title);
++        $this->assertSame('A', $events['B']->previous()?->title);
++        $this->assertSame('B', $events['C']->previous()?->title);
++    }
++
++    public function test_first_has_no_previous_and_last_has_no_next(): void
++    {
++        $events = $this->createEventsOn(['A' => 10, 'B' => 20]);
++
++        $this->assertNull($events['A']->previous());
++        $this->assertNull($events['B']->next());
++    }
++
++    public function test_single_or_new_event_has_no_neighbors(): void
++    {
++        $only = $this->createEvent();
++
++        $this->assertNull($only->previous());
++        $this->assertNull($only->next());
++        $this->assertNull((new Event($this->params()))->next());
++    }
++
++    public function test_equal_dates_should_be_ordered_by_id(): void
++    {
++        // Três Eventos no mesmo dia, entre um antes e um depois: nenhum é pulado nem repetido.
++        $events = $this->createEventsOn(['Antes' => 5, 'X' => 15, 'Y' => 15, 'Z' => 15, 'Depois' => 25]);
++
++        $this->assertSame('X', $events['Antes']->next()?->title);
++        $this->assertSame('Y', $events['X']->next()?->title);
++        $this->assertSame('Z', $events['Y']->next()?->title);
++        $this->assertSame('Depois', $events['Z']->next()?->title);
++
++        $this->assertSame('Z', $events['Depois']->previous()?->title);
++        $this->assertSame('Y', $events['Z']->previous()?->title);
++        $this->assertSame('X', $events['Y']->previous()?->title);
++        $this->assertSame('Antes', $events['X']->previous()?->title);
++    }
++
++    public function test_walking_next_should_visit_every_event_once_in_order(): void
++    {
++        $events = $this->createEventsOn(['E3' => 12, 'E1' => 3, 'E4' => 12, 'E2' => 7, 'E5' => 40]);
++
++        $visited = [];
++        $current = $events['E1'];
++        while ($current !== null) {
++            $visited[] = $current->title;
++            $current = $current->next();
++        }
++
++        $this->assertSame(['E1', 'E2', 'E3', 'E4', 'E5'], $visited);
++        $this->assertInstanceOf(Event::class, $events['E5']->previous());
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+
