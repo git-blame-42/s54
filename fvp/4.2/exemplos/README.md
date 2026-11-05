@@ -93,6 +93,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N7. Painel administrativo com resumo
   `n7-painel-resumo/`
   - feat: Show event summary on the admin dashboard
+- N9. Filtro por período (de/até) validado, mantido na paginação
+  `n9-filtro-por-periodo/`
+  - feat: Filter events by period keeping it in pagination
 - O1. Rota RESTful nova com página (lotados)
   `o1-rota-eventos-lotados/`
   - feat: List full events in admin area

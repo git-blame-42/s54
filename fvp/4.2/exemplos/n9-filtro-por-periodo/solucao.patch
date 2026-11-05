@@ -1,0 +1,623 @@
+From 3133ba963394a56ff0ad479ca00382dd4d1ac9a6 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:51:42 -0300
+Subject: [PATCH] feat: Filter events by period keeping it in pagination
+
+---
+ app/Controllers/Admin/EventsController.php    |  68 +++++++++-
+ app/Models/Event.php                          |  29 ++++
+ app/views/admin/events/index.phtml            |  20 ++-
+ app/views/paginator/_pages.phtml              |  10 +-
+ lib/Paginator.php                             |  41 ++++--
+ .../admin/events/FilterEventsByPeriodCest.php |  76 +++++++++++
+ .../Admin/EventsControllerTest.php            | 124 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        |  69 ++++++++++
+ 8 files changed, 418 insertions(+), 19 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/FilterEventsByPeriodCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..aadb7aa 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
+ use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
++use DateTimeImmutable;
+ use Lib\FlashMessage;
+ 
+ class EventsController extends Controller
+@@ -15,15 +16,29 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
++        $page = max(1, (int) $request->getParam('page', 1));
++        $from = $this->dateParam($request, 'from');
++        $to = $this->dateParam($request, 'to');
++        $error = $this->periodError($from, $to);
++
++        if ($error === null && ($from !== '' || $to !== '')) {
++            $paginator = Event::paginateBetween(
++                from: $from !== '' ? $from : null,
++                to: $to !== '' ? $to : null,
++                page: $page,
++                per_page: self::PER_PAGE,
++                route: 'admin.events.paginate'
++            );
++        } else {
++            if ($error !== null) {
++                FlashMessage::danger("{$error} A listagem abaixo está sem filtro.");
++            }
++            $paginator = Event::paginate(page: $page, per_page: self::PER_PAGE, route: 'admin.events.paginate');
++        }
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'title', 'from', 'to', 'error'));
+     }
+ 
+     public function show(Request $request): void
+@@ -129,6 +144,47 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * Valor bruto de um parâmetro de data do filtro: '' quando ausente ou vazio; um array
++     * (`?from[]=x`) vira um valor inválido, para ser acusado e não ignorado.
++     */
++    private function dateParam(Request $request, string $name): string
++    {
++        $value = $request->getParam($name, '');
++
++        if ($value === null) {
++            return '';
++        }
++
++        return is_string($value) ? trim($value) : '!';
++    }
++
++    /**
++     * Validação de entrada do filtro (não é regra de negócio do Evento): datas no formato
++     * AAAA-MM-DD que existam no calendário e `from` <= `to`. Retorna a mensagem de erro ou null.
++     */
++    private function periodError(string $from, string $to): ?string
++    {
++        foreach (['inicial' => $from, 'final' => $to] as $label => $value) {
++            if ($value !== '' && !$this->isValidDate($value)) {
++                return "Data {$label} inválida no filtro!";
++            }
++        }
++
++        if ($from !== '' && $to !== '' && $from > $to) {
++            return 'A data inicial do filtro não pode ser depois da data final!';
++        }
++
++        return null;
++    }
++
++    private function isValidDate(string $value): bool
++    {
++        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
++
++        return $date !== false && $date->format('Y-m-d') === $value;
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..b382e8a 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\Paginator;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -44,6 +45,10 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Limites do tipo DATE do MySQL: usados quando só uma ponta do período é informada. */
++    public const MIN_DATE = '1000-01-01';
++    public const MAX_DATE = '9999-12-31';
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -114,6 +119,30 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Listagem paginada só com os Eventos cujo `starts_on` está no período [from, to] (as duas pontas
++     * entram). `null` numa ponta deixa o período aberto daquele lado. `from` e `to` vão para os links
++     * de página (`queryParams`), para a página 2 manter o filtro.
++     */
++    public static function paginateBetween(
++        ?string $from,
++        ?string $to,
++        int $page = 1,
++        int $per_page = 10,
++        ?string $route = null
++    ): Paginator {
++        return new Paginator(
++            class: static::class,
++            page: $page,
++            per_page: $per_page,
++            table: static::$table,
++            attributes: static::$columns,
++            route: $route,
++            queryParams: array_filter(['from' => $from, 'to' => $to], fn(?string $value) => $value !== null),
++            ranges: ['starts_on' => [$from ?? self::MIN_DATE, $to ?? self::MAX_DATE]]
++        );
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..05de9e2 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -2,8 +2,26 @@
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<?php $filtered = $error === null && ($from !== '' || $to !== ''); ?>
++<form class="row g-2 align-items-end mb-3" method="get" action="<?= route('admin.events.index') ?>" novalidate>
++    <div class="col-auto">
++        <label class="form-label" for="filter_from">De</label>
++        <input type="date" class="form-control <?= $error !== null ? 'is-invalid' : '' ?>" id="filter_from" name="from"
++            value="<?= htmlspecialchars($from) ?>">
++    </div>
++    <div class="col-auto">
++        <label class="form-label" for="filter_to">Até</label>
++        <input type="date" class="form-control <?= $error !== null ? 'is-invalid' : '' ?>" id="filter_to" name="to"
++            value="<?= htmlspecialchars($to) ?>">
++    </div>
++    <div class="col-auto">
++        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
++        <a class="btn btn-outline-secondary" href="<?= route('admin.events.index') ?>">Limpar</a>
++    </div>
++</form>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= $filtered ? 'Nenhum evento no período.' : 'Nenhum evento cadastrado.' ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..66d132e 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -1,9 +1,13 @@
++<?php
++// URL de cada link: a página mais os parâmetros extras guardados no Paginator (ex.: filtros).
++$pageUrl = fn (int $p) => route($paginator->getRouteName(), array_merge(['page' => $p], $paginator->queryParams()));
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +17,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..1e0f9da 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -15,6 +15,12 @@ class Paginator
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions filtros por igualdade (WHERE coluna = valor)
++     * @param array<string, mixed> $queryParams parâmetros extras repassados aos links de página (ex.: from, to)
++     * @param array<string, array{0: string, 1: string}> $ranges filtros por intervalo fechado
++     *        (WHERE coluna BETWEEN de AND até), ex.: ['starts_on' => ['2026-01-01', '2026-01-31']]
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,7 +28,9 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private array $queryParams = [],
++        private array $ranges = []
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -38,6 +46,16 @@ class Paginator
+         return $this->per_page;
+     }
+ 
++    /**
++     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.
++     *
++     * @return array<string, mixed>
++     */
++    public function queryParams(): array
++    {
++        return $this->queryParams;
++    }
++
+     public function totalOfRegistersOfPage(): int
+     {
+         return $this->totalOfRegistersOfPage;
+@@ -146,25 +164,30 @@ class Paginator
+ 
+     private function buildConditions(): string
+     {
+-        if (empty($this->conditions)) {
+-            return '';
+-        }
+-
+         $sqlConditions = array_map(function ($column) {
+             return "{$column} = :{$column}";
+         }, array_keys($this->conditions));
+ 
++        foreach (array_keys($this->ranges) as $column) {
++            $sqlConditions[] = "{$column} BETWEEN :{$column}_from AND :{$column}_to";
++        }
++
++        if (empty($sqlConditions)) {
++            return '';
++        }
++
+         return ' WHERE ' . implode(' AND ', $sqlConditions);
+     }
+ 
+     private function bindConditions(PDOStatement $stmt): void
+     {
+-        if (empty($this->conditions)) {
+-            return;
+-        }
+-
+         foreach ($this->conditions as $column => $value) {
+             $stmt->bindValue($column, $value);
+         }
++
++        foreach ($this->ranges as $column => [$from, $to]) {
++            $stmt->bindValue("{$column}_from", $from);
++            $stmt->bindValue("{$column}_to", $to);
++        }
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php b/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php
+new file mode 100644
+index 0000000..50cb8e2
+--- /dev/null
++++ b/tests/Acceptance/admin/events/FilterEventsByPeriodCest.php
+@@ -0,0 +1,76 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * N9: filtro da listagem por período (de/até), mantido na paginação.
++ * No BaseEventsCest o "Evento NN" começa em hoje + (13 + NN) dias.
++ */
++class FilterEventsByPeriodCest extends BaseEventsCest
++{
++    public function filterByPeriodAndGoToPage2(AcceptanceTester $page): void
++    {
++        $from = $this->startsOn(2);
++        $to = $this->startsOn(13);
++
++        $page->wantTo('Filtrar a listagem por período e ir à página 2 mantendo o filtro');
++        $page->amOnPage('/admin/events');
++        $this->setDate($page, 'filter_from', $from);
++        $this->setDate($page, 'filter_to', $to);
++        $page->click('Filtrar');
++
++        $page->seeCurrentUrlEquals("/admin/events?from={$from}&to={$to}");
++        $page->see('Mostrando 1 - 5 de 12');
++        $page->dontSee('Evento 01', 'table');
++        $page->see('Evento 02', 'table');
++        $page->see('Evento 06', 'table');
++        $page->seeInField('#filter_from', $from);
++        $page->seeInField('#filter_to', $to);
++
++        $page->click('2', '.pagination');
++        $page->seeCurrentUrlEquals("/admin/events/page/2?from={$from}&to={$to}");
++        $page->see('Mostrando 6 - 10 de 12');
++        $page->see('Evento 07', 'table');
++        $page->see('Evento 11', 'table');
++
++        $page->click('Próxima', '.pagination');
++        $page->seeCurrentUrlEquals("/admin/events/page/3?from={$from}&to={$to}");
++        $page->see('Evento 12', 'table');
++        $page->see('Evento 13', 'table');
++        $page->dontSee('Evento 14', 'table');
++
++        $page->click('Limpar');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Mostrando 1 - 5 de 16');
++    }
++
++    public function invalidDateShowsErrorAndUnfilteredList(AcceptanceTester $page): void
++    {
++        $page->wantTo('Data inválida no filtro mostra erro e a listagem sem filtro');
++        $page->amOnPage('/admin/events?from=2026-13-40&to=');
++
++        $page->see('Data inicial inválida no filtro! A listagem abaixo está sem filtro.');
++        $page->see('Mostrando 1 - 5 de 16');
++        $page->see('Evento 01', 'table');
++    }
++
++    public function periodWithFromAfterToShowsError(AcceptanceTester $page): void
++    {
++        $page->wantTo('Data inicial depois da final é acusada');
++        $page->amOnPage('/admin/events');
++        $this->setDate($page, 'filter_from', $this->startsOn(10));
++        $this->setDate($page, 'filter_to', $this->startsOn(5));
++        $page->click('Filtrar');
++
++        $page->see('A data inicial do filtro não pode ser depois da data final!');
++        $page->see('Mostrando 1 - 5 de 16');
++    }
++
++    private function setDate(AcceptanceTester $page, string $id, string $value): void
++    {
++        // input[type=date] depende do idioma do navegador ao digitar; definir o valor ISO é determinístico.
++        $page->executeJS('document.getElementById(arguments[0]).value = arguments[1];', [$id, $value]);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..a8111e7 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -67,6 +68,129 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_filters_by_period_and_keeps_it_in_page_links(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "No período {$i}", 'starts_on' => $this->day(10 + $i)]);
++        }
++        $this->createEvent(['title' => 'Fora do período', 'starts_on' => $this->day(40)]);
++        $from = $this->day(11);
++        $to = $this->day(17);
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['from' => $from, 'to' => $to]);
++        $page2 = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['from' => $from, 'to' => $to, 'page' => 2]
++        );
++
++        $this->assertStringContainsString('No período 1', $page1);
++        $this->assertStringContainsString('No período 5', $page1);
++        $this->assertStringNotContainsString('Fora do período', $page1);
++        $this->assertStringContainsString("href=\"/admin/events/page/2?from={$from}&to={$to}\"", $page1);
++        $this->assertStringContainsString("value=\"{$from}\"", $page1);
++        $this->assertStringContainsString("value=\"{$to}\"", $page1);
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $page1);
++        $this->assertStringContainsString('No período 6', $page2);
++        $this->assertStringContainsString('No período 7', $page2);
++        $this->assertStringNotContainsString('No período 5', $page2);
++        $this->assertStringNotContainsString('Fora do período', $page2);
++    }
++
++    public function test_index_filter_includes_both_ends(): void
++    {
++        $this->createEvent(['title' => 'Na borda inicial', 'starts_on' => $this->day(10)]);
++        $this->createEvent(['title' => 'Na borda final', 'starts_on' => $this->day(20)]);
++        $this->createEvent(['title' => 'Um dia depois', 'starts_on' => $this->day(21)]);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['from' => $this->day(10), 'to' => $this->day(20)]
++        );
++
++        $this->assertStringContainsString('Na borda inicial', $response);
++        $this->assertStringContainsString('Na borda final', $response);
++        $this->assertStringNotContainsString('Um dia depois', $response);
++    }
++
++    public function test_index_filter_with_only_from_lists_from_that_day_on(): void
++    {
++        $this->createEvent(['title' => 'Cedo', 'starts_on' => $this->day(5)]);
++        $this->createEvent(['title' => 'Tarde', 'starts_on' => $this->day(50)]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['from' => $this->day(6), 'to' => '']);
++
++        $this->assertStringContainsString('Tarde', $response);
++        $this->assertStringNotContainsString('Cedo', $response);
++    }
++
++    public function test_index_filter_without_events_in_period_says_so(): void
++    {
++        $this->createEvent(['starts_on' => $this->day(10)]);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['from' => $this->day(11), 'to' => $this->day(12)]
++        );
++
++        $this->assertStringContainsString('Nenhum evento no período.', $response);
++    }
++
++    /**
++     * @return array<string, array{array<string, mixed>, string}>
++     */
++    public static function invalidPeriods(): array
++    {
++        return [
++            'mês 13' => [['from' => '2026-13-40', 'to' => ''], 'Data inicial inválida no filtro!'],
++            '30 de fevereiro' => [['from' => '', 'to' => '2027-02-30'], 'Data final inválida no filtro!'],
++            'formato brasileiro' => [['from' => '10/12/2026', 'to' => ''], 'Data inicial inválida no filtro!'],
++            'texto' => [['from' => 'amanhã', 'to' => ''], 'Data inicial inválida no filtro!'],
++            'array' => [['from' => ['2026-12-10'], 'to' => ''], 'Data inicial inválida no filtro!'],
++            'de depois de até' => [
++                ['from' => '2027-01-20', 'to' => '2027-01-10'],
++                'A data inicial do filtro não pode ser depois da data final!',
++            ],
++        ];
++    }
++
++    /**
++     * @param array<string, mixed> $params
++     */
++    #[DataProvider('invalidPeriods')]
++    public function test_index_with_invalid_period_shows_error_and_unfiltered_list(array $params, string $message): void
++    {
++        $this->createEvent(['title' => 'Evento Próximo', 'starts_on' => $this->day(5)]);
++        $this->createEvent(['title' => 'Evento Distante', 'starts_on' => $this->day(90)]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: $params);
++
++        $this->assertStringContainsString("{$message} A listagem abaixo está sem filtro.", $response);
++        $this->assertStringContainsString('is-invalid', $response);
++        $this->assertStringContainsString('Evento Próximo', $response);
++        $this->assertStringContainsString('Evento Distante', $response);
++    }
++
++    public function test_index_without_filter_keeps_plain_page_links(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('href="/admin/events/page/2"', $response);
++        $this->assertStringNotContainsString('is-invalid', $response);
++        $this->assertStringNotContainsString('?from=', $response);
++    }
++
++    private function day(int $days): string
++    {
++        return date('Y-m-d', strtotime("+{$days} days"));
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..1fc1b09 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,73 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- filtro por período (N9) ------------------- */
++
++    private function day(int $days): string
++    {
++        return date('Y-m-d', strtotime("+{$days} days"));
++    }
++
++    /**
++     * @param array<Event> $events
++     * @return array<int, string>
++     */
++    private function titlesOf(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_paginate_between_should_include_both_ends_of_the_period(): void
++    {
++        $this->createEvent(['title' => 'Antes', 'starts_on' => $this->day(9)]);
++        $this->createEvent(['title' => 'Início', 'starts_on' => $this->day(10)]);
++        $this->createEvent(['title' => 'Meio', 'starts_on' => $this->day(15)]);
++        $this->createEvent(['title' => 'Fim', 'starts_on' => $this->day(20)]);
++        $this->createEvent(['title' => 'Depois', 'starts_on' => $this->day(21)]);
++
++        $paginator = Event::paginateBetween(from: $this->day(10), to: $this->day(20), page: 1, per_page: 10);
++
++        $this->assertEquals(['Início', 'Meio', 'Fim'], $this->titlesOf($paginator->registers()));
++        $this->assertSame(3, $paginator->totalOfRegisters());
++        $this->assertEquals(['from' => $this->day(10), 'to' => $this->day(20)], $paginator->queryParams());
++    }
++
++    public function test_paginate_between_should_paginate_only_the_filtered_events(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "No período {$i}", 'starts_on' => $this->day(10 + $i)]);
++        }
++        $this->createEvent(['title' => 'Fora', 'starts_on' => $this->day(40)]);
++
++        $page2 = Event::paginateBetween(from: $this->day(11), to: $this->day(17), page: 2, per_page: 5);
++
++        $this->assertSame(7, $page2->totalOfRegisters());
++        $this->assertSame(2, $page2->totalOfPages());
++        $this->assertEquals(['No período 6', 'No período 7'], $this->titlesOf($page2->registers()));
++    }
++
++    public function test_paginate_between_with_one_open_end_should_filter_only_the_other_side(): void
++    {
++        $this->createEvent(['title' => 'Cedo', 'starts_on' => $this->day(5)]);
++        $this->createEvent(['title' => 'Tarde', 'starts_on' => $this->day(50)]);
++
++        $fromOnly = Event::paginateBetween(from: $this->day(6), to: null, page: 1, per_page: 10);
++        $toOnly = Event::paginateBetween(from: null, to: $this->day(6), page: 1, per_page: 10);
++
++        $this->assertEquals(['Tarde'], $this->titlesOf($fromOnly->registers()));
++        $this->assertEquals(['from' => $this->day(6)], $fromOnly->queryParams());
++        $this->assertEquals(['Cedo'], $this->titlesOf($toOnly->registers()));
++        $this->assertEquals(['to' => $this->day(6)], $toOnly->queryParams());
++    }
++
++    public function test_paginate_between_with_an_empty_period_should_return_nothing(): void
++    {
++        $this->createEvent(['starts_on' => $this->day(10)]);
++
++        $paginator = Event::paginateBetween(from: $this->day(11), to: $this->day(12), page: 1, per_page: 10);
++
++        $this->assertSame([], $paginator->registers());
++        $this->assertSame(0, $paginator->totalOfRegisters());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
