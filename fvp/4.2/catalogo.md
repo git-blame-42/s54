@@ -4728,13 +4728,16 @@ Prova: testes; no navegador, inscrever-se (P2) e ver o número.
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p15-inscricao-json`.
+
 Pedido típico: "o `POST /events/{id}/enrollments` deve responder JSON
 quando o cliente pedir `Accept: application/json`" (prévia do Ajax da
 4.4, sobre P2).
 
 Arquivos: P2 (`EnrollmentsController::create`), `CTRL:44-55`
 (`renderJson`, view `.json.php`), `core/Http/Request.php:52-55`
-(`acceptJson`), O4 (mesmo mecanismo na listagem), `ECT` de P2,
+(`acceptJson`), O4 (mesmo mecanismo na listagem),
+`tests/Integration/Controllers/EnrollmentsControllerTest.php` (de P2),
 `core/Http/Request.php:41-44` (`getHeaders`).
 
 Passos:
@@ -4746,6 +4749,7 @@ Passos:
 
    ```php
    if ($request->acceptJson()) {
+       http_response_code($saved ? 201 : 422);
        $ok = $saved;
        $message = $saved
            ? 'Inscrição realizada!'
@@ -4767,20 +4771,27 @@ Passos:
        'available_spots' => $event->availableSpots(),
    ];
    ```
+
+   Com `fetch()` atualizando a tela, acrescente `errors`,
+   `enrollments_count` e `capacity`.
 4. Sem flash no caminho JSON (ninguém lê a sessão).
+5. Evento inexistente com `acceptJson()`: 404 em JSON, não flash +
+   redirect.
 
 Armadilhas:
 
 - `acceptJson()` exige igualdade exata do header (`Request.php:54`);
   `fetch()` do navegador manda `application/json` se você setar.
-- Status 201/422 só com `http_response_code()` e só fora do CLI (O8);
-  no teste, cheque o corpo.
+- `http_response_code()` funciona também em CLI: zere no `setUp` (O8).
+  O teste por HTTP é o mais fiel para o status.
+- Pedido JSON sem sessão continua 302 para `/login` (middleware `auth`).
 - `renderJson` tem `chartset` no header (`CTRL:51`); não é seu.
 - Não misture: ou redireciona, ou responde JSON. `return` após o
   `renderJson`.
 
 Prova: teste e `curl -X POST -H 'Accept: application/json' -b <cookie>`
-em `localhost/events/2/enrollments`.
+em `localhost/events/3/enrollments` (no Evento 2, `user@example.com` já
+está inscrito pelo populate e recebe 422).
 
 ### P16. Remover só com código de confirmação gerado no backend
 
