@@ -130,6 +130,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P12. Código aleatório no login (a FVP real da 4.1)
   `p12-codigo-aleatorio-login/`
   - feat: Require a random access code after the password on
+- P13. Admin inscreve e remove um Participante pelo show
+  `p13-admin-inscreve-remove-participante/`
+  - feat: Admin enrolls and removes participants from event show
 - P16. Remover Evento só com código de confirmação gerado no backend
   `p16-remover-com-codigo-confirmacao/`
   - feat: Require a confirmation code to remove an Event
