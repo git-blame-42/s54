@@ -7,7 +7,7 @@ use PHPUnit\Framework\Assert;
 use Tests\Support\AcceptanceTester;
 
 /**
- * M14: cada abertura do show do Evento soma uma visualização, exibida no show e na listagem.
+ * Cada abertura do show do Evento soma uma visualização, exibida no show e na listagem.
  */
 class ViewsCountCest extends BaseEventsCest
 {

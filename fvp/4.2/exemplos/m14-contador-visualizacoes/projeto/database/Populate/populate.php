@@ -140,7 +140,7 @@ foreach ($events as [$title, $description, $kind, $modality, $audience, $daysAhe
         'starts_on' => date('Y-m-d', strtotime("+{$daysAhead} days")),
         'location' => $location,
         'capacity' => $capacity,
-        'views_count' => 0, // M14: todo Evento começa sem visualizações
+        'views_count' => 0, // todo Evento começa sem visualizações
     ]);
     $event->setAudienceList(explode(',', $audience));
     if (!$event->save()) {

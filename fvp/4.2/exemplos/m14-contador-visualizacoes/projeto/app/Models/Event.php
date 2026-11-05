@@ -18,7 +18,7 @@ use PDOException;
  * @property string $starts_on
  * @property string $location
  * @property int|string $capacity
- * @property int|string $views_count visualizações do show (M14); nunca vem do formulário
+ * @property int|string $views_count visualizações do show; nunca vem do formulário
  */
 class Event extends Model
 {
@@ -132,9 +132,10 @@ class Event extends Model
     }
 
     /**
-     * Soma uma visualização. Usa update(), que grava só views_count, sem validar (ver um Evento
-     * passado não pode falhar por starts_on). Corrida: dois acessos ao mesmo tempo leem o mesmo
-     * valor e um incremento se perde; a alternativa atômica é um SQL no model com
+     * Soma uma visualização. Usa update(), que grava só views_count e não passa por validates();
+     * save() regravaria todas as colunas do Evento só para mudar o contador. update() já atualiza
+     * o atributo em memória. Corrida: dois acessos ao mesmo tempo leem o mesmo valor e um
+     * incremento se perde; a alternativa atômica é um SQL no model com
      * `UPDATE events SET views_count = views_count + 1 WHERE id = :id`.
      */
     public function registerView(): void

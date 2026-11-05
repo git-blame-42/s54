@@ -12,7 +12,7 @@ Branch no clone: `fvp/m14-contador-visualizacoes`, a partir de `main`
 
 | Commit    | Mensagem                                         |
 |-----------|--------------------------------------------------|
-| `eb852bb` | `feat: Count event views on the admin show page` |
+| `37468d1` | `feat: Count event views on the admin show page` |
 
 ## O que mudou
 
@@ -44,10 +44,12 @@ Branch no clone: `fvp/m14-contador-visualizacoes`, a partir de `main`
 
 ## Por que assim
 
-- `update()` e não `save()`: `update()` grava só a coluna pedida e não
-  passa por `validates()`. Com `save()`, ver um Evento que já passou
-  ou que está lotado poderia falhar na validação, e todas as colunas
-  seriam regravadas.
+- `update()` e não `save()`: `update()` grava só a coluna pedida, não
+  passa por `validates()` e já atualiza o atributo em memória. O
+  `save()` regravaria todas as colunas do Evento (e rodaria a
+  validação inteira) só para somar 1 ao contador. É essa diferença
+  (`update()` não valida, `save()` valida e grava tudo) que o
+  professor costuma perguntar.
 - Default no construtor: `save()` grava todas as colunas de
   `$columns`, e o `DEFAULT 0` do banco não vale (iria `NULL` e
   quebraria o `NOT NULL`).
@@ -64,13 +66,21 @@ Branch no clone: `fvp/m14-contador-visualizacoes`, a partir de `main`
   ```php
   public function registerView(): void
   {
+      if ($this->newRecord()) {
+          return;
+      }
+
       $stmt = Database::getDatabaseConn()->prepare(
           'UPDATE events SET views_count = views_count + 1 WHERE id = :id'
       );
-      $stmt->bindValue(':id', $this->id);
+      $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
       $stmt->execute();
+      $this->views_count = (int) $this->views_count + 1;
   }
   ```
+
+  (Igual ao catálogo: a guarda de registro novo e a atualização do
+  atributo em memória, que o `update()` fazia sozinho.)
 
   Ficou o `update()` porque é o que o pedido cita e basta para o
   projeto.
@@ -144,7 +154,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-m14 \
     s50/fvp/4.2/exemplos/m14-contador-visualizacoes/projeto
 git fetch fvp-m14 fvp/m14-contador-visualizacoes
-git cherry-pick eb852bb
+git cherry-pick 37468d1
 git remote remove fvp-m14
 ```
 
@@ -155,7 +165,7 @@ git fetch \
     s50/fvp/4.2/exemplos/m14-contador-visualizacoes/solucao.bundle \
     fvp/m14-contador-visualizacoes:fvp-m14
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick eb852bb
+git cherry-pick 37468d1
 # opcional, limpa a ref
 git branch -D fvp-m14
 ```
@@ -201,16 +211,18 @@ Depois de aplicar: `./run db:populate` (schema mudou), os testes e
 
 - Sem default no construtor, `save()` grava `NULL` em `views_count` e
   o `INSERT` falha (`NOT NULL`), mesmo com `DEFAULT 0` no schema.
-- `save()` no lugar de `update()`: passa pela validação; ver um Evento
-  passado com data alterada, por exemplo, deixaria de contar.
+- `save()` no lugar de `update()`: funciona, mas regrava todas as
+  colunas e roda a validação inteira a cada visualização; não é o que
+  o pedido ("com `update()`") quer mostrar.
+- `update()` devolve `false` quando nada mudou (`rowCount() === 0`):
+  não use o retorno como "deu erro".
+- Efeito colateral em GET: contar ao exibir é aceitável para um
+  contador; não faça o mesmo com regras de negócio (inscrever,
+  confirmar etc.) em rotas GET.
 - `updated_at` tem `ON UPDATE CURRENT_TIMESTAMP`: cada visualização
   muda o `updated_at` do Evento. Se isso importar, use o SQL atômico
   com `updated_at = updated_at` no `SET`.
 - Corrida entre acessos simultâneos (ver "Por que assim").
-- Uma edição aberta antes de várias visualizações regrava o valor
-  antigo de `views_count` no `save()` (o `save()` grava todas as
-  colunas). Para o projeto é aceitável; documente se o professor
-  perguntar.
 - Contar no `edit` ou no `index`: só o `show` conta; os testes
   conferem.
 - `db:populate` refaz o schema; sem ele o banco de desenvolvimento não

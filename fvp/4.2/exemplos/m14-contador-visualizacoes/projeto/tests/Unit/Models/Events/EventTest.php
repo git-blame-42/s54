@@ -682,7 +682,7 @@ class EventTest extends TestCase
         $event->destroy();
     }
 
-    /* ------------------- Visualizações (M14) ------------------- */
+    /* ------------------- Visualizações ------------------- */
 
     public function test_views_count_should_default_to_zero(): void
     {

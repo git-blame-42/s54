@@ -29,7 +29,7 @@ CREATE TABLE events (
     starts_on   DATE NOT NULL,
     location    VARCHAR(255) NOT NULL,
     capacity    INT NOT NULL,
-    -- M14: visualizações do detalhe do Evento (incrementado por Event::registerView).
+    -- Visualizações do detalhe do Evento (incrementado por Event::registerView).
     views_count INT UNSIGNED NOT NULL DEFAULT 0,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
