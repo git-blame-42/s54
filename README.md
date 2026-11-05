@@ -40,9 +40,11 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
 
 - `neovim-dicas.md`
   Neovim com LazyVim para quem vem do IntelliJ: modos, atalhos de
-  IDE (buscar, ir à definição, erros, terminal embutido) e o passo
-  a passo de um cenário do FVP no editor. Pressupõe o
-  `scripts/10-install-neovim.sh`.
+  IDE (buscar, ir à definição, erros, terminal embutido), atalhos do
+  framework (navegação MVC, `./run`, phpcs e phpstan, snippets) e o
+  passo a passo de um cenário do FVP no editor. Pressupõe o
+  `scripts/10-install-neovim.sh`, que instala a configuração da
+  disciplina (`scripts/files/nvim/`).
 
 Ordem sugerida: resumo, completo, catálogo do FVP da entrega com o
 projeto aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
@@ -116,11 +118,12 @@ tmux, zsh como shell padrão, verificação do que o framework precisa
 teste do framework sem modificações num diretório temporário,
 instalação do projeto Eventos do Câmpus, preparo da FVP (branches
 das soluções e atalhos), PHP nativo com phpcs e phpstan, Neovim com
-LazyVim e, opcionais, VS Code e IntelliJ. Um script por tarefa; só
-`-h` e `-z` (desfaz o que aquele script fez, sem tocar no que já
-existia). `scripts/00-run-all.sh` roda tudo em ordem, inclusive o 14,
-menos os opcionais (11 e 12, IDEs; 13, rootless) e o 15, que só
-verifica. Ordem e detalhes em `scripts/README.md`.
+LazyVim e a configuração da disciplina e, opcionais, VS Code e
+IntelliJ. Um script por tarefa; só `-h` e `-z` (desfaz o que aquele
+script fez, sem tocar no que já existia). `scripts/00-run-all.sh`
+roda tudo em ordem, inclusive o 14, menos os opcionais (11 e 12,
+IDEs; 13, rootless) e o 15, que só verifica. Ordem e detalhes em
+`scripts/README.md`.
 
 ## Convenções
 
