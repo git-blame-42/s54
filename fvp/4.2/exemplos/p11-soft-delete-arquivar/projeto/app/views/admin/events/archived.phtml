@@ -23,7 +23,8 @@
                     <td><?= $event->enrollmentsCount() ?></td>
                     <td><?= date('d/m/Y H:i', strtotime((string) $event->deleted_at)) ?></td>
                     <td>
-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-secondary"
+                            href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
                         <form class="d-inline" action="<?= route('admin.events.restore', ['id' => $event->id]) ?>" method="post">
                             <input type="hidden" name="_method" value="PUT">
                             <button type="submit" class="btn btn-sm btn-outline-success">Restaurar</button>

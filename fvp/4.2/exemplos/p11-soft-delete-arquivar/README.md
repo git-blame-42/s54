@@ -13,7 +13,7 @@ Branch no clone: `fvp/p11-soft-delete-arquivar`, a partir de `main`
 Commits:
 
 - `6011e4c` `feat: Support null conditions as IS NULL in Paginator`
-- `70e36dd` `feat: Archive events instead of deleting them`
+- `91408e0` `feat: Archive events instead of deleting them`
 
 ## O que mudou
 
@@ -126,7 +126,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p11 \
     s50/fvp/4.2/exemplos/p11-soft-delete-arquivar/projeto
 git fetch fvp-p11 fvp/p11-soft-delete-arquivar
-git cherry-pick 6011e4c 70e36dd
+git cherry-pick 6011e4c 91408e0
 git remote remove fvp-p11
 ```
 
@@ -137,7 +137,7 @@ git fetch \
     s50/fvp/4.2/exemplos/p11-soft-delete-arquivar/solucao.bundle \
     fvp/p11-soft-delete-arquivar:fvp-p11
 # o bundle traz os objetos; o cherry-pick cria commits novos
-git cherry-pick 6011e4c 70e36dd
+git cherry-pick 6011e4c 91408e0
 # opcional, limpa a ref
 git branch -D fvp-p11
 ```

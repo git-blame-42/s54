@@ -40,7 +40,7 @@ index 065ee46..b33dbba 100644
 2.54.0 (Apple Git-157)
 
 
-From 70e36dd2b9765182d9aa8acba8ee3674747bd0ca Mon Sep 17 00:00:00 2001
+From 91408e0ad00b1541277cfe8db164ab77bfa7993b Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:25:51 -0300
 Subject: [PATCH 2/2] feat: Archive events instead of deleting them
@@ -49,7 +49,7 @@ Destroy now sets deleted_at; the index lists only active events, archived ones a
 ---
  app/Controllers/Admin/EventsController.php    |  35 +++++-
  app/Models/Event.php                          | 103 ++++++++++++++++
- app/views/admin/events/archived.phtml         |  36 ++++++
+ app/views/admin/events/archived.phtml         |  37 ++++++
  app/views/admin/events/index.phtml            |   3 +-
  app/views/admin/events/show.phtml             |   5 +
  config/routes.php                             |   6 +-
@@ -60,7 +60,7 @@ Destroy now sets deleted_at; the index lists only active events, archived ones a
  tests/Integration/Access/EventsAccessTest.php |  34 +++++-
  .../Admin/EventsControllerTest.php            | 112 +++++++++++++++--
  tests/Unit/Models/Events/EventTest.php        | 114 ++++++++++++++++++
- 13 files changed, 483 insertions(+), 40 deletions(-)
+ 13 files changed, 484 insertions(+), 40 deletions(-)
  create mode 100644 app/views/admin/events/archived.phtml
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
@@ -267,10 +267,10 @@ index ba66870..8b06c93 100644
       *
 diff --git a/app/views/admin/events/archived.phtml b/app/views/admin/events/archived.phtml
 new file mode 100644
-index 0000000..26b3129
+index 0000000..4f7b761
 --- /dev/null
 +++ b/app/views/admin/events/archived.phtml
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,37 @@
 +<div class="mb-3">
 +    <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar para Eventos</a>
 +</div>
@@ -296,7 +296,8 @@ index 0000000..26b3129
 +                    <td><?= $event->enrollmentsCount() ?></td>
 +                    <td><?= date('d/m/Y H:i', strtotime((string) $event->deleted_at)) ?></td>
 +                    <td>
-+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++                        <a class="btn btn-sm btn-outline-secondary"
++                            href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
 +                        <form class="d-inline" action="<?= route('admin.events.restore', ['id' => $event->id]) ?>" method="post">
 +                            <input type="hidden" name="_method" value="PUT">
 +                            <button type="submit" class="btn btn-sm btn-outline-success">Restaurar</button>
