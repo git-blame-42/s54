@@ -22,6 +22,11 @@ class EventsController extends Controller
         // e os links de uma repetem a página atual da outra (página 1 fica fora da URL).
         $page = $this->pageNumber($request, 'page');
         $pastPage = $this->pageNumber($request, self::PAST_PAGE_PARAM);
+        if ($page === null || $pastPage === null) {
+            FlashMessage::danger('Página inválida!');
+            $this->redirectTo(route('admin.events.index'));
+            return;
+        }
 
         $upcoming = Event::paginateUpcoming(
             page: $page,
@@ -36,6 +41,15 @@ class EventsController extends Controller
             pageParam: self::PAST_PAGE_PARAM,
             routeParams: $page > 1 ? ['page' => $page] : []
         );
+
+        // Página depois da última (em qualquer tabela): vai para a última, mantendo a outra.
+        $lastPage = max(1, $upcoming->totalOfPages());
+        $lastPastPage = max(1, $past->totalOfPages());
+        if ($page > $lastPage || $pastPage > $lastPastPage) {
+            FlashMessage::danger('Página inexistente! Mostrando a última página.');
+            $this->redirectTo($this->indexUrl(min($page, $lastPage), min($pastPage, $lastPastPage)));
+            return;
+        }
 
         $title = 'Eventos';
         $this->render('admin/events/index', compact('upcoming', 'past', 'title'));
@@ -126,11 +140,39 @@ class EventsController extends Controller
     }
 
     /**
-     * Número de página lido do parâmetro informado; ausente, zero ou negativo vira 1.
+     * Número de página lido do parâmetro informado: ausente vira 1; inválido devolve null.
+     *
+     * Aceita só dígitos (ctype_digit), sem zero à esquerda nem estouro, e >= 1. Nada de
+     * (int) às cegas: (int) 'abc' é 0 e (int) '2abc' é 2. Aceita int porque os testes de
+     * controller passam ['page' => 2].
      */
-    private function pageNumber(Request $request, string $param): int
+    private function pageNumber(Request $request, string $param): ?int
     {
-        return max(1, (int) $request->getParam($param, 1));
+        $value = $request->getParam($param, '1');
+
+        if (is_int($value)) {
+            return $value >= 1 ? $value : null;
+        }
+
+        if (!is_string($value) || !ctype_digit($value) || $value !== (string) (int) $value) {
+            return null;
+        }
+
+        return (int) $value >= 1 ? (int) $value : null;
+    }
+
+    /**
+     * URL do index com as duas páginas; página 1 fica fora da URL.
+     */
+    private function indexUrl(int $page, int $pastPage): string
+    {
+        $params = $pastPage > 1 ? [self::PAST_PAGE_PARAM => $pastPage] : [];
+
+        if ($page > 1) {
+            return route('admin.events.paginate', ['page' => $page] + $params);
+        }
+
+        return route('admin.events.index', $params);
     }
 
     /**

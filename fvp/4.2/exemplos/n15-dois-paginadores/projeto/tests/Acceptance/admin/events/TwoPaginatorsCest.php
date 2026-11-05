@@ -69,6 +69,25 @@ class TwoPaginatorsCest extends BaseEventsCest
         $this->seeRows($page, self::UPCOMING, 13, 16);
     }
 
+    public function invalidOrNonexistentPastPage(AcceptanceTester $page): void
+    {
+        $page->wantTo('Abrir Passados com página inválida ou depois da última');
+        $this->movePastEvents();
+
+        // Depois da última: vai para a última de Passados, mantendo a página de Próximos.
+        $page->amOnPage('/admin/events/page/2?past_page=99');
+        $page->seeCurrentUrlEquals('/admin/events/page/2?past_page=2');
+        $page->see('Página inexistente! Mostrando a última página.');
+        $this->seeRows($page, self::PAST, 6, 7);
+        $this->seeRows($page, self::UPCOMING, 13, 16);
+
+        // Inválida: volta à listagem sem parâmetros.
+        $page->amOnPage('/admin/events?past_page=abc');
+        $page->seeCurrentUrlEquals('/admin/events');
+        $page->see('Página inválida!');
+        $this->seeRows($page, self::PAST, 1, 5);
+    }
+
     public function noPastEventsShowsEmptyMessage(AcceptanceTester $page): void
     {
         $page->wantTo('Ver a tabela de Passados vazia quando todos os Eventos são futuros');

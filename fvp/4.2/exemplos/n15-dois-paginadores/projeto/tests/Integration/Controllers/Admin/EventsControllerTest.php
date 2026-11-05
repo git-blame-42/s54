@@ -175,27 +175,78 @@ class EventsControllerTest extends ControllerTestCase
     }
 
     /**
-     * @return array<string, array{0: mixed}>
+     * @return array<string, array{0: string, 1: mixed}>
      */
-    public static function invalidPastPages(): array
+    public static function invalidPages(): array
     {
         return [
-            'zero' => [0],
-            'negativa' => [-3],
-            'texto' => ['abc'],
+            'past_page texto' => ['past_page', 'abc'],
+            'past_page dígito e texto' => ['past_page', '2abc'],
+            'past_page zero' => ['past_page', '0'],
+            'past_page negativa' => ['past_page', '-1'],
+            'past_page zero à esquerda' => ['past_page', '02'],
+            'past_page decimal' => ['past_page', '1.5'],
+            'past_page estouro' => ['past_page', '99999999999999999999'],
+            'past_page array' => ['past_page', ['2']],
+            'past_page int zero' => ['past_page', 0],
+            'page texto' => ['page', 'abc'],
         ];
     }
 
-    #[DataProvider('invalidPastPages')]
-    public function test_index_invalid_past_page_falls_back_to_first_page(mixed $pastPage): void
+    #[DataProvider('invalidPages')]
+    public function test_index_invalid_page_redirects_with_flash(string $param, mixed $value): void
     {
         $this->createUpcomingAndPastEvents();
 
-        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => $pastPage]);
-        $past = $this->section($response, 'past-events');
+        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: [$param => $value]);
 
-        $this->assertStringContainsString('Passado 1', $past);
-        $this->assertStringNotContainsString('Passado 6', $past);
+        $this->assertSame('Location: /admin/events', $response);
+        $this->assertEquals('Página inválida!', $_SESSION['flash']['danger']);
+    }
+
+    public function test_index_valid_past_page_as_string_is_accepted(): void
+    {
+        $this->createUpcomingAndPastEvents();
+
+        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => '2']);
+
+        $this->assertStringContainsString('Passado 6', $this->section($response, 'past-events'));
+    }
+
+    public function test_index_past_page_after_last_redirects_to_last_keeping_upcoming_page(): void
+    {
+        $this->createUpcomingAndPastEvents();
+
+        $response = $this->get(
+            action: 'index',
+            controllerName: self::CONTROLLER,
+            params: ['page' => 2, 'past_page' => '99']
+        );
+
+        $this->assertSame('Location: /admin/events/page/2?past_page=2', $response);
+        $this->assertEquals('Página inexistente! Mostrando a última página.', $_SESSION['flash']['danger']);
+    }
+
+    public function test_index_past_page_without_past_events_redirects_to_first(): void
+    {
+        $this->createEvent(['title' => 'Só futuro']);
+
+        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => '2']);
+
+        $this->assertSame('Location: /admin/events', $response);
+    }
+
+    public function test_index_upcoming_page_after_last_redirects_keeping_past_page(): void
+    {
+        $this->createUpcomingAndPastEvents();
+
+        $response = $this->get(
+            action: 'index',
+            controllerName: self::CONTROLLER,
+            params: ['page' => '9', 'past_page' => '2']
+        );
+
+        $this->assertSame('Location: /admin/events/page/2?past_page=2', $response);
     }
 
     public function test_new_renders_form(): void

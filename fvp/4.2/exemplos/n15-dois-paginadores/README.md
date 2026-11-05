@@ -12,7 +12,7 @@ Branch no clone: `fvp/n15-dois-paginadores`, a partir de `main`
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
-| `d8d1dc6` | `feat: Paginate upcoming and past events in two tables`  |
+| `ec15dda` | `feat: Paginate upcoming and past events in two tables`  |
 
 ## O que mudou
 
@@ -44,9 +44,17 @@ Branch no clone: `fvp/n15-dois-paginadores`, a partir de `main`
   - os dois chamam o privado `paginateByStartsOn`, que monta o
     `Paginator` com `date('Y-m-d')`. Import novo: `Lib\Paginator`.
 - `app/Controllers/Admin/EventsController.php`, `index`:
-  - `PAST_PAGE_PARAM = 'past_page'` e o privado `pageNumber()`
-    (`max(1, (int) getParam(...))`: ausente, zero, negativo ou texto
-    vira 1);
+  - `PAST_PAGE_PARAM = 'past_page'` e o privado `pageNumber()`:
+    ausente vira 1; aceita só dígitos (`ctype_digit`), sem zero à
+    esquerda nem estouro (`$value === (string) (int) $value`), e
+    `>= 1`. Inválido (`abc`, `2abc`, `0`, `-1`, `02`, `1.5`, array)
+    devolve `null`, e o `index` responde com a flash "Página
+    inválida!", redirect para `/admin/events` e `return`;
+  - página depois da última, em qualquer das tabelas: flash "Página
+    inexistente! Mostrando a última página." e redirect para a
+    última página daquela tabela, mantendo a outra (privado
+    `indexUrl()`), ex.: `/admin/events/page/2?past_page=99` vai para
+    `/admin/events/page/2?past_page=2`;
   - "Próximos" usa o `page` e a rota de sempre
     (`admin.events.paginate`, `/admin/events/page/{page}`);
     "Passados" usa `past_page` na query string de
@@ -67,15 +75,20 @@ Branch no clone: `fvp/n15-dois-paginadores`, a partir de `main`
     `paginatePast` (hoje não entra, mais recente primeiro); passados
     vazio; `pageParam` padrão `page`; `pageParam` próprio com
     `routeParams`; operador inválido lança exceção.
-  - `EventsControllerTest` (+8, 3 do data provider): as duas tabelas
-    paginam separadas; `past_page=2` não mexe em "Próximos" e os links
-    de "Próximos" levam `?past_page=2`; as duas na página 2 (link
-    `/admin/events?page=2&amp;past_page=1`); vazias de cada lado;
-    `past_page` 0, -3 e `abc` caem na página 1.
-  - `TwoPaginatorsCest` (novo, 2): move os Eventos 01 a 07 para o
+  - `EventsControllerTest` (+19, 10 do data provider): as duas
+    tabelas paginam separadas; `past_page=2` não mexe em "Próximos" e
+    os links de "Próximos" levam `?past_page=2`; as duas na página 2
+    (link `/admin/events?page=2&amp;past_page=1`); vazias de cada
+    lado; páginas inválidas (data provider) redirecionam com "Página
+    inválida!"; `'2'` como string é aceita; página depois da última
+    em "Passados" e em "Próximos" vai para a última mantendo a outra;
+    `past_page=2` sem passados vai para `/admin/events`.
+  - `TwoPaginatorsCest` (novo, 3): move os Eventos 01 a 07 para o
     passado, pagina "Passados", depois "Próximos", depois volta em
     "Passados", conferindo URL e linhas das duas tabelas a cada
-    clique; sem passados, uma paginação só.
+    clique; `?past_page=99` (vai para a última com o aviso) e
+    `?past_page=abc` ("Página inválida!"); sem passados, uma
+    paginação só.
   - `CreateSuccessfullyCest`: o Evento novo (amanhã) agora é a 1ª
     linha de "Próximos" ("Mostrando 1 - 5 de 17"), e não a página 4.
 
@@ -108,6 +121,15 @@ Branch no clone: `fvp/n15-dois-paginadores`, a partir de `main`
   `<table>` no `index.phtml` também funciona, com o dobro de código.
 - `htmlspecialchars` no `href`: com dois parâmetros na query string o
   link leva `&`, que vira `&amp;` no HTML.
+- Página inválida com flash + redirect, sem `(int)` às cegas:
+  `(int) 'abc'` é 0 e `(int) '2abc'` é 2, e o `max(1, ...)`
+  esconderia o erro mostrando a página 1. Mesma regra do N10
+  (`n10-pagina-id-invalido`), aplicada aos dois parâmetros.
+- Página depois da última vai para a última (não para a 1), sem
+  perder a página da outra tabela. Sem isso, `?past_page=99` mostra
+  "Nenhum evento passado." e nenhuma paginação para voltar (o
+  `_table.phtml` só desenha a tabela e a paginação se houver
+  registros).
 
 ## Como verificar
 
@@ -121,7 +143,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 165, Integration 53, Acceptance 25 (base:
+Resultado obtido: Unit 165, Integration 64, Acceptance 26 (base:
 159 / 45 / 23). PHPCS e PHPStan sem erros. Schema não mudou.
 
 Na tela: o populate só tem Eventos futuros. "Próximos" mostra 5 de 16
@@ -168,6 +190,12 @@ de "Próximos" aponta para `/admin/events/page/2?past_page=2`. Depois,
   comparações na mesma coluna; para período, use o `ranges` do N9.
 - N4 (`n4-per-page`): se o usuário escolhe o tamanho, ponha
   `per_page` em `routeParams` dos dois paginadores.
+- N10 (`n10-pagina-id-invalido`): mesma validação de página
+  (`ctype_digit`, flash + redirect), só para `page`, e
+  `Paginator::isOutOfRange()`. Juntos, fique com um helper só para
+  ler página (o N10 chama de `positiveInt`) e use-o nos dois
+  parâmetros; o "depois da última" daqui precisa manter a página da
+  outra tabela no redirect.
 
 ## Como aplicar em outro repositório (cherry-pick)
 
@@ -187,7 +215,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-n15 \
     s50/fvp/4.2/exemplos/n15-dois-paginadores/projeto
 git fetch fvp-n15 fvp/n15-dois-paginadores
-git cherry-pick d8d1dc6
+git cherry-pick ec15dda
 git remote remove fvp-n15
 ```
 
@@ -198,7 +226,7 @@ git fetch \
     s50/fvp/4.2/exemplos/n15-dois-paginadores/solucao.bundle \
     fvp/n15-dois-paginadores:fvp-n15
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick d8d1dc6
+git cherry-pick ec15dda
 # opcional, limpa a ref
 git branch -D fvp-n15
 ```
@@ -273,6 +301,12 @@ mudança de schema).
 - Operador ou `orderBy` vindo da requisição: vira injeção de SQL. Só
   texto fixo do model.
 - `&` cru no `href`: use `htmlspecialchars` no link.
+- `max(1, (int) $request->getParam('past_page'))`: `abc` vira página
+  1 em silêncio e `2abc` vira 2. Valide com `ctype_digit`.
+- Página fora do intervalo (`?past_page=99`): sem tratamento, a
+  tabela some ("Nenhum evento passado.") junto com a paginação, e o
+  usuário não tem link para voltar. Redirecione para a última página
+  (ou trate como no N10).
 - Criar Evento passado com `save()` nos testes: a validação recusa.
   Use `update()` depois de criar (não valida).
 - `static::paginateByStartsOn()` num método `private`: o PHPStan acusa

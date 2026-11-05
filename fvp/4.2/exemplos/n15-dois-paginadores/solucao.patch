@@ -1,4 +1,4 @@
-From d8d1dc62379fa9054ef8b194b1f428d3e989742e Mon Sep 17 00:00:00 2001
+From ec15dda0ef13863687333b1168309fe32b59aa77 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:33:51 -0300
 Subject: [PATCH] feat: Paginate upcoming and past events in two tables
@@ -6,25 +6,25 @@ Subject: [PATCH] feat: Paginate upcoming and past events in two tables
 The Paginator takes an optional page param name, fixed route params,
 comparisons and order, so two paginators can share the same screen.
 ---
- app/Controllers/Admin/EventsController.php    |  33 ++++-
- app/Models/Event.php                          |  61 ++++++++
- app/views/admin/events/_table.phtml           |  47 +++++++
- app/views/admin/events/index.phtml            |  52 +++----
+ app/Controllers/Admin/EventsController.php    |  75 +++++++-
+ app/Models/Event.php                          |  61 ++++++
+ app/views/admin/events/_table.phtml           |  47 +++++
+ app/views/admin/events/index.phtml            |  52 ++---
  app/views/paginator/_pages.phtml              |  11 +-
- lib/Paginator.php                             |  57 ++++++--
+ lib/Paginator.php                             |  57 +++++-
  .../admin/events/CreateSuccessfullyCest.php   |   8 +-
- .../admin/events/TwoPaginatorsCest.php        |  83 +++++++++++
- .../Admin/EventsControllerTest.php            | 131 ++++++++++++++++++
- tests/Unit/Models/Events/EventTest.php        | 108 +++++++++++++++
- 10 files changed, 534 insertions(+), 57 deletions(-)
+ .../admin/events/TwoPaginatorsCest.php        | 102 ++++++++++
+ .../Admin/EventsControllerTest.php            | 182 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 108 +++++++++++
+ 10 files changed, 646 insertions(+), 57 deletions(-)
  create mode 100644 app/views/admin/events/_table.phtml
  create mode 100644 tests/Acceptance/admin/events/TwoPaginatorsCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
-index ca4ada1..0cb3086 100644
+index ca4ada1..232bf68 100644
 --- a/app/Controllers/Admin/EventsController.php
 +++ b/app/Controllers/Admin/EventsController.php
-@@ -11,19 +11,34 @@ class EventsController extends Controller
+@@ -11,19 +11,48 @@ class EventsController extends Controller
  {
      private const PER_PAGE = 5;
  
@@ -41,6 +41,11 @@ index ca4ada1..0cb3086 100644
 +        // e os links de uma repetem a página atual da outra (página 1 fica fora da URL).
 +        $page = $this->pageNumber($request, 'page');
 +        $pastPage = $this->pageNumber($request, self::PAST_PAGE_PARAM);
++        if ($page === null || $pastPage === null) {
++            FlashMessage::danger('Página inválida!');
++            $this->redirectTo(route('admin.events.index'));
++            return;
++        }
 +
 +        $upcoming = Event::paginateUpcoming(
 +            page: $page,
@@ -48,15 +53,24 @@ index ca4ada1..0cb3086 100644
 -            route: 'admin.events.paginate'
 +            route: 'admin.events.paginate',
 +            routeParams: $pastPage > 1 ? [self::PAST_PAGE_PARAM => $pastPage] : []
-+        );
+         );
+-        $events = $paginator->registers();
 +        $past = Event::paginatePast(
 +            page: $pastPage,
 +            per_page: self::PER_PAGE,
 +            route: 'admin.events.index',
 +            pageParam: self::PAST_PAGE_PARAM,
 +            routeParams: $page > 1 ? ['page' => $page] : []
-         );
--        $events = $paginator->registers();
++        );
++
++        // Página depois da última (em qualquer tabela): vai para a última, mantendo a outra.
++        $lastPage = max(1, $upcoming->totalOfPages());
++        $lastPastPage = max(1, $past->totalOfPages());
++        if ($page > $lastPage || $pastPage > $lastPastPage) {
++            FlashMessage::danger('Página inexistente! Mostrando a última página.');
++            $this->redirectTo($this->indexUrl(min($page, $lastPage), min($pastPage, $lastPastPage)));
++            return;
++        }
  
          $title = 'Eventos';
 -        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
@@ -64,16 +78,44 @@ index ca4ada1..0cb3086 100644
      }
  
      public function show(Request $request): void
-@@ -110,6 +125,14 @@ class EventsController extends Controller
+@@ -110,6 +139,42 @@ class EventsController extends Controller
          $this->redirectTo(route('admin.events.index'));
      }
  
 +    /**
-+     * Número de página lido do parâmetro informado; ausente, zero ou negativo vira 1.
++     * Número de página lido do parâmetro informado: ausente vira 1; inválido devolve null.
++     *
++     * Aceita só dígitos (ctype_digit), sem zero à esquerda nem estouro, e >= 1. Nada de
++     * (int) às cegas: (int) 'abc' é 0 e (int) '2abc' é 2. Aceita int porque os testes de
++     * controller passam ['page' => 2].
 +     */
-+    private function pageNumber(Request $request, string $param): int
++    private function pageNumber(Request $request, string $param): ?int
 +    {
-+        return max(1, (int) $request->getParam($param, 1));
++        $value = $request->getParam($param, '1');
++
++        if (is_int($value)) {
++            return $value >= 1 ? $value : null;
++        }
++
++        if (!is_string($value) || !ctype_digit($value) || $value !== (string) (int) $value) {
++            return null;
++        }
++
++        return (int) $value >= 1 ? (int) $value : null;
++    }
++
++    /**
++     * URL do index com as duas páginas; página 1 fica fora da URL.
++     */
++    private function indexUrl(int $page, int $pastPage): string
++    {
++        $params = $pastPage > 1 ? [self::PAST_PAGE_PARAM => $pastPage] : [];
++
++        if ($page > 1) {
++            return route('admin.events.paginate', ['page' => $page] + $params);
++        }
++
++        return route('admin.events.index', $params);
 +    }
 +
      /**
@@ -451,10 +493,10 @@ index f051af8..7132e51 100644
          Assert::assertEquals($this->admin->id, $event->user_id);
 diff --git a/tests/Acceptance/admin/events/TwoPaginatorsCest.php b/tests/Acceptance/admin/events/TwoPaginatorsCest.php
 new file mode 100644
-index 0000000..a11ffe0
+index 0000000..5794453
 --- /dev/null
 +++ b/tests/Acceptance/admin/events/TwoPaginatorsCest.php
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,102 @@
 +<?php
 +
 +namespace Tests\Acceptance\admin\events;
@@ -526,6 +568,25 @@ index 0000000..a11ffe0
 +        $this->seeRows($page, self::UPCOMING, 13, 16);
 +    }
 +
++    public function invalidOrNonexistentPastPage(AcceptanceTester $page): void
++    {
++        $page->wantTo('Abrir Passados com página inválida ou depois da última');
++        $this->movePastEvents();
++
++        // Depois da última: vai para a última de Passados, mantendo a página de Próximos.
++        $page->amOnPage('/admin/events/page/2?past_page=99');
++        $page->seeCurrentUrlEquals('/admin/events/page/2?past_page=2');
++        $page->see('Página inexistente! Mostrando a última página.');
++        $this->seeRows($page, self::PAST, 6, 7);
++        $this->seeRows($page, self::UPCOMING, 13, 16);
++
++        // Inválida: volta à listagem sem parâmetros.
++        $page->amOnPage('/admin/events?past_page=abc');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Página inválida!');
++        $this->seeRows($page, self::PAST, 1, 5);
++    }
++
 +    public function noPastEventsShowsEmptyMessage(AcceptanceTester $page): void
 +    {
 +        $page->wantTo('Ver a tabela de Passados vazia quando todos os Eventos são futuros');
@@ -539,7 +600,7 @@ index 0000000..a11ffe0
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..a40cdb3 100644
+index bc62d1d..2d83722 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -6,6 +6,7 @@ use App\Models\Enrollment;
@@ -550,7 +611,7 @@ index bc62d1d..a40cdb3 100644
  use Tests\Integration\Controllers\ControllerTestCase;
  
  class EventsControllerTest extends ControllerTestCase
-@@ -67,6 +68,136 @@ class EventsControllerTest extends ControllerTestCase
+@@ -67,6 +68,187 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertStringContainsString('1/10', $response);
      }
  
@@ -661,27 +722,78 @@ index bc62d1d..a40cdb3 100644
 +    }
 +
 +    /**
-+     * @return array<string, array{0: mixed}>
++     * @return array<string, array{0: string, 1: mixed}>
 +     */
-+    public static function invalidPastPages(): array
++    public static function invalidPages(): array
 +    {
 +        return [
-+            'zero' => [0],
-+            'negativa' => [-3],
-+            'texto' => ['abc'],
++            'past_page texto' => ['past_page', 'abc'],
++            'past_page dígito e texto' => ['past_page', '2abc'],
++            'past_page zero' => ['past_page', '0'],
++            'past_page negativa' => ['past_page', '-1'],
++            'past_page zero à esquerda' => ['past_page', '02'],
++            'past_page decimal' => ['past_page', '1.5'],
++            'past_page estouro' => ['past_page', '99999999999999999999'],
++            'past_page array' => ['past_page', ['2']],
++            'past_page int zero' => ['past_page', 0],
++            'page texto' => ['page', 'abc'],
 +        ];
 +    }
 +
-+    #[DataProvider('invalidPastPages')]
-+    public function test_index_invalid_past_page_falls_back_to_first_page(mixed $pastPage): void
++    #[DataProvider('invalidPages')]
++    public function test_index_invalid_page_redirects_with_flash(string $param, mixed $value): void
 +    {
 +        $this->createUpcomingAndPastEvents();
 +
-+        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => $pastPage]);
-+        $past = $this->section($response, 'past-events');
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: [$param => $value]);
 +
-+        $this->assertStringContainsString('Passado 1', $past);
-+        $this->assertStringNotContainsString('Passado 6', $past);
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Página inválida!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_index_valid_past_page_as_string_is_accepted(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => '2']);
++
++        $this->assertStringContainsString('Passado 6', $this->section($response, 'past-events'));
++    }
++
++    public function test_index_past_page_after_last_redirects_to_last_keeping_upcoming_page(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['page' => 2, 'past_page' => '99']
++        );
++
++        $this->assertSame('Location: /admin/events/page/2?past_page=2', $response);
++        $this->assertEquals('Página inexistente! Mostrando a última página.', $_SESSION['flash']['danger']);
++    }
++
++    public function test_index_past_page_without_past_events_redirects_to_first(): void
++    {
++        $this->createEvent(['title' => 'Só futuro']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => '2']);
++
++        $this->assertSame('Location: /admin/events', $response);
++    }
++
++    public function test_index_upcoming_page_after_last_redirects_keeping_past_page(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['page' => '9', 'past_page' => '2']
++        );
++
++        $this->assertSame('Location: /admin/events/page/2?past_page=2', $response);
 +    }
 +
      public function test_new_renders_form(): void
