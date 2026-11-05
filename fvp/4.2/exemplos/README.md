@@ -289,6 +289,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R11. Anterior/próximo Evento no show
   `r11-anterior-proximo-no-show/`
   - feat: Add previous and next event links to the show page
+- R12. Tela reflete as regras do model
+  `r12-tela-reflete-regras/`
+  - feat: Reflect enrollment rules in the events screens
 - R2. Nome do criador no show/listagem (BelongsTo)
   `r2-nome-do-criador/`
   - feat: Show event creator name in listing and show

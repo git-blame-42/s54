@@ -1,0 +1,260 @@
+From 7505f60abdda7c30e9cb1a55f07e0025c706f9e1 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:38:13 -0300
+Subject: [PATCH] feat: Reflect enrollment rules in the events screens
+
+Hide the Remove button of events with enrollments (Event::isRemovable,
+same rule as safeDestroy) and set the capacity field minimum to the
+enrollments count (Event::minCapacity), with a hint when there are
+enrollments. The server-side rules stay in the model.
+---
+ app/Models/Event.php                          | 18 ++++++++
+ app/views/admin/events/_form.phtml            |  6 ++-
+ app/views/admin/events/index.phtml            | 13 ++++--
+ .../admin/events/DeleteEventCest.php          | 12 +++--
+ .../admin/events/ListEventsCest.php           |  3 +-
+ .../events/UpdateWithInvalidDataCest.php      |  3 ++
+ .../Admin/EventsControllerTest.php            | 45 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 45 +++++++++++++++++++
+ 8 files changed, 132 insertions(+), 13 deletions(-)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..4d0d970 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -144,6 +144,24 @@ class Event extends Model
+         return $this->enrollmentsCount() > 0;
+     }
+ 
++    /**
++     * Mesma regra de safeDestroy(): só Evento salvo e sem Inscrições pode ser removido.
++     * Serve para a tela esconder o Remover; quem barra a remoção continua sendo safeDestroy().
++     */
++    public function isRemovable(): bool
++    {
++        return !$this->newRecord() && !$this->hasEnrollments();
++    }
++
++    /**
++     * Menor capacidade aceita: 1, ou o total de Inscrições se for maior
++     * (mesma regra de validatesCapacityAgainstEnrollments()).
++     */
++    public function minCapacity(): int
++    {
++        return max(1, $this->enrollmentsCount());
++    }
++
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+      * retorna false e registra o motivo em errors('base').
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..c6ac66f 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -83,9 +83,13 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+ 
+     <div class="mb-3">
+         <label for="event_capacity" class="form-label">Vagas</label>
++        <?php $minCapacity = $event->minCapacity(); ?>
+         <input type="number" class="form-control<?= $invalid('capacity') ?>" id="event_capacity" name="event[capacity]"
+-            min="1" value="<?= htmlspecialchars((string) $event->capacity) ?>">
++            min="<?= $minCapacity ?>" value="<?= htmlspecialchars((string) $event->capacity) ?>">
+         <?= $feedback('capacity') ?>
++        <?php if ($event->hasEnrollments()) : ?>
++            <div class="form-text">Mínimo: <?= $minCapacity ?> (total de inscrições).</div>
++        <?php endif; ?>
+     </div>
+ 
+     <button type="submit" class="btn btn-primary">Salvar</button>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..af74c7d 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -27,10 +27,15 @@
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
++                        <?php if ($event->isRemovable()) : ?>
++                            <form class="d-inline" method="post"
++                                action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>">
++                                <input type="hidden" name="_method" value="DELETE">
++                                <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++                            </form>
++                        <?php else : ?>
++                            <span class="small text-body-secondary">Com inscrições</span>
++                        <?php endif; ?>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..2fba0ff 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -32,15 +32,13 @@ class DeleteEventCest extends BaseEventsCest
+         $event = $this->events[1];
+         Assert::assertTrue($event->hasEnrollments());
+ 
+-        $page->wantTo('Remoção do registro (P03: Evento com Inscrições não pode ser removido)');
++        $page->wantTo('Remoção do registro (P03: Evento com Inscrições não mostra Remover)');
+         $page->amOnPage('/admin/events');
+ 
+-        $this->clickRemove($page, 'Evento 01');
+-
+-        $page->seeCurrentUrlEquals('/admin/events');
+-        $page->see('não é possível remover um evento com inscrições (3)!');
+-        $page->dontSee('Evento removido com sucesso!');
+-        $page->see('Eventos', 'h1');
++        // Sem botão na tela; a recusa do servidor a um DELETE direto fica no EventsControllerTest.
++        $page->dontSeeElement($this->rowOf('Evento 01') . "//button[contains(., 'Remover')]");
++        $page->see('Com inscrições', $this->rowOf('Evento 01'));
++        $page->seeElement($this->rowOf('Evento 02') . "//button[contains(., 'Remover')]");
+         $page->see('Evento 01', 'table');
+         Assert::assertNotNull(Event::findById((int) $event->id));
+         Assert::assertSame(3, $event->enrollmentsCount());
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..4c2fa4a 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -29,7 +29,8 @@ class ListEventsCest extends BaseEventsCest
+             $this->assertContains($event->location, $row);
+             $this->assertContains('Ver', $row);
+             $this->assertContains('Editar', $row);
+-            $this->assertContains('Remover', $row);
++            // Eventos com Inscrições (01 e 03) não mostram Remover.
++            $this->assertContains($event->hasEnrollments() ? 'Com inscrições' : 'Remover', $row);
+         }
+ 
+         // Vagas no formato inscritos/capacity: Evento 01 lotado (3/3), Evento 03 com 1 Inscrição, Evento 02 sem.
+diff --git a/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php b/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
+index c35d12e..43cd7ba 100644
+--- a/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
+@@ -67,6 +67,9 @@ class UpdateWithInvalidDataCest extends BaseEventsCest
+         $page->wantTo('Tentativa de atualização com dados incorretos (P02: capacidade menor que as Inscrições)');
+         $page->amOnPage("/admin/events/{$event->id}/edit");
+         $page->seeInField('#event_capacity', '3');
++        // A tela já avisa o mínimo; o novalidate deixa o envio chegar ao model, que recusa.
++        $page->seeElement('#event_capacity[min="3"]');
++        $page->see('Mínimo: 3 (total de inscrições).');
+ 
+         $this->fillEventForm($page, ['capacity' => '2']);
+         $page->click('Salvar');
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..4cea142 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,51 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_index_hides_remove_button_of_event_with_enrollments(): void
++    {
++        $free = $this->createEvent(['title' => 'Sem inscrições']);
++        $taken = $this->createEvent(['title' => 'Com inscritos']);
++        $this->enroll($taken);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        // O link Ver usa href; só o form de Remover usa action.
++        $this->assertStringContainsString("action=\"/admin/events/{$free->id}\"", $response);
++        $this->assertStringNotContainsString("action=\"/admin/events/{$taken->id}\"", $response);
++        $this->assertSame(1, substr_count($response, '>Remover</button>'));
++        $this->assertStringContainsString('Com inscrições', $response);
++    }
++
++    public function test_edit_sets_min_capacity_to_enrollments_count(): void
++    {
++        $event = $this->createEvent(['capacity' => 10]);
++        $this->enroll($event, 'p1@example.com');
++        $this->enroll($event, 'p2@example.com');
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('min="2"', $response);
++        $this->assertStringContainsString('Mínimo: 2 (total de inscrições).', $response);
++    }
++
++    public function test_edit_without_enrollments_keeps_min_one_and_no_hint(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('min="1"', $response);
++        $this->assertStringNotContainsString('Mínimo:', $response);
++    }
++
++    public function test_new_form_has_min_capacity_one(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('min="1"', $response);
++        $this->assertStringNotContainsString('Mínimo:', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..4d388f7 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,51 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    /* ------------------- regras expostas para a tela ------------------- */
++
++    public function test_new_event_should_not_be_removable(): void
++    {
++        $event = new Event($this->params());
++
++        $this->assertFalse($event->isRemovable());
++    }
++
++    public function test_saved_event_without_enrollments_should_be_removable(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertTrue($event->isRemovable());
++    }
++
++    public function test_event_with_enrollments_should_not_be_removable(): void
++    {
++        $event = $this->createEvent();
++        $this->enroll($event, 1);
++
++        $this->assertFalse($event->isRemovable());
++        $this->assertFalse($event->safeDestroy());
++    }
++
++    public function test_min_capacity_should_be_one_without_enrollments(): void
++    {
++        $this->assertSame(1, (new Event($this->params()))->minCapacity());
++        $this->assertSame(1, $this->createEvent()->minCapacity());
++    }
++
++    public function test_min_capacity_should_be_the_enrollments_count(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 3);
++
++        $this->assertSame(3, $event->minCapacity());
++
++        // A capacidade mínima informada é aceita; uma a menos, não.
++        $event->capacity = $event->minCapacity();
++        $this->assertTrue($event->isValid());
++        $event->capacity = $event->minCapacity() - 1;
++        $this->assertFalse($event->isValid());
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+
