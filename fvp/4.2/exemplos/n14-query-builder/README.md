@@ -146,8 +146,13 @@ iria para a página 4.
   array $bindings)` futuro (fora do escopo mínimo).
 - N2 (`n2-busca-por-titulo`): `->where('title', 'LIKE', "%{$q}%")`
   resolve a busca com bind.
-- N15 (`n15-dois-paginadores`): cada tabela pode usar um builder com
-  `where('starts_on', '>=', $hoje)` ou `'<'`.
+- N15 (`n15-dois-paginadores`): o exemplo põe no `Paginator`
+  `comparisons` (`starts_on >= hoje` / `<`) e o mesmo `orderBy` deste
+  cenário, mais `pageParam`/`routeParams`. Com o builder, cada tabela
+  seria `Event::query()->where('starts_on', '>=', $hoje)->orderBy(...)`,
+  mas `paginate()` daqui não repassa `pageParam` nem `routeParams`:
+  ao juntar, acrescente os dois à chamada do `Paginator` no builder e
+  mantenha um só `orderBy`.
 
 ## Como aplicar em outro repositório (cherry-pick)
 
