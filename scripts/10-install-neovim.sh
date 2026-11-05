@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# 10-install-neovim.sh: Neovim (AppImage) + LazyVim + PHP (intelephense).
+# 10-install-neovim.sh: Neovim (AppImage) + a configuração LazyVim da
+# disciplina (scripts/files/nvim: PHP, framework, ./run, snippets).
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-PKGS=(git curl build-essential unzip ripgrep fd-find nodejs npm)
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPTS_DIR/.." && pwd)"
+CFG_SRC="$SCRIPTS_DIR/files/nvim"
+# xclip e wl-clipboard: clipboard do sistema no X11 e no Wayland.
+PKGS=(git curl build-essential unzip ripgrep fd-find nodejs npm xclip
+  wl-clipboard)
 case "$(uname -m)" in
   x86_64)  NVIM_ASSET='nvim-linux-x86_64.appimage' ;;
   aarch64) NVIM_ASSET='nvim-linux-arm64.appimage' ;;
   *)       NVIM_ASSET="" ;;
 esac
 NVIM_URL="https://github.com/neovim/neovim/releases/latest/download/$NVIM_ASSET"
-STARTER_URL='https://github.com/LazyVim/starter'
 NVIM_MIN=0.10                       # LazyVim atual exige >= 0.10
 NVIM_HOME="$HOME/.local/share/nvim-appimage"   # AppImage extraído
 NVIM_BIN="$HOME/.local/bin/nvim"
@@ -30,10 +35,12 @@ uso: $(basename "$0") [-h] [-z]
 
 Instala o Neovim mais recente (AppImage extraído em
 ~/.local/share/nvim-appimage, link em ~/.local/bin/nvim; o apt do
-24.04 traz 0.9, velho demais para o LazyVim), o LazyVim starter em
-~/.config/nvim com o extra de PHP usando intelephense, e deixa
-plugins, LSP e parsers (php, lua) pré-instalados em modo headless.
-Pacotes apt: ${PKGS[*]}.
+24.04 traz 0.9, velho demais para o LazyVim) e copia
+scripts/files/nvim para ~/.config/nvim: LazyVim com intelephense,
+phpcs/phpstan, navegação controller/view/teste/rota, atalhos do
+./run e snippets do framework (veja neovim-dicas.md). Deixa
+plugins (versões do lazy-lock.json), LSP e parsers pré-instalados em
+modo headless. Pacotes apt: ${PKGS[*]}.
 Precisa de php no PATH (scripts/09-install-php.sh), de sudo (apt) e
 de rede. Um nvim >= $NVIM_MIN já presente é usado em vez de baixar;
 um ~/.config/nvim existente é guardado e volta no -z.
@@ -159,29 +166,25 @@ nvim_cmd() { # caminho do nvim a usar
   fi
 }
 
-install_lazyvim() {
-  step "LazyVim starter em ~/.config/nvim"
+# Copia scripts/files/nvim para ~/.config/nvim. O que havia antes vai
+# para o backup (volta no -z). Numa retomada, a cópia anterior (deste
+# script) é trocada por uma nova.
+install_config() {
+  step "Configuração em ~/.config/nvim (scripts/files/nvim)"
+  [[ -s "$CFG_SRC/init.lua" ]] \
+    || die "não achei $CFG_SRC/init.lua; o clone está incompleto?"
   if [[ "$(state_get cfg_preexisting)" == 1 && ! -e "$CFG_BACKUP" ]]; then
     mkdir -p "$S50_STATE_DIR"
     mv "$NVIM_CFG" "$CFG_BACKUP"
     warn "havia ~/.config/nvim; guardado em $CFG_BACKUP (volta no -z)"
   fi
-  if [[ -d "$NVIM_CFG" ]]; then
-    ok "já existe (execução anterior)"
-  else
-    mkdir -p "$HOME/.config"
-    git clone -q --depth 1 "$STARTER_URL" "$NVIM_CFG"
-    rm -rf "$NVIM_CFG/.git"
-    ok "starter clonado"
-  fi
-  mkdir -p "$NVIM_CFG/lua/plugins"
-  cat > "$NVIM_CFG/lua/plugins/php.lua" <<'LUA'
--- PHP com intelephense (o phpactor padrão falhou em ir-para-definição
--- e autocompletar no teste da disciplina).
-vim.g.lazyvim_php_lsp = "intelephense"
-return { { import = "lazyvim.plugins.extras.lang.php" } }
-LUA
-  ok "extra de PHP: lua/plugins/php.lua (intelephense)"
+  rm -rf "$NVIM_CFG"
+  mkdir -p "$HOME/.config"
+  cp -R "$CFG_SRC" "$NVIM_CFG"
+  # Caminho deste repositório, para o <Espaço>? achar o neovim-dicas.md
+  # e o :Fvp achar o fvp.sh (a config é cópia, não sabe de onde veio).
+  printf '%s\n' "$REPO_DIR" > "$NVIM_CFG/s50-repo"
+  ok "copiada; repositório anotado em ~/.config/nvim/s50-repo"
 }
 
 # headless descrição comandos... Falha vira aviso: o nvim refaz ao abrir.
@@ -190,7 +193,8 @@ headless() {
   shift
   nvim="$(nvim_cmd)"
   info "$what"
-  if "$nvim" --headless "$@" +qa </dev/null >/dev/null 2>&1; then
+  if (cd "$HOME" && "$nvim" --headless "$@" +qa) </dev/null >/dev/null 2>&1
+  then
     ok "$what"
   else
     warn "$what: falhou em headless; o nvim tenta de novo ao abrir"
@@ -199,12 +203,13 @@ headless() {
 
 preinstall_plugins() {
   step "Plugins, LSP e parsers (headless; pode levar alguns minutos)"
-  headless "lazy sync (plugins)" "+Lazy! sync"
-  headless "mason: intelephense" \
+  # restore, e não sync: instala os commits do lazy-lock.json.
+  headless "plugins nas versões do lazy-lock.json" "+Lazy! restore"
+  headless "mason: intelephense e tree-sitter-cli" \
     "+Lazy! load mason.nvim mason-lspconfig.nvim" \
-    "+MasonInstall intelephense"
-  headless "treesitter: php e lua" \
-    "+Lazy! load nvim-treesitter" "+TSInstall! php lua" "+sleep 60"
+    "+MasonInstall intelephense tree-sitter-cli"
+  headless "treesitter: php, html, sql e os do LazyVim" \
+    "+lua require('s50.setup').treesitter()"
 }
 
 verify() {
@@ -240,7 +245,7 @@ run() {
   record_preexisting
   install_packages
   install_nvim
-  install_lazyvim
+  install_config
   preinstall_plugins
   verify
   state_mark_done
@@ -267,7 +272,7 @@ undo() {
   case "$(state_get cfg_preexisting)" in
     0)
       rm -rf "$NVIM_CFG"
-      ok "configuração do LazyVim removida de ~/.config/nvim"
+      ok "configuração da disciplina removida de ~/.config/nvim"
       ;;
     1)
       if [[ -e "$CFG_BACKUP" ]]; then

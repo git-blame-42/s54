@@ -204,22 +204,41 @@ cache, o bloco e os pacotes que instalou.
 
 ### 10-install-neovim.sh
 
-Neovim para o terminal, com LazyVim. Precisa de php no PATH (o 09).
-Instala com apt o que falta entre git, curl, build-essential, unzip,
-ripgrep, fd-find, nodejs e npm. O apt do 24.04 traz o Neovim
-0.9, velho demais para o LazyVim; o script baixa o AppImage mais
-recente, extrai em `~/.local/share/nvim-appimage` (sem depender de
-FUSE) e linka em `~/.local/bin/nvim`, com um bloco de PATH em
-`~/.bashrc` e `~/.zshrc`. Um nvim >= 0.10 já presente é usado no
-lugar. Clona o LazyVim starter em `~/.config/nvim` (um `~/.config/nvim`
-que já existia é guardado e volta no `-z`) e adiciona
-`lua/plugins/php.lua` com o extra de PHP usando intelephense (o
-phpactor padrão falhou em definição e autocompletar). Em headless,
-sincroniza os plugins, instala o intelephense pelo mason e compila
-os parsers treesitter de php e lua, para a primeira abertura não
-esperar. O `-z` remove nvim, configuração, `~/.local/share/nvim`,
-`~/.local/state/nvim`, `~/.cache/nvim` e `~/.npm` (só os que não
-existiam antes) e os pacotes que instalou.
+Neovim para o terminal, com LazyVim e a configuração da disciplina.
+Precisa de php no PATH (o 09). Instala com apt o que falta entre git,
+curl, build-essential, unzip, ripgrep, fd-find, nodejs, npm, xclip e
+wl-clipboard (clipboard do sistema no X11 e no Wayland). O apt do
+24.04 traz o Neovim 0.9, velho demais para o LazyVim; o script baixa
+o AppImage mais recente, extrai em `~/.local/share/nvim-appimage` (sem
+depender de FUSE) e linka em `~/.local/bin/nvim`, com um bloco de PATH
+em `~/.bashrc` e `~/.zshrc`. Um nvim >= 0.10 já presente é usado no
+lugar.
+
+Copia `scripts/files/nvim/` para `~/.config/nvim` (um
+`~/.config/nvim` que já existia é guardado e volta no `-z`) e grava
+em `~/.config/nvim/s50-repo` o caminho deste repositório, para o
+`Esp ?` abrir o `neovim-dicas.md` e o `:Fvp` achar o `fvp.sh`. A
+configuração, sobre o LazyVim com o extra de PHP: intelephense (o
+phpactor falhou em definição e autocompletar) com a raiz do projeto
+(pasta com `composer.json` e `./run`); `.phtml` como PHP com HTML
+injetado; `.env`, compose, `phpunit.xml`, `codeception.yml` e
+`phpstan.neon` reconhecidos; `vendor/` fora das buscas e indexado pelo
+intelephense; 4 espaços em PHP (PSR-12; o `.editorconfig` do projeto
+diz 2, ignorado só na indentação de `.php` e `.phtml`) e 2 no resto;
+guia nas colunas 131 (PHP, limite 130 do `phpcs.xml`) e 81
+(Markdown); navegação controller, view, teste, rota e model
+(`Esp m`), busca em `app/`, `core/`, `lib/`, `tests/` (`Esp j`);
+`./run` em terminal flutuante (`Esp t`, `Esp p`, `Esp r`, `:Run`);
+phpcs e phpstan como diagnósticos (nativos, automáticos; pelo
+container só com `Esp p l`); phpcbf ao salvar; snippets `fw*` do
+framework. Detalhes em `neovim-dicas.md`.
+
+Em headless, instala os plugins nos commits do `lazy-lock.json`
+(`:Lazy! restore`), o intelephense e o tree-sitter-cli pelo mason e
+compila os parsers treesitter (php, html, sql e os do LazyVim), para
+a primeira abertura não esperar. O `-z` remove nvim, configuração,
+`~/.local/share/nvim`, `~/.local/state/nvim`, `~/.cache/nvim` e
+`~/.npm` (só os que não existiam antes) e os pacotes que instalou.
 
 ### 11-install-vscode.sh
 

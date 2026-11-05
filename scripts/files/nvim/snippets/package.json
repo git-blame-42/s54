@@ -1,0 +1,9 @@
+{
+  "name": "tsi34d-snippets",
+  "description": "Snippets do framework da disciplina TSI34D (prefixo fw)",
+  "contributes": {
+    "snippets": [
+      { "language": ["php"], "path": "./php.json" }
+    ]
+  }
+}
