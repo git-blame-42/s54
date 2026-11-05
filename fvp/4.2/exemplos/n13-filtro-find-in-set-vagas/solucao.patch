@@ -1,4 +1,4 @@
-From 12e6ca7812c68859b9099da216642a6b678a87ec Mon Sep 17 00:00:00 2001
+From 1c7ab1abcfbb72bba4c4d5e0abcd4db011d86372 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:05:20 -0300
 Subject: [PATCH] feat: Filter events by audience and available spots
@@ -231,14 +231,14 @@ index 0000000..fd7c815
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..f4c1e5e 100644
+index bc62d1d..932c4df 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -56,6 +56,77 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertStringNotContainsString('Evento 5', $page2);
      }
  
-+    /* ------------------- N13: filtros por público e vagas ------------------- */
++    /* ------------------- filtros por público e vagas ------------------- */
 +
 +    public function test_index_shows_the_filter_form(): void
 +    {
@@ -313,14 +313,14 @@ index bc62d1d..f4c1e5e 100644
      {
          $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..4298c2b 100644
+index f961b4c..c434f06 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -385,6 +385,76 @@ class EventTest extends TestCase
          $this->assertFalse(Event::exists(['title' => 'Outro']));
      }
  
-+    /* ------------------- N13: FIND_IN_SET e "só com vagas" ------------------- */
++    /* ------------------- FIND_IN_SET e "só com vagas" ------------------- */
 +
 +    /**
 +     * @param array<int, Event> $events
@@ -351,7 +351,7 @@ index f961b4c..4298c2b 100644
 +
 +    public function test_search_filtered_by_audience_should_not_match_parts_of_a_value(): void
 +    {
-+        // LIKE '%staff%' casaria "staff" dentro de outro texto; FIND_IN_SET compara o item inteiro.
++        // LIKE '%professor%' casaria "professors"; FIND_IN_SET compara o item inteiro da lista.
 +        $this->createEvent(['title' => 'Professores', 'audience' => 'professors']);
 +
 +        $this->assertSame([], Event::searchFiltered('professor', false));

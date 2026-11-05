@@ -13,7 +13,7 @@ Branch no clone: `fvp/n13-filtro-find-in-set-vagas`, a partir de
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
-| `12e6ca7` | `feat: Filter events by audience and available spots`    |
+| `1c7ab1a` | `feat: Filter events by audience and available spots`    |
 
 ## O que mudou
 
@@ -163,7 +163,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-n13 \
     s50/fvp/4.2/exemplos/n13-filtro-find-in-set-vagas/projeto
 git fetch fvp-n13 fvp/n13-filtro-find-in-set-vagas
-git cherry-pick 12e6ca7
+git cherry-pick 1c7ab1a
 git remote remove fvp-n13
 ```
 
@@ -172,7 +172,7 @@ git remote remove fvp-n13
 ```
 D=s50/fvp/4.2/exemplos/n13-filtro-find-in-set-vagas
 git fetch $D/solucao.bundle fvp/n13-filtro-find-in-set-vagas:fvp-n13
-git cherry-pick 12e6ca7
+git cherry-pick 1c7ab1a
 # opcional, limpa a ref
 git branch -D fvp-n13
 ```

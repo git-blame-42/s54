@@ -56,7 +56,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringNotContainsString('Evento 5', $page2);
     }
 
-    /* ------------------- N13: filtros por público e vagas ------------------- */
+    /* ------------------- filtros por público e vagas ------------------- */
 
     public function test_index_shows_the_filter_form(): void
     {

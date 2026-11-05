@@ -385,7 +385,7 @@ class EventTest extends TestCase
         $this->assertFalse(Event::exists(['title' => 'Outro']));
     }
 
-    /* ------------------- N13: FIND_IN_SET e "só com vagas" ------------------- */
+    /* ------------------- FIND_IN_SET e "só com vagas" ------------------- */
 
     /**
      * @param array<int, Event> $events
@@ -416,7 +416,7 @@ class EventTest extends TestCase
 
     public function test_search_filtered_by_audience_should_not_match_parts_of_a_value(): void
     {
-        // LIKE '%staff%' casaria "staff" dentro de outro texto; FIND_IN_SET compara o item inteiro.
+        // LIKE '%professor%' casaria "professors"; FIND_IN_SET compara o item inteiro da lista.
         $this->createEvent(['title' => 'Professores', 'audience' => 'professors']);
 
         $this->assertSame([], Event::searchFiltered('professor', false));
