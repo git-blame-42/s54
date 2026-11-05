@@ -194,6 +194,13 @@ Arquivos que costumam conflitar neste cenário e por quê:
 - `EventsControllerTest.php`: testes novos de outros cenários no mesmo
   ponto do arquivo; fique com os dois. Se outro cenário também
   importar `Lib\FlashMessage`, deixe um `use` só.
+- `tests/Integration/Controllers/Admin/DashboardControllerTest.php`:
+  N6, N7 e N11 também criam esse arquivo (conflito add/add). Junte os
+  testes dos dois lados numa classe só, com um `use` de cada import.
+- `app/views/admin/dashboard/index.phtml`: N6 e N11 acrescentam
+  conteúdo logo abaixo da linha 1 (a saudação). Fique com o conteúdo
+  novo deles e mantenha `htmlspecialchars($this->currentUser()->name)`
+  na saudação.
 
 Depois de aplicar: rode o `./run phpcs` e os testes de novo (não há
 mudança de schema nem classe nova fora de `tests/`).
