@@ -12,21 +12,23 @@ no bundle `5dedab5`, ver README raiz).
 
 Commit:
 
-- `b54d2be` `feat: Respond 404 for unknown events and 422 for invalid
+- `cb47e98` `feat: Respond 404 for unknown events and 422 for invalid
   forms`
 
 ## O que mudou
 
 - `app/Controllers/Admin/EventsController.php`:
   - `eventNotFound()`: no lugar de flash + redirect,
-    `http_response_code(404)` e `render('errors/404', ...)` com
+    `http_response_code(404)` e `render('admin/events/not_found', ...)` com
     `$title = 'Evento não encontrado'`. Vale para `show`, `edit`,
     `update` e `destroy` com id inexistente.
   - `create` e `update` inválidos: `http_response_code(422)` logo
     antes do `render` do formulário (o flash "Existem dados
     incorretos!" e os erros por campo continuam).
-- `app/views/errors/404.phtml` (novo): "O evento procurado não existe
-  ou foi removido." e o botão "Voltar para a lista de eventos".
+- `app/views/admin/events/not_found.phtml` (novo): "O evento procurado
+  não existe ou foi removido." e o botão "Voltar para a lista de
+  eventos". Fica em `admin/events/` (com o layout), e não em
+  `errors/404.phtml`, que é a página sem layout do O11.
 - Testes:
   - `EventsAccessTest` (HTTP real, Guzzle): o antigo
     `test_admin_should_be_redirected_to_index_when_event_does_not_exist`
@@ -36,23 +38,28 @@ Commit:
     `Location`, corpo com "Evento não encontrado"); novos: create
     inválido -> 422 sem gravar; update inválido (`_method=PUT`) -> 422
     com o Evento intacto; create válido continua 302 para o `show`.
-  - `EventsControllerTest`: `test_show_with_unknown_id_redirects_to_index`
-    virou `test_show_with_unknown_id_renders_not_found_page` (página,
-    sem `Location` nem flash); novo teste para `edit`/`update`/
-    `destroy` com id inexistente.
+  - `EventsControllerTest`: `http_response_code(200)` no `setUp`;
+    `test_show_with_unknown_id_redirects_to_index` virou
+    `test_show_with_unknown_id_renders_not_found_page` (404 por
+    `http_response_code()`, página, sem `Location` nem flash); novos:
+    `edit`/`update`/`destroy` com id inexistente (404) e create válido
+    (200); o teste de create inválido passou a conferir o 422.
   - `NotFoundEventCest` (novo): `/admin/events/999999` fica no mesmo
     endereço, mostra o `h1` "Evento não encontrado" e o botão volta à
     listagem.
 
 ## Por que assim
 
-- O teste de controller roda em CLI: lá `http_response_code()` não
-  tem efeito e o teste não vê status. Por isso os status são
-  conferidos por HTTP (`EventsAccessTest`, Guzzle contra o `web`),
-  com `http_errors => false` para o Guzzle não lançar exceção em
-  4xx. O Cest (Selenium) também não lê status: ele confere a página.
-- `http_response_code()` antes do `render`: o `render` imprime; o
-  status tem de ir antes da saída.
+- Status conferido nos dois níveis: por HTTP (`EventsAccessTest`,
+  Guzzle contra o `web`, com `http_errors => false` para o Guzzle não
+  lançar exceção em 4xx), que é o mais fiel, e no teste de controller,
+  onde `http_response_code()` também funciona em CLI (devolve o código
+  definido). Como o status fica no processo do PHPUnit, o `setUp` zera
+  com `http_response_code(200)`. O Cest (Selenium) não lê status: ele
+  confere a página.
+- `http_response_code()` antes do `render`: boa prática. Aqui
+  funcionaria depois também, porque o `ErrorsHandler` segura a saída
+  com `ob_start()`.
 - Página própria em vez de `throw new HTTPException`: o
   `ErrorsHandler` mostraria o stack trace com caminhos do servidor.
 - Um lugar só (`eventNotFound`): as quatro ações já passavam por ele.
@@ -74,7 +81,7 @@ docker compose up -d selenium && sleep 5
 ./run test:browser
 ```
 
-Resultado obtido: Unit 159 testes, Integration 52, Acceptance 24
+Resultado obtido: Unit 159 testes, Integration 53, Acceptance 24
 (base: 159 / 45 / 23). PHPCS e PHPStan sem erros. Sem schema.
 
 Testes novos ou alterados:
@@ -89,6 +96,7 @@ Testes novos ou alterados:
   - `test_show_with_unknown_id_renders_not_found_page` (substitui
     `..._redirects_to_index`)
   - `test_edit_update_and_destroy_with_unknown_id_render_not_found_page`
+  - `test_valid_create_keeps_status_200_in_cli`
 - `NotFoundEventCest::unknownEventShowsNotFoundPage`
 
 Pelo terminal, com cookie de admin (clone sem porta):
@@ -119,6 +127,11 @@ importa.)
   lógica. O flash "Evento não encontrado!" deixa de existir aqui.
 - N10 (`n10-pagina-id-invalido`): id inválido (texto) também pode
   responder 404 pelo mesmo `eventNotFound`.
+- O11 (página 404 amigável, sem stack trace): o O11 cria
+  `app/views/errors/404.phtml` (página sem layout, para rota
+  inexistente). Por isso este cenário usa
+  `admin/events/not_found.phtml`: os dois juntos não colidem no mesmo
+  arquivo.
 - A8 da 4.1: mesma ideia (status corretos) aplicada ao login.
 
 ## Como aplicar em outro repositório (cherry-pick)
@@ -138,7 +151,7 @@ deste cenário no s50: `s50/fvp/4.2/exemplos/o8-status-http`.
 cd /caminho/do/seu/repositorio
 git remote add fvp-o8 s50/fvp/4.2/exemplos/o8-status-http/projeto
 git fetch fvp-o8 fvp/o8-status-http
-git cherry-pick b54d2be
+git cherry-pick cb47e98
 git remote remove fvp-o8
 ```
 
@@ -148,7 +161,7 @@ git remote remove fvp-o8
 git fetch s50/fvp/4.2/exemplos/o8-status-http/solucao.bundle \
     fvp/o8-status-http:fvp-o8
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick b54d2be
+git cherry-pick cb47e98
 # opcional, limpa a ref
 git branch -D fvp-o8
 ```
@@ -187,10 +200,8 @@ Depois de aplicar: rode os testes e o `./run phpcs` (sem schema).
 
 ## Armadilhas
 
-- `http_response_code()` depois do `render`: o status não muda
-  (cabeçalhos já enviados).
-- Testar status no `EventsControllerTest`: em CLI ele não existe; o
-  teste passaria sem testar nada.
+- Testar status no `EventsControllerTest` sem zerar no `setUp`: um
+  teste herda o 404/422 do anterior e passa sem testar nada.
 - Guzzle sem `http_errors => false` lança `ClientException` em 404 e
   422 em vez de devolver a resposta.
 - `throw new HTTPException(...)` para "não encontrado" dá 404, mas com

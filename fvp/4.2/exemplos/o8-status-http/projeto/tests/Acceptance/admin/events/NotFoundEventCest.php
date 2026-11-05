@@ -5,7 +5,7 @@ namespace Tests\Acceptance\admin\events;
 use Tests\Support\AcceptanceTester;
 
 /**
- * O8: Evento inexistente mostra a página "Evento não encontrado" no próprio endereço (404, sem
+ * Evento inexistente mostra a página "Evento não encontrado" no próprio endereço (404, sem
  * redirect). O status é conferido por HTTP em EventsAccessTest; o Selenium não lê status.
  */
 class NotFoundEventCest extends BaseEventsCest

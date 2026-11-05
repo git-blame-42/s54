@@ -140,13 +140,13 @@ class EventsController extends Controller
 
     /**
      * Evento inexistente: responde 404 com uma página própria (sem flash nem redirect).
-     * http_response_code() vem antes do render, que já imprime a página.
+     * O status é definido antes do render (boa prática, mesmo com a saída em buffer).
      */
     private function eventNotFound(): void
     {
         http_response_code(404);
 
         $title = 'Evento não encontrado';
-        $this->render('errors/404', compact('title'));
+        $this->render('admin/events/not_found', compact('title'));
     }
 }

@@ -18,6 +18,8 @@ class EventsControllerTest extends ControllerTestCase
     {
         parent::setUp();
         $_SESSION['flash'] = [];
+        // O status HTTP fica no processo do PHPUnit: zera para um teste não herdar o 404/422 do anterior.
+        http_response_code(200);
 
         $this->admin = new User([
             'name' => 'Admin',
@@ -126,6 +128,7 @@ class EventsControllerTest extends ControllerTestCase
         );
 
         $this->assertCount(0, Event::all());
+        $this->assertSame(422, http_response_code());
         $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
         $this->assertMatchesRegularExpression('/id="event_title"[^>]*is-invalid|is-invalid[^>]*id="event_title"/', $response);
         $this->assertStringContainsString('<div class="invalid-feedback">não pode ser vazio!</div>', $response);
@@ -161,11 +164,14 @@ class EventsControllerTest extends ControllerTestCase
     }
 
     /**
-     * O status 404 só é visível por HTTP (EventsAccessTest); aqui, em CLI, confere-se a página renderizada.
+     * Em CLI, http_response_code() devolve o código definido pelo controller; o teste por HTTP
+     * (EventsAccessTest) confere o mesmo status na resposta real.
      */
     public function test_show_with_unknown_id_renders_not_found_page(): void
     {
         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+
+        $this->assertSame(404, http_response_code());
 
         $this->assertMatchesRegularExpression('/<h1>\s*Evento não encontrado\s*<\/h1>/', $response);
         $this->assertStringContainsString('O evento procurado não existe ou foi removido.', $response);
@@ -183,6 +189,7 @@ class EventsControllerTest extends ControllerTestCase
         );
         $destroy = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => 9999]);
 
+        $this->assertSame(404, http_response_code());
         foreach ([$edit, $update, $destroy] as $response) {
             $this->assertStringContainsString('O evento procurado não existe ou foi removido.', $response);
             $this->assertStringNotContainsString('Location:', $response);
@@ -208,6 +215,13 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertMatchesRegularExpression('/id="event_audience_professors"[^>]*checked/', $response);
         $this->assertMatchesRegularExpression('/id="event_audience_staff"[^>]*checked/', $response);
         $this->assertDoesNotMatchRegularExpression('/id="event_audience_students"[^>]*checked/', $response);
+    }
+
+    public function test_valid_create_keeps_status_200_in_cli(): void
+    {
+        $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $this->validParams()]);
+
+        $this->assertSame(200, http_response_code());
     }
 
     public function test_update_with_valid_data_changes_event(): void

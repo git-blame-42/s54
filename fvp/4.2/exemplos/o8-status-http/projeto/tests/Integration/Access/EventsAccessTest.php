@@ -173,7 +173,7 @@ class EventsAccessTest extends TestCase
     }
 
     /**
-     * O8: Evento inexistente responde 404 (página própria, sem redirect) em todas as rotas com {id}.
+     * Evento inexistente responde 404 (página própria, sem redirect) em todas as rotas com {id}.
      *
      * @return array<string, array{string, string}>
      */
