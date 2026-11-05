@@ -13,8 +13,8 @@ feat: CRUD completo de Eventos"). O método testado é o de P6.
 
 | Commit    | Mensagem                                             |
 |-----------|------------------------------------------------------|
-| `858c551` | (base, P6) `feat: Duplicate an Event from the listing` |
-| `855b213` | `test: Cover Event::duplicate() with unit tests`     |
+| `267afc4` | (base, P6) `feat: Duplicate an Event from the listing` |
+| `1d021c4` | `test: Cover Event::duplicate() with unit tests`     |
 
 ## O que mudou
 
@@ -84,8 +84,8 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 167, Integration 52, Acceptance 24 (com P6:
-159 / 52 / 24; base `main`: 159 / 45 / 23). `--filter duplicate`: 8
+Resultado obtido: Unit 167, Integration 53, Acceptance 24 (com P6:
+159 / 53 / 24; base `main`: 159 / 45 / 23). `--filter duplicate`: 8
 testes, 37 asserções. PHPCS e PHPStan sem erros.
 
 ## Relação com outros cenários
@@ -93,7 +93,7 @@ testes, 37 asserções. PHPCS e PHPStan sem erros.
 - P6 (`p6-duplicar-evento`): base obrigatória (o método testado).
 - A mesma receita serve para o método de qualquer outro cenário:
   `cancel()` (P5), `isEditable()` (Q2), `newCheckinCode()` (P1),
-  `searchByTitle`/`upcoming` (N2, N3). Os exemplos desses cenários já
+  `searchByTitle`/`upcoming` (N2, N5). Os exemplos desses cenários já
   trazem os testes; use-os como modelo.
 - S1/S2: aceitação e acesso por HTTP da mesma modificação.
 
@@ -110,8 +110,8 @@ público. `<caminho>` abaixo é
 Escolha o que aplicar:
 
 - Sem P6 no seu repositório: aplique o range inteiro
-  `f31006b..855b213` (P6 + S3, dois commits, nessa ordem).
-- Com P6 já aplicado: aplique só o topo, `855b213`.
+  `f31006b..1d021c4` (P6 + S3, dois commits, nessa ordem).
+- Com P6 já aplicado: aplique só o topo, `1d021c4`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -121,9 +121,9 @@ git remote add fvp-s3 \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/projeto
 git fetch fvp-s3 fvp/s3-teste-unitario-model
 # range (P6 + S3):
-git cherry-pick f31006b..855b213
+git cherry-pick f31006b..1d021c4
 # ou só o topo, se já tem P6:
-# git cherry-pick 855b213
+# git cherry-pick 1d021c4
 git remote remove fvp-s3
 ```
 
@@ -133,8 +133,8 @@ git remote remove fvp-s3
 git fetch \
     s50/fvp/4.2/exemplos/s3-teste-unitario-model/solucao.bundle \
     fvp/s3-teste-unitario-model:fvp-s3
-git cherry-pick f31006b..855b213
-# ou só o topo: git cherry-pick 855b213
+git cherry-pick f31006b..1d021c4
+# ou só o topo: git cherry-pick 1d021c4
 # opcional, limpa a ref
 git branch -D fvp-s3
 ```

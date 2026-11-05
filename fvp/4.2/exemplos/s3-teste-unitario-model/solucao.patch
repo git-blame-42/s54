@@ -1,4 +1,4 @@
-From 858c5512c6d973f4de15d2cf19561d21fbc79e4f Mon Sep 17 00:00:00 2001
+From 267afc40e703af39542920f7f9c73d1058f19deb Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:20:23 -0300
 Subject: [PATCH 1/2] feat: Duplicate an Event from the listing
@@ -153,7 +153,7 @@ index 0000000..de26b36
 +    }
 +}
 diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
-index 4396d14..b57d1c5 100644
+index 4396d14..42618b0 100644
 --- a/tests/Integration/Access/EventsAccessTest.php
 +++ b/tests/Integration/Access/EventsAccessTest.php
 @@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
@@ -165,8 +165,8 @@ index 4396d14..b57d1c5 100644
       *
       * @return array<string, array{string, string}>
       */
-@@ -106,6 +106,7 @@ class EventsAccessTest extends TestCase
-         return [
+@@ -93,6 +93,7 @@ class EventsAccessTest extends TestCase
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
              'admin.events.update' => ['PUT', '/admin/events/1'],
              'admin.events.destroy' => ['DELETE', '/admin/events/1'],
 +            'admin.events.duplicate' => ['POST', '/admin/events/1/duplicate'],
@@ -264,7 +264,7 @@ index bc62d1d..7e0bd21 100644
 2.54.0 (Apple Git-157)
 
 
-From 855b2136a042bab10cde45f08931c94a0198984f Mon Sep 17 00:00:00 2001
+From 1d021c49157a87a1cc825871b2ad4d7cb1ed200e Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:22:21 -0300
 Subject: [PATCH 2/2] test: Cover Event::duplicate() with unit tests
