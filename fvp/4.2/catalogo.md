@@ -125,6 +125,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M13 | Montagem do Evento no model ou service | média-baixa | 10-20 min |
 | M14 | Contador de visualizações com `update()` | média-baixa | 15-20 min |
 | M15 | Escolher o responsável entre os admins | média-baixa | 20-30 min |
+| M16 | Gancho `beforeValidation` no core (espaços) | baixa | 15-20 min |
 | N1 | Filtro por tipo com `where` na paginação | alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
@@ -138,6 +139,8 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | N11 | `Model::count()` no framework | média | 15-20 min |
 | N12 | Paginação com Primeira/Última e janela | média | 10-20 min |
 | N13 | Filtro fora do `where` (SET, vagas) | média-baixa | 25-35 min |
+| N14 | Query Builder mínimo no core | baixa | 40-60 min |
+| N15 | Dois paginadores na mesma tela | baixa | 25-35 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
@@ -147,6 +150,8 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | O7 | `Route::patch` no core | média-baixa | 15-20 min |
 | O8 | Status HTTP corretos (404, 422) | baixa | 15-20 min |
 | O9 | `_method` só via POST (falha real) | média | 15-20 min |
+| O10 | `Route::resource` ou `Route::prefix` no core | média-baixa | 25-40 min |
+| O11 | Página 404 amigável, sem stack trace | baixa | 20-25 min |
 | P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
 | P2 | Inscrição do Participante em um Evento | média-alta | 30-40 min |
 | P3 | Cancelar a própria inscrição | média | 15-20 min |
@@ -165,6 +170,9 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P16 | Remover só com código de confirmação | média-alta | 30-40 min |
 | P17 | Remover com inscrições, em cascata e confirmado | média | 20-30 min |
 | P18 | Evento privado com código de convite | baixa | 30-40 min |
+| P19 | Remoção em lote | baixa | 25-35 min |
+| P20 | Exportar Evento em iCal (`.ics`) | baixa | 20-25 min |
+| P21 | Imagem de capa do Evento (upload) | baixa | 35-40 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
 | Q3 | Ação só para Participante | média-baixa | 20-30 min |
@@ -189,6 +197,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | T1 | Populate: campo novo, mais Eventos, segundo admin | alta | 5-10 min |
 | T2 | `phpcs`, `phpstan` e CI verdes | alta | 5 min |
 | T3 | README e wiki da feature nova | média-baixa | 10 min |
+| T4 | Itens por página e capacidade no `.env` | média-baixa | 15-20 min |
 
 Chance é estimativa a partir da rubrica, das issues de avaliação de
 2026-2 (4.1 e 4.2), do pedido real da FVP 4.1 e do que falta no
@@ -1077,6 +1086,70 @@ Armadilhas:
 Prova: testes; no navegador, criar Evento para `admin2@` (T1) e ver o
 nome no `show`.
 
+### M16. Gancho `beforeValidation` no core (espaços nas pontas)
+
+Chance: baixa. Tempo: 15-20 min.
+
+Pedido típico: "tire os espaços das pontas antes de validar". Hoje um
+título só com espaços passa: `Validations::notEmpty` só recusa `null` e
+`''` (`VAL:9-17`), e o `fill` copia o texto cru (`EC:116-130`).
+
+Arquivos: `MODEL:103-110` (`isValid`), `MODEL:139-141` (`save` chama
+`isValid`), `MODEL:189-213` (`update` não valida), `EV:60-82`,
+`VAL:9-17`, `EVT`.
+
+Passos:
+
+1. Testes em `EVT`: título `'   '` -> inválido, erro em `title`; título
+   `' Oficina '` -> `save()` grava `'Oficina'` (confira com `findById`).
+   Um caso para `description` e `location`.
+2. `Model`:
+
+   ```php
+   public function isValid(): bool
+   {
+       $this->errors = [];
+       $this->beforeValidation();
+       $this->validates();
+
+       return empty($this->errors);
+   }
+
+   /** Gancho: a subclasse normaliza atributos antes das validações. */
+   protected function beforeValidation(): void
+   {
+   }
+   ```
+
+3. `Event`:
+
+   ```php
+   protected function beforeValidation(): void
+   {
+       foreach (['title', 'description', 'location'] as $field) {
+           if (is_string($this->$field)) {
+               $this->$field = trim($this->$field);
+           }
+       }
+   }
+   ```
+
+Armadilhas:
+
+- `update()` não passa por `isValid` (`MODEL:189`): o gancho vale só
+  para `save()`. Diga isso se o professor perguntar.
+- Só campos de texto livre. Não leve o gancho para o `User` sem pensar
+  na senha (espaço na senha é legítimo).
+- `trim` não tira espaço não separável (U+00A0, comum em texto colado);
+  se o professor testar isso, use `preg_replace('/^\s+|\s+$/u', '', $v)`.
+- Alternativa sem core: `trim` no `fill` (`EC:125`). Funciona, mas é
+  regra no controller; o gancho deixa a regra no model e serve a
+  qualquer model.
+- O gancho altera o objeto mesmo quando a validação falha: o form
+  volta com o valor já aparado (bom, mas saiba explicar).
+
+Prova: `EVT`; no navegador, título "   " mostra "não pode ser vazio!".
+
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
 Chance: alta (`where` é a linha nova da rubrica; manter o filtro na
@@ -1812,6 +1885,113 @@ Armadilhas:
 Prova: testes; no populate, "Servidores" traz 7 Eventos e "só com
 vagas" tira o Evento 1.
 
+### N14. Query Builder mínimo no core
+
+Chance: baixa (mais de 40 min). Tempo: 40-60 min.
+
+Pedido típico: "em vez de SQL à mão no model, faça
+`Event::query()->where(...)->orderBy(...)->paginate(...)`" (aula de
+Builder). Junta N1 (filtro), N3 (ordem) e N13 (condição que não é
+igualdade) numa API só.
+
+Arquivos: `MODEL:284-294` (`paginate` sem condições), `MODEL:300-330`
+(`where` só com `=`; com `[]` gera `WHERE` vazio e erro de SQL),
+`PAG:18-29` (construtor recebe `conditions`), `PAG:104-158`
+(`loadTotals`, `loadRegisters`, `buildConditions`: só `=` e `AND`, sem
+`ORDER BY`), `EC:16-27`.
+
+Passos:
+
+1. Testes do builder sem banco: `toSql()` de
+   `where('kind', 'talk')->where('starts_on', '>=', '2026-11-05')
+   ->orderBy('starts_on')` gera
+   `... WHERE kind = :p0 AND starts_on >= :p1 ORDER BY starts_on ASC`;
+   operador fora da lista e coluna fora de `$columns` lançam
+   `InvalidArgumentException`. Com banco: `get()` devolve na ordem;
+   `paginate` conta só os filtrados.
+2. `core/Database/ActiveRecord/QueryBuilder.php`: guarda classe, tabela,
+   colunas, a lista de condições `[coluna, operador, valor]` e a lista
+   de ordens; métodos `where(string $column, mixed $opOrValue,
+   mixed $value = null): static`, `orderBy(string $column,
+   string $dir = 'ASC'): static`, `get(): array`, `count(): int`,
+   `paginate(int $page, int $perPage, string $route): Paginator`.
+3. `Model::query(): QueryBuilder` com
+   `new QueryBuilder(static::class, static::$table, static::$columns)`.
+4. `Paginator`: parâmetros opcionais `whereSql`, `bindings` e `orderBy`
+   no construtor (`PAG:18-26`), usados em `loadTotals`/`loadRegisters`
+   quando vierem. O caminho atual (`conditions`) fica igual e os testes
+   de paginação seguem verdes.
+5. `EC::index`: `Event::query()->orderBy('starts_on')->orderBy('id')
+   ->paginate(...)`.
+
+Armadilhas:
+
+- Placeholders numerados (`:p0`, `:p1`): a mesma coluna duas vezes
+  (de/até) quebra com `:starts_on`.
+- Coluna e direção não aceitam bind: lista permitida
+  (`in_array($column, ['id', ...static::$columns], true)`, `ASC`/`DESC`),
+  senão é injeção de SQL.
+- Operadores em lista fechada (`=`, `!=`, `<`, `<=`, `>`, `>=`, `LIKE`).
+- `LIMIT`/`OFFSET` com `PDO::PARAM_INT` (`PAG:133-134`).
+- Core com PHPDoc dos arrays
+  (`@var list<array{0: string, 1: string, 2: mixed}>`), phpstan nível 6.
+- O tempo da FVP não comporta tudo: proponha o mínimo (`where` +
+  `orderBy` + `get`) e diga o que ficou de fora.
+
+Prova: testes do builder; listagem ordenada e filtrada pelo builder.
+
+### N15. Dois paginadores na mesma tela
+
+Chance: baixa. Tempo: 25-35 min.
+
+Pedido típico: "na listagem, uma tabela de próximos e outra de passados,
+cada uma com a sua paginação".
+
+Arquivos: `PAG:99-102` (`getRouteName`), `PAGES:6,16,22` (sempre
+`['page' => N]`), `PAG:147-158` (só igualdade: "passado" exige N5),
+`ROUTES:27-28` (`/admin/events/page/{page}`), `core/Router/Router.php:79-103`
+(o que não está na URI vira query string), `EC:16-27`, `IDX`.
+
+Passos:
+
+1. Testes `ECT`: com 7 futuros e 7 passados, `index` com `page=2` e
+   `past_page=1` mostra a página 2 dos futuros e a 1 dos passados; os
+   links da tabela de passados levam o `page` atual junto, e vice-versa.
+2. Consultas: cada lista precisa de `starts_on >= :today` ou `<`, que o
+   `Paginator` não faz (`PAG:147-158`). Use o `Paginator` estendido do
+   N14 ou dois métodos no model com `LIMIT/OFFSET` e `COUNT(*)` próprios
+   (molde N13).
+3. `Paginator`: parâmetros `string $pageParam = 'page'` e
+   `array $keepParams = []` no construtor e um método
+
+   ```php
+   public function linkTo(int $page): string
+   {
+       return route(
+           $this->getRouteName(),
+           [...$this->keepParams, $this->pageParam => $page]
+       );
+   }
+   ```
+
+   `PAGES` passa a usar `$paginator->linkTo(N)` nas três linhas.
+4. `EC::index`: lê `page` e `past_page` (validados como N10), monta os
+   dois paginadores, cada um com o número de página do outro em
+   `keepParams`.
+5. `IDX`: duas tabelas, cada uma com o seu `renderPagesNavigation()`.
+
+Armadilhas:
+
+- A rota `admin.events.paginate` tem `{page}` na URI: `route()` põe
+  `page` no caminho e o resto na query string. O segundo paginador
+  precisa de outro nome (`past_page`), senão um pisa no outro.
+- `entriesInfo()` e "Nenhum evento" por tabela.
+- Página fora do intervalo em uma das listas (N10).
+- `PAGES` serve a qualquer paginador: com `pageParam = 'page'` como
+  padrão, a listagem atual e os testes de paginação ficam iguais.
+
+Prova: `ECT`; no navegador, avançar uma tabela não mexe na outra.
+
 ### O1. Rota RESTful nova com página (lotados)
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -2310,6 +2490,151 @@ Armadilhas:
 
 Prova: `RequestTest`; no navegador logado, abrir
 `/admin/events/16?_method=DELETE` e ver o `show`, não a remoção.
+
+### O10. `Route::resource` ou `Route::prefix` no core
+
+Chance: média-baixa. Tempo: 25-40 min.
+
+Pedido típico: "um atalho que registre as rotas RESTful de uma vez" ou
+"um prefixo `/admin` para o grupo, sem repetir em cada rota" (item de
+framework da rubrica).
+
+Arquivos: `core/Router/Route.php:106-149` (`get/post/put/delete`,
+`middleware`), `core/Router/RouteWrapperMiddleware.php:15-25` (`group`
+conta as rotas antes e depois do callback), `core/Router/Router.php:33-52`
+(`reset`, `addRoute`, `getRouteSize`, `getRoute`), `ROUTES:25-35`,
+`tests/Unit/Core/Router/RouteTest.php`, `RouterTest.php:19-24`
+(`tearDown` zera o singleton por reflexão), `CTC:17-18` (todo teste de
+controller carrega `config/routes.php`), `ACC` (rotas por nome).
+
+Passos (`resource`):
+
+1. Teste em `RouteTest`: depois de
+   `Route::resource('/admin/events', MockController::class, 'admin.events')`,
+   `getRouteSize() === 8`, nomes na ordem `index, paginate, new, create,
+   show, edit, update, destroy`, e
+   `getRoutePathByName('admin.events.edit', ['id' => 3])` devolve
+   `/admin/events/3/edit`. Confira que `new` vem antes de `show`.
+2. `Route.php`:
+
+   ```php
+   /** @var list<array{0: string, 1: string, 2: string, 3: string}> */
+   private const RESOURCE = [
+       ['get', '', 'index', 'index'],
+       ['get', '/page/{page}', 'index', 'paginate'],
+       ['get', '/new', 'new', 'new'],
+       ['post', '', 'create', 'create'],
+       ['get', '/{id}', 'show', 'show'],
+       ['get', '/{id}/edit', 'edit', 'edit'],
+       ['put', '/{id}', 'update', 'update'],
+       ['delete', '/{id}', 'destroy', 'destroy'],
+   ];
+
+   public static function resource(
+       string $uri,
+       string $ctrl,
+       string $name
+   ): void {
+       foreach (self::RESOURCE as [$verb, $suffix, $action, $route]) {
+           self::$verb($uri . $suffix, [$ctrl, $action])
+               ->name("{$name}.{$route}");
+       }
+   }
+   ```
+
+3. `ROUTES:26-35` vira
+   `Route::resource('/admin/events', AdminEventsController::class,
+   'admin.events');` dentro do grupo `admin` (o `group` conta as rotas
+   antes e depois, então o middleware chega a todas).
+4. Rode a suíte inteira: `ACC` e `ECT` provam que nenhum nome nem
+   ordem mudou.
+
+Variante `prefix`: `Route::prefix('/admin')->group(fn () => ...)`. Uma
+classe `RoutePrefix` guarda os prefixos numa pilha estática;
+`get/post/put/delete` concatenam a pilha na URI; `group` empilha, chama
+o callback e desempilha num `finally`. Teste: rota registrada dentro do
+grupo tem URI `/admin/events`; registrada fora, não.
+
+Armadilhas:
+
+- A ordem é o ponto: o Router usa a primeira rota que casa
+  (`Router.php:109-121`); `new` e `page/{page}` antes de `{id}`.
+- Recurso sem alguma ação (sem `destroy`): parâmetro `only`/`except`,
+  ou registre essa rota à mão.
+- Testes novos: `Router::reset()` no `setUp` e no `tearDown`; o
+  singleton vaza entre testes.
+- Nome de parâmetro só com `[a-z,_]` (`Route.php:90`).
+- `Route::patch` não existe (O7); recurso com PATCH exige criá-lo antes.
+- Pilha de prefixo sem `finally`: uma exceção no callback deixa o
+  prefixo grudado nas rotas seguintes.
+- PHPDoc da constante e dos parâmetros (phpstan nível 6).
+
+Prova: `RouteTest`; suíte inteira verde sem mudar nenhum teste.
+
+### O11. Página 404 amigável, sem stack trace fora de development
+
+Chance: baixa. Tempo: 20-25 min.
+
+Pedido típico: "não mostre stack trace ao usuário" ou "URL inexistente
+deve mostrar uma página de não encontrado". Hoje toda exceção imprime
+classe, arquivo, linha e trace (`core/Errors/ErrorsHandler.php:32-45`),
+e a mensagem `URI ... not found.` vai para o `<h1>` sem escape.
+
+Arquivos: `core/Errors/ErrorsHandler.php:14-19` (buffer e handlers),
+`:21-47` (exceção), `:49-86` (warning ou notice -> 500 com
+`debug_print_backtrace`), `config/bootstrap.php:11-12`
+(`ErrorsHandler::init()` roda **antes** de `EnvLoader::init()`),
+`core/Env/EnvLoader.php:9-16` (grava só em `$_ENV`, sem `putenv`),
+`.env.example:1` (`APP_ENV=development`), `docker-compose.yml:66` (só o
+`php_test` define `APP_ENV=testing`), `core/Router/Router.php:122`
+(`HTTPException` 404), `app/views/errors/` (nova).
+
+Passos:
+
+1. Extraia a decisão para um método testável:
+   `ErrorsHandler::viewFor(\Throwable $e, string $env): ?string` devolve
+   `'errors/404'` para `HTTPException` 404, `'errors/500'` para o resto
+   e `null` em `development` (mantém o trace). Testes em
+   `tests/Unit/Core/Errors/ErrorsHandlerTest.php`: 404 e 500 em
+   `production`, qualquer um em `development` -> `null`.
+2. No `exceptionHandler`, depois do `header(...)`:
+
+   ```php
+   $env = $_ENV['APP_ENV'] ?? 'production';
+   $view = self::viewFor($e, $env);
+   if ($view !== null) {
+       require Constants::rootPath()->join("app/views/{$view}.phtml");
+       return;
+   }
+   ```
+
+3. `app/views/errors/404.phtml` e `500.phtml`: HTML completo e simples,
+   sem layout e sem `$this`, com link para `/`.
+4. No `errorHandler`, o mesmo para warnings e notices fora de
+   development.
+5. No navegador: `APP_ENV=production` no `.env` local, abra
+   `/qualquer-coisa` e veja a página 404; volte para `development`.
+
+Armadilhas:
+
+- `getenv('APP_ENV')` devolve `false` no contêiner `php` (o `.env` só
+  vai para `$_ENV`): leia `$_ENV`.
+- Erro antes do `EnvLoader` (`.env` ausente): `$_ENV` vazio; trate como
+  produção, o padrão seguro.
+- Não chame `render()` do `Controller`: precisa de `$title`, layout e
+  sessão, e se a view falhar o handler entra em laço. Inclua HTML
+  simples.
+- `ob_end_clean()` (`:24`) descarta o que já saiu; não imprima nada
+  antes do `header`.
+- A mensagem da exceção traz a URI digitada: se a página a repetir,
+  use `htmlspecialchars`.
+- O contêiner de teste roda em `testing`: decida se `testing` mostra o
+  trace (ajuda a depurar o `ACC`) e diga.
+- "Evento não encontrado" do `EC` é redirect com flash (`EC:137-141`),
+  não 404; status certos são o O8.
+
+Prova: testes do `viewFor`; com `APP_ENV=production`, `/nao-existe`
+mostra a página 404 com status 404 (aba Rede do navegador).
 
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
@@ -3691,6 +4016,156 @@ Armadilhas:
 Prova: testes; no navegador, criar privado, ver o código no `show` do
 admin e inscrever-se como Participante com e sem o código.
 
+### P19. Remoção em lote
+
+Chance: baixa. Tempo: 25-35 min.
+
+Pedido típico: "checkbox em cada linha e um botão Remover selecionados".
+
+Arquivos: `ROUTES:26-35` (rota de coleção `DELETE /admin/events`),
+`IDX:11-34` (tabela; `IDX:30-33` já tem um `<form>` por linha),
+`EV:151-173` (`safeDestroy` por Evento), `FLASH:25-28` (um texto por
+tipo), `EC:96-111`, `ECT:242-265`, `ACC`.
+
+Passos:
+
+1. Testes `ECT`: `ids = [a, b]` sem inscrições -> os dois somem, flash
+   "2 eventos removidos!"; `[a, c]` com `c` inscrito -> `a` some, `c`
+   fica, flash de sucesso e de erro juntos; `ids` vazio, não array,
+   `['x']` ou id inexistente -> nada removido e flash de erro. `ACC`: a
+   rota exige admin.
+2. `ROUTES`: `Route::delete('/admin/events', [AdminEventsController::class,
+   'destroyMany'])->name('admin.events.destroy_many');`. Não colide com
+   `DELETE /admin/events/{id}`: o número de partes é outro.
+3. `EV`: `public static function destroyMany(array $ids): array` com
+   `@param list<string> $ids` e
+   `@return array{removed: int, kept: list<string>}`: para cada id,
+   `findById` e `safeDestroy()`; junta os títulos não removidos.
+4. `EC::destroyMany`: valida `ids` (`is_array`, cada item `is_string` e
+   `ctype_digit`; vazio -> `danger('Selecione ao menos um evento!')`,
+   redirect e `return`), chama o model e monta **um** texto por tipo.
+5. `IDX`: um `<form id="bulk-delete">` fora da tabela (POST com
+   `_method=DELETE`) e checkboxes `name="ids[]" form="bulk-delete"`.
+
+Armadilhas:
+
+- Form dentro de form é HTML inválido, e cada linha já tem um
+  (`IDX:30-33`): use o atributo `form="bulk-delete"` nos checkboxes.
+- `FlashMessage` guarda um texto por tipo (`FLASH:27`): no laço, a
+  segunda mensagem apaga a primeira. Junte antes.
+- Nada de `(int)` em cada id (N10): `'3abc'` não pode virar 3.
+- "Tudo ou nada" é outro pedido: transação na **mesma** conexão (P17;
+  `getDatabaseConn` abre uma conexão nova a cada chamada). O padrão
+  aqui é remover o que pode e avisar o resto; diga qual escolheu.
+- `ids[]` repetidos: `array_unique`.
+
+Prova: testes; no navegador, marcar dois e remover.
+
+### P20. Exportar Evento em iCal (`.ics`)
+
+Chance: baixa. Tempo: 20-25 min.
+
+Pedido típico: "botão Adicionar ao calendário no detalhe do Evento".
+
+Arquivos: `ROUTES:31-32` (rota `GET /admin/events/{id}/ics` junto do
+`show`), `EC:29-39` (`show` como molde), `CTRL:32-55` (`render` e
+`renderJson`; o `.ics` não usa layout), `SHOW:35-36` (botões),
+`CTC:70-84` (o teste captura a saída com `ob_start`), `EV`, `EVT`.
+
+Passos:
+
+1. Testes: `EVT` para `Event::toIcs(): string` (começa com
+   `BEGIN:VCALENDAR`, tem `DTSTART;VALUE=DATE:20261120`, `DTEND` do dia
+   seguinte, `SUMMARY` escapado, termina com `END:VCALENDAR`, linhas
+   separadas por `\r\n`); `ECT`: `ics` devolve o texto; id inexistente
+   redireciona como o `show`.
+2. `EV::toIcs()`: monta as linhas e devolve
+   `implode("\r\n", $lines) . "\r\n"`. `UID` `event-{id}@eventos.local`,
+   `DTSTAMP` em UTC (`gmdate('Ymd\THis\Z')`), texto escapado:
+
+   ```php
+   private static function icsText(string $value): string
+   {
+       return str_replace(
+           ['\\', ';', ',', "\r\n", "\n"],
+           ['\\\\', '\;', '\,', '\n', '\n'],
+           $value
+       );
+   }
+   ```
+
+3. `EC::ics(Request $request)`: `findEvent` com early return;
+   `header('Content-Type: text/calendar; charset=utf-8')`,
+   `header('Content-Disposition: attachment; filename="evento-'
+   . $event->id . '.ics"')` e `echo $event->toIcs();`.
+4. `SHOW`: link "Adicionar ao calendário".
+
+Armadilhas:
+
+- `DTEND` com `VALUE=DATE` é exclusivo: Evento de um dia termina no dia
+  seguinte.
+- Sem `render`: o layout HTML entraria no arquivo.
+- `header()` não é capturado no teste de controller (CLI): teste o
+  corpo; o tipo de conteúdo fica para o teste HTTP ou o navegador.
+- Linha com mais de 75 bytes deve ser dobrada (RFC 5545): descrição
+  longa vai em pedaços com `"\r\n "`, ou fique com título, data e local.
+- Para o Participante (O2), a rota vai no grupo dele, não no `admin`.
+
+Prova: testes; no navegador o arquivo baixa e abre no calendário.
+
+### P21. Imagem de capa do Evento (upload)
+
+Chance: baixa (conteúdo da 4.3). Tempo: 35-40 min.
+
+Pedido típico: "o Evento pode ter uma imagem de capa".
+
+Arquivos: `SCH` (coluna `cover_name VARCHAR(255) NULL`), `EV:48-58`
+(`$columns`), `FORM:16` (form sem `enctype`), `EC:49-94`,
+`core/Http/Request.php` (não expõe `$_FILES`), `php/uploads.ini`
+(40 MB), `public/assets/uploads/` (já existe, com `.gitkeep`), molde
+`ProfileAvatar` do projeto de exemplo da disciplina (problem-track:
+valida extensão e tamanho, move para
+`public/assets/uploads/{tabela}/{id}/` e grava o nome com `update()`),
+`SHOW`.
+
+Passos:
+
+1. Testes do serviço (`tests/Unit/Services/EventCoverTest.php`) com
+   arquivo temporário; `move_uploaded_file` isolado num método
+   `protected` que o teste sobrescreve. Casos: extensão inválida,
+   tamanho acima do limite, sem arquivo (`UPLOAD_ERR_NO_FILE`) mantém a
+   capa atual.
+2. `SCH`, `EV::$columns` e T1 (populate sem capa).
+3. `app/Services/EventCover.php`: validações
+   `['extension' => ['jpg', 'png'], 'size' => 2 * 1024 * 1024]`, nome
+   gerado `cover.<ext>`, `path()` com imagem padrão.
+4. `Request::getFile(string $key): ?array` (core, com teste), em vez de
+   ler `$_FILES` no controller.
+5. `FORM:16`: `enctype="multipart/form-data"`;
+   `<input type="file" name="event_cover">` fora de `event[]`.
+6. `EC::create`/`update`: depois do `save()` com sucesso (a pasta usa o
+   `id`), `$event->cover()->update($file)`; erro de capa vira flash de
+   aviso, o Evento continua salvo.
+7. `SHOW`: `<img src="<?= htmlspecialchars($event->cover()->path()) ?>">`.
+
+Armadilhas:
+
+- O molde confia na extensão do nome: confira também o tipo real
+  (`getimagesize` ou `finfo_file`).
+- `error !== UPLOAD_ERR_OK` primeiro; sem arquivo no editar, mantenha a
+  capa.
+- O `id` só existe depois do `INSERT`: no create, salve o Evento e
+  depois a capa.
+- O nome gravado é gerado, nunca o original do usuário; `update()` não
+  valida (`MODEL:189`).
+- Remover o Evento deve apagar a pasta (`safeDestroy`).
+- `post_max_size` estourado esvazia `$_POST` inteiro: o form volta
+  vazio, sem erro claro.
+- Arquivos enviados no `.gitignore` (a base já ignora o conteúdo de
+  `uploads`, mantendo a pasta).
+
+Prova: testes; no navegador, enviar uma imagem e vê-la no `show`.
+
 ### Q1. Só o dono edita e remove
 
 Chance: média-alta. Tempo: 20-30 min.
@@ -4904,6 +5379,72 @@ Armadilhas:
 - Linha > 130 colunas: `phpcs` falha; quebre.
 - Código comentado e `use` sem uso: `phpcs` não pega tudo; revise.
 
+### T4. Itens por página e capacidade máxima no `.env`
+
+Chance: média-baixa. Tempo: 15-20 min.
+
+Pedido típico: "o número de itens por página não pode ficar fixo no
+código" ou "a capacidade máxima vem da configuração".
+
+Arquivos: `core/Env/EnvLoader.php:9-16` (lê `.env` com
+`parse_ini_file` e grava em `$_ENV`, preferindo `getenv()` quando a
+variável já existe no processo), `config/bootstrap.php:12`,
+`.env.example` (o CI copia para `.env`:
+`.github/workflows/ci.yml:19,54,81`), `EC:12,20` (`PER_PAGE`),
+`phpunit.xml:6-13` (`<env>` dos testes PHPUnit),
+`docker-compose.yml:65-71` (ambiente do `php_test`), `PAG:114` (divide
+por `per_page`), `ECT:39-57`.
+
+Passos:
+
+1. Testes `ECT`: sem a chave, `index` lista 5; com
+   `$_ENV['EVENTS_PER_PAGE'] = '10'` (e `unset` no `tearDown`), lista
+   10; com `'0'`, `'abc'` ou `'500'`, volta a 5. `EVT`: com
+   `MAX_CAPACITY = '100'`, capacidade 101 é inválida.
+2. `.env.example` (e o `.env` local): `EVENTS_PER_PAGE=5` e
+   `MAX_CAPACITY=1000`.
+3. Leitura num só lugar, `lib/Config.php`:
+
+   ```php
+   public static function int(
+       string $key,
+       int $default,
+       int $min,
+       int $max
+   ): int {
+       $value = $_ENV[$key] ?? null;
+       if (!is_string($value) || !ctype_digit($value)) {
+           return $default;
+       }
+       $number = (int) $value;
+
+       return ($number >= $min && $number <= $max) ? $number : $default;
+   }
+   ```
+
+4. `EC::index`: `per_page: Config::int('EVENTS_PER_PAGE', 5, 1, 100)`.
+   `EV::validates()`: `integerMax` (M2) com
+   `Config::int('MAX_CAPACITY', 1000, 1, 100000)`.
+
+Armadilhas:
+
+- Valor do `.env` é string (`""` para chave vazia); `"0"` faz
+  `PAG:114` dividir por zero. Valide e use o padrão.
+- Os testes PHPUnit não rodam o `EnvLoader`: `$_ENV` só tem o que está
+  no `phpunit.xml`, e sem a chave vale o padrão. O teste HTTP passa pelo
+  `bootstrap` no `php_test` e lê o `.env` do projeto (no CI, a cópia do
+  `.env.example`).
+- `getenv()` não enxerga o que veio do `.env` (`EnvLoader` não faz
+  `putenv`): leia `$_ENV`.
+- Nunca commite o `.env`, só o `.env.example`; quem já tem `.env`
+  precisa acrescentar a chave.
+- O `(int)` vem depois do `ctype_digit`: não é conversão silenciosa.
+- `lib/` fica fora do phpstan, mas tipe tudo mesmo assim.
+
+Prova: testes; trocar `EVENTS_PER_PAGE=3` no `.env` e ver 3 por página
+no navegador, sem reiniciar o contêiner (o `.env` é lido a cada
+requisição).
+
 ## 6. Armadilhas gerais do CRUD de Eventos
 
 - `Model::save()` grava **todas** as colunas de `$columns`
@@ -4920,7 +5461,15 @@ Armadilhas:
 - O partial de paginação só enxerga `$paginator` e `$this`
   (`PAG:93-97`). Variável fora do `compact` na view: warning -> 500
   (`core/Errors/ErrorsHandler.php`).
-- `PUT`/`DELETE` só com `_method` no POST (`core/Http/Request.php:18`).
+- `PUT`/`DELETE` vêm do `_method` lido de `$_REQUEST`
+  (`core/Http/Request.php:18`): até `GET ...?_method=DELETE` vira
+  `DELETE` (O9).
+- Parâmetro de rota só com `{[a-z,_]+}` (`core/Router/Route.php:90`):
+  `{eventId}` ou `{event2}` viram texto literal e a rota dá 404 sem
+  erro. Use `{event_id}` em rotas aninhadas (P13, O7, O10).
+- `Database::getDatabaseConn()` abre um PDO novo a cada chamada
+  (`core/Database/Database.php:10-22`): transação só vale para os
+  comandos feitos no mesmo `$pdo` (P17, P19).
 - Rota fixa (`new`, `full`, `export`) sempre antes de `{id}`
   (`ROUTES:29-31`); o teste de controller não pega a ordem errada, o
   teste HTTP pega.
