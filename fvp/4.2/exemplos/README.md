@@ -138,6 +138,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - S4. Testes de borda pedidos pelo professor
   `s4-testes-de-borda/`
   - test: Add edge case tests for events
+- T1. Populate: campo novo, mais Eventos, segundo admin
+  `t1-populate-campo-eventos-admin/`
+  - chore: Add second admin and more events to the populate
 - T2. `phpcs`, `phpstan` e CI verdes
   `t2-phpcs-phpstan-verdes/`
   - (sem código; só README)
