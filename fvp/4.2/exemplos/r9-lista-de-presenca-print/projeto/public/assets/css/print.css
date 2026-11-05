@@ -1,0 +1,60 @@
+/* Layout de impressão (lista de presença): sem navbar, preto no branco. */
+body.print-layout {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #fff;
+  margin: 2rem;
+}
+
+.print-layout h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.print-layout h2 {
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
+}
+
+.actions {
+  margin: 1rem 0;
+}
+
+table.attendance {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.attendance th,
+table.attendance td {
+  border: 1px solid #000;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+table.attendance td {
+  height: 2rem;
+}
+
+table.attendance .number {
+  width: 2.5rem;
+  text-align: center;
+}
+
+table.attendance .signature {
+  width: 35%;
+}
+
+@media print {
+  body.print-layout {
+    margin: 0;
+  }
+
+  .no-print {
+    display: none;
+  }
+
+  table.attendance tr {
+    page-break-inside: avoid;
+  }
+}

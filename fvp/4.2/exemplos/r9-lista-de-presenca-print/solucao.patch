@@ -1,0 +1,483 @@
+From 311753e3ba47482b46582c6fb8943f1c1592e9ff Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:58:09 -0300
+Subject: [PATCH] feat: Add printable attendance list with its own layout
+
+---
+ app/Controllers/Admin/EventsController.php    | 18 ++++++
+ app/Models/Event.php                          | 29 +++++++++
+ app/views/admin/events/attendance.phtml       | 46 ++++++++++++++
+ app/views/admin/events/show.phtml             |  1 +
+ app/views/layouts/print.phtml                 | 21 +++++++
+ config/routes.php                             |  2 +
+ public/assets/css/print.css                   | 60 +++++++++++++++++++
+ public/assets/js/print.js                     | 10 ++++
+ .../admin/events/AttendanceListCest.php       | 53 ++++++++++++++++
+ tests/Integration/Access/EventsAccessTest.php | 12 +++-
+ .../Admin/EventsControllerTest.php            | 52 ++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 25 ++++++++
+ 12 files changed, 328 insertions(+), 1 deletion(-)
+ create mode 100644 app/views/admin/events/attendance.phtml
+ create mode 100644 app/views/layouts/print.phtml
+ create mode 100644 public/assets/css/print.css
+ create mode 100644 public/assets/js/print.js
+ create mode 100644 tests/Acceptance/admin/events/AttendanceListCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..f608e06 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -62,6 +62,24 @@ class EventsController extends Controller
+         }
+     }
+ 
++    /**
++     * Lista de presença para imprimir: inscritos com coluna de assinatura, no layout `print` (sem navbar).
++     */
++    public function attendance(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        $participants = $event->participants();
++
++        $title = 'Lista de presença';
++        $this->layout = 'print';
++        $this->render('admin/events/attendance', compact('event', 'participants', 'title'));
++    }
++
+     public function edit(Request $request): void
+     {
+         $event = $this->findEvent($request);
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..b198b80 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,8 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use PDO;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -119,6 +121,33 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    /**
++     * Participantes inscritos neste Evento, em ordem alfabética (lista de presença).
++     * Uma consulta só (JOIN com a pivô event_user), sem N+1.
++     *
++     * @return array<int, User>
++     */
++    public function participants(): array
++    {
++        if ($this->newRecord()) {
++            return [];
++        }
++
++        $sql = <<<SQL
++            SELECT users.id, users.name, users.email, users.role
++            FROM users
++            INNER JOIN event_user ON event_user.user_id = users.id
++            WHERE event_user.event_id = :event_id
++            ORDER BY users.name, users.id
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':event_id', $this->id, PDO::PARAM_INT);
++        $stmt->execute();
++
++        return array_map(fn(array $row) => new User($row), $stmt->fetchAll(PDO::FETCH_ASSOC));
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/events/attendance.phtml b/app/views/admin/events/attendance.phtml
+new file mode 100644
+index 0000000..d7761e2
+--- /dev/null
++++ b/app/views/admin/events/attendance.phtml
+@@ -0,0 +1,46 @@
++<?php
++/**
++ * @var \App\Models\Event $event
++ * @var array<int, \App\Models\User> $participants
++ */
++?>
++<section class="event-info">
++    <h2><?= htmlspecialchars($event->title) ?></h2>
++    <p>
++        <strong>Data:</strong> <?= date('d/m/Y', strtotime($event->starts_on)) ?>
++        &nbsp;|&nbsp;
++        <strong>Local:</strong> <?= htmlspecialchars((string) $event->location) ?>
++        &nbsp;|&nbsp;
++        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= (int) $event->capacity ?>
++    </p>
++</section>
++
++<div class="no-print actions">
++    <button type="button" id="print_button">Imprimir</button>
++    <a href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Voltar</a>
++</div>
++
++<?php if (empty($participants)) : ?>
++    <p>Nenhum inscrito neste evento.</p>
++<?php else : ?>
++    <table class="attendance">
++        <thead>
++            <tr>
++                <th class="number">#</th>
++                <th>Nome</th>
++                <th>E-mail</th>
++                <th class="signature">Assinatura</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($participants as $index => $participant) : ?>
++                <tr>
++                    <td class="number"><?= $index + 1 ?></td>
++                    <td><?= htmlspecialchars($participant->name) ?></td>
++                    <td><?= htmlspecialchars($participant->email) ?></td>
++                    <td class="signature"></td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++<?php endif; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..f3923c7 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -33,4 +33,5 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<a class="btn btn-outline-secondary" href="<?= route('admin.events.attendance', ['id' => $event->id]) ?>">Lista de presença</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/app/views/layouts/print.phtml b/app/views/layouts/print.phtml
+new file mode 100644
+index 0000000..25aba06
+--- /dev/null
++++ b/app/views/layouts/print.phtml
+@@ -0,0 +1,21 @@
++<!DOCTYPE html>
++<html lang="pt-br">
++
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title><?= $title ?> - Eventos do Câmpus</title>
++
++    <link rel="stylesheet" href="/assets/css/print.css">
++    <script src="/assets/js/print.js"></script>
++</head>
++
++<body class="print-layout">
++    <main>
++        <h1><?= $title ?></h1>
++
++        <?php require $view ?>
++    </main>
++</body>
++
++</html>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..2952eee 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
+         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+         Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
++        Route::get('/admin/events/{id}/attendance', [AdminEventsController::class, 'attendance'])
++            ->name('admin.events.attendance');
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
+diff --git a/public/assets/css/print.css b/public/assets/css/print.css
+new file mode 100644
+index 0000000..5d00f1c
+--- /dev/null
++++ b/public/assets/css/print.css
+@@ -0,0 +1,60 @@
++/* Layout de impressão (lista de presença): sem navbar, preto no branco. */
++body.print-layout {
++  font-family: Arial, Helvetica, sans-serif;
++  color: #000;
++  background: #fff;
++  margin: 2rem;
++}
++
++.print-layout h1 {
++  font-size: 1.5rem;
++  margin-bottom: 0.25rem;
++}
++
++.print-layout h2 {
++  font-size: 1.2rem;
++  margin: 0.5rem 0;
++}
++
++.actions {
++  margin: 1rem 0;
++}
++
++table.attendance {
++  width: 100%;
++  border-collapse: collapse;
++}
++
++table.attendance th,
++table.attendance td {
++  border: 1px solid #000;
++  padding: 0.5rem;
++  text-align: left;
++}
++
++table.attendance td {
++  height: 2rem;
++}
++
++table.attendance .number {
++  width: 2.5rem;
++  text-align: center;
++}
++
++table.attendance .signature {
++  width: 35%;
++}
++
++@media print {
++  body.print-layout {
++    margin: 0;
++  }
++
++  .no-print {
++    display: none;
++  }
++
++  table.attendance tr {
++    page-break-inside: avoid;
++  }
++}
+diff --git a/public/assets/js/print.js b/public/assets/js/print.js
+new file mode 100644
+index 0000000..0e10dd9
+--- /dev/null
++++ b/public/assets/js/print.js
+@@ -0,0 +1,10 @@
++// Botão "Imprimir" da lista de presença (layouts/print.phtml).
++document.addEventListener("DOMContentLoaded", function () {
++  const button = document.getElementById("print_button");
++
++  if (!button) return;
++
++  button.addEventListener("click", function () {
++    window.print();
++  });
++});
+diff --git a/tests/Acceptance/admin/events/AttendanceListCest.php b/tests/Acceptance/admin/events/AttendanceListCest.php
+new file mode 100644
+index 0000000..6fe6b0b
+--- /dev/null
++++ b/tests/Acceptance/admin/events/AttendanceListCest.php
+@@ -0,0 +1,53 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Lista de presença imprimível. Evento 01 da base tem os 3 Participantes inscritos.
++ */
++class AttendanceListCest extends BaseEventsCest
++{
++    public function openAttendanceListFromShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++
++        $page->wantTo('Abrir a lista de presença a partir do detalhe do Evento');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->click('Lista de presença');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}/attendance");
++        $page->see('Lista de presença', 'h1');
++        $page->see($this->title(1), 'h2');
++        $page->see('Assinatura', 'table thead');
++        $page->seeNumberOfElements('table.attendance tbody tr', 3);
++        foreach ($this->participants as $participant) {
++            $page->see($participant->name, 'table.attendance');
++            $page->see($participant->email, 'table.attendance');
++        }
++
++        // Layout próprio: sem navbar; o botão Imprimir existe (o JS fica em arquivo próprio).
++        $page->dontSeeElement('nav.navbar');
++        $page->seeElement('#print_button');
++        $page->seeInSource('src="/assets/js/print.js"');
++
++        // Troca window.print por um espião para não abrir o diálogo do navegador.
++        $page->executeJS('window.printCalled = false; window.print = function () { window.printCalled = true; };');
++        $page->click('Imprimir');
++        Assert::assertTrue($page->executeJS('return window.printCalled;'));
++
++        $page->click('Voltar');
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++    }
++
++    public function attendanceListOfEventWithoutEnrollments(AcceptanceTester $page): void
++    {
++        $page->wantTo('Lista de presença de Evento sem inscritos');
++        $page->amOnPage("/admin/events/{$this->events[2]->id}/attendance");
++
++        $page->see('Nenhum inscrito neste evento.');
++        $page->dontSeeElement('table.attendance');
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..f229255 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 9 rotas admin.events.* (index, paginate, new, create, show, edit, attendance, update, destroy).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -91,6 +91,7 @@ class EventsAccessTest extends TestCase
+             'admin.events.create' => ['POST', '/admin/events'],
+             'admin.events.show' => ['GET', '/admin/events/1'],
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
++            'admin.events.attendance' => ['GET', '/admin/events/1/attendance'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
+         ];
+@@ -172,6 +173,15 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_access_the_attendance_list(): void
++    {
++        $response = $this->loggedClient($this->admin)->get("/admin/events/{$this->event->id}/attendance");
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Lista de presença', (string) $response->getBody());
++        $this->assertStringContainsString('Palestra de Acesso', (string) $response->getBody());
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..d54ca4f 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -168,6 +168,58 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
+     }
+ 
++    public function test_attendance_lists_participants_in_the_print_layout(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra com Lista', 'location' => 'Auditório Central']);
++        $this->enroll($event, 'zeca@example.com');
++        $this->enroll($event, 'amanda@example.com');
++        $this->createEvent(['title' => 'Outro Evento']);
++
++        $response = $this->get(action: 'attendance', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Lista de presença\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Palestra com Lista', $response);
++        $this->assertStringContainsString('Auditório Central', $response);
++        $this->assertStringContainsString(date('d/m/Y', strtotime('+10 days')), $response);
++        $this->assertStringContainsString('zeca@example.com', $response);
++        $this->assertStringContainsString('amanda@example.com', $response);
++        $this->assertStringContainsString('Assinatura', $response);
++        $this->assertStringContainsString('id="print_button"', $response);
++        $this->assertStringContainsString('src="/assets/js/print.js"', $response);
++        $this->assertStringNotContainsString('onclick', $response);
++        // Layout próprio: sem a navbar nem o CSS do layout application.
++        $this->assertStringNotContainsString('navbar', $response);
++        $this->assertStringNotContainsString('application.css', $response);
++        $this->assertStringNotContainsString('Outro Evento', $response);
++    }
++
++    public function test_attendance_without_participants_shows_empty_message(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'attendance', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Nenhum inscrito neste evento.', $response);
++    }
++
++    public function test_attendance_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->get(action: 'attendance', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_show_links_to_attendance(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString("/admin/events/{$event->id}/attendance", $response);
++        $this->assertStringContainsString('Lista de presença', $response);
++    }
++
+     public function test_edit_renders_form_filled(): void
+     {
+         $event = $this->createEvent([
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..27d7408 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,31 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    /* ------------------- R9: participantes (lista de presença) ------------------- */
++
++    public function test_participants_should_list_the_enrolled_users_ordered_by_name(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createEvent(['title' => 'Outro evento']);
++        foreach (['Carla', 'Ana', 'Bruno'] as $name) {
++            $user = $this->createUser($name, strtolower($name) . '@example.com');
++            $this->assertTrue((new Enrollment(['event_id' => $event->id, 'user_id' => $user->id]))->save());
++        }
++        $this->enroll($other, 1);
++
++        $participants = $event->participants();
++
++        $this->assertSame(['Ana', 'Bruno', 'Carla'], array_map(fn(User $user) => $user->name, $participants));
++        $this->assertSame('ana@example.com', $participants[0]->email);
++        $this->assertContainsOnlyInstancesOf(User::class, $participants);
++    }
++
++    public function test_participants_should_be_empty_without_enrollments_and_for_new_records(): void
++    {
++        $this->assertSame([], $this->createEvent()->participants());
++        $this->assertSame([], (new Event($this->params()))->participants());
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+

@@ -1,0 +1,46 @@
+<?php
+/**
+ * @var \App\Models\Event $event
+ * @var array<int, \App\Models\User> $participants
+ */
+?>
+<section class="event-info">
+    <h2><?= htmlspecialchars($event->title) ?></h2>
+    <p>
+        <strong>Data:</strong> <?= date('d/m/Y', strtotime($event->starts_on)) ?>
+        &nbsp;|&nbsp;
+        <strong>Local:</strong> <?= htmlspecialchars((string) $event->location) ?>
+        &nbsp;|&nbsp;
+        <strong>Inscritos:</strong> <?= count($participants) ?>/<?= (int) $event->capacity ?>
+    </p>
+</section>
+
+<div class="no-print actions">
+    <button type="button" id="print_button">Imprimir</button>
+    <a href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Voltar</a>
+</div>
+
+<?php if (empty($participants)) : ?>
+    <p>Nenhum inscrito neste evento.</p>
+<?php else : ?>
+    <table class="attendance">
+        <thead>
+            <tr>
+                <th class="number">#</th>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th class="signature">Assinatura</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($participants as $index => $participant) : ?>
+                <tr>
+                    <td class="number"><?= $index + 1 ?></td>
+                    <td><?= htmlspecialchars($participant->name) ?></td>
+                    <td><?= htmlspecialchars($participant->email) ?></td>
+                    <td class="signature"></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>

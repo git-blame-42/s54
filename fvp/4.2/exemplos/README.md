@@ -213,6 +213,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R8. Lista de todos os erros no topo do form
   `r8-erros-no-topo-do-form/`
   - feat: List all validation errors on top of the event form
+- R9. Lista de presença imprimível com layout próprio
+  `r9-lista-de-presenca-print/`
+  - feat: Add printable attendance list with its own layout
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in

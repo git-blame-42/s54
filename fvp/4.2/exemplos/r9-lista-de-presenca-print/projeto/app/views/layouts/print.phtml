@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $title ?> - Eventos do Câmpus</title>
+
+    <link rel="stylesheet" href="/assets/css/print.css">
+    <script src="/assets/js/print.js"></script>
+</head>
+
+<body class="print-layout">
+    <main>
+        <h1><?= $title ?></h1>
+
+        <?php require $view ?>
+    </main>
+</body>
+
+</html>
