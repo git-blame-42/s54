@@ -1,0 +1,153 @@
+From 03fe7487b6f73bc5db419f0f0b1e4ffd26473f2a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:03:56 -0300
+Subject: [PATCH] feat: Add save and new button to the event form
+
+The new-event form gets a second submit button (name=commit, outside event[]). When create receives exactly that value it redirects back to a blank form with the success flash; any other value keeps the redirect to the show page. The edit form does not get the button.
+---
+ app/Controllers/Admin/EventsController.php    | 10 ++++
+ app/views/admin/events/_form.phtml            |  4 ++
+ .../admin/events/CreateSuccessfullyCest.php   | 23 ++++++++
+ .../Admin/EventsControllerTest.php            | 52 +++++++++++++++++++
+ 4 files changed, 89 insertions(+)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..34d7f9e 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,6 +11,9 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
++    /** Valor do segundo botão do formulário de cadastro (name="commit"). */
++    public const SAVE_AND_NEW = 'Salvar e cadastrar outro';
++
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+@@ -54,6 +57,13 @@ class EventsController extends Controller
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento cadastrado com sucesso!');
++
++            // "Salvar e cadastrar outro" volta para um formulário vazio; qualquer outro valor vai para o show.
++            if ($request->getParam('commit') === self::SAVE_AND_NEW) {
++                $this->redirectTo(route('admin.events.new'));
++                return;
++            }
++
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+             FlashMessage::danger('Existem dados incorretos! Por favor, verifique!');
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..60a203d 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -89,5 +89,9 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </div>
+ 
+     <button type="submit" class="btn btn-primary">Salvar</button>
++    <?php if (!$isUpdate) : ?>
++        <?php $saveAndNew = \App\Controllers\Admin\EventsController::SAVE_AND_NEW; ?>
++        <button type="submit" class="btn btn-outline-primary" name="commit" value="<?= $saveAndNew ?>"><?= $saveAndNew ?></button>
++    <?php endif; ?>
+     <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
+ </form>
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..c27b1c9 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -45,4 +45,27 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertEquals(40, $event->capacity);
+         Assert::assertSame(0, $event->enrollmentsCount());
+     }
++
++    public function createTwoEventsInARowWithSaveAndNew(AcceptanceTester $page): void
++    {
++        $page->wantTo('Cadastrar dois Eventos seguidos com "Salvar e cadastrar outro"');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData(['title' => 'Primeiro em Sequência']));
++        $page->click('Salvar e cadastrar outro');
++
++        $page->seeCurrentUrlEquals('/admin/events/new');
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('Novo Evento', 'h1');
++        $page->seeInField('#event_title', '');
++
++        $this->fillEventForm($page, $this->validEventData(['title' => 'Segundo em Sequência']));
++        $page->click('Salvar e cadastrar outro');
++
++        $page->seeCurrentUrlEquals('/admin/events/new');
++        $page->see('Evento cadastrado com sucesso!');
++        Assert::assertNotNull(Event::findBy(['title' => 'Primeiro em Sequência']));
++        Assert::assertNotNull(Event::findBy(['title' => 'Segundo em Sequência']));
++        Assert::assertCount(self::TOTAL_EVENTS + 2, Event::all());
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..dc8adaf 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,58 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_create_with_save_and_new_redirects_to_a_blank_form(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(), 'commit' => 'Salvar e cadastrar outro']
++        );
++
++        $this->assertNotNull(Event::findBy(['title' => 'Oficina de Testes']));
++        $this->assertSame('Location: /admin/events/new', $response);
++        $this->assertEquals('Evento cadastrado com sucesso!', $_SESSION['flash']['success']);
++    }
++
++    public function test_create_with_unexpected_commit_value_goes_to_show(): void
++    {
++        foreach (['Salvar', 'outro valor', ['Salvar e cadastrar outro']] as $i => $commit) {
++            $response = $this->post(
++                action: 'create',
++                controllerName: self::CONTROLLER,
++                params: ['event' => $this->validParams(['title' => "Evento {$i}"]), 'commit' => $commit]
++            );
++
++            $event = Event::findBy(['title' => "Evento {$i}"]);
++            $this->assertNotNull($event);
++            $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        }
++    }
++
++    public function test_create_invalid_with_save_and_new_renders_the_form_with_errors(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => '']), 'commit' => 'Salvar e cadastrar outro']
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
++    public function test_save_and_new_button_only_in_the_new_form(): void
++    {
++        $event = $this->createEvent();
++
++        $new = $this->get(action: 'new', controllerName: self::CONTROLLER);
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('name="commit" value="Salvar e cadastrar outro"', $new);
++        $this->assertStringNotContainsString('name="commit"', $edit);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+

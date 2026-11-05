@@ -48,6 +48,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M11. Validar `user_id` no model (existe e é admin)
   `m11-validar-user-id/`
   - feat: Validate that the event creator exists and is an admin
+- M12. Último editor (`updated_by`) gravado da sessão no update
+  `m12-ultimo-editor/`
+  - feat: Record the last editor of an event
 - M14. Contador de visualizações com `Model::update()`
   `m14-contador-visualizacoes/`
   - feat: Count event views on the admin show page
@@ -206,6 +209,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type
+- R10. "Salvar e cadastrar outro"
+  `r10-salvar-e-cadastrar-outro/`
+  - feat: Add save and new button to the event form
 - R2. Nome do criador no show/listagem (BelongsTo)
   `r2-nome-do-criador/`
   - feat: Show event creator name in listing and show
