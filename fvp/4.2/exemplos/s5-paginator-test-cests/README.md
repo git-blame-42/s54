@@ -13,7 +13,7 @@ nenhum arquivo de `app/`, `core/`, `lib/`, `config/` ou do schema mudou.
 
 | Commit    | Mensagem                                                  |
 |-----------|-----------------------------------------------------------|
-| `abb5d77` | `test: Add Paginator unit tests and event show accept...` |
+| `da50799` | `test: Add Paginator unit tests and event show accept...` |
 
 (mensagem completa: `test: Add Paginator unit tests and event show
 acceptance tests`)
@@ -41,7 +41,8 @@ acceptance tests`)
   - página depois da última (página 3): `registers()` vazio e
     `entriesInfo() === 'Mostrando 11 - 10 de 7'`. É o comportamento
     ATUAL, um defeito conhecido (início maior que o fim e que o
-    total); o docblock do teste avisa que o N10 trata isso;
+    total), que o N10 corrige; o docblock do teste avisa que a
+    asserção muda se a página fora do intervalo for tratada;
   - `conditions: ['kind' => 'lecture']` com 3 Palestras e 4 Oficinas:
     total 3, 1 página, só Palestras, `'Mostrando 1 - 3 de 3'`;
   - tabela vazia: total 0, `totalOfPages() === 0`, sem registros, sem
@@ -149,7 +150,7 @@ Depois:
 cd /caminho/do/seu/repositorio
 git remote add fvp-s5 <caminho>/projeto
 git fetch fvp-s5 fvp/s5-paginator-test-cests
-git cherry-pick abb5d77
+git cherry-pick da50799
 git remote remove fvp-s5
 ```
 
@@ -158,7 +159,7 @@ git remote remove fvp-s5
 ```
 git fetch <caminho>/solucao.bundle \
     fvp/s5-paginator-test-cests:fvp-s5
-git cherry-pick abb5d77
+git cherry-pick da50799
 # opcional, limpa a ref
 git branch -D fvp-s5
 ```

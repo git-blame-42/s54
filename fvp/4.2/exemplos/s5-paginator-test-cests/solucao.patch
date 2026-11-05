@@ -1,4 +1,4 @@
-From abb5d7785a9937b2a508f305f5d4caab074614e1 Mon Sep 17 00:00:00 2001
+From da50799ade9d162751dfc2de1e741ed4993e0961 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:44:52 -0300
 Subject: [PATCH] test: Add Paginator unit tests and event show acceptance
@@ -57,7 +57,7 @@ index 0000000..dedd683
 +}
 diff --git a/tests/Unit/Lib/PaginatorTest.php b/tests/Unit/Lib/PaginatorTest.php
 new file mode 100644
-index 0000000..603c3c0
+index 0000000..5ece353
 --- /dev/null
 +++ b/tests/Unit/Lib/PaginatorTest.php
 @@ -0,0 +1,149 @@
@@ -159,8 +159,8 @@ index 0000000..603c3c0
 +
 +    /**
 +     * Comportamento ATUAL (defeito conhecido): depois da última página não há registros e a faixa fica
-+     * incoerente, com início maior que o fim e maior que o total. O cenário N10 trata a página fora do
-+     * intervalo; quando ele entrar, esta asserção muda.
++     * incoerente, com início maior que o fim e maior que o total. Se a página fora do intervalo
++     * passar a ser tratada, esta asserção muda.
 +     */
 +    public function test_page_after_the_last_should_be_empty_with_incoherent_entries_info(): void
 +    {

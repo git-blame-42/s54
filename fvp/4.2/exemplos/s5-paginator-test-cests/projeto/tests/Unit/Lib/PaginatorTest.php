@@ -96,8 +96,8 @@ class PaginatorTest extends TestCase
 
     /**
      * Comportamento ATUAL (defeito conhecido): depois da última página não há registros e a faixa fica
-     * incoerente, com início maior que o fim e maior que o total. O cenário N10 trata a página fora do
-     * intervalo; quando ele entrar, esta asserção muda.
+     * incoerente, com início maior que o fim e maior que o total. Se a página fora do intervalo
+     * passar a ser tratada, esta asserção muda.
      */
     public function test_page_after_the_last_should_be_empty_with_incoherent_entries_info(): void
     {
