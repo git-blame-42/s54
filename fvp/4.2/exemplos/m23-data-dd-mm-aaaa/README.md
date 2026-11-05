@@ -222,6 +222,23 @@ Arquivos que costumam conflitar e por quê:
 - `input[type=date]` envia sempre `Y-m-d`, qualquer que seja o idioma
   do navegador. Não adianta só mudar o `validDate`: troque o tipo do
   campo para `text`.
+- Pergunte antes se basta o `type="date"`: com o navegador em pt-BR
+  o campo da base já **mostra** dd/mm/aaaa (e tem calendário), só
+  **envia** `Y-m-d`. Se o pedido for "o usuário vê dd/mm/aaaa", nada
+  precisa mudar. Este exemplo vale para "campo de texto digitado".
+- Com `type="text"` o seletor de calendário do navegador some. Se
+  pedirem máscara (barras automáticas), o JavaScript vai num arquivo
+  em `public/assets/js/` (ao lado do `application.js`), nunca inline
+  na view; a regra continua no model.
+- Aqui a conversão para `Y-m-d` acontece dentro de `validates()`, que
+  então altera o objeto. Funciona porque o `save()` valida antes do
+  bind; o lugar mais limpo é o gancho `beforeValidation` do M16
+  (catálogo, M16), se ele já estiver aplicado. Formato: `'d/m/Y'` com
+  a comparação estrita do `validDate` recusa `5/3/2031`. Se o
+  professor quiser aceitar sem zero à esquerda, use `'j/n/Y'` (e
+  `'!j/n/Y'` no `createFromFormat`); aí é `05/03/2031` que passa a
+  ser recusado, então para aceitar os dois tente um formato e depois
+  o outro.
 - Testes que fazem POST precisam mandar `d/m/Y`; testes que criam
   Evento pelo model continuam com `Y-m-d`. Misturar os dois faz o
   `save()` falhar em silêncio no helper.
