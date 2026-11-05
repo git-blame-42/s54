@@ -8,7 +8,7 @@ use Tests\Acceptance\admin\events\BaseEventsCest;
 use Tests\Support\AcceptanceTester;
 
 /**
- * Q3: o Administrador vê a página do Evento na área do Participante, mas sem o botão de inscrição.
+ * O Administrador vê a página do Evento na área do Participante, mas sem o botão de inscrição.
  * (BaseEventsCest já faz login como Administrador.)
  */
 class AdminCannotEnrollCest extends BaseEventsCest

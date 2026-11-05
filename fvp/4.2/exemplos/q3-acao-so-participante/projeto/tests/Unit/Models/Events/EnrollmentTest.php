@@ -139,6 +139,16 @@ class EnrollmentTest extends TestCase
         $this->assertCount(0, Enrollment::all());
     }
 
+    public function test_admin_check_should_not_cast_a_malformed_user_id(): void
+    {
+        // Com (int), "1abc" viraria o id do admin e a mensagem de admin apareceria.
+        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => "{$this->admin->id}abc"]);
+
+        $enrollment->isValid();
+
+        $this->assertNotEquals('administradores não podem se inscrever em eventos!', $enrollment->errors('base'));
+    }
+
     public function test_participant_can_still_enroll(): void
     {
         $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);

@@ -9,14 +9,14 @@ Chance: média-baixa. Tempo estimado: 20-30 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, Q3.
 
 Branch no clone: `fvp/q3-acao-so-participante`, empilhada sobre P2
-(`fvp/p2-inscricao-participante`, do agente A, mesmos SHAs), que por
-sua vez está sobre O2. Base: `main` (`f31006b`) → O2 → P2 → Q3.
+(`fvp/p2-inscricao-participante`, mesmos SHAs do exemplo do P2), que
+por sua vez está sobre O2. Base: `main` (`f31006b`) → O2 → P2 → Q3.
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
 | `0669a19` | (base, O2) `feat: Add events listing and details for ...` |
 | `458a05b` | (base, P2) `feat: Allow participants to enroll in events` |
-| `e590c00` | `feat: Restrict enrollment to participants`              |
+| `d0bd242` | `feat: Restrict enrollment to participants`              |
 
 A mensagem completa do commit de O2 é `feat: Add events listing and
 details for participants`.
@@ -36,9 +36,12 @@ details for participants`.
   `auth`. P2 não tem `DELETE` de inscrição; quando P3 entrar, a rota
   dele vai para o mesmo grupo.
 - `app/Models/Enrollment.php`: `validates()` chama o privado
-  `validatesParticipant()` antes da unicidade:
-  `User::findById($this->user_id)?->isAdmin()` → `addError('base',
-  'administradores não podem se inscrever em eventos!')`.
+  `validatesParticipant()` antes da unicidade. Ele converte `user_id`
+  com `filter_var($this->user_id, FILTER_VALIDATE_INT)` (não `(int)`:
+  `'1abc'` viraria o usuário 1), busca o `User` e, se for admin,
+  `addError('base', 'administradores não podem se inscrever em
+  eventos!')` e devolve `false`. O `@property` de `user_id` passou a
+  `int|string|null` (o valor pode vir de formulário).
 - `app/views/events/show.phtml`: para admin, no lugar do botão,
   "Inscrições são feitas pelos participantes.".
 - `tests/Integration/Controllers/EventsControllerTest.php` (de O2/P2):
@@ -57,10 +60,14 @@ details for participants`.
   middleware numa rota nova, o model ainda recusa.
 - Esconder o botão é só conforto; não é segurança. As duas camadas de
   cima é que garantem.
-- Ordem dos middlewares (A7/A17 da 4.1): `participant` fica dentro do
-  grupo `auth`, então roda depois dele. Sem sessão, o `auth` manda
-  para `/login` antes; por isso o `Participant` não precisa tratar
-  usuário `null`.
+- Ordem dos middlewares (A7/A17 da 4.1): o `RouteWrapperMiddleware`
+  acrescenta o middleware às rotas quando o grupo fecha, e o grupo
+  mais interno fecha primeiro. Com `participant` dentro de `auth`, o
+  `Participant` roda **antes** do `Authenticate`. Por isso ele trata
+  usuário `null` deixando passar: sem sessão, quem barra é o
+  `Authenticate`, logo em seguida, mandando para `/login`. (Se o
+  `Participant` redirecionasse sem sessão, o visitante iria para
+  `/admin` em vez de `/login`.)
 - Admin vai para `/admin` (e não `/dashboard`): é a "casa" dele; o
   `Admin` faz o simétrico com o Participante.
 
@@ -78,7 +85,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 169, Integration 72, Acceptance 31 (com P2:
+Resultado obtido: Unit 170, Integration 72, Acceptance 31 (com P2:
 164 / 68 / 29; O2: 159 / 58 / 26; `main`: 159 / 45 / 23). PHPCS e
 PHPStan sem erros; PSR-4 estrito ok.
 
@@ -86,9 +93,11 @@ Testes novos:
 
 - `tests/Unit/App/Middleware/ParticipantTest.php` (+ dublê
   `ParticipantDouble.php`, como no F2 da 4.1): admin → `/admin` com
-  flash; Participante passa; sem sessão passa (quem barra é o `auth`).
+  flash; Participante passa; sem sessão passa (o `Participant` roda
+  antes, e quem barra em seguida é o `Authenticate`).
 - `EnrollmentTest`: `test_admin_cannot_enroll_in_an_event`,
-  `test_participant_can_still_enroll`.
+  `test_admin_check_should_not_cast_a_malformed_user_id` (`'1abc'`
+  não vira o admin), `test_participant_can_still_enroll`.
 - `EnrollmentsControllerTest`:
   `test_create_does_not_enroll_a_logged_admin` (sem router, quem barra
   é o model; nenhuma inscrição criada).
@@ -126,9 +135,9 @@ público. `<caminho>` abaixo é
 
 Escolha o que aplicar:
 
-- Sem O2 nem P2: aplique o range inteiro `5dedab5..e590c00` (O2 + P2 +
+- Sem O2 nem P2: aplique o range inteiro `5dedab5..d0bd242` (O2 + P2 +
   Q3, três commits, nessa ordem).
-- Com O2 e P2 já aplicados: aplique só o topo, `e590c00`.
+- Com O2 e P2 já aplicados: aplique só o topo, `d0bd242`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -138,9 +147,9 @@ git remote add fvp-q3 \
     s50/fvp/4.2/exemplos/q3-acao-so-participante/projeto
 git fetch fvp-q3 fvp/q3-acao-so-participante
 # range (O2 + P2 + Q3):
-git cherry-pick 5dedab5..e590c00
+git cherry-pick 5dedab5..d0bd242
 # ou só o topo, se já tem O2 e P2:
-# git cherry-pick e590c00
+# git cherry-pick d0bd242
 git remote remove fvp-q3
 ```
 
@@ -150,8 +159,8 @@ git remote remove fvp-q3
 git fetch \
     s50/fvp/4.2/exemplos/q3-acao-so-participante/solucao.bundle \
     fvp/q3-acao-so-participante:fvp-q3
-git cherry-pick 5dedab5..e590c00
-# ou só o topo: git cherry-pick e590c00
+git cherry-pick 5dedab5..d0bd242
+# ou só o topo: git cherry-pick d0bd242
 # opcional, limpa a ref
 git branch -D fvp-q3
 ```
@@ -204,6 +213,15 @@ Arquivos que costumam conflitar neste cenário e por quê:
   `Participant` vê `null`, deixa passar, e a ação roda sem usuário.
 - `redirectTo` `private` com `exit` (cópia literal do `Admin`): o
   teste unitário do middleware não tem como rodar; deixe `protected`.
+- `redirectTo` duplicado: `Admin` e `Participant` passam a ter o mesmo
+  método `header` + `exit`. É o problema que o A1 da 4.1 resolve com
+  um `BaseMiddleware` (com `redirectTo()`/`deny()` protegidos); se o
+  professor cobrar repetição, extraia para lá e faça os dois herdarem.
+- Achar que o `auth` roda antes do `participant` por estar "por fora":
+  é o contrário (o grupo interno roda primeiro). Um `Participant` que
+  redirecionasse sem sessão mandaria o visitante para `/admin`.
+- Converter `user_id` com `(int)` no model: `'1abc'` vira `1`, que pode
+  ser o admin. Use `filter_var(..., FILTER_VALIDATE_INT)`.
 - Esquecer o alias em `config/App.php`: `Route::middleware(
   'participant')` falha ao resolver o nome.
 - `$this->currentUser()->isAdmin()` sem `?->` na view: quebra se a

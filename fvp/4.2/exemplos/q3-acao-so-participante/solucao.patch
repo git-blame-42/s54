@@ -1185,7 +1185,7 @@ index 5780e2e..2d7f66a 100644
 2.54.0 (Apple Git-157)
 
 
-From e590c0010aad7338e3ff2907e8785ffb100ec42a Mon Sep 17 00:00:00 2001
+From d0bd24216e836cfc28bae060a614a4e1daa443dd Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:59:39 -0300
 Subject: [PATCH 3/3] feat: Restrict enrollment to participants
@@ -1193,18 +1193,18 @@ Subject: [PATCH 3/3] feat: Restrict enrollment to participants
 Adds the participant middleware (alias in Config\App) to the enrollment route, redirecting admins to /admin with a flash, and makes Enrollment::validates() reject admin users as a second layer. The enroll button is hidden for admins.
 ---
  app/Middleware/Participant.php                | 35 ++++++++
- app/Models/Enrollment.php                     | 20 +++++
+ app/Models/Enrollment.php                     | 24 +++++-
  app/views/events/show.phtml                   |  4 +-
  config/App.php                                |  1 +
  config/routes.php                             |  8 +-
  .../events/AdminCannotEnrollCest.php          | 39 +++++++++
- .../Access/ParticipantEventsAccessTest.php    | 45 +++++++++++
+ .../Access/ParticipantEventsAccessTest.php    | 45 ++++++++++
  .../Controllers/EnrollmentsControllerTest.php | 14 ++++
  .../Controllers/EventsControllerTest.php      |  4 +-
- .../Unit/App/Middleware/ParticipantDouble.php | 18 +++++
- tests/Unit/App/Middleware/ParticipantTest.php | 81 +++++++++++++++++++
- tests/Unit/Models/Events/EnrollmentTest.php   | 18 +++++
- 12 files changed, 282 insertions(+), 5 deletions(-)
+ .../Unit/App/Middleware/ParticipantDouble.php | 18 ++++
+ tests/Unit/App/Middleware/ParticipantTest.php | 82 +++++++++++++++++++
+ tests/Unit/Models/Events/EnrollmentTest.php   | 28 +++++++
+ 12 files changed, 296 insertions(+), 6 deletions(-)
  create mode 100644 app/Middleware/Participant.php
  create mode 100644 tests/Acceptance/events/AdminCannotEnrollCest.php
  create mode 100644 tests/Unit/App/Middleware/ParticipantDouble.php
@@ -1212,7 +1212,7 @@ Adds the participant middleware (alias in Config\App) to the enrollment route, r
 
 diff --git a/app/Middleware/Participant.php b/app/Middleware/Participant.php
 new file mode 100644
-index 0000000..7ee41ee
+index 0000000..09466c4
 --- /dev/null
 +++ b/app/Middleware/Participant.php
 @@ -0,0 +1,35 @@
@@ -1226,7 +1226,7 @@ index 0000000..7ee41ee
 +use Lib\FlashMessage;
 +
 +/**
-+ * Q3: ações exclusivas do Participante (ex.: inscrever-se). O Administrador é barrado e vai
++ * Ações exclusivas do Participante (ex.: inscrever-se). O Administrador é barrado e vai
 + * para a área administrativa. Espelho do middleware Admin.
 + */
 +class Participant implements Middleware
@@ -1252,9 +1252,18 @@ index 0000000..7ee41ee
 +    }
 +}
 diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
-index 640846a..468f747 100644
+index 640846a..42ebd08 100644
 --- a/app/Models/Enrollment.php
 +++ b/app/Models/Enrollment.php
+@@ -11,7 +11,7 @@ use Lib\Validations;
+  *
+  * @property int $id
+  * @property int $event_id
+- * @property int $user_id
++ * @property int|string|null $user_id
+  */
+ class Enrollment extends Model
+ {
 @@ -24,6 +24,10 @@ class Enrollment extends Model
              return;
          }
@@ -1266,17 +1275,19 @@ index 640846a..468f747 100644
          if (!Validations::uniqueness(['event_id', 'user_id'], $this)) {
              $this->addError('base', 'você já está inscrito neste evento!');
              return;
-@@ -32,6 +36,22 @@ class Enrollment extends Model
+@@ -32,6 +36,24 @@ class Enrollment extends Model
          $this->validatesAvailableSpots();
      }
  
 +    /**
-+     * Q3: só Participante se inscreve. Segunda camada, além do middleware participant da rota:
++     * Só Participante se inscreve. Segunda camada, além do middleware participant da rota:
 +     * vale também para populate, console e qualquer outro caminho que crie Inscrição.
 +     */
 +    private function validatesParticipant(): bool
 +    {
-+        $user = User::findById((int) $this->user_id);
++        // filter_var e não (int): '1abc' viraria o usuário 1.
++        $userId = filter_var($this->user_id, FILTER_VALIDATE_INT);
++        $user = $userId === false ? null : User::findById($userId);
 +
 +        if ($user !== null && $user->isAdmin()) {
 +            $this->addError('base', 'administradores não podem se inscrever em eventos!');
@@ -1316,7 +1327,7 @@ index b58901e..345919e 100644
      ];
  }
 diff --git a/config/routes.php b/config/routes.php
-index ed13ab3..149f3ca 100644
+index ed13ab3..bab6f5a 100644
 --- a/config/routes.php
 +++ b/config/routes.php
 @@ -25,9 +25,11 @@ Route::middleware('auth')->group(function () {
@@ -1326,7 +1337,7 @@ index ed13ab3..149f3ca 100644
 -    // Inscrição do usuário logado no Evento.
 -    Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])
 -        ->name('events.enrollments.create');
-+    // Inscrição do usuário logado no Evento. Q3: só Participante (admin vai para /admin).
++    // Inscrição do usuário logado no Evento: só Participante (admin vai para /admin).
 +    Route::middleware('participant')->group(function () {
 +        Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])
 +            ->name('events.enrollments.create');
@@ -1336,7 +1347,7 @@ index ed13ab3..149f3ca 100644
      Route::middleware('admin')->group(function () {
 diff --git a/tests/Acceptance/events/AdminCannotEnrollCest.php b/tests/Acceptance/events/AdminCannotEnrollCest.php
 new file mode 100644
-index 0000000..2f90626
+index 0000000..064e0f4
 --- /dev/null
 +++ b/tests/Acceptance/events/AdminCannotEnrollCest.php
 @@ -0,0 +1,39 @@
@@ -1350,7 +1361,7 @@ index 0000000..2f90626
 +use Tests\Support\AcceptanceTester;
 +
 +/**
-+ * Q3: o Administrador vê a página do Evento na área do Participante, mas sem o botão de inscrição.
++ * O Administrador vê a página do Evento na área do Participante, mas sem o botão de inscrição.
 + * (BaseEventsCest já faz login como Administrador.)
 + */
 +class AdminCannotEnrollCest extends BaseEventsCest
@@ -1380,7 +1391,7 @@ index 0000000..2f90626
 +    }
 +}
 diff --git a/tests/Integration/Access/ParticipantEventsAccessTest.php b/tests/Integration/Access/ParticipantEventsAccessTest.php
-index e606ad3..0a8eab5 100644
+index e606ad3..440e0e0 100644
 --- a/tests/Integration/Access/ParticipantEventsAccessTest.php
 +++ b/tests/Integration/Access/ParticipantEventsAccessTest.php
 @@ -139,6 +139,51 @@ class ParticipantEventsAccessTest extends TestCase
@@ -1388,7 +1399,7 @@ index e606ad3..0a8eab5 100644
      }
  
 +    /**
-+     * Q3: ações só de Participante (middleware participant).
++     * Ações só de Participante (middleware participant).
 +     *
 +     * @return array<string, array{string, string}>
 +     */
@@ -1461,7 +1472,7 @@ index 8a5a68d..4c14d0b 100644
      {
          $event = $this->createEvent();
 diff --git a/tests/Integration/Controllers/EventsControllerTest.php b/tests/Integration/Controllers/EventsControllerTest.php
-index 0bcb3f4..bfa1385 100644
+index 0bcb3f4..0338551 100644
 --- a/tests/Integration/Controllers/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/EventsControllerTest.php
 @@ -106,7 +106,9 @@ class EventsControllerTest extends ControllerTestCase
@@ -1469,7 +1480,7 @@ index 0bcb3f4..bfa1385 100644
      {
          $full = $this->createEvent(['capacity' => 1]);
 -        (new Enrollment(['event_id' => $full->id, 'user_id' => $this->admin->id]))->save();
-+        // Q3: admin não se inscreve; quem ocupa a vaga é outro Participante.
++        // Admin não se inscreve; quem ocupa a vaga é outro Participante.
 +        $other = $this->createUser('Outro Participante', 'outro@example.com', 'participant');
 +        (new Enrollment(['event_id' => $full->id, 'user_id' => $other->id]))->save();
          $open = $this->createEvent(['capacity' => 2]);
@@ -1501,10 +1512,10 @@ index 0000000..beb67a7
 +}
 diff --git a/tests/Unit/App/Middleware/ParticipantTest.php b/tests/Unit/App/Middleware/ParticipantTest.php
 new file mode 100644
-index 0000000..3117608
+index 0000000..93e0abb
 --- /dev/null
 +++ b/tests/Unit/App/Middleware/ParticipantTest.php
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +<?php
 +
 +namespace Tests\Unit\App\Middleware;
@@ -1581,16 +1592,17 @@ index 0000000..3117608
 +
 +        $middleware->handle(new Request());
 +
-+        // Sem sessão quem barra é o Authenticate, que vem antes no mesmo grupo de rotas.
++        // Sem sessão o Participant deixa passar. Ele roda ANTES do Authenticate (o grupo interno
++        // roda primeiro), e é o Authenticate, em seguida, que manda para /login.
 +        $this->assertNull($middleware->location);
 +        $this->assertSame([], FlashMessage::get());
 +    }
 +}
 diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
-index 8fe4a60..b166f15 100644
+index 8fe4a60..2f3a3f8 100644
 --- a/tests/Unit/Models/Events/EnrollmentTest.php
 +++ b/tests/Unit/Models/Events/EnrollmentTest.php
-@@ -129,6 +129,24 @@ class EnrollmentTest extends TestCase
+@@ -129,6 +129,34 @@ class EnrollmentTest extends TestCase
          $this->assertCount(0, Enrollment::all());
      }
  
@@ -1602,6 +1614,16 @@ index 8fe4a60..b166f15 100644
 +        $this->assertFalse($enrollment->save());
 +        $this->assertEquals('administradores não podem se inscrever em eventos!', $enrollment->errors('base'));
 +        $this->assertCount(0, Enrollment::all());
++    }
++
++    public function test_admin_check_should_not_cast_a_malformed_user_id(): void
++    {
++        // Com (int), "1abc" viraria o id do admin e a mensagem de admin apareceria.
++        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => "{$this->admin->id}abc"]);
++
++        $enrollment->isValid();
++
++        $this->assertNotEquals('administradores não podem se inscrever em eventos!', $enrollment->errors('base'));
 +    }
 +
 +    public function test_participant_can_still_enroll(): void

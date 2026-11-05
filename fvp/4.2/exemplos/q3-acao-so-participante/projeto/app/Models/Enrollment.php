@@ -11,7 +11,7 @@ use Lib\Validations;
  *
  * @property int $id
  * @property int $event_id
- * @property int $user_id
+ * @property int|string|null $user_id
  */
 class Enrollment extends Model
 {
@@ -37,12 +37,14 @@ class Enrollment extends Model
     }
 
     /**
-     * Q3: só Participante se inscreve. Segunda camada, além do middleware participant da rota:
+     * Só Participante se inscreve. Segunda camada, além do middleware participant da rota:
      * vale também para populate, console e qualquer outro caminho que crie Inscrição.
      */
     private function validatesParticipant(): bool
     {
-        $user = User::findById((int) $this->user_id);
+        // filter_var e não (int): '1abc' viraria o usuário 1.
+        $userId = filter_var($this->user_id, FILTER_VALIDATE_INT);
+        $user = $userId === false ? null : User::findById($userId);
 
         if ($user !== null && $user->isAdmin()) {
             $this->addError('base', 'administradores não podem se inscrever em eventos!');

@@ -74,7 +74,8 @@ class ParticipantTest extends TestCase
 
         $middleware->handle(new Request());
 
-        // Sem sessão quem barra é o Authenticate, que vem antes no mesmo grupo de rotas.
+        // Sem sessão o Participant deixa passar. Ele roda ANTES do Authenticate (o grupo interno
+        // roda primeiro), e é o Authenticate, em seguida, que manda para /login.
         $this->assertNull($middleware->location);
         $this->assertSame([], FlashMessage::get());
     }

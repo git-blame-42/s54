@@ -8,7 +8,7 @@ use Lib\Authentication\Auth;
 use Lib\FlashMessage;
 
 /**
- * Q3: ações exclusivas do Participante (ex.: inscrever-se). O Administrador é barrado e vai
+ * Ações exclusivas do Participante (ex.: inscrever-se). O Administrador é barrado e vai
  * para a área administrativa. Espelho do middleware Admin.
  */
 class Participant implements Middleware

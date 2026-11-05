@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/events/page/{page}', [EventsController::class, 'index'])->name('events.paginate');
     Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
 
-    // Inscrição do usuário logado no Evento. Q3: só Participante (admin vai para /admin).
+    // Inscrição do usuário logado no Evento: só Participante (admin vai para /admin).
     Route::middleware('participant')->group(function () {
         Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])
             ->name('events.enrollments.create');

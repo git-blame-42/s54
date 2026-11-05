@@ -106,7 +106,7 @@ class EventsControllerTest extends ControllerTestCase
     public function test_show_marks_full_event(): void
     {
         $full = $this->createEvent(['capacity' => 1]);
-        // Q3: admin não se inscreve; quem ocupa a vaga é outro Participante.
+        // Admin não se inscreve; quem ocupa a vaga é outro Participante.
         $other = $this->createUser('Outro Participante', 'outro@example.com', 'participant');
         (new Enrollment(['event_id' => $full->id, 'user_id' => $other->id]))->save();
         $open = $this->createEvent(['capacity' => 2]);

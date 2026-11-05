@@ -140,7 +140,7 @@ class ParticipantEventsAccessTest extends TestCase
     }
 
     /**
-     * Q3: ações só de Participante (middleware participant).
+     * Ações só de Participante (middleware participant).
      *
      * @return array<string, array{string, string}>
      */
