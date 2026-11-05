@@ -1,0 +1,492 @@
+From c76e3910d7ae8e8e12a0e1e6b1505d94be1dc491 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:24:58 -0300
+Subject: [PATCH] feat: Accept event date typed as dd/mm/yyyy
+
+The form field becomes a text input in dd/mm/yyyy. Event validates the
+typed value with validDate('d/m/Y') and converts it to Y-m-d before
+save binds it, so the not-in-the-past check on edit compares the
+original and the new date in the same format. The edit form shows the
+stored date as dd/mm/yyyy.
+---
+ app/Controllers/Admin/EventsController.php    |  6 +-
+ app/Models/Event.php                          | 67 +++++++++++++++-
+ app/views/admin/events/_form.phtml            |  5 +-
+ .../admin/events/BaseEventsCest.php           | 15 ++--
+ .../events/CreateWithInvalidDataCest.php      | 18 +++++
+ .../admin/events/UpdateSuccessfullyCest.php   | 25 +++++-
+ tests/Integration/Access/EventsAccessTest.php |  2 +-
+ .../Admin/EventsControllerTest.php            | 70 ++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        | 77 +++++++++++++++++++
+ 9 files changed, 269 insertions(+), 16 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8352700 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,7 +11,7 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++    private const FIELDS = ['title', 'description', 'kind', 'modality', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
+@@ -125,6 +125,10 @@ class EventsController extends Controller
+             $event->$field = is_scalar($value) ? (string) $value : null;
+         }
+ 
++        // Data digitada como dd/mm/aaaa: o model valida o formato e converte para Y-m-d antes de gravar.
++        $startsOn = $params['starts_on'] ?? '';
++        $event->setStartsOnInput(is_scalar($startsOn) ? (string) $startsOn : '');
++
+         $audience = $params['audience'] ?? [];
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..a5ada42 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use DateTimeImmutable;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -15,7 +16,7 @@ use PDOException;
+  * @property string $kind
+  * @property string $modality
+  * @property string|null $audience valores separados por vírgula (tipo SET do MySQL); use audienceList()
+- * @property string $starts_on
++ * @property string $starts_on Y-m-d (formato do banco); o formulário usa dd/mm/aaaa (setStartsOnInput)
+  * @property string $location
+  * @property int|string $capacity
+  */
+@@ -44,6 +45,12 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Formato da data digitada no formulário. O banco (coluna DATE) continua recebendo Y-m-d. */
++    public const STARTS_ON_INPUT_FORMAT = 'd/m/Y';
++
++    /** true enquanto `starts_on` guarda o texto digitado no formulário, ainda não convertido para Y-m-d. */
++    private bool $startsOnFromInput = false;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -73,7 +80,7 @@ class Event extends Model
+             Validations::inclusionOfAll('audience', $this, array_keys(self::AUDIENCES));
+ 
+         Validations::notEmpty('starts_on', $this) &&
+-            Validations::validDate('starts_on', $this) &&
++            $this->validatesStartsOnFormat() &&
+             $this->validatesStartsOnNotPast();
+ 
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+@@ -81,6 +88,32 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Data vinda do formulário: precisa estar em dd/mm/aaaa e é convertida aqui para Y-m-d, antes de o
++     * save() fazer o bind. Data definida pelo código (populate, testes) ou lida do banco já está em Y-m-d.
++     * A conversão vem antes de validatesStartsOnNotPast(): lá o original (Y-m-d) é comparado com este valor.
++     */
++    private function validatesStartsOnFormat(): bool
++    {
++        if (!$this->startsOnFromInput) {
++            return Validations::validDate('starts_on', $this);
++        }
++
++        if (!Validations::validDate('starts_on', $this, self::STARTS_ON_INPUT_FORMAT)) {
++            return false;
++        }
++
++        $date = DateTimeImmutable::createFromFormat('!' . self::STARTS_ON_INPUT_FORMAT, $this->starts_on);
++        if ($date === false) {
++            return false;
++        }
++
++        $this->starts_on = $date->format('Y-m-d');
++        $this->startsOnFromInput = false;
++
++        return true;
++    }
++
+     /**
+      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+@@ -205,6 +238,36 @@ class Event extends Model
+         $this->audience = implode(',', $values);
+     }
+ 
++    /**
++     * Recebe a data como o usuário digitou no formulário (dd/mm/aaaa). A validação confere o formato e
++     * converte para Y-m-d; texto inválido fica como veio, para o formulário mostrá-lo de volta com o erro.
++     */
++    public function setStartsOnInput(string $value): void
++    {
++        $this->starts_on = $value;
++        $this->startsOnFromInput = true;
++    }
++
++    /**
++     * Valor do campo Data do formulário: dd/mm/aaaa a partir do Y-m-d. Texto digitado que não passou na
++     * validação volta exatamente como foi digitado.
++     */
++    public function startsOnInput(): string
++    {
++        $value = (string) $this->starts_on;
++
++        if ($this->startsOnFromInput) {
++            return $value;
++        }
++
++        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
++        if ($date === false || $date->format('Y-m-d') !== $value) {
++            return $value;
++        }
++
++        return $date->format(self::STARTS_ON_INPUT_FORMAT);
++    }
++
+     public function hasAudience(string $value): bool
+     {
+         return in_array($value, $this->audienceList(), true);
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..593c856 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -69,8 +69,9 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+ 
+     <div class="mb-3">
+         <label for="event_starts_on" class="form-label">Data</label>
+-        <input type="date" class="form-control<?= $invalid('starts_on') ?>" id="event_starts_on" name="event[starts_on]"
+-            value="<?= htmlspecialchars((string) $event->starts_on) ?>">
++        <input type="text" class="form-control<?= $invalid('starts_on') ?>" id="event_starts_on" name="event[starts_on]"
++            placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric"
++            value="<?= htmlspecialchars($event->startsOnInput()) ?>">
+         <?= $feedback('starts_on') ?>
+     </div>
+ 
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..a638509 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -115,7 +115,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+      * Preenche apenas os campos informados. `audience` define exatamente quais checkboxes ficam marcados.
+      *
+      * Chaves aceitas: title, description, kind (rótulo exibido no select), modality (valor do radio: in_person,
+-     * online, hybrid), audience (lista de valores), starts_on (Y-m-d), location, capacity.
++     * online, hybrid), audience (lista de valores), starts_on (Y-m-d; digitado como dd/mm/aaaa), location, capacity.
+      *
+      * @param array<string, mixed> $data
+      */
+@@ -146,14 +146,17 @@ class BaseEventsCest extends BaseAcceptanceCest
+         }
+ 
+         if (array_key_exists('starts_on', $data)) {
+-            // input[type=date] depende do idioma do navegador ao digitar; definir o valor ISO é determinístico.
+-            $page->executeJS(
+-                "document.getElementById('event_starts_on').value = arguments[0];",
+-                [(string) $data['starts_on']]
+-            );
++            // O campo é texto em dd/mm/aaaa; os Cests guardam a data em Y-m-d (formato do banco) e digitam convertida.
++            $page->fillField('#event_starts_on', $this->typedDate((string) $data['starts_on']));
+         }
+     }
+ 
++    /** Converte Y-m-d (formato do banco) para dd/mm/aaaa, como o usuário digita no formulário. */
++    protected function typedDate(string $date): string
++    {
++        return date('d/m/Y', (int) strtotime($date));
++    }
++
+     /**
+      * Dados todos válidos para o formulário.
+      *
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..9d56651 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -73,4 +73,22 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
++
++    public function createWithDateInWrongFormat(AcceptanceTester $page): void
++    {
++        $page->wantTo('Tentativa de cadastro com dados incorretos (data fora do formato dd/mm/aaaa)');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData());
++        $page->fillField('#event_starts_on', '31/02/2030');
++        $page->click('Salvar');
++
++        $page->see(self::FLASH);
++        $page->seeElement('#event_starts_on.is-invalid');
++        $page->see('não é uma data válida!', '#event_starts_on ~ .invalid-feedback');
++        // O texto digitado volta como estava, para o usuário corrigir.
++        $page->seeInField('#event_starts_on', '31/02/2030');
++
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
+ }
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..9db7b1b 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -34,7 +34,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $page->seeCheckboxIsChecked("#event_modality_{$event->modality}");
+         $page->seeCheckboxIsChecked('#event_audience_students');
+         $page->dontSeeCheckboxIsChecked('#event_audience_professors');
+-        $page->seeInField('#event_starts_on', $event->starts_on);
++        $page->seeInField('#event_starts_on', $this->typedDate($event->starts_on));
+         $page->seeInField('#event_location', $event->location);
+         $page->seeInField('#event_capacity', (string) $event->capacity);
+ 
+@@ -90,4 +90,27 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         Assert::assertEquals(10, $stored->capacity);
+         Assert::assertSame(3, $stored->enrollmentsCount());
+     }
++
++    public function updatePastEventWithoutChangingTheDate(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $past = date('Y-m-d', strtotime('-10 days'));
++        // update() grava direto, sem validar: simula um Evento que já aconteceu.
++        $event->update(['starts_on' => $past]);
++
++        $page->wantTo('Tentativa de atualização bem-sucedida (Evento passado, data dd/mm/aaaa não muda)');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->seeInField('#event_starts_on', $this->typedDate($past));
++
++        $this->fillEventForm($page, ['title' => 'Evento 02 Corrigido']);
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento atualizado com sucesso!');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertSame('Evento 02 Corrigido', $stored->title);
++        Assert::assertSame($past, $stored->starts_on);
++    }
+ }
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..f7b657a 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -147,7 +147,7 @@ class EventsAccessTest extends TestCase
+             'kind' => 'lecture',
+             'modality' => 'online',
+             'audience' => ['students'],
+-            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'starts_on' => date('d/m/Y', strtotime('+10 days')),
+             'location' => 'Qualquer lugar',
+             'capacity' => '5',
+         ]]]);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..4d24844 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -77,7 +77,8 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('id="event_kind"', $response);
+         $this->assertStringContainsString('id="event_modality_online"', $response);
+         $this->assertStringContainsString('id="event_audience_students"', $response);
+-        $this->assertStringContainsString('type="date"', $response);
++        $this->assertMatchesRegularExpression('/id="event_starts_on"[^>]*placeholder="dd\/mm\/aaaa"/', $response);
++        $this->assertStringNotContainsString('type="date"', $response);
+         $this->assertStringContainsString('Salvar', $response);
+         $this->assertStringNotContainsString('name="_method"', $response);
+     }
+@@ -219,6 +220,7 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Original', Event::findById($event->id)->title);
+         $this->assertMatchesRegularExpression('/<h1>\s*Editar Evento\s*<\/h1>/', $response);
+         $this->assertStringContainsString('value="Mudou"', $response);
++        $this->assertStringContainsString('value="' . date('d/m/Y', strtotime('+10 days')) . '"', $response);
+         $this->assertStringContainsString('invalid-feedback', $response);
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+@@ -239,6 +241,67 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
++    /* ------------------- data digitada como dd/mm/aaaa ------------------- */
++
++    public function test_create_converts_typed_date_to_database_format(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['starts_on' => date('d/m/Y', strtotime('+15 days'))])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertSame(date('Y-m-d', strtotime('+15 days')), $event->starts_on);
++    }
++
++    public function test_create_with_date_in_another_format_renders_form_with_typed_value(): void
++    {
++        $iso = date('Y-m-d', strtotime('+15 days'));
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['starts_on' => $iso])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('<div class="invalid-feedback">não é uma data válida!</div>', $response);
++        $this->assertStringContainsString("value=\"{$iso}\"", $response);
++    }
++
++    public function test_edit_shows_date_as_dd_mm_yyyy(): void
++    {
++        $event = $this->createEvent(['starts_on' => date('Y-m-d', strtotime('+20 days'))]);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('value="' . date('d/m/Y', strtotime('+20 days')) . '"', $response);
++        $this->assertStringNotContainsString('value="' . date('Y-m-d', strtotime('+20 days')) . '"', $response);
++    }
++
++    public function test_update_of_past_event_keeping_the_typed_date_is_accepted(): void
++    {
++        $event = $this->createEvent();
++        $past = date('Y-m-d', strtotime('-10 days'));
++        $event->update(['starts_on' => $past]);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams([
++                'title' => 'Corrigido',
++                'starts_on' => date('d/m/Y', (int) strtotime($past)),
++            ])]
++        );
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $updated = Event::findById($event->id);
++        $this->assertEquals('Corrigido', $updated->title);
++        $this->assertSame($past, $updated->starts_on);
++    }
++
+     public function test_destroy_removes_event_without_enrollments(): void
+     {
+         $event = $this->createEvent();
+@@ -277,7 +340,7 @@ class EventsControllerTest extends ControllerTestCase
+             'kind' => 'workshop',
+             'modality' => 'in_person',
+             'audience' => ['students'],
+-            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'starts_on' => date('d/m/Y', strtotime('+10 days')),
+             'location' => 'Bloco A',
+             'capacity' => '20',
+         ], $overrides);
+@@ -288,7 +351,8 @@ class EventsControllerTest extends ControllerTestCase
+      */
+     private function createEvent(array $overrides = []): Event
+     {
+-        $params = array_merge($this->validParams(), $overrides);
++        // Pelo model a data é Y-m-d (formato do banco); dd/mm/aaaa é só o formato do formulário.
++        $params = array_merge($this->validParams(['starts_on' => date('Y-m-d', strtotime('+10 days'))]), $overrides);
+         $audience = $params['audience'];
+         unset($params['audience']);
+ 
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..3238d85 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -575,6 +575,83 @@ class EventTest extends TestCase
+         $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
+     }
+ 
++    /* ------------------- starts_on digitado como dd/mm/aaaa ------------------- */
++
++    public function test_typed_starts_on_should_be_saved_as_database_date(): void
++    {
++        $event = new Event($this->params());
++        $event->setStartsOnInput(date('d/m/Y', strtotime('+15 days')));
++
++        $this->assertTrue($event->save());
++        $this->assertSame(date('Y-m-d', strtotime('+15 days')), $event->starts_on);
++        $this->assertSame(date('Y-m-d', strtotime('+15 days')), Event::findById($event->id)->starts_on);
++    }
++
++    public function test_typed_starts_on_should_be_in_dd_mm_yyyy(): void
++    {
++        foreach (['2030-12-25', '31/02/2030', '1/2/2030', '25/12/30', '25-12-2030', 'amanhã'] as $value) {
++            $event = new Event($this->params());
++            $event->setStartsOnInput($value);
++
++            $this->assertFalse($event->save(), $value);
++            $this->assertEquals('não é uma data válida!', $event->errors('starts_on'), $value);
++            $this->assertSame($value, $event->startsOnInput(), $value);
++        }
++
++        $this->assertCount(0, Event::all());
++    }
++
++    public function test_typed_starts_on_should_not_be_in_the_past(): void
++    {
++        $event = new Event($this->params());
++        $event->setStartsOnInput(date('d/m/Y', strtotime('-1 day')));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
++    }
++
++    public function test_empty_typed_starts_on_should_be_required(): void
++    {
++        $event = new Event($this->params());
++        $event->setStartsOnInput('');
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não pode ser vazio!', $event->errors('starts_on'));
++    }
++
++    public function test_starts_on_input_should_show_stored_date_as_dd_mm_yyyy(): void
++    {
++        $event = $this->createEvent(['starts_on' => date('Y-m-d', strtotime('+30 days'))]);
++
++        $this->assertSame(date('d/m/Y', strtotime('+30 days')), $event->startsOnInput());
++        $this->assertSame(date('d/m/Y', strtotime('+30 days')), Event::findById($event->id)->startsOnInput());
++        $this->assertSame('', (new Event())->startsOnInput());
++    }
++
++    public function test_past_event_can_be_edited_when_typed_starts_on_does_not_change(): void
++    {
++        $event = $this->createPastEvent();
++        $past = $event->starts_on;
++
++        // O formulário devolve a mesma data em dd/mm/aaaa; comparar com o Y-m-d do banco sem converter acusaria mudança.
++        $event->setStartsOnInput(date('d/m/Y', (int) strtotime($past)));
++        $event->description = 'Descrição corrigida depois do evento.';
++
++        $this->assertTrue($event->save());
++        $this->assertNull($event->errors('starts_on'));
++        $this->assertSame($past, Event::findById($event->id)->starts_on);
++    }
++
++    public function test_past_event_should_reject_a_new_typed_past_starts_on(): void
++    {
++        $event = $this->createPastEvent();
++
++        $event->setStartsOnInput(date('d/m/Y', strtotime('-3 days')));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
++    }
++
+     /* ------------------- P02: capacity >= Inscrições ------------------- */
+ 
+     public function test_capacity_below_enrollments_should_be_invalid_on_edit(): void
+-- 
+2.54.0 (Apple Git-157)
+
