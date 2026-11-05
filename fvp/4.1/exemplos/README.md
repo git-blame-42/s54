@@ -196,6 +196,21 @@ Unit 71, Integration 9, Acceptance 9).
   `b10-perfil-lista-fechada/`
   - `2f28970` refactor: Replace role magic strings with constants
   - `3cd1685` feat: Validate user role against a closed list
+- B11. Login por código de 4 dígitos gerado pelo backend
+  `b11-login-por-codigo/`
+  - `e4709a6` feat: Add login code columns to users table
+  - `5b04a04` feat: Generate and validate login codes in User
+  - `c7a1d5b` test: Cover login code generation and validation in UserTest
+  - `bc9d6af` feat: Keep the pending login code request in the session
+  - `191b037` test: Cover the login code session helpers in AuthTest
+  - `4081615` feat: Add login code routes
+  - `17b2528` feat: Add LoginCodesController
+  - `0396b5d` feat: Add the login code request form
+  - `f2f36e3` feat: Add the login code verification form
+  - `43274da` feat: Link the login page to the login by code
+  - `c4d9964` test: Cover LoginCodesController actions
+  - `45e9097` test: Cover login code routes access
+  - `062920e` test: Cover login by code in the browser
 - C1. Novo tipo de flash (warning, info)
   `c1-novo-tipo-flash/`
   - `3fed8e8` feat: Add warning and info flash message types

@@ -2920,3 +2920,79 @@ Armadilhas:
   projeto em `86c81ca`): phpcs, phpstan, `test tests/Unit`,
   `test tests/Integration` e `test:browser`, todos com código 0.
 
+## 12. Complemento 3: o desafio do FVP da 4.1
+
+### B11. Login por código de 4 dígitos gerado pelo backend
+
+Chance: alta. Tempo: 40 min. Foi o desafio pedido no FVP da Entrega 4.1.
+O foco é a validação do login, não o sorteio. Exemplo pronto, um commit por
+arquivo na ordem das edições: `fvp/4.1/exemplos/b11-login-por-codigo/`.
+
+Fluxo em duas etapas, sem senha: e-mail (`GET`/`POST /login/code`) → o
+backend sorteia `random_int(1000, 9999)`, grava só o hash e a validade e
+mostra o código na tela (não há e-mail no projeto) → código
+(`GET`/`POST /login/code/verify`) → `Auth::login`.
+
+Arquivos, na ordem: `schema.sql` (`login_code_digest VARCHAR(255) NULL`,
+`login_code_expires_at DATETIME NULL`, `login_code_attempts TINYINT UNSIGNED
+NOT NULL DEFAULT 0`), `User` (`$columns`, `@property`, zero no construtor,
+`LOGIN_CODE_TTL = 300`, `LOGIN_CODE_MAX_ATTEMPTS = 3`, `generateLoginCode`,
+`hasPendingLoginCode`, `authenticateWithLoginCode`, `clearLoginCode`),
+`UserTest`, `Auth` (`startLoginCode`, `loginCodeUser`, `clearLoginCode`:
+o pedido pendente na sessão, só o id), `AuthTest`, `routes.php` (quatro
+rotas públicas `login_codes.*`), `LoginCodesController` (`new`, `create`,
+`verify`, `authenticate`), views `login_codes/new.phtml` e `verify.phtml`,
+link em `authentications/new.phtml`, testes de controller, acesso e
+aceitação.
+
+```php
+// User.php: a validação, num só método
+public function authenticateWithLoginCode(string $code): bool
+{
+    if (!$this->hasPendingLoginCode()) {          // há código, na validade, tentativas < 3
+        $this->clearLoginCode();
+        return false;
+    }
+    $wellFormed = preg_match('/^\\d{4}$/', $code) === 1;
+    if (!$wellFormed || !password_verify($code, (string) $this->login_code_digest)) {
+        $attempts = (int) $this->login_code_attempts + 1;
+        $attempts >= self::LOGIN_CODE_MAX_ATTEMPTS
+            ? $this->clearLoginCode()
+            : $this->update(['login_code_attempts' => $attempts]);
+        return false;
+    }
+    $this->clearLoginCode();                      // uso único
+    return true;
+}
+```
+
+```php
+// LoginCodesController::authenticate (controller fino)
+$user = Auth::loginCodeUser();                    // quem pediu neste navegador
+if ($user === null) { /* flash + redirect login_codes.new; return */ }
+if ($user->authenticateWithLoginCode($this->field($request, 'code'))) {
+    Auth::clearLoginCode();
+    Auth::login($user);
+    /* flash + redirect dashboard.index; return */
+}
+if (!$user->hasPendingLoginCode()) { /* expirou ou esgotou: redirect login_codes.new */ }
+/* 'Código inválido!' + redirect login_codes.verify */
+```
+
+Oito verificações: código pendente, validade, tentativas, 4 dígitos, hash
+confere (`password_verify`, nunca `==`), contador persistido, uso único e
+"é de quem pediu neste navegador" (`Auth`). Sete no model, uma no `Auth`.
+
+Testes: unit (gera 4 dígitos e grava só o hash; aceita uma vez; errado conta
+tentativa; bloqueia na 3ª; expirado recusa; entrada malformada recusa),
+`AuthTest` (pedido vive na sessão até ser encerrado), controller (`create`
+redireciona para verify; certo loga; errado não; sem pedido volta), acesso
+(`/login/code` 200; `/login/code/verify` sem pedido 302), aceitação (lê o
+código do flash e entra; `0000` é recusado).
+
+Armadilhas: `db:reset` (schema mudou); zero no construtor para a coluna
+`NOT NULL`; `update()` não valida (os testes releem com `findById`); `return`
+depois de cada `redirectTo` (nos testes ele não encerra); `GET` jamais para
+o código. Plano B sem mexer no banco: tudo na sessão via `Auth`
+(`issueLoginCode`/`authenticateWithLoginCode`), mesmas oito verificações,
+mas o contador não sobrevive à troca de navegador e a demo do banco fica vazia.
