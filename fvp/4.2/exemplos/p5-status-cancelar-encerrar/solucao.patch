@@ -1,4 +1,4 @@
-From ba6b6f104a3bc3e18b9b756af0933ce01a9662fb Mon Sep 17 00:00:00 2001
+From 56398d195aa3a78b7ed294867bc60da7ff4bda0d Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:12:19 -0300
 Subject: [PATCH] feat: Add Event status with cancel and finish actions
@@ -7,7 +7,7 @@ Adds events.status (scheduled, canceled, finished; scheduled by default in the c
 ---
  app/Controllers/Admin/EventsController.php    |  49 +++++++
  app/Models/Event.php                          |  73 +++++++++++
- app/views/admin/events/index.phtml            |  11 +-
+ app/views/admin/events/index.phtml            |  12 +-
  app/views/admin/events/show.phtml             |  15 +++
  config/routes.php                             |   4 +
  database/schema.sql                           |   2 +
@@ -15,7 +15,7 @@ Adds events.status (scheduled, canceled, finished; scheduled by default in the c
  tests/Integration/Access/EventsAccessTest.php |  26 +++-
  .../Admin/EventsControllerTest.php            | 124 ++++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        |  85 ++++++++++++
- 10 files changed, 465 insertions(+), 2 deletions(-)
+ 10 files changed, 466 insertions(+), 2 deletions(-)
  create mode 100644 tests/Acceptance/admin/events/CancelEventCest.php
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
@@ -207,7 +207,7 @@ index ba66870..c940be7 100644
  
      /**
 diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
-index 6835d74..1d85552 100644
+index 6835d74..b8e870d 100644
 --- a/app/views/admin/events/index.phtml
 +++ b/app/views/admin/events/index.phtml
 @@ -19,7 +19,10 @@
@@ -222,12 +222,13 @@ index 6835d74..1d85552 100644
                      <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
                      <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
                      <td><?= htmlspecialchars($event->location) ?></td>
-@@ -31,6 +34,12 @@
+@@ -31,6 +34,13 @@
                              <input type="hidden" name="_method" value="DELETE">
                              <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
                          </form>
 +                        <?php if ($event->status === 'scheduled') : ?>
-+                            <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
++                            <form class="d-inline"
++                                  action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
 +                                <input type="hidden" name="_method" value="PUT">
 +                                <button type="submit" class="btn btn-sm btn-outline-warning">Cancelar Evento</button>
 +                            </form>

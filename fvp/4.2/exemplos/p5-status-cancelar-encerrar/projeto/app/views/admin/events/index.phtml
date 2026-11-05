@@ -35,7 +35,8 @@
                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
                         </form>
                         <?php if ($event->status === 'scheduled') : ?>
-                            <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
+                            <form class="d-inline"
+                                  action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
                                 <input type="hidden" name="_method" value="PUT">
                                 <button type="submit" class="btn btn-sm btn-outline-warning">Cancelar Evento</button>
                             </form>
