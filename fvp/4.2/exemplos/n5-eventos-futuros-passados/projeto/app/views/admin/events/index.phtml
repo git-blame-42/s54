@@ -1,0 +1,61 @@
+<div class="mb-3">
+    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+</div>
+
+<ul class="nav nav-tabs mb-3 events-scope">
+    <li class="nav-item">
+        <a class="nav-link <?= $scope === null ? 'active' : '' ?>" href="<?= route('admin.events.index') ?>">Todos</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $scope === 'upcoming' ? 'active' : '' ?>"
+           href="<?= route('admin.events.index', ['scope' => 'upcoming']) ?>">Próximos</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $scope === 'past' ? 'active' : '' ?>"
+           href="<?= route('admin.events.index', ['scope' => 'past']) ?>">Passados</a>
+    </li>
+</ul>
+
+<?php if (empty($events)) : ?>
+    <p><?= match ($scope) {
+        'upcoming' => 'Nenhum evento próximo.',
+        'past' => 'Nenhum evento passado.',
+        default => 'Nenhum evento cadastrado.',
+    } ?></p>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Vagas</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($events as $event) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($event->title) ?></td>
+                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                    <td><?= htmlspecialchars($event->location) ?></td>
+                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php if ($paginator !== null) : ?>
+        <?php $paginator->renderPagesNavigation(); ?>
+    <?php endif; ?>
+<?php endif; ?>

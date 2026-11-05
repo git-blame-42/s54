@@ -1,0 +1,358 @@
+From 05193177d4c7f8c64b28686e9c9ea401c4568802 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:21:26 -0300
+Subject: [PATCH] feat: Add upcoming and past events tabs
+
+Event::upcoming() and Event::past() compare starts_on with today in SQL,
+ordered by date. ?scope= is validated against a closed list and the tabs
+are not paginated.
+---
+ app/Controllers/Admin/EventsController.php    | 26 ++++++--
+ app/Models/Event.php                          | 42 ++++++++++++
+ app/views/admin/events/index.phtml            | 24 ++++++-
+ .../admin/events/ScopeEventsCest.php          | 49 ++++++++++++++
+ .../Admin/EventsControllerTest.php            | 65 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 36 ++++++++++
+ 6 files changed, 233 insertions(+), 9 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/ScopeEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..e43ae95 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,19 +11,31 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
++    /** Abas aceitas em `?scope=` (lista fechada). */
++    private const SCOPES = ['upcoming', 'past'];
++
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
+-        $events = $paginator->registers();
++        $scope = $request->getParam('scope');
++        $scope = is_string($scope) && in_array($scope, self::SCOPES, true) ? $scope : null;
++
++        if ($scope !== null) {
++            // Abas Próximos/Passados: sem paginação, ordenadas por data no SQL do model.
++            $events = $scope === 'upcoming' ? Event::upcoming() : Event::past();
++            $paginator = null;
++        } else {
++            $paginator = Event::paginate(
++                page: max(1, (int) $request->getParam('page', 1)),
++                per_page: self::PER_PAGE,
++                route: 'admin.events.paginate'
++            );
++            $events = $paginator->registers();
++        }
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'scope', 'title'));
+     }
+ 
+     public function show(Request $request): void
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..62972c0 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,7 +4,9 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
+ use Lib\Validations;
++use PDO;
+ use PDOException;
+ 
+ /**
+@@ -144,6 +146,46 @@ class Event extends Model
+         return $this->enrollmentsCount() > 0;
+     }
+ 
++    /**
++     * Eventos de hoje em diante, do mais próximo ao mais distante.
++     *
++     * @return array<static>
++     */
++    public static function upcoming(): array
++    {
++        return self::byStartsOn('starts_on >= :today ORDER BY starts_on, id');
++    }
++
++    /**
++     * Eventos que já aconteceram (antes de hoje), do mais recente ao mais antigo.
++     *
++     * @return array<static>
++     */
++    public static function past(): array
++    {
++        return self::byStartsOn('starts_on < :today ORDER BY starts_on DESC, id DESC');
++    }
++
++    /**
++     * "Hoje" vem do PHP (mesmo fuso da validação de data), não do CURDATE() do MySQL.
++     * `$condition` é sempre um texto fixo deste model, nunca entrada do usuário.
++     *
++     * @return array<static>
++     */
++    private static function byStartsOn(string $condition): array
++    {
++        $columns = implode(', ', static::$columns);
++        $table = static::$table;
++
++        $stmt = Database::getDatabaseConn()->prepare("SELECT id, {$columns} FROM {$table} WHERE {$condition}");
++        $stmt->bindValue(':today', date('Y-m-d'));
++        $stmt->execute();
++
++        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
++
++        return array_map(fn($row) => new static($row), $rows);
++    }
++
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+      * retorna false e registra o motivo em errors('base').
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..b24818c 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -2,8 +2,26 @@
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<ul class="nav nav-tabs mb-3 events-scope">
++    <li class="nav-item">
++        <a class="nav-link <?= $scope === null ? 'active' : '' ?>" href="<?= route('admin.events.index') ?>">Todos</a>
++    </li>
++    <li class="nav-item">
++        <a class="nav-link <?= $scope === 'upcoming' ? 'active' : '' ?>"
++           href="<?= route('admin.events.index', ['scope' => 'upcoming']) ?>">Próximos</a>
++    </li>
++    <li class="nav-item">
++        <a class="nav-link <?= $scope === 'past' ? 'active' : '' ?>"
++           href="<?= route('admin.events.index', ['scope' => 'past']) ?>">Passados</a>
++    </li>
++</ul>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= match ($scope) {
++        'upcoming' => 'Nenhum evento próximo.',
++        'past' => 'Nenhum evento passado.',
++        default => 'Nenhum evento cadastrado.',
++    } ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+@@ -37,5 +55,7 @@
+         </tbody>
+     </table>
+ 
+-    <?php $paginator->renderPagesNavigation(); ?>
++    <?php if ($paginator !== null) : ?>
++        <?php $paginator->renderPagesNavigation(); ?>
++    <?php endif; ?>
+ <?php endif; ?>
+diff --git a/tests/Acceptance/admin/events/ScopeEventsCest.php b/tests/Acceptance/admin/events/ScopeEventsCest.php
+new file mode 100644
+index 0000000..a6376c3
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ScopeEventsCest.php
+@@ -0,0 +1,49 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Abas Próximos/Passados (`?scope=upcoming|past`). Os Eventos da base são todos futuros; aqui o
++ * Evento 02 é movido para ontem com update(), que não valida (o formulário recusaria a data).
++ */
++class ScopeEventsCest extends BaseEventsCest
++{
++    public function upcomingAndPastTabs(AcceptanceTester $page): void
++    {
++        $this->events[2]->update(['starts_on' => date('Y-m-d', strtotime('-1 day'))]);
++
++        $page->wantTo('Ver só os Eventos próximos e só os passados');
++        $page->amOnPage('/admin/events');
++
++        $page->click('Próximos', '.events-scope');
++        $page->seeCurrentUrlEquals('/admin/events?scope=upcoming');
++        // Sem paginação: os 15 futuros numa página só.
++        $page->seeNumberOfElements('table tbody tr', self::TOTAL_EVENTS - 1);
++        $page->see($this->title(1), 'table');
++        $page->see($this->title(16), 'table');
++        $page->dontSee($this->title(2), 'table');
++        $page->dontSeeElement('.pagination');
++
++        $page->click('Passados', '.events-scope');
++        $page->seeCurrentUrlEquals('/admin/events?scope=past');
++        $page->seeNumberOfElements('table tbody tr', 1);
++        $page->see($this->title(2), 'table');
++        $page->see(date('d/m/Y', (int) strtotime('-1 day')), 'table');
++
++        $page->click('Todos', '.events-scope');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->seeElement('.pagination');
++        $page->see('Mostrando 1 - 5 de 16');
++    }
++
++    public function pastTabWithoutEvents(AcceptanceTester $page): void
++    {
++        $page->wantTo('Aba de Eventos passados vazia');
++        $page->amOnPage('/admin/events?scope=past');
++
++        $page->see('Nenhum evento passado.');
++        $page->dontSeeElement('table');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..49c1734 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,62 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_with_upcoming_scope_lists_only_future_events_without_pagination(): void
++    {
++        // 6 futuros (mais que uma página de 5) e 1 passado.
++        for ($i = 6; $i >= 1; $i--) {
++            $this->createEvent(['title' => sprintf('Futuro %02d', $i), 'starts_on' => date('Y-m-d', strtotime("+{$i} days"))]);
++        }
++        $this->createPastEvent('Passado 01', '-1 day');
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['scope' => 'upcoming']);
++
++        $this->assertStringContainsString('Futuro 01', $response);
++        $this->assertStringContainsString('Futuro 06', $response);
++        $this->assertStringNotContainsString('Passado 01', $response);
++        $this->assertStringNotContainsString('class="pagination', $response);
++        // Ordenado por data: o de amanhã vem antes do de daqui a 6 dias (criado primeiro).
++        $this->assertLessThan(strpos($response, 'Futuro 06'), strpos($response, 'Futuro 01'));
++        $this->assertMatchesRegularExpression('/nav-link active"\s+href="\/admin\/events\?scope=upcoming"/', $response);
++    }
++
++    public function test_index_with_past_scope_lists_only_past_events(): void
++    {
++        $this->createEvent(['title' => 'Futuro 01', 'starts_on' => date('Y-m-d', strtotime('+1 day'))]);
++        $this->createPastEvent('Passado 01', '-1 day');
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['scope' => 'past']);
++
++        $this->assertStringContainsString('Passado 01', $response);
++        $this->assertStringContainsString(date('d/m/Y', strtotime('-1 day')), $response);
++        $this->assertStringNotContainsString('Futuro 01', $response);
++    }
++
++    public function test_index_with_past_scope_without_events_shows_message(): void
++    {
++        $this->createEvent(['title' => 'Futuro 01']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['scope' => 'past']);
++
++        $this->assertStringContainsString('Nenhum evento passado.', $response);
++    }
++
++    public function test_index_with_invalid_scope_lists_all_paginated(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        foreach (['', 'all', ['past']] as $scope) {
++            $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['scope' => $scope]);
++
++            $this->assertStringContainsString('Evento 05', $response);
++            $this->assertStringNotContainsString('Evento 06', $response);
++            $this->assertStringContainsString('/admin/events/page/2', $response);
++            $this->assertMatchesRegularExpression('/nav-link active"\s+href="\/admin\/events"/', $response);
++        }
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+@@ -299,6 +355,15 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
++    private function createPastEvent(string $title, string $relative): Event
++    {
++        $event = $this->createEvent(['title' => $title]);
++        // update() não valida: é o jeito de gravar uma data passada (o formulário recusa).
++        $this->assertTrue($event->update(['starts_on' => date('Y-m-d', strtotime($relative))]));
++
++        return $event;
++    }
++
+     private function enroll(Event $event, string $email = 'participante@example.com'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..eede276 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -375,6 +375,31 @@ class EventTest extends TestCase
+         $this->assertCount(0, Event::where(['kind' => 'short_course']));
+     }
+ 
++    public function test_upcoming_should_return_today_and_future_events_ordered_by_date(): void
++    {
++        $tomorrow = $this->createEvent(['title' => 'Amanhã', 'starts_on' => date('Y-m-d', strtotime('+1 day'))]);
++        $today = $this->createEvent(['title' => 'Hoje', 'starts_on' => date('Y-m-d')]);
++        $this->createEventOn('Ontem', '-1 day');
++
++        $upcoming = Event::upcoming();
++
++        $this->assertCount(2, $upcoming);
++        $this->assertInstanceOf(Event::class, $upcoming[0]);
++        $this->assertEquals([$today->id, $tomorrow->id], array_map(fn(Event $event) => $event->id, $upcoming));
++    }
++
++    public function test_past_should_return_only_past_events_most_recent_first(): void
++    {
++        $this->createEvent(['title' => 'Amanhã', 'starts_on' => date('Y-m-d', strtotime('+1 day'))]);
++        $this->createEvent(['title' => 'Hoje', 'starts_on' => date('Y-m-d')]);
++        $lastWeek = $this->createEventOn('Semana passada', '-7 days');
++        $yesterday = $this->createEventOn('Ontem', '-1 day');
++
++        $past = Event::past();
++
++        $this->assertEquals([$yesterday->id, $lastWeek->id], array_map(fn(Event $event) => $event->id, $past));
++    }
++
+     public function test_find_by_and_exists(): void
+     {
+         $event = $this->createEvent(['title' => 'Único']);
+@@ -496,6 +521,17 @@ class EventTest extends TestCase
+      * Cria um Evento e move `starts_on` para o passado direto no banco (update não valida),
+      * simulando um Evento que já aconteceu.
+      */
++    /**
++     * Evento numa data relativa (pode ser passada): grava com update, que não valida (como createPastEvent).
++     */
++    private function createEventOn(string $title, string $relative): Event
++    {
++        $event = $this->createEvent(['title' => $title]);
++        $this->assertTrue($event->update(['starts_on' => date('Y-m-d', strtotime($relative))]));
++
++        return Event::findById($event->id);
++    }
++
+     private function createPastEvent(): Event
+     {
+         $event = $this->createEvent();
+-- 
+2.54.0 (Apple Git-157)
+

@@ -65,6 +65,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N4. Mudar `per_page` ou deixar o usuário escolher
   `n4-per-page/`
   - feat: Show 10 events per page and allow choosing per_page
+- N5. Só Eventos futuros ou passados
+  `n5-eventos-futuros-passados/`
+  - feat: Add upcoming and past events tabs
 - N6. Dado calculado na tela (badge "Lotado", total no painel)
   `n6-badge-lotado-contador/`
   - feat: Show full badge and admin dashboard totals
