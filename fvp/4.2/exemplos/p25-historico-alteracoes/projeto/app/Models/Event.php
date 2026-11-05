@@ -45,6 +45,9 @@ class Event extends Model
         'community' => 'Comunidade externa',
     ];
 
+    /** Colunas inteiras editáveis: comparadas pelo valor numérico no histórico. */
+    private const INTEGER_COLUMNS = ['capacity'];
+
     protected static string $table = 'events';
     protected static array $columns = [
         'user_id',
@@ -176,7 +179,7 @@ class Event extends Model
             $new = $this->$column;
 
             if (self::comparableValue($column, $old) !== self::comparableValue($column, $new)) {
-                $changes[$column] = [self::storableValue($old), self::storableValue($new)];
+                $changes[$column] = [self::storableValue($column, $old), self::storableValue($column, $new)];
             }
         }
 
@@ -198,13 +201,18 @@ class Event extends Model
     }
 
     /**
-     * Valor em forma comparável. O banco devolve capacity como int (20) e o formulário
-     * como string ('20'); o SET volta na ordem da definição da coluna, não na ordem
-     * enviada; o navegador envia as quebras de linha do textarea como \r\n.
+     * Valor em forma comparável. O banco devolve capacity como int (5) e o formulário
+     * como string ('5', '+5' ou ' 5', que o integerMin aceita e o banco grava como 5);
+     * o SET volta na ordem da definição da coluna, não na ordem enviada; o navegador
+     * envia as quebras de linha do textarea como \r\n.
      */
     private static function comparableValue(string $column, mixed $value): string
     {
         $value = is_scalar($value) ? (string) $value : '';
+
+        if (in_array($column, self::INTEGER_COLUMNS, true)) {
+            return self::integerText($value);
+        }
 
         if ($column === 'audience') {
             $values = explode(',', $value);
@@ -216,9 +224,31 @@ class Event extends Model
         return str_replace("\r\n", "\n", $value);
     }
 
-    private static function storableValue(mixed $value): ?string
+    /**
+     * Valor gravado no histórico: o inteiro como o banco o guarda (5, não '+5').
+     */
+    private static function storableValue(string $column, mixed $value): ?string
     {
-        return is_scalar($value) ? (string) $value : null;
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        if (in_array($column, self::INTEGER_COLUMNS, true)) {
+            return self::integerText((string) $value);
+        }
+
+        return (string) $value;
+    }
+
+    /**
+     * Inteiro normalizado como texto ('+5' e ' 5' viram '5'); valor que não é inteiro
+     * fica como veio (a validação o rejeita antes de gravar).
+     */
+    private static function integerText(string $value): string
+    {
+        $number = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $number === false ? $value : (string) $number;
     }
 
     public function user(): BelongsTo

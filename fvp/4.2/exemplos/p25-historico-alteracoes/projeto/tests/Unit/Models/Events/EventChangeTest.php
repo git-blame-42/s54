@@ -175,6 +175,44 @@ class EventChangeTest extends TestCase
         $this->assertSame([], $event->history());
     }
 
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function sameCapacityProvider(): array
+    {
+        return [
+            'com sinal' => ['+10'],
+            'com espaço' => [' 10'],
+        ];
+    }
+
+    #[DataProvider('sameCapacityProvider')]
+    public function test_capacity_with_sign_or_space_is_the_same_integer(string $capacity): void
+    {
+        $event = $this->loaded($this->createEvent(['capacity' => 10]));
+
+        // O integerMin aceita '+10' e ' 10' (filter_var) e o banco grava 10.
+        $event->capacity = $capacity;
+
+        $this->assertSame([], $event->changedFields());
+        $this->assertTrue($event->saveWithHistory($this->editor->id));
+        $this->assertSame([], $event->history());
+        $this->assertEquals(10, $this->loaded($event)->capacity);
+    }
+
+    public function test_changed_capacity_is_recorded_as_the_stored_integer(): void
+    {
+        $event = $this->loaded($this->createEvent(['capacity' => 10]));
+
+        $event->capacity = '+12';
+
+        $this->assertTrue($event->saveWithHistory($this->editor->id));
+        $history = $event->history();
+        $this->assertCount(1, $history);
+        $this->assertSame('10', $history[0]->old_value);
+        $this->assertSame('12', $history[0]->new_value);
+    }
+
     public function test_invalid_data_should_not_save_nor_record_history(): void
     {
         $event = $this->loaded($this->createEvent());

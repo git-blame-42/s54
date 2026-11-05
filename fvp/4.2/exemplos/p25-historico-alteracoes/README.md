@@ -6,7 +6,7 @@ campo que realmente mudou, o valor antigo, o novo, quem editou e
 quando. Mostre esse histórico no detalhe do Evento, do mais recente
 para o mais antigo. Quem editou vem da sessão, não do formulário."
 
-Chance: média. Tempo estimado: 30-40 min. Catálogo:
+Chance: média-baixa. Tempo estimado: 35-45 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, P25.
 
 Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
@@ -14,7 +14,7 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
 
 | Commit    | Mensagem                                       |
 |-----------|------------------------------------------------|
-| `fa13d56` | `feat: Record the change history of events`    |
+| `0fa5bbe` | `feat: Record the change history of events`    |
 
 ## O que mudou
 
@@ -28,8 +28,10 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
   - `DROP TABLE IF EXISTS event_changes` antes do de `event_user`.
 - `app/Models/EventChange.php` (novo):
   - `$columns` com as 6 colunas; o construtor preenche
-    `created_at` quando não vem do banco (o `save()` grava todas as
-    colunas, o `DEFAULT` do schema não vale);
+    `created_at` com `date('Y-m-d H:i:s')` quando não vem do banco.
+    No schema a coluna é `TIMESTAMP ... DEFAULT CURRENT_TIMESTAMP`,
+    mas esse `DEFAULT` nunca é usado: o `save()` grava todas as
+    colunas de `$columns`, então o valor vem sempre do PHP;
   - `validates()`: `event_id`, `user_id` e `field` obrigatórios;
     `field` precisa ser uma coluna de `Event` (`inclusion`);
   - `forEvent(int $eventId)`: SQL próprio com `prepare` +
@@ -47,8 +49,11 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
     `self::findById($this->id)` e compara coluna a coluna de
     `$columns` (menos `user_id`), com valores normalizados.
     Devolve `[campo => [antigo, novo]]`;
-  - `comparableValue()` (privado): tudo vira string, o SET é
-    ordenado, `\r\n` vira `\n`;
+  - `comparableValue()` (privado): tudo vira string; as colunas
+    inteiras editáveis (`INTEGER_COLUMNS`, hoje só `capacity`)
+    passam por `filter_var(..., FILTER_VALIDATE_INT)`; o SET é
+    ordenado; `\r\n` vira `\n`. O `new_value` de `capacity` é
+    gravado já normalizado (`12`, não `'+12'`);
   - `history()`: `EventChange::forEvent($this->id)`;
   - PHPDoc do `safeDestroy`: o histórico não bloqueia a remoção.
 - `app/Controllers/Admin/EventsController.php`:
@@ -63,7 +68,7 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
 - `database/Populate/populate.php`: duas linhas de exemplo (ver
   "Por que assim").
 - Testes:
-  - `EventChangeTest` (novo, 13 testes, um com 8 casos).
+  - `EventChangeTest` (novo, 15 testes, dois com casos: 8 e 2).
   - `EventsControllerTest`: 5 testes novos.
   - `EventHistoryCest` (novo, 2 cenários).
 
@@ -78,11 +83,23 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
   outra edição gravou no meio, o "de" é o valor do banco.
 - Mudanças calculadas antes do `save()`: depois dele o banco já
   tem os valores novos e nada pareceria alterado.
-- Normalização (como na comparação do M19): o banco devolve
-  `capacity` como int `20` e o form manda `'20'`; o SET volta na
-  ordem da definição da coluna; o textarea chega com `\r\n`. Sem
-  ela, todo Salvar gravaria linhas falsas (conferido: o teste
-  `test_same_values_as_the_form_sends_are_not_changes` falha).
+- Normalização: cobre os casos que o formulário e a validação da
+  base produzem, não qualquer forma "equivalente" de um valor.
+  - `capacity`: o banco devolve int `5`; o form manda `'5'`, e o
+    `integerMin` (`filter_var`) também aceita `'+5'` e `' 5'`, que
+    o banco grava como `5`. Só `(string)` não basta (`'+5'` contra
+    `'5'` daria a linha falsa "Vagas 5 para +5"); por isso o
+    `filter_var` também na comparação. Coluna inteira nova (M1)
+    entra em `INTEGER_COLUMNS`.
+  - SET: volta na ordem da definição da coluna, não na enviada.
+  - Textarea: chega com `\r\n`.
+  - Sem ela, todo Salvar gravaria linhas falsas (conferido: sem
+    normalizar, `test_same_values_as_the_form_sends_are_not_changes`
+    falha).
+  - Não é normalizado: espaço no fim do título, `'020'` em
+    `capacity` (`filter_var` recusa e a validação barra), datas em
+    outro formato (a validação exige `Y-m-d`). Texto diferente que
+    o banco grava diferente é mudança de verdade.
 - `user_id` fora da comparação: o formulário não o edita e o
   `fill` nunca o copia.
 - Autor só da sessão: o controller passa
@@ -98,9 +115,17 @@ Branch no clone: `fvp/p25-historico-alteracoes`, a partir de `main`
   impedir a remoção.
 - Sem transação: cada chamada a `Database::getDatabaseConn()` abre
   uma conexão nova, então `save()` e os `EventChange` não cabem na
-  mesma transação sem mexer no `core/`. Se um `EventChange` falhar
-  (não deveria: os dados vêm do próprio model), o model lança
-  `RuntimeException` em vez de esconder o erro.
+  mesma transação sem mexer no `core/`. Consequência: se um
+  `EventChange` falhar (não deveria: os dados vêm do próprio
+  model), o Evento já está salvo e o histórico fica parcial (as
+  linhas gravadas antes da falha ficam). O model lança
+  `RuntimeException` em vez de esconder o erro, e ela vira 500 no
+  `ErrorsHandler`. A opção com transação (catálogo, P25, passo 4)
+  muda 2 linhas no `core/`: `Model::save(?PDO $pdo = null)` e
+  `$pdo ??= Database::getDatabaseConn();`. Aí o `saveWithHistory`
+  abre um PDO, faz `beginTransaction()`, passa o mesmo `$pdo` ao
+  `save()` do Evento e de cada `EventChange`, e `commit()` ou
+  `rollBack()`. Não fiz para não mexer no `core/`.
 - Populate com duas linhas: uma edição de exemplo do Administrador,
   há dois dias, no Evento "Introdução a APIs REST com PHP" (local e
   vagas). O `new_value` é o valor atual do Evento, então o
@@ -124,7 +149,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 179 testes, Integration 50, Acceptance 25
+Resultado obtido: Unit 182 testes, Integration 50, Acceptance 25
 (base: 159 / 45 / 23). PHPCS e PHPStan sem erros. O populate
 termina com "2 Alterações de exemplo no histórico do Evento
 "Introdução a APIs REST com PHP"".
@@ -137,6 +162,9 @@ Testes novos:
     (8 casos)
   - `test_save_with_history_should_record_nothing_without_changes`
   - `test_same_values_as_the_form_sends_are_not_changes`
+  - `test_capacity_with_sign_or_space_is_the_same_integer`
+    (`'+10'` e `' 10'` contra `10`: 0 linhas)
+  - `test_changed_capacity_is_recorded_as_the_stored_integer`
   - `test_invalid_data_should_not_save_nor_record_history`
   - `test_without_editor_should_not_save_nor_record_history`
   - `test_new_record_has_no_changed_fields_nor_history`
@@ -178,8 +206,10 @@ novo sem mexer não acrescenta linha.
   linha no histórico a cada editor diferente: acrescente-o ao
   `array_diff(static::$columns, ['user_id'])` de `changedFields()`.
 - M1 (`m1-campo-novo-workload-hours`) e outros campos novos: entram
-  no histórico sem mexer em `changedFields()`; só falta o rótulo
-  em `EventChange::FIELD_LABELS` (sem ele aparece o nome da coluna).
+  no histórico sem mexer em `changedFields()`. Falta o rótulo em
+  `EventChange::FIELD_LABELS` (sem ele aparece o nome da coluna) e,
+  se for inteiro como `workload_hours`, incluí-lo em
+  `Event::INTEGER_COLUMNS` (senão `'+4'` contra `4` vira linha).
 - P10 (`p10-comentarios-evento`): mesmo molde de tabela filha com
   `ON DELETE CASCADE` e `created_at` preenchido no construtor.
 - R5 (`r5-created-updated-at`): mostra `updated_at` do Evento; o
@@ -209,7 +239,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p25 \
     s50/fvp/4.2/exemplos/p25-historico-alteracoes/projeto
 git fetch fvp-p25 fvp/p25-historico-alteracoes
-git cherry-pick fa13d56
+git cherry-pick 0fa5bbe
 git remote remove fvp-p25
 ```
 
@@ -220,7 +250,7 @@ D=s50/fvp/4.2/exemplos/p25-historico-alteracoes
 git fetch $D/solucao.bundle \
     fvp/p25-historico-alteracoes:fvp-p25
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick fa13d56
+git cherry-pick 0fa5bbe
 # opcional, limpa a ref
 git branch -D fvp-p25
 ```
@@ -284,6 +314,9 @@ Arquivos que costumam conflitar e por quê:
 - Comparar com `!==` sem normalizar: `20` (int do banco) contra
   `'20'` (form) gera uma linha "Vagas 20 para 20" a cada Salvar; o
   mesmo para o SET em outra ordem e o `\r\n` do textarea.
+- Normalizar inteiro só com `(string)`: `'+5'` passa no
+  `integerMin`, o banco grava `5` e sai "Vagas 5 para +5". Use
+  `filter_var(..., FILTER_VALIDATE_INT)` dos dois lados.
 - Autor vindo de `event[user_id]` ou de um campo oculto: qualquer
   um forja. Use `$this->currentUser()`.
 - `ORDER BY created_at DESC` sem `id`: as linhas da mesma edição

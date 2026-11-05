@@ -1,4 +1,4 @@
-From fa13d568acb8ce5ba708672ccbfb3518f14f482a Mon Sep 17 00:00:00 2001
+From 0fa5bbe626531d8a60a4ea2a3da1787dfe3fe244 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 19:29:40 -0300
 Subject: [PATCH] feat: Record the change history of events
@@ -11,15 +11,15 @@ the history newest first (created_at DESC, id DESC). Populate seeds one
 example edit with two rows.
 ---
  app/Controllers/Admin/EventsController.php    |   7 +-
- app/Models/Event.php                          | 110 +++++-
- app/Models/EventChange.php                    | 153 +++++++++
+ app/Models/Event.php                          | 140 ++++++-
+ app/Models/EventChange.php                    | 153 ++++++++
  app/views/admin/events/show.phtml             |  31 ++
  database/Populate/populate.php                |  27 ++
- database/schema.sql                           |  19 ++
+ database/schema.sql                           |  19 +
  .../admin/events/EventHistoryCest.php         |  64 ++++
  .../Admin/EventsControllerTest.php            | 108 ++++++
- tests/Unit/Models/Events/EventChangeTest.php  | 313 ++++++++++++++++++
- 9 files changed, 829 insertions(+), 3 deletions(-)
+ tests/Unit/Models/Events/EventChangeTest.php  | 351 ++++++++++++++++++
+ 9 files changed, 897 insertions(+), 3 deletions(-)
  create mode 100644 app/Models/EventChange.php
  create mode 100644 tests/Acceptance/admin/events/EventHistoryCest.php
  create mode 100644 tests/Unit/Models/Events/EventChangeTest.php
@@ -51,7 +51,7 @@ index ca4ada1..2284a22 100644
              $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
          } else {
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..3e43d5c 100644
+index ba66870..52b4d34 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -6,6 +6,7 @@ use Core\Database\ActiveRecord\BelongsTo;
@@ -62,7 +62,17 @@ index ba66870..3e43d5c 100644
  
  /**
   * @property int $id
-@@ -114,6 +115,112 @@ class Event extends Model
+@@ -44,6 +45,9 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Colunas inteiras editáveis: comparadas pelo valor numérico no histórico. */
++    private const INTEGER_COLUMNS = ['capacity'];
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -114,6 +118,139 @@ class Event extends Model
          }
      }
  
@@ -127,7 +137,7 @@ index ba66870..3e43d5c 100644
 +            $new = $this->$column;
 +
 +            if (self::comparableValue($column, $old) !== self::comparableValue($column, $new)) {
-+                $changes[$column] = [self::storableValue($old), self::storableValue($new)];
++                $changes[$column] = [self::storableValue($column, $old), self::storableValue($column, $new)];
 +            }
 +        }
 +
@@ -149,13 +159,18 @@ index ba66870..3e43d5c 100644
 +    }
 +
 +    /**
-+     * Valor em forma comparável. O banco devolve capacity como int (20) e o formulário
-+     * como string ('20'); o SET volta na ordem da definição da coluna, não na ordem
-+     * enviada; o navegador envia as quebras de linha do textarea como \r\n.
++     * Valor em forma comparável. O banco devolve capacity como int (5) e o formulário
++     * como string ('5', '+5' ou ' 5', que o integerMin aceita e o banco grava como 5);
++     * o SET volta na ordem da definição da coluna, não na ordem enviada; o navegador
++     * envia as quebras de linha do textarea como \r\n.
 +     */
 +    private static function comparableValue(string $column, mixed $value): string
 +    {
 +        $value = is_scalar($value) ? (string) $value : '';
++
++        if (in_array($column, self::INTEGER_COLUMNS, true)) {
++            return self::integerText($value);
++        }
 +
 +        if ($column === 'audience') {
 +            $values = explode(',', $value);
@@ -167,15 +182,37 @@ index ba66870..3e43d5c 100644
 +        return str_replace("\r\n", "\n", $value);
 +    }
 +
-+    private static function storableValue(mixed $value): ?string
++    /**
++     * Valor gravado no histórico: o inteiro como o banco o guarda (5, não '+5').
++     */
++    private static function storableValue(string $column, mixed $value): ?string
 +    {
-+        return is_scalar($value) ? (string) $value : null;
++        if (!is_scalar($value)) {
++            return null;
++        }
++
++        if (in_array($column, self::INTEGER_COLUMNS, true)) {
++            return self::integerText((string) $value);
++        }
++
++        return (string) $value;
++    }
++
++    /**
++     * Inteiro normalizado como texto ('+5' e ' 5' viram '5'); valor que não é inteiro
++     * fica como veio (a validação o rejeita antes de gravar).
++     */
++    private static function integerText(string $value): string
++    {
++        $number = filter_var($value, FILTER_VALIDATE_INT);
++
++        return $number === false ? $value : (string) $number;
 +    }
 +
      public function user(): BelongsTo
      {
          return $this->belongsTo(User::class, 'user_id');
-@@ -146,7 +253,8 @@ class Event extends Model
+@@ -146,7 +283,8 @@ class Event extends Model
  
      /**
       * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
@@ -664,10 +701,10 @@ index bc62d1d..a90d6c6 100644
          $user = User::findByEmail($email) ?? new User([
 diff --git a/tests/Unit/Models/Events/EventChangeTest.php b/tests/Unit/Models/Events/EventChangeTest.php
 new file mode 100644
-index 0000000..fb8821d
+index 0000000..549e699
 --- /dev/null
 +++ b/tests/Unit/Models/Events/EventChangeTest.php
-@@ -0,0 +1,313 @@
+@@ -0,0 +1,351 @@
 +<?php
 +
 +namespace Tests\Unit\Models\Events;
@@ -843,6 +880,44 @@ index 0000000..fb8821d
 +        $this->assertSame([], $event->changedFields());
 +        $this->assertTrue($event->saveWithHistory($this->editor->id));
 +        $this->assertSame([], $event->history());
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function sameCapacityProvider(): array
++    {
++        return [
++            'com sinal' => ['+10'],
++            'com espaço' => [' 10'],
++        ];
++    }
++
++    #[DataProvider('sameCapacityProvider')]
++    public function test_capacity_with_sign_or_space_is_the_same_integer(string $capacity): void
++    {
++        $event = $this->loaded($this->createEvent(['capacity' => 10]));
++
++        // O integerMin aceita '+10' e ' 10' (filter_var) e o banco grava 10.
++        $event->capacity = $capacity;
++
++        $this->assertSame([], $event->changedFields());
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++        $this->assertSame([], $event->history());
++        $this->assertEquals(10, $this->loaded($event)->capacity);
++    }
++
++    public function test_changed_capacity_is_recorded_as_the_stored_integer(): void
++    {
++        $event = $this->loaded($this->createEvent(['capacity' => 10]));
++
++        $event->capacity = '+12';
++
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++        $history = $event->history();
++        $this->assertCount(1, $history);
++        $this->assertSame('10', $history[0]->old_value);
++        $this->assertSame('12', $history[0]->new_value);
 +    }
 +
 +    public function test_invalid_data_should_not_save_nor_record_history(): void
