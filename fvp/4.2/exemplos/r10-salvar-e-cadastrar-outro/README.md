@@ -47,9 +47,12 @@ Branch no clone: `fvp/r10-salvar-e-cadastrar-outro`, a partir de
   outro texto; qualquer coisa diferente cai no padrão (o teste cobre).
   Texto e comparação vêm da mesma constante, então mudar o rótulo não
   quebra o fluxo.
-- `return` depois do `redirectTo`: no teste de controller o
-  `redirectTo` não encerra o script; sem o `return`, o segundo
-  redirecionamento sobrescreveria o primeiro.
+- `return` depois do `redirectTo`: é a regra do professor (todo
+  redirect termina o método). Em produção o `redirectTo` já faz
+  `exit`, mas o controller não deve depender disso. No teste de
+  controller ele só imprime `Location: ...` (sem `exit`); sem o
+  `return`, o método seguiria e imprimiria o segundo `Location`
+  colado no primeiro.
 - O flash de sucesso aparece no formulário novo (o layout mostra o
   flash em qualquer página).
 - Edição sem o botão: "cadastrar outro" não faz sentido no `edit`. A
@@ -170,8 +173,13 @@ Depois de aplicar: rode os testes e o `./run phpcs` (sem schema).
 
 - Pôr o botão como `event[commit]`: o valor entra no array do Evento e
   qualquer cenário que copie `event[...]` sem filtro tentaria gravá-lo.
-- Esquecer o `return` depois do primeiro `redirectTo`: no teste, a
-  saída fica com o `Location` do `show`.
+- Esquecer o `return` depois do primeiro `redirectTo`: fere a regra
+  do professor. Em produção passa despercebido (o `exit` do
+  `redirectTo` encerra antes); no teste a saída traz os dois
+  `Location` concatenados (`Location: /admin/events/new` e logo depois
+  o do `show`). Por isso o teste usa `assertSame('Location:
+  /admin/events/new', ...)`: `assertStringContainsString` passaria
+  mesmo assim.
 - Comparar com `==` ou sem conferir o tipo: `commit` como array não
   pode cair no ramo especial.
 - O Codeception clica pelo texto: `click('Salvar')` continua achando o
