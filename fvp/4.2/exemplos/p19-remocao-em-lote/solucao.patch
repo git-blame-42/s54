@@ -1,0 +1,434 @@
+From c22f59a5805991b343af295e5bc8cf1f24922b55 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:10:52 -0300
+Subject: [PATCH] feat: Add bulk removal of events
+
+DELETE /admin/events receives ids[], validates them and applies the safeDestroy rule to each event, with one flash message per type.
+---
+ app/Controllers/Admin/EventsController.php    |  55 ++++++++++
+ app/Models/Event.php                          |  26 +++++
+ app/views/admin/events/index.phtml            |  13 +++
+ config/routes.php                             |   3 +
+ .../admin/events/DestroyManyEventsCest.php    |  57 ++++++++++
+ tests/Integration/Access/EventsAccessTest.php |   5 +-
+ .../Admin/EventsControllerTest.php            | 101 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        |  32 ++++++
+ 8 files changed, 291 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Acceptance/admin/events/DestroyManyEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..e0cf53d 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -129,6 +129,61 @@ class EventsController extends Controller
+         $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
+     }
+ 
++    /**
++     * DELETE /admin/events: remove os Eventos marcados (ids[]). Cada um passa pela regra do safeDestroy();
++     * um flash por tipo (success e danger), porque o FlashMessage guarda uma mensagem por tipo.
++     */
++    public function destroyMany(Request $request): void
++    {
++        $ids = $this->selectedIds($request->getParam('ids'));
++
++        if ($ids === null) {
++            FlashMessage::danger('Selecione ao menos um evento válido para remover!');
++            $this->redirectTo(route('admin.events.index'));
++            return;
++        }
++
++        $result = Event::destroyMany($ids);
++
++        if ($result['removed'] !== []) {
++            FlashMessage::success(count($result['removed']) . ' evento(s) removido(s) com sucesso!');
++        }
++
++        $problems = [];
++        if ($result['blocked'] !== []) {
++            $problems[] = 'não é possível remover eventos com inscrições: ' . implode(', ', $result['blocked']);
++        }
++        if ($result['missing'] !== []) {
++            $problems[] = count($result['missing']) . ' evento(s) não encontrado(s)';
++        }
++        if ($problems !== []) {
++            FlashMessage::danger(ucfirst(implode('; ', $problems)) . '!');
++        }
++
++        $this->redirectTo(route('admin.events.index'));
++    }
++
++    /**
++     * ids[] do formulário: precisa ser um array não vazio só com inteiros positivos em texto ("12").
++     * Qualquer item inválido invalida a seleção inteira (nada é removido).
++     *
++     * @return array<int, int>|null
++     */
++    private function selectedIds(mixed $ids): ?array
++    {
++        if (!is_array($ids) || $ids === []) {
++            return null;
++        }
++
++        foreach ($ids as $id) {
++            if (!is_string($id) || !ctype_digit($id) || (int) $id === 0) {
++                return null;
++            }
++        }
++
++        return array_values(array_map('intval', $ids));
++    }
++
+     private function findEvent(Request $request): ?Event
+     {
+         return Event::findById((int) $request->getParam('id'));
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..895c358 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -172,6 +172,32 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Remoção em lote: aplica a mesma regra do safeDestroy() (P03) a cada id.
++     * Devolve os títulos removidos, os barrados (com o motivo) e os ids que não existem.
++     *
++     * @param array<int, int> $ids
++     * @return array{removed: array<int, string>, blocked: array<int, string>, missing: array<int, int>}
++     */
++    public static function destroyMany(array $ids): array
++    {
++        $result = ['removed' => [], 'blocked' => [], 'missing' => []];
++
++        foreach (array_unique($ids) as $id) {
++            $event = self::findById($id);
++
++            if ($event === null) {
++                $result['missing'][] = $id;
++            } elseif ($event->safeDestroy()) {
++                $result['removed'][] = $event->title;
++            } else {
++                $result['blocked'][] = $event->title;
++            }
++        }
++
++        return $result;
++    }
++
+     /**
+      * Público-alvo como array (o banco guarda "students,professors").
+      *
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..14e542d 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -5,9 +5,17 @@
+ <?php if (empty($events)) : ?>
+     <p>Nenhum evento cadastrado.</p>
+ <?php else : ?>
++    <?php /* Formulário fora da tabela: cada linha já tem o form de Remover, e form dentro de form é inválido.
++       Os checkboxes se ligam a ele pelo atributo form="bulk_destroy_form". */ ?>
++    <form id="bulk_destroy_form" class="mb-2" action="<?= route('admin.events.destroy_many') ?>" method="post">
++        <input type="hidden" name="_method" value="DELETE">
++        <button type="submit" class="btn btn-sm btn-outline-danger">Remover selecionados</button>
++    </form>
++
+     <table class="table table-striped align-middle">
+         <thead>
+             <tr>
++                <th><span class="visually-hidden">Selecionar</span></th>
+                 <th>Título</th>
+                 <th>Tipo</th>
+                 <th>Data</th>
+@@ -19,6 +27,11 @@
+         <tbody>
+             <?php foreach ($events as $event) : ?>
+                 <tr>
++                    <td>
++                        <input type="checkbox" class="form-check-input" id="event_select_<?= $event->id ?>" name="ids[]"
++                            value="<?= $event->id ?>" form="bulk_destroy_form"
++                            aria-label="Selecionar <?= htmlspecialchars($event->title) ?>">
++                    </td>
+                     <td><?= htmlspecialchars($event->title) ?></td>
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..af6703d 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
+             ->name('admin.events.paginate');
+         Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
+         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
++        // Remoção em lote: DELETE na coleção (POST com _method=DELETE), ids[] no corpo.
++        Route::delete('/admin/events', [AdminEventsController::class, 'destroyMany'])
++            ->name('admin.events.destroy_many');
+         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+         Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+diff --git a/tests/Acceptance/admin/events/DestroyManyEventsCest.php b/tests/Acceptance/admin/events/DestroyManyEventsCest.php
+new file mode 100644
+index 0000000..f77f3ef
+--- /dev/null
++++ b/tests/Acceptance/admin/events/DestroyManyEventsCest.php
+@@ -0,0 +1,57 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Remoção em lote. Base: Evento 01 (3 inscrições) e Evento 03 (1 inscrição) não podem ser removidos.
++ */
++class DestroyManyEventsCest extends BaseEventsCest
++{
++    public function removeSelectedEvents(AcceptanceTester $page): void
++    {
++        $page->wantTo('Remover vários Eventos marcando os checkboxes');
++        $page->amOnPage('/admin/events');
++
++        $page->checkOption("#event_select_{$this->events[2]->id}");
++        $page->checkOption("#event_select_{$this->events[4]->id}");
++        $page->click('Remover selecionados');
++
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('2 evento(s) removido(s) com sucesso!');
++        $page->dontSee($this->title(2), 'table');
++        $page->dontSee($this->title(4), 'table');
++        Assert::assertCount(self::TOTAL_EVENTS - 2, Event::all());
++    }
++
++    public function eventsWithEnrollmentsAreKept(AcceptanceTester $page): void
++    {
++        $page->wantTo('Remover em lote com Eventos que têm inscrições');
++        $page->amOnPage('/admin/events');
++
++        $page->checkOption("#event_select_{$this->events[1]->id}");
++        $page->checkOption("#event_select_{$this->events[2]->id}");
++        $page->checkOption("#event_select_{$this->events[3]->id}");
++        $page->click('Remover selecionados');
++
++        $page->see('1 evento(s) removido(s) com sucesso!');
++        $page->see("Não é possível remover eventos com inscrições: {$this->title(1)}, {$this->title(3)}!");
++        $page->see($this->title(1), 'table');
++        $page->dontSee($this->title(2), 'table');
++        Assert::assertCount(self::TOTAL_EVENTS - 1, Event::all());
++    }
++
++    public function removeWithoutSelection(AcceptanceTester $page): void
++    {
++        $page->wantTo('Clicar em Remover selecionados sem marcar nada');
++        $page->amOnPage('/admin/events');
++
++        $page->click('Remover selecionados');
++
++        $page->see('Selecione ao menos um evento válido para remover!');
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..8927874 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 9 rotas admin.events.* (index, paginate, new, create, destroy_many, show, edit, update, destroy).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -89,6 +89,7 @@ class EventsAccessTest extends TestCase
+             'admin.events.paginate' => ['GET', '/admin/events/page/2'],
+             'admin.events.new' => ['GET', '/admin/events/new'],
+             'admin.events.create' => ['POST', '/admin/events'],
++            'admin.events.destroy_many' => ['DELETE', '/admin/events'],
+             'admin.events.show' => ['GET', '/admin/events/1'],
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+@@ -106,6 +107,7 @@ class EventsAccessTest extends TestCase
+         return [
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.destroy_many' => ['DELETE', '/admin/events'],
+         ];
+     }
+ 
+@@ -153,6 +155,7 @@ class EventsAccessTest extends TestCase
+         ]]]);
+         $client->post($uri, ['form_params' => ['_method' => 'PUT', 'event' => ['title' => 'Título Alterado']]]);
+         $client->post($uri, ['form_params' => ['_method' => 'DELETE']]);
++        $client->post('/admin/events', ['form_params' => ['_method' => 'DELETE', 'ids' => [(string) $this->event->id]]]);
+ 
+         $events = Event::all();
+         $this->assertCount(1, $events);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..e679017 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -265,6 +266,106 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- P19: remoção em lote ------------------- */
++
++    public function test_index_shows_bulk_destroy_form_and_checkboxes(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('id="bulk_destroy_form"', $response);
++        $this->assertStringContainsString('Remover selecionados', $response);
++        $this->assertMatchesRegularExpression(
++            '/id="event_select_' . $event->id . '" name="ids\[\]"\s+value="' . $event->id . '" form="bulk_destroy_form"/',
++            $response
++        );
++    }
++
++    public function test_destroy_many_removes_the_selected_events(): void
++    {
++        $first = $this->createEvent(['title' => 'Primeiro']);
++        $second = $this->createEvent(['title' => 'Segundo']);
++        $kept = $this->createEvent(['title' => 'Fica']);
++
++        $response = $this->delete(
++            action: 'destroyMany',
++            controllerName: self::CONTROLLER,
++            params: ['ids' => [(string) $first->id, (string) $second->id]]
++        );
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('2 evento(s) removido(s) com sucesso!', $_SESSION['flash']['success']);
++        $this->assertArrayNotHasKey('danger', $_SESSION['flash']);
++        $this->assertCount(1, Event::all());
++        $this->assertNotNull(Event::findById($kept->id));
++    }
++
++    public function test_destroy_many_keeps_events_with_enrollments_with_one_flash_per_type(): void
++    {
++        $free = $this->createEvent(['title' => 'Livre']);
++        $busy = $this->createEvent(['title' => 'Ocupado']);
++        $this->enroll($busy);
++
++        $this->delete(
++            action: 'destroyMany',
++            controllerName: self::CONTROLLER,
++            params: ['ids' => [(string) $free->id, (string) $busy->id, '9999']]
++        );
++
++        $this->assertNull(Event::findById($free->id));
++        $this->assertNotNull(Event::findById($busy->id));
++        $this->assertEquals('1 evento(s) removido(s) com sucesso!', $_SESSION['flash']['success']);
++        $this->assertEquals(
++            'Não é possível remover eventos com inscrições: Ocupado; 1 evento(s) não encontrado(s)!',
++            $_SESSION['flash']['danger']
++        );
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function invalidIdsProvider(): array
++    {
++        return [
++            'sem ids' => [null],
++            'lista vazia' => [[]],
++            'texto em vez de lista' => ['1'],
++            'id com letras' => [['1abc']],
++            'id negativo' => [['-1']],
++            'zero' => [['0']],
++            'decimal' => [['1.5']],
++            'lista dentro da lista' => [[['1']]],
++        ];
++    }
++
++    #[DataProvider('invalidIdsProvider')]
++    public function test_destroy_many_with_invalid_ids_removes_nothing(mixed $ids): void
++    {
++        $event = $this->createEvent();
++        $params = $ids === null ? [] : ['ids' => $ids];
++
++        $response = $this->delete(action: 'destroyMany', controllerName: self::CONTROLLER, params: $params);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Selecione ao menos um evento válido para remover!', $_SESSION['flash']['danger']);
++        $this->assertNotNull(Event::findById($event->id));
++    }
++
++    public function test_destroy_many_rejects_the_whole_selection_if_one_id_is_invalid(): void
++    {
++        $event = $this->createEvent();
++
++        $this->delete(
++            action: 'destroyMany',
++            controllerName: self::CONTROLLER,
++            params: ['ids' => [(string) $event->id, '2 OR 1=1']]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..595d793 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -672,6 +672,38 @@ class EventTest extends TestCase
+         $this->assertNotNull($event->errors('base'));
+     }
+ 
++    /* ------------------- P19: remoção em lote ------------------- */
++
++    public function test_destroy_many_should_remove_events_without_enrollments(): void
++    {
++        $first = $this->createEvent(['title' => 'Primeiro']);
++        $second = $this->createEvent(['title' => 'Segundo']);
++        $kept = $this->createEvent(['title' => 'Fica']);
++
++        $result = Event::destroyMany([$first->id, $second->id]);
++
++        $this->assertSame(['Primeiro', 'Segundo'], $result['removed']);
++        $this->assertSame([], $result['blocked']);
++        $this->assertSame([], $result['missing']);
++        $this->assertCount(1, Event::all());
++        $this->assertNotNull(Event::findById($kept->id));
++    }
++
++    public function test_destroy_many_should_keep_events_with_enrollments_and_report_missing_ids(): void
++    {
++        $free = $this->createEvent(['title' => 'Sem inscrições']);
++        $busy = $this->createEvent(['title' => 'Com inscrições']);
++        $this->enroll($busy, 1);
++
++        $result = Event::destroyMany([$free->id, $busy->id, 999, $free->id]);
++
++        $this->assertSame(['Sem inscrições'], $result['removed']);
++        $this->assertSame(['Com inscrições'], $result['blocked']);
++        $this->assertSame([999], $result['missing']);
++        $this->assertNull(Event::findById($free->id));
++        $this->assertNotNull(Event::findById($busy->id));
++    }
++
+     public function test_plain_destroy_with_enrollments_is_blocked_by_the_foreign_key(): void
+     {
+         $event = $this->createEvent();
+-- 
+2.54.0 (Apple Git-157)
+
