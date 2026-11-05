@@ -81,6 +81,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `p2-inscricao-participante/`
   - feat: Add events listing and details for participants
   - feat: Allow participants to enroll in events
+- P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
+  `p3-cancelar-inscricao/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Allow participants to cancel their enrollment
 - P8. Exportar a listagem em CSV
   `p8-exportar-csv/`
   - feat: Export events listing as CSV
