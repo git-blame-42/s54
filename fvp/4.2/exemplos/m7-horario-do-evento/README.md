@@ -85,10 +85,12 @@ Forma usada: a (B) do catálogo, `starts_on DATE` vira
   criar `notPastDateTime` no lib, a regra ficou no método privado do
   model, que já existia e é uma linha.
 - A normalização fica no model (`__set`), não no controller: vale
-  para o formulário, para o que vem do banco (`findById`, `all`,
-  `Paginator` usam `new static($row)`) e para os testes. Sem ela,
-  editar um Evento sem mexer na hora falharia (`14:30:00` não é
-  `Y-m-d H:i`). O controller continua só copiando `FIELDS`.
+  para o formulário, para o que vem do banco (`findById` e `all` usam
+  `new static($row)`; o `Paginator` usa `new $this->class($row)`, em
+  `lib/Paginator.php:143`; os dois passam pelo construtor, que chama
+  `__set`) e para os testes. Sem ela, editar um Evento sem mexer na
+  hora falharia (`14:30:00` não é `Y-m-d H:i`). O controller continua
+  só copiando `FIELDS`.
 - Forma (A), alternativa menor: manter `starts_on DATE` e somar
   `starts_time TIME NOT NULL` (e `ends_time TIME NULL`, com
   `ends_time > starts_time` comparando strings `H:i`). Validação
@@ -218,8 +220,12 @@ Arquivos que costumam conflitar neste cenário e por quê:
 ## Armadilhas
 
 - O MySQL devolve `DATETIME` como `Y-m-d H:i:s`. Sem normalizar,
-  editar um Evento sem mexer na hora dá "não é uma data válida!".
-  É exatamente o caso do `UpdateSuccessfullyCest`.
+  editar um Evento sem mexer na hora dá "não é uma data válida!". A
+  prova é
+  `EventTest::test_past_event_can_be_edited_when_starts_at_does_not_change`
+  (carrega do banco, muda só a descrição e salva). O
+  `UpdateSuccessfullyCest` não prova isso: ele troca `starts_at`
+  (+90 dias).
 - O `datetime-local` envia `2030-05-10T14:30` (com `T`), que
   `validDate(..., 'Y-m-d H:i')` recusa. Por isso a troca no `__set`;
   o `startsAtInputValue()` devolve o `T` no `value`, que é a forma
