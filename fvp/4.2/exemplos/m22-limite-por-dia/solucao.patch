@@ -1,0 +1,218 @@
+From ba3601032da51df156dce456a02143a9d3f80aa0 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:23:02 -0300
+Subject: [PATCH] feat: Limit events per day
+
+Event validation rejects a fourth event on the same starts_on date. The
+count excludes the event itself, so editing an event on a full day still
+works. Pagination tests now spread their events over different days.
+---
+ app/Models/Event.php                          | 24 ++++++-
+ .../Admin/EventsControllerTest.php            | 40 ++++++++++-
+ tests/Unit/Models/Events/EventTest.php        | 68 ++++++++++++++++++-
+ 3 files changed, 127 insertions(+), 5 deletions(-)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..6bf8c20 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -44,6 +44,9 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Máximo de Eventos cadastrados no mesmo dia (`starts_on`). */
++    public const MAX_EVENTS_PER_DAY = 3;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -72,9 +75,10 @@ class Event extends Model
+         Validations::notEmpty('audience', $this) &&
+             Validations::inclusionOfAll('audience', $this, array_keys(self::AUDIENCES));
+ 
+-        Validations::notEmpty('starts_on', $this) &&
+-            Validations::validDate('starts_on', $this) &&
++        if (Validations::notEmpty('starts_on', $this) && Validations::validDate('starts_on', $this)) {
+             $this->validatesStartsOnNotPast();
++            $this->validatesEventsPerDayLimit();
++        }
+ 
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+@@ -98,6 +102,22 @@ class Event extends Model
+         Validations::notPastDate('starts_on', $this);
+     }
+ 
++    /**
++     * No máximo MAX_EVENTS_PER_DAY Eventos no mesmo dia. Na edição, o próprio Evento já está
++     * gravado nesse dia e não pode contar contra si mesmo: por isso o filtro pelo id.
++     */
++    private function validatesEventsPerDayLimit(): void
++    {
++        $sameDay = array_filter(
++            self::where(['starts_on' => $this->starts_on]),
++            fn(Event $event) => $event->id !== $this->id
++        );
++
++        if (count($sameDay) >= self::MAX_EVENTS_PER_DAY) {
++            $this->addError('starts_on', 'já tem ' . self::MAX_EVENTS_PER_DAY . ' eventos neste dia, escolha outra data!');
++        }
++    }
++
+     /**
+      * P02: na edição, a capacidade não pode ficar abaixo do total de Inscrições.
+      */
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..ceef18d 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -39,7 +39,7 @@ class EventsControllerTest extends ControllerTestCase
+     public function test_index_lists_five_events_per_page(): void
+     {
+         for ($i = 1; $i <= 7; $i++) {
+-            $this->createEvent(['title' => "Evento {$i}"]);
++            $this->createEvent(['title' => "Evento {$i}", 'starts_on' => date('Y-m-d', strtotime("+{$i} days"))]);
+         }
+ 
+         $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
+@@ -239,6 +239,44 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
++    public function test_create_on_a_full_day_renders_form_with_error(): void
++    {
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['title' => 'Evento a mais'])]
++        );
++
++        $this->assertNull(Event::findBy(['title' => 'Evento a mais']));
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString(
++            '<div class="invalid-feedback">já tem 3 eventos neste dia, escolha outra data!</div>',
++            $response
++        );
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
++    public function test_update_on_a_full_day_keeping_the_date_is_accepted(): void
++    {
++        $event = $this->createEvent(['title' => 'Evento 1']);
++        for ($i = 2; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Evento 1 revisado'])]
++        );
++
++        $this->assertEquals('Evento 1 revisado', Event::findById($event->id)->title);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
+     public function test_destroy_removes_event_without_enrollments(): void
+     {
+         $event = $this->createEvent();
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..5289cf3 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -390,7 +390,7 @@ class EventTest extends TestCase
+     public function test_paginate_should_return_five_events_per_page(): void
+     {
+         for ($i = 1; $i <= 12; $i++) {
+-            $this->createEvent(['title' => "Evento {$i}"]);
++            $this->createEvent(['title' => "Evento {$i}", 'starts_on' => date('Y-m-d', strtotime("+{$i} days"))]);
+         }
+ 
+         $page1 = Event::paginate(1, 5, 'admin.events.paginate');
+@@ -415,7 +415,7 @@ class EventTest extends TestCase
+     public function test_paginate_should_navigate_between_pages(): void
+     {
+         for ($i = 1; $i <= 7; $i++) {
+-            $this->createEvent(['title' => "Evento {$i}"]);
++            $this->createEvent(['title' => "Evento {$i}", 'starts_on' => date('Y-m-d', strtotime("+{$i} days"))]);
+         }
+ 
+         $page1 = Event::paginate(1, 5);
+@@ -575,6 +575,70 @@ class EventTest extends TestCase
+         $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
+     }
+ 
++    /* ------------------- limite de Eventos por dia ------------------- */
++
++    public function test_day_should_accept_up_to_the_limit_of_events(): void
++    {
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $this->assertCount(Event::MAX_EVENTS_PER_DAY, Event::where(['starts_on' => $this->params()['starts_on']]));
++    }
++
++    public function test_day_over_the_limit_should_be_invalid(): void
++    {
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $event = new Event($this->params(['title' => 'Evento a mais']));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('já tem 3 eventos neste dia, escolha outra data!', $event->errors('starts_on'));
++        $this->assertCount(Event::MAX_EVENTS_PER_DAY, Event::all());
++    }
++
++    public function test_other_day_should_not_count_for_the_limit(): void
++    {
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $event = new Event($this->params(['starts_on' => date('Y-m-d', strtotime('+31 days'))]));
++
++        $this->assertTrue($event->save());
++    }
++
++    public function test_update_on_a_full_day_should_not_count_the_event_itself(): void
++    {
++        $events = [];
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $events[] = $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $event = Event::findById($events[0]->id);
++        $this->assertInstanceOf(Event::class, $event);
++        $event->title = 'Título corrigido';
++
++        $this->assertTrue($event->save());
++        $this->assertEquals('Título corrigido', Event::findById($event->id)?->title);
++    }
++
++    public function test_update_moving_to_a_full_day_should_be_invalid(): void
++    {
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++        $other = $this->createEvent(['title' => 'Outro dia', 'starts_on' => date('Y-m-d', strtotime('+31 days'))]);
++
++        $other->starts_on = $this->params()['starts_on'];
++
++        $this->assertFalse($other->save());
++        $this->assertEquals('já tem 3 eventos neste dia, escolha outra data!', $other->errors('starts_on'));
++        $this->assertEquals(date('Y-m-d', strtotime('+31 days')), Event::findById($other->id)?->starts_on);
++    }
++
+     /* ------------------- P02: capacity >= Inscrições ------------------- */
+ 
+     public function test_capacity_below_enrollments_should_be_invalid_on_edit(): void
+-- 
+2.54.0 (Apple Git-157)
+
