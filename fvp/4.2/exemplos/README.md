@@ -121,3 +121,6 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `s2-teste-acesso-rota-nova/`
   - feat: List full events in admin area
   - test: Cover full events route access over HTTP
+- S4. Testes de borda pedidos pelo professor
+  `s4-testes-de-borda/`
+  - test: Add edge case tests for events
