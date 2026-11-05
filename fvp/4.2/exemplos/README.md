@@ -244,6 +244,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P22. Adiar o Evento uma semana com um botão
   `p22-adiar-uma-semana/`
   - feat: Add button to postpone an event by one week
+- P25. Histórico de alterações dos Eventos
+  `p25-historico-alteracoes/`
+  - feat: Record the change history of events
 - P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
   `p3-cancelar-inscricao/`
   - feat: Add events listing and details for participants

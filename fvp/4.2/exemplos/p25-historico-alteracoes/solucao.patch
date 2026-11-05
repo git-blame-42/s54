@@ -1,0 +1,986 @@
+From fa13d568acb8ce5ba708672ccbfb3518f14f482a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:29:40 -0300
+Subject: [PATCH] feat: Record the change history of events
+
+New event_changes table (ON DELETE CASCADE on event_id) and EventChange
+model. Event::saveWithHistory() reloads the stored event once, compares
+every column (except user_id) with normalized values and writes one row
+per changed field, authored by the session user. The admin show lists
+the history newest first (created_at DESC, id DESC). Populate seeds one
+example edit with two rows.
+---
+ app/Controllers/Admin/EventsController.php    |   7 +-
+ app/Models/Event.php                          | 110 +++++-
+ app/Models/EventChange.php                    | 153 +++++++++
+ app/views/admin/events/show.phtml             |  31 ++
+ database/Populate/populate.php                |  27 ++
+ database/schema.sql                           |  19 ++
+ .../admin/events/EventHistoryCest.php         |  64 ++++
+ .../Admin/EventsControllerTest.php            | 108 ++++++
+ tests/Unit/Models/Events/EventChangeTest.php  | 313 ++++++++++++++++++
+ 9 files changed, 829 insertions(+), 3 deletions(-)
+ create mode 100644 app/Models/EventChange.php
+ create mode 100644 tests/Acceptance/admin/events/EventHistoryCest.php
+ create mode 100644 tests/Unit/Models/Events/EventChangeTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..2284a22 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -34,8 +34,10 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        $changes = $event->history();
++
+         $title = htmlspecialchars($event->title);
+-        $this->render('admin/events/show', compact('event', 'title'));
++        $this->render('admin/events/show', compact('event', 'changes', 'title'));
+     }
+ 
+     public function new(): void
+@@ -83,7 +85,8 @@ class EventsController extends Controller
+         }
+         $this->fill($event, $request);
+ 
+-        if ($event->save()) {
++        // Quem editou vem da sessão, nunca do formulário.
++        if ($event->saveWithHistory($this->currentUser()?->id)) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+         } else {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..3e43d5c 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -6,6 +6,7 @@ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
+ use Lib\Validations;
+ use PDOException;
++use RuntimeException;
+ 
+ /**
+  * @property int $id
+@@ -114,6 +115,112 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Salva o Evento e registra no histórico uma linha por campo que mudou, com $userId
++     * como autor. Sem autor não salva (o histórico sempre diz quem editou). Se nada
++     * mudou, salva sem registrar nada. Retorna false se a validação falhar.
++     */
++    public function saveWithHistory(?int $userId): bool
++    {
++        if ($userId === null) {
++            $this->addError('base', 'não é possível salvar sem saber quem editou!');
++            return false;
++        }
++
++        // Antes do save(): depois dele o banco já tem os valores novos.
++        $changes = $this->changedFields();
++
++        if (!$this->save()) {
++            return false;
++        }
++
++        foreach ($changes as $field => [$oldValue, $newValue]) {
++            $change = new EventChange([
++                'event_id' => $this->id,
++                'user_id' => $userId,
++                'field' => $field,
++                'old_value' => $oldValue,
++                'new_value' => $newValue,
++            ]);
++
++            if (!$change->save()) {
++                throw new RuntimeException("Não foi possível registrar a alteração de {$field}.");
++            }
++        }
++
++        return true;
++    }
++
++    /**
++     * Campos cujo valor difere do que está gravado no banco, no formato
++     * [campo => [valor antigo, valor novo]]. O original é recarregado do banco UMA vez
++     * (não se usa o que veio no request nem o que estava em memória). user_id fica de
++     * fora: não é editado pelo formulário. Registro novo não tem alterações.
++     *
++     * @return array<string, array{0: ?string, 1: ?string}>
++     */
++    public function changedFields(): array
++    {
++        if ($this->newRecord()) {
++            return [];
++        }
++
++        $original = self::findById($this->id);
++        if ($original === null) {
++            return [];
++        }
++
++        $changes = [];
++        foreach (array_diff(static::$columns, ['user_id']) as $column) {
++            $old = $original->$column;
++            $new = $this->$column;
++
++            if (self::comparableValue($column, $old) !== self::comparableValue($column, $new)) {
++                $changes[$column] = [self::storableValue($old), self::storableValue($new)];
++            }
++        }
++
++        return $changes;
++    }
++
++    /**
++     * Histórico de alterações deste Evento, do mais recente para o mais antigo.
++     *
++     * @return array<EventChange>
++     */
++    public function history(): array
++    {
++        if ($this->newRecord()) {
++            return [];
++        }
++
++        return EventChange::forEvent($this->id);
++    }
++
++    /**
++     * Valor em forma comparável. O banco devolve capacity como int (20) e o formulário
++     * como string ('20'); o SET volta na ordem da definição da coluna, não na ordem
++     * enviada; o navegador envia as quebras de linha do textarea como \r\n.
++     */
++    private static function comparableValue(string $column, mixed $value): string
++    {
++        $value = is_scalar($value) ? (string) $value : '';
++
++        if ($column === 'audience') {
++            $values = explode(',', $value);
++            sort($values);
++
++            return implode(',', $values);
++        }
++
++        return str_replace("\r\n", "\n", $value);
++    }
++
++    private static function storableValue(mixed $value): ?string
++    {
++        return is_scalar($value) ? (string) $value : null;
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+@@ -146,7 +253,8 @@ class Event extends Model
+ 
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+-     * retorna false e registra o motivo em errors('base').
++     * retorna false e registra o motivo em errors('base'). O histórico de alterações não
++     * bloqueia: o banco o apaga junto (ON DELETE CASCADE em event_changes.event_id).
+      */
+     public function safeDestroy(): bool
+     {
+diff --git a/app/Models/EventChange.php b/app/Models/EventChange.php
+new file mode 100644
+index 0000000..849fe79
+--- /dev/null
++++ b/app/Models/EventChange.php
+@@ -0,0 +1,153 @@
++<?php
++
++namespace App\Models;
++
++use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use Lib\Validations;
++use PDO;
++
++/**
++ * Uma linha do histórico de alterações de um Evento: qual campo mudou, de que valor
++ * para qual, quem editou e quando. Gravada por Event::saveWithHistory().
++ *
++ * @property int $id
++ * @property int $event_id
++ * @property int $user_id
++ * @property string $field
++ * @property string|null $old_value
++ * @property string|null $new_value
++ * @property string $created_at
++ */
++class EventChange extends Model
++{
++    /** Rótulo de cada campo do Evento na tela do histórico. */
++    public const FIELD_LABELS = [
++        'title' => 'Título',
++        'description' => 'Descrição',
++        'kind' => 'Tipo',
++        'modality' => 'Modalidade',
++        'audience' => 'Público-alvo',
++        'starts_on' => 'Data',
++        'location' => 'Local',
++        'capacity' => 'Vagas',
++    ];
++
++    protected static string $table = 'event_changes';
++    protected static array $columns = ['event_id', 'user_id', 'field', 'old_value', 'new_value', 'created_at'];
++
++    /**
++     * `save()` grava todas as colunas de $columns (o DEFAULT do banco não é usado),
++     * então created_at é preenchido aqui quando não vem do banco.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        if ($this->created_at === null) {
++            $this->created_at = date('Y-m-d H:i:s');
++        }
++    }
++
++    public function validates(): void
++    {
++        Validations::notEmpty('event_id', $this);
++        Validations::notEmpty('user_id', $this);
++
++        Validations::notEmpty('field', $this) &&
++            Validations::inclusion('field', $this, Event::columns());
++    }
++
++    /**
++     * Histórico de um Evento, do mais recente para o mais antigo. Várias linhas da mesma
++     * edição têm o mesmo created_at (resolução de segundos); o id desempata.
++     *
++     * @return array<static>
++     */
++    public static function forEvent(int $eventId): array
++    {
++        $table = static::$table;
++        $attributes = implode(', ', static::$columns);
++
++        $sql = <<<SQL
++            SELECT id, {$attributes} FROM {$table}
++            WHERE event_id = :event_id
++            ORDER BY created_at DESC, id DESC;
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        $stmt->bindValue(':event_id', $eventId, PDO::PARAM_INT);
++        $stmt->execute();
++
++        $changes = [];
++        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
++            $changes[] = new static($row);
++        }
++
++        return $changes;
++    }
++
++    public function event(): BelongsTo
++    {
++        return $this->belongsTo(Event::class, 'event_id');
++    }
++
++    public function user(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'user_id');
++    }
++
++    public function userName(): string
++    {
++        $user = $this->user()->get();
++
++        return $user instanceof User ? $user->name : '';
++    }
++
++    public function fieldLabel(): string
++    {
++        return self::FIELD_LABELS[$this->field] ?? $this->field;
++    }
++
++    public function oldValueLabel(): string
++    {
++        return $this->valueLabel($this->old_value);
++    }
++
++    public function newValueLabel(): string
++    {
++        return $this->valueLabel($this->new_value);
++    }
++
++    /**
++     * Valor como o usuário vê no show do Evento: rótulo do ENUM/SET e data em d/m/Y.
++     * Valor desconhecido (ex.: opção removida do ENUM depois) aparece como foi gravado.
++     */
++    private function valueLabel(?string $value): string
++    {
++        if ($value === null || $value === '') {
++            return '';
++        }
++
++        return match ($this->field) {
++            'kind' => Event::KINDS[$value] ?? $value,
++            'modality' => Event::MODALITIES[$value] ?? $value,
++            'audience' => implode(', ', array_map(
++                fn(string $item) => Event::AUDIENCES[$item] ?? $item,
++                explode(',', $value)
++            )),
++            'starts_on' => self::dateLabel($value),
++            default => $value,
++        };
++    }
++
++    private static function dateLabel(string $value): string
++    {
++        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
++
++        return $date === false ? $value : $date->format('d/m/Y');
++    }
++}
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..60ea1b2 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -34,3 +34,34 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++
++<section id="history" class="mt-4">
++    <h2 class="h4">Histórico de alterações</h2>
++
++    <?php if (empty($changes)) : ?>
++        <p class="text-muted">Nenhuma alteração registrada.</p>
++    <?php else : ?>
++        <table class="table table-sm table-striped">
++            <thead>
++                <tr>
++                    <th>Campo</th>
++                    <th>De</th>
++                    <th>Para</th>
++                    <th>Quem</th>
++                    <th>Quando</th>
++                </tr>
++            </thead>
++            <tbody>
++                <?php foreach ($changes as $change) : ?>
++                    <tr class="event-change">
++                        <td><?= htmlspecialchars($change->fieldLabel()) ?></td>
++                        <td><?= nl2br(htmlspecialchars($change->oldValueLabel())) ?></td>
++                        <td><?= nl2br(htmlspecialchars($change->newValueLabel())) ?></td>
++                        <td><?= htmlspecialchars($change->userName()) ?></td>
++                        <td><?= htmlspecialchars(date('d/m/Y H:i', strtotime($change->created_at))) ?></td>
++                    </tr>
++                <?php endforeach; ?>
++            </tbody>
++        </table>
++    <?php endif; ?>
++</section>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..8904413 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -4,6 +4,7 @@ require __DIR__ . '/../../config/bootstrap.php';
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventChange;
+ use App\Models\User;
+ use Core\Database\Database;
+ 
+@@ -177,3 +178,29 @@ foreach ($enrollments as $eventIndex => $participantIndexes) {
+ }
+ 
+ echo "$total Inscrições criadas em " . count($enrollments) . " Eventos\n";
++
++// Histórico de alterações: uma edição de exemplo no Evento 1 ("Introdução a APIs REST"), feita pelo Administrador
++// há dois dias, que mudou o local e a capacidade. new_value é o valor atual do Evento, então o
++// histórico confere com os dados. As próximas linhas surgem ao editar pela Área Administrativa.
++$edited = $eventModels[1];
++$editedAt = date('Y-m-d H:i:s', strtotime('-2 days'));
++$exampleChanges = [
++    'location' => 'Google Meet (link enviado aos inscritos)',
++    'capacity' => '60',
++];
++
++foreach ($exampleChanges as $field => $oldValue) {
++    $change = new EventChange([
++        'event_id' => $edited->id,
++        'user_id' => $admin->id,
++        'field' => $field,
++        'old_value' => $oldValue,
++        'new_value' => (string) $edited->$field,
++        'created_at' => $editedAt,
++    ]);
++    if (!$change->save()) {
++        throw new RuntimeException('Alteração inválida no populate');
++    }
++}
++
++echo count($exampleChanges) . " Alterações de exemplo no histórico do Evento \"{$edited->title}\"\n";
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..b9bc5e6 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -1,5 +1,6 @@
+ SET foreign_key_checks = 0;
+ 
++DROP TABLE IF EXISTS event_changes;
+ DROP TABLE IF EXISTS event_user;
+ DROP TABLE IF EXISTS events;
+ DROP TABLE IF EXISTS users;
+@@ -52,4 +53,22 @@ CREATE TABLE event_user (
+         ON DELETE RESTRICT ON UPDATE CASCADE
+ );
+ 
++-- Histórico de alterações do Evento: uma linha por campo que mudou em cada edição.
++-- ON DELETE CASCADE em event_id: removido o Evento, o histórico dele vai junto.
++-- user_id é quem editou (vem da sessão); o usuário com histórico não pode ser removido.
++CREATE TABLE event_changes (
++    id         INT AUTO_INCREMENT PRIMARY KEY,
++    event_id   INT NOT NULL,
++    user_id    INT NOT NULL,
++    field      VARCHAR(64) NOT NULL,
++    old_value  TEXT NULL,
++    new_value  TEXT NULL,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    CONSTRAINT fk_event_changes_event FOREIGN KEY (event_id) REFERENCES events (id)
++        ON DELETE CASCADE ON UPDATE CASCADE,
++    CONSTRAINT fk_event_changes_user FOREIGN KEY (user_id) REFERENCES users (id)
++        ON DELETE RESTRICT ON UPDATE CASCADE,
++    INDEX index_event_changes_on_event_id_and_created_at (event_id, created_at)
++);
++
+ SET foreign_key_checks = 1;
+diff --git a/tests/Acceptance/admin/events/EventHistoryCest.php b/tests/Acceptance/admin/events/EventHistoryCest.php
+new file mode 100644
+index 0000000..46bf8ec
+--- /dev/null
++++ b/tests/Acceptance/admin/events/EventHistoryCest.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\EventChange;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Histórico de alterações no show do Evento: editar pela Área Administrativa grava uma linha
++ * por campo alterado, com o Administrador logado como autor.
++ */
++class EventHistoryCest extends BaseEventsCest
++{
++    public function editAndSeeHistoryOnShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Editar um Evento e ver o histórico de alterações no show');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->see('Histórico de alterações', 'h2');
++        $page->see('Nenhuma alteração registrada.', '#history');
++
++        $page->click('Editar');
++        $this->fillEventForm($page, ['title' => 'Evento 02 <i>Revisto</i>', 'capacity' => '30']);
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento atualizado com sucesso!', '.alert-success');
++        $page->dontSee('Nenhuma alteração registrada.');
++        $page->seeNumberOfElements('#history tr.event-change', 2);
++
++        $titleRow = "//section[@id='history']//tr[td[1][normalize-space(.)='Título']]";
++        $page->see('Evento 02', "{$titleRow}/td[2]");
++        $page->see('Evento 02 <i>Revisto</i>', "{$titleRow}/td[3]");
++        $page->see('Administrador', "{$titleRow}/td[4]");
++        $page->dontSeeElement('#history i');
++
++        $capacityRow = "//section[@id='history']//tr[td[1][normalize-space(.)='Vagas']]";
++        $page->see((string) $event->capacity, "{$capacityRow}/td[2]");
++        $page->see('30', "{$capacityRow}/td[3]");
++
++        Assert::assertCount(2, EventChange::forEvent($event->id));
++    }
++
++    public function saveWithoutChangesAddsNoHistory(AcceptanceTester $page): void
++    {
++        $event = $this->events[3];
++
++        $page->wantTo('Salvar sem mudar nada não acrescenta linhas ao histórico');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $this->fillEventForm($page, ['location' => 'Auditório Novo']);
++        $page->click('Salvar');
++        $page->seeNumberOfElements('#history tr.event-change', 1);
++
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->click('Salvar');
++
++        $page->see('Evento atualizado com sucesso!', '.alert-success');
++        $page->seeNumberOfElements('#history tr.event-change', 1);
++        $page->see('Auditório Novo', '#history');
++        Assert::assertCount(1, EventChange::forEvent($event->id));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..a90d6c6 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Integration\Controllers\Admin;
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventChange;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
+ use Tests\Integration\Controllers\ControllerTestCase;
+@@ -239,6 +240,100 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
++    public function test_update_records_history_with_the_session_user(): void
++    {
++        $event = $this->createEvent(['title' => 'Antes', 'capacity' => '20']);
++        $editor = new User([
++            'name' => 'Editora da Sessão',
++            'email' => 'editora@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $editor->save();
++        Auth::login($editor);
++
++        // user_id no request (dentro e fora de event[]) não pode virar o autor do histórico.
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: [
++                'id' => $event->id,
++                'user_id' => $this->admin->id,
++                'event' => $this->validParams(['title' => 'Depois', 'user_id' => (string) $this->admin->id]),
++            ]
++        );
++
++        $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
++        $history = EventChange::forEvent($event->id);
++        $this->assertCount(1, $history);
++        $this->assertSame('title', $history[0]->field);
++        $this->assertSame('Antes', $history[0]->old_value);
++        $this->assertSame('Depois', $history[0]->new_value);
++        $this->assertEquals($editor->id, $history[0]->user_id);
++        $this->assertEquals($this->admin->id, Event::findById($event->id)?->user_id);
++    }
++
++    public function test_update_without_changes_records_no_history(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams()]
++        );
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertSame([], EventChange::forEvent($event->id));
++    }
++
++    public function test_update_with_invalid_data_records_no_history(): void
++    {
++        $event = $this->createEvent();
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Mudou', 'capacity' => '0'])]
++        );
++
++        $this->assertSame([], EventChange::forEvent($event->id));
++    }
++
++    public function test_show_lists_history_newest_first_and_escaped(): void
++    {
++        $event = $this->createEvent();
++        $this->recordChange($event, 'title', 'Velho', '<b>Novo</b>', '2026-03-01 10:00:00');
++        $this->recordChange($event, 'kind', 'lecture', 'workshop', '2026-03-02 11:30:00');
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Histórico de alterações', $response);
++        $this->assertMatchesRegularExpression(
++            '/<td>Título<\/td>\s*<td>Velho<\/td>\s*<td>&lt;b&gt;Novo&lt;\/b&gt;<\/td>\s*<td>Admin<\/td>/',
++            $response
++        );
++        $this->assertStringNotContainsString('<b>Novo</b>', $response);
++        $this->assertMatchesRegularExpression('/<td>Tipo<\/td>\s*<td>Palestra<\/td>\s*<td>Oficina<\/td>/', $response);
++        $this->assertStringContainsString('02/03/2026 11:30', $response);
++        $this->assertStringContainsString('01/03/2026 10:00', $response);
++        $this->assertSame(2, substr_count($response, 'class="event-change"'));
++
++        // Mais recente primeiro: a mudança de Tipo (dia 02) vem antes da de Título (dia 01).
++        $this->assertLessThan(strpos($response, '01/03/2026 10:00'), strpos($response, '02/03/2026 11:30'));
++    }
++
++    public function test_show_without_history_says_so(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Nenhuma alteração registrada.', $response);
++        $this->assertStringNotContainsString('class="event-change"', $response);
++    }
++
+     public function test_destroy_removes_event_without_enrollments(): void
+     {
+         $event = $this->createEvent();
+@@ -299,6 +394,19 @@ class EventsControllerTest extends ControllerTestCase
+         return $event;
+     }
+ 
++    private function recordChange(Event $event, string $field, string $old, string $new, string $createdAt): void
++    {
++        $change = new EventChange([
++            'event_id' => $event->id,
++            'user_id' => $this->admin->id,
++            'field' => $field,
++            'old_value' => $old,
++            'new_value' => $new,
++            'created_at' => $createdAt,
++        ]);
++        $this->assertTrue($change->save());
++    }
++
+     private function enroll(Event $event, string $email = 'participante@example.com'): void
+     {
+         $user = User::findByEmail($email) ?? new User([
+diff --git a/tests/Unit/Models/Events/EventChangeTest.php b/tests/Unit/Models/Events/EventChangeTest.php
+new file mode 100644
+index 0000000..fb8821d
+--- /dev/null
++++ b/tests/Unit/Models/Events/EventChangeTest.php
+@@ -0,0 +1,313 @@
++<?php
++
++namespace Tests\Unit\Models\Events;
++
++use App\Models\Event;
++use App\Models\EventChange;
++use App\Models\User;
++use PHPUnit\Framework\Attributes\DataProvider;
++use Tests\TestCase;
++
++/**
++ * Histórico de alterações do Evento: Event::saveWithHistory(), Event::changedFields(),
++ * Event::history() e o model EventChange.
++ */
++class EventChangeTest extends TestCase
++{
++    private User $admin;
++    private User $editor;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $this->admin = $this->createUser('Administrador', 'admin@example.com');
++        $this->editor = $this->createUser('Editora', 'editora@example.com');
++    }
++
++    private function createUser(string $name, string $email): User
++    {
++        $user = new User([
++            'name' => $name,
++            'email' => $email,
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $user->save();
++
++        return $user;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createEvent(array $overrides = []): Event
++    {
++        $event = new Event(array_merge([
++            'user_id' => $this->admin->id,
++            'title' => 'Semana Acadêmica',
++            'description' => 'Palestras e minicursos.',
++            'kind' => 'lecture',
++            'modality' => 'in_person',
++            'audience' => 'students,professors',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Auditório Central',
++            'capacity' => 10,
++        ], $overrides));
++        $this->assertTrue($event->save());
++
++        return $event;
++    }
++
++    private function loaded(Event $event): Event
++    {
++        $found = Event::findById($event->id);
++        $this->assertInstanceOf(Event::class, $found);
++
++        return $found;
++    }
++
++    /**
++     * @param array<string, mixed> $overrides
++     */
++    private function createChange(Event $event, array $overrides = []): EventChange
++    {
++        $change = new EventChange(array_merge([
++            'event_id' => $event->id,
++            'user_id' => $this->editor->id,
++            'field' => 'title',
++            'old_value' => 'A',
++            'new_value' => 'B',
++        ], $overrides));
++        $this->assertTrue($change->save());
++
++        return $change;
++    }
++
++    /* ------------------- Só os campos alterados ------------------- */
++
++    public function test_save_with_history_should_record_only_the_changed_fields(): void
++    {
++        $event = $this->loaded($this->createEvent());
++
++        $event->title = 'Semana Acadêmica 2027';
++        $event->capacity = '25';
++
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++
++        $history = $event->history();
++        $this->assertCount(2, $history);
++
++        $byField = [];
++        foreach ($history as $change) {
++            $byField[$change->field] = $change;
++        }
++        ksort($byField);
++        $this->assertSame(['capacity', 'title'], array_keys($byField));
++
++        $this->assertSame('Semana Acadêmica', $byField['title']->old_value);
++        $this->assertSame('Semana Acadêmica 2027', $byField['title']->new_value);
++        $this->assertSame('10', $byField['capacity']->old_value);
++        $this->assertSame('25', $byField['capacity']->new_value);
++
++        foreach ($history as $change) {
++            $this->assertEquals($this->editor->id, $change->user_id);
++            $this->assertEquals($event->id, $change->event_id);
++        }
++
++        $this->assertSame('Semana Acadêmica 2027', $this->loaded($event)->title);
++    }
++
++    /**
++     * @return array<string, array{string, string}>
++     */
++    public static function changedFieldProvider(): array
++    {
++        return [
++            'title' => ['title', 'Outro título'],
++            'description' => ['description', 'Outra descrição.'],
++            'kind' => ['kind', 'workshop'],
++            'modality' => ['modality', 'online'],
++            'audience' => ['audience', 'students'],
++            'starts_on' => ['starts_on', date('Y-m-d', strtotime('+31 days'))],
++            'location' => ['location', 'Bloco B'],
++            'capacity' => ['capacity', '11'],
++        ];
++    }
++
++    #[DataProvider('changedFieldProvider')]
++    public function test_save_with_history_should_record_one_row_for_each_field(string $field, string $value): void
++    {
++        $event = $this->loaded($this->createEvent());
++
++        $event->$field = $value;
++
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++        $history = $event->history();
++        $this->assertCount(1, $history);
++        $this->assertSame($field, $history[0]->field);
++        $this->assertSame($value, $history[0]->new_value);
++    }
++
++    /* ------------------- Nenhuma linha quando nada muda ------------------- */
++
++    public function test_save_with_history_should_record_nothing_without_changes(): void
++    {
++        $event = $this->loaded($this->createEvent());
++
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++
++        $this->assertSame([], $event->history());
++    }
++
++    public function test_same_values_as_the_form_sends_are_not_changes(): void
++    {
++        $event = $this->loaded($this->createEvent(['description' => "Linha 1\nLinha 2"]));
++
++        // O formulário entrega tudo como string, o SET na ordem marcada e o textarea com \r\n.
++        $event->capacity = '10';
++        $event->setAudienceList(['professors', 'students']);
++        $event->description = "Linha 1\r\nLinha 2";
++
++        $this->assertSame([], $event->changedFields());
++        $this->assertTrue($event->saveWithHistory($this->editor->id));
++        $this->assertSame([], $event->history());
++    }
++
++    public function test_invalid_data_should_not_save_nor_record_history(): void
++    {
++        $event = $this->loaded($this->createEvent());
++
++        $event->title = 'Mudou';
++        $event->capacity = '0';
++
++        $this->assertFalse($event->saveWithHistory($this->editor->id));
++        $this->assertSame([], $event->history());
++        $this->assertSame('Semana Acadêmica', $this->loaded($event)->title);
++    }
++
++    public function test_without_editor_should_not_save_nor_record_history(): void
++    {
++        $event = $this->loaded($this->createEvent());
++
++        $event->title = 'Mudou';
++
++        $this->assertFalse($event->saveWithHistory(null));
++        $this->assertNotNull($event->errors('base'));
++        $this->assertSame([], $event->history());
++        $this->assertSame('Semana Acadêmica', $this->loaded($event)->title);
++    }
++
++    public function test_new_record_has_no_changed_fields_nor_history(): void
++    {
++        $event = new Event(['title' => 'Novo']);
++
++        $this->assertSame([], $event->changedFields());
++        $this->assertSame([], $event->history());
++    }
++
++    /* ------------------- Compara com o banco, não com a memória ------------------- */
++
++    public function test_changes_are_compared_with_the_stored_values(): void
++    {
++        $event = $this->loaded($this->createEvent(['title' => 'Antes']));
++
++        // Outra edição grava "No banco" depois que $event foi carregado.
++        $other = $this->loaded($event);
++        $other->update(['title' => 'No banco']);
++
++        $event->title = 'Depois';
++        $this->assertSame(['title' => ['No banco', 'Depois']], $event->changedFields());
++
++        // Voltar ao valor que já está no banco não é alteração, mesmo diferente do carregado.
++        $event->title = 'No banco';
++        $this->assertSame([], $event->changedFields());
++    }
++
++    /* ------------------- CASCADE ao remover o Evento ------------------- */
++
++    public function test_removing_the_event_removes_its_history(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createEvent(['title' => 'Outro Evento']);
++        $this->createChange($event);
++        $this->createChange($event, ['field' => 'location']);
++        $kept = $this->createChange($other);
++
++        $this->assertTrue($event->safeDestroy());
++
++        $this->assertSame([], EventChange::where(['event_id' => $event->id]));
++        $remaining = EventChange::all();
++        $this->assertCount(1, $remaining);
++        $this->assertSame($kept->id, $remaining[0]->id);
++    }
++
++    /* ------------------- Ordem ------------------- */
++
++    public function test_history_should_be_newest_first_with_id_as_tie_breaker(): void
++    {
++        $event = $this->createEvent();
++        $other = $this->createEvent(['title' => 'Outro Evento']);
++
++        $oldest = $this->createChange($event, ['created_at' => '2026-01-10 08:00:00']);
++        $sameSecondA = $this->createChange($event, ['field' => 'location', 'created_at' => '2026-03-01 10:00:00']);
++        $sameSecondB = $this->createChange($event, ['field' => 'capacity', 'created_at' => '2026-03-01 10:00:00']);
++        $middle = $this->createChange($event, ['created_at' => '2026-02-15 09:30:00']);
++        $this->createChange($other, ['created_at' => '2026-04-01 00:00:00']);
++
++        $ids = array_map(fn(EventChange $change) => $change->id, $event->history());
++
++        $this->assertSame([$sameSecondB->id, $sameSecondA->id, $middle->id, $oldest->id], $ids);
++    }
++
++    /* ------------------- EventChange ------------------- */
++
++    public function test_event_change_requires_event_user_and_a_known_field(): void
++    {
++        $change = new EventChange();
++        $this->assertFalse($change->isValid());
++        $this->assertSame('não pode ser vazio!', $change->errors('event_id'));
++        $this->assertSame('não pode ser vazio!', $change->errors('user_id'));
++        $this->assertSame('não pode ser vazio!', $change->errors('field'));
++
++        $change->field = 'password';
++        $change->isValid();
++        $this->assertSame('não é uma opção válida!', $change->errors('field'));
++    }
++
++    public function test_event_change_fills_created_at_when_missing(): void
++    {
++        $change = new EventChange(['field' => 'title']);
++
++        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $change->created_at);
++    }
++
++    public function test_event_change_labels_show_what_the_user_sees(): void
++    {
++        $event = $this->createEvent();
++
++        $kind = $this->createChange($event, ['field' => 'kind', 'old_value' => 'lecture', 'new_value' => 'workshop']);
++        $audience = $this->createChange($event, [
++            'field' => 'audience',
++            'old_value' => 'students,professors',
++            'new_value' => 'community',
++        ]);
++        $date = $this->createChange($event, [
++            'field' => 'starts_on',
++            'old_value' => '2027-03-01',
++            'new_value' => '2027-03-08',
++        ]);
++
++        $this->assertSame('Tipo', $kind->fieldLabel());
++        $this->assertSame('Palestra', $kind->oldValueLabel());
++        $this->assertSame('Oficina', $kind->newValueLabel());
++        $this->assertSame('Público-alvo', $audience->fieldLabel());
++        $this->assertSame('Estudantes, Professores', $audience->oldValueLabel());
++        $this->assertSame('Comunidade externa', $audience->newValueLabel());
++        $this->assertSame('Data', $date->fieldLabel());
++        $this->assertSame('01/03/2027', $date->oldValueLabel());
++        $this->assertSame('08/03/2027', $date->newValueLabel());
++        $this->assertSame('Editora', $kind->userName());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
