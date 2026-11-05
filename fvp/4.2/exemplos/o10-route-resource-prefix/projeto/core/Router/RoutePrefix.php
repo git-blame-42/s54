@@ -37,14 +37,17 @@ class RoutePrefix
     /**
      * URI com os prefixos ativos. A rota '/' dentro de '/admin' vira
      * '/admin', não '/admin/' (que o Router não casaria com '/admin').
+     * Sem prefixo efetivo (pilha vazia ou prefix('/'), que o rtrim deixa
+     * vazio), a URI fica como está: '/' nunca pode virar ''.
      */
     public static function apply(string $uri): string
     {
-        if (self::$stack === []) {
+        $prefix = implode('', self::$stack);
+
+        if ($prefix === '') {
             return $uri;
         }
 
-        $prefix = implode('', self::$stack);
         return $uri === '/' ? $prefix : $prefix . $uri;
     }
 }

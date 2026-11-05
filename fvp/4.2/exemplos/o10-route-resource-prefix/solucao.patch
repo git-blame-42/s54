@@ -1,4 +1,4 @@
-From 48226194855a9e2cd1f58cb1cef94c88895a5635 Mon Sep 17 00:00:00 2001
+From f4481efdbd154cc83cd18fae8e5cee57f5d56b79 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:26:48 -0300
 Subject: [PATCH] feat: Add Route::resource and Route::prefix to the router
@@ -11,11 +11,11 @@ the admin events routes, keeping the same names, URIs and middlewares.
 ---
  config/routes.php                             |  14 +-
  core/Router/Route.php                         |  44 ++++-
- core/Router/RoutePrefix.php                   |  50 +++++
+ core/Router/RoutePrefix.php                   |  53 ++++++
  .../Core/Router/MockResourceController.php    |  43 +++++
- tests/Unit/Core/Router/RoutePrefixTest.php    | 138 ++++++++++++++
- tests/Unit/Core/Router/RouteTest.php          | 173 ++++++++++++++++++
- 6 files changed, 447 insertions(+), 15 deletions(-)
+ tests/Unit/Core/Router/RoutePrefixTest.php    | 153 ++++++++++++++++
+ tests/Unit/Core/Router/RouteTest.php          | 168 ++++++++++++++++++
+ 6 files changed, 460 insertions(+), 15 deletions(-)
  create mode 100644 core/Router/RoutePrefix.php
  create mode 100644 tests/Unit/Core/Router/MockResourceController.php
  create mode 100644 tests/Unit/Core/Router/RoutePrefixTest.php
@@ -133,10 +133,10 @@ index 2f068a0..cb08b87 100644
  }
 diff --git a/core/Router/RoutePrefix.php b/core/Router/RoutePrefix.php
 new file mode 100644
-index 0000000..664f4b1
+index 0000000..04c4109
 --- /dev/null
 +++ b/core/Router/RoutePrefix.php
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,53 @@
 +<?php
 +
 +namespace Core\Router;
@@ -176,14 +176,17 @@ index 0000000..664f4b1
 +    /**
 +     * URI com os prefixos ativos. A rota '/' dentro de '/admin' vira
 +     * '/admin', não '/admin/' (que o Router não casaria com '/admin').
++     * Sem prefixo efetivo (pilha vazia ou prefix('/'), que o rtrim deixa
++     * vazio), a URI fica como está: '/' nunca pode virar ''.
 +     */
 +    public static function apply(string $uri): string
 +    {
-+        if (self::$stack === []) {
++        $prefix = implode('', self::$stack);
++
++        if ($prefix === '') {
 +            return $uri;
 +        }
 +
-+        $prefix = implode('', self::$stack);
 +        return $uri === '/' ? $prefix : $prefix . $uri;
 +    }
 +}
@@ -238,10 +241,10 @@ index 0000000..9ce6e2b
 +}
 diff --git a/tests/Unit/Core/Router/RoutePrefixTest.php b/tests/Unit/Core/Router/RoutePrefixTest.php
 new file mode 100644
-index 0000000..47384d6
+index 0000000..b9bf871
 --- /dev/null
 +++ b/tests/Unit/Core/Router/RoutePrefixTest.php
-@@ -0,0 +1,138 @@
+@@ -0,0 +1,153 @@
 +<?php
 +
 +namespace Tests\Unit\Core\Router;
@@ -249,6 +252,7 @@ index 0000000..47384d6
 +use App\Middleware\Authenticate;
 +use Core\Constants\Constants;
 +use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
 +use Core\Router\Route;
 +use Core\Router\Router;
 +use PHPUnit\Framework\TestCase as FrameworkTestCase;
@@ -294,6 +298,20 @@ index 0000000..47384d6
 +        });
 +
 +        $this->assertSame(['/admin', '/admin/events'], $this->uris());
++    }
++
++    public function test_slash_prefix_should_keep_the_uris_including_the_root(): void
++    {
++        Route::prefix('/')->group(function () {
++            Route::get('/', [MockController::class, 'action']);
++            Route::get('/events', [MockController::class, 'action']);
++        });
++
++        $this->assertSame(['/', '/events'], $this->uris());
++
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/';
++        $this->assertTrue(Router::getInstance()->getRoute(0)->match(new Request()));
 +    }
 +
 +    public function test_nested_prefixes_should_be_concatenated_in_order(): void
@@ -381,7 +399,7 @@ index 0000000..47384d6
 +    }
 +}
 diff --git a/tests/Unit/Core/Router/RouteTest.php b/tests/Unit/Core/Router/RouteTest.php
-index 7946a53..cb5d640 100644
+index 7946a53..64e89c1 100644
 --- a/tests/Unit/Core/Router/RouteTest.php
 +++ b/tests/Unit/Core/Router/RouteTest.php
 @@ -2,6 +2,9 @@
@@ -394,7 +412,7 @@ index 7946a53..cb5d640 100644
  use Core\Constants\Constants;
  use Core\Http\Middleware\Middleware;
  use Core\Http\Request;
-@@ -11,6 +14,29 @@ use Tests\TestCase;
+@@ -11,6 +14,38 @@ use Tests\TestCase;
  
  class RouteTest extends TestCase
  {
@@ -415,8 +433,17 @@ index 7946a53..cb5d640 100644
 +        ['DELETE', '/admin/events/{id}', 'destroy', 'admin.events.destroy'],
 +    ];
 +
++    // O Router é singleton: zera antes e depois de cada teste. No tearDown roda
++    // mesmo se o teste falhar, então nenhuma rota vaza para o teste seguinte.
++    public function setUp(): void
++    {
++        parent::setUp();
++        Router::reset();
++    }
++
 +    public function tearDown(): void
 +    {
++        Router::reset();
 +        parent::tearDown();
 +        $_REQUEST = [];
 +    }
@@ -424,7 +451,7 @@ index 7946a53..cb5d640 100644
      public function test_should_create_route_using_constructor(): void
      {
          $route = new Route(method: 'GET', uri: '/', controllerName: MockController::class, actionName: 'action');
-@@ -206,4 +232,151 @@ class RouteTest extends TestCase
+@@ -206,4 +241,137 @@ class RouteTest extends TestCase
  
          $this->assertContains($middleware, $middlewares);
      }
@@ -435,7 +462,6 @@ index 7946a53..cb5d640 100644
 +
 +    public function test_resource_should_register_eight_routes_with_names_in_order(): void
 +    {
-+        Router::reset();
 +        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 +
 +        $this->assertSame(8, Router::getInstance()->getRouteSize());
@@ -443,12 +469,10 @@ index 7946a53..cb5d640 100644
 +        for ($i = 0; $i < 8; $i++) {
 +            $this->assertSame(MockResourceController::class, Router::getInstance()->getRoute($i)->getControllerName());
 +        }
-+        Router::reset();
 +    }
 +
 +    public function test_resource_route_names_should_build_the_paths(): void
 +    {
-+        Router::reset();
 +        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 +        $router = Router::getInstance();
 +
@@ -457,31 +481,25 @@ index 7946a53..cb5d640 100644
 +        $this->assertSame('/admin/events/new', $router->getRoutePathByName('admin.events.new'));
 +        $this->assertSame('/admin/events/3', $router->getRoutePathByName('admin.events.show', ['id' => 3]));
 +        $this->assertSame('/admin/events/3/edit', $router->getRoutePathByName('admin.events.edit', ['id' => 3]));
-+        Router::reset();
 +    }
 +
 +    public function test_resource_new_should_dispatch_to_new_and_not_to_show(): void
 +    {
-+        Router::reset();
 +        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 +
 +        $this->assertSame('new', $this->dispatchTo('GET', '/admin/events/new'));
-+        Router::reset();
 +    }
 +
 +    public function test_resource_page_should_dispatch_to_index_with_the_page_param(): void
 +    {
-+        Router::reset();
 +        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 +
 +        $this->assertSame('index page=1', $this->dispatchTo('GET', '/admin/events'));
 +        $this->assertSame('index page=2', $this->dispatchTo('GET', '/admin/events/page/2'));
-+        Router::reset();
 +    }
 +
 +    public function test_resource_each_verb_should_dispatch_to_its_action(): void
 +    {
-+        Router::reset();
 +        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 +
 +        $this->assertSame('create', $this->dispatchTo('POST', '/admin/events'));
@@ -489,12 +507,10 @@ index 7946a53..cb5d640 100644
 +        $this->assertSame('edit id=5', $this->dispatchTo('GET', '/admin/events/5/edit'));
 +        $this->assertSame('update id=5', $this->dispatchTo('POST', '/admin/events/5', 'PUT'));
 +        $this->assertSame('destroy id=5', $this->dispatchTo('POST', '/admin/events/5', 'DELETE'));
-+        Router::reset();
 +    }
 +
 +    public function test_resource_inside_middleware_groups_should_get_auth_and_admin(): void
 +    {
-+        Router::reset();
 +        Route::get('/outside', [MockResourceController::class, 'index']);
 +        Route::middleware('auth')->group(function () {
 +            Route::middleware('admin')->group(function () {
@@ -507,12 +523,10 @@ index 7946a53..cb5d640 100644
 +        for ($i = 1; $i <= 8; $i++) {
 +            $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
 +        }
-+        Router::reset();
 +    }
 +
 +    public function test_config_routes_should_keep_the_same_admin_events_routes(): void
 +    {
-+        Router::reset();
 +        require Constants::rootPath()->join('config/routes.php');
 +        $router = Router::getInstance();
 +
@@ -531,7 +545,6 @@ index 7946a53..cb5d640 100644
 +            $this->assertSame(AdminEventsController::class, $router->getRoute($i)->getControllerName());
 +            $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
 +        }
-+        Router::reset();
 +    }
 +
 +    /**

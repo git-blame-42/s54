@@ -5,6 +5,7 @@ namespace Tests\Unit\Core\Router;
 use App\Middleware\Authenticate;
 use Core\Constants\Constants;
 use Core\Http\Middleware\Middleware;
+use Core\Http\Request;
 use Core\Router\Route;
 use Core\Router\Router;
 use PHPUnit\Framework\TestCase as FrameworkTestCase;
@@ -50,6 +51,20 @@ class RoutePrefixTest extends FrameworkTestCase
         });
 
         $this->assertSame(['/admin', '/admin/events'], $this->uris());
+    }
+
+    public function test_slash_prefix_should_keep_the_uris_including_the_root(): void
+    {
+        Route::prefix('/')->group(function () {
+            Route::get('/', [MockController::class, 'action']);
+            Route::get('/events', [MockController::class, 'action']);
+        });
+
+        $this->assertSame(['/', '/events'], $this->uris());
+
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_SERVER['REQUEST_URI'] = '/';
+        $this->assertTrue(Router::getInstance()->getRoute(0)->match(new Request()));
     }
 
     public function test_nested_prefixes_should_be_concatenated_in_order(): void

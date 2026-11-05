@@ -14,7 +14,7 @@ Branch no clone: `fvp/o10-route-resource-prefix`, a partir de `main`
 
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
-| `4822619` | `feat: Add Route::resource and Route::prefix to the...`  |
+| `f4481ef` | `feat: Add Route::resource and Route::prefix to the...`  |
 
 (mensagem completa: `feat: Add Route::resource and Route::prefix to
 the router`)
@@ -37,13 +37,16 @@ the router`)
 - `core/Router/RoutePrefix.php` (novo): pilha estática de prefixos.
   `group()` empilha, chama o callback e desempilha num `finally`;
   `apply()` concatena a pilha na URI (`/` dentro de `/admin` vira
-  `/admin`, não `/admin/`).
+  `/admin`, não `/admin/`). Sem prefixo efetivo (pilha vazia ou
+  `prefix('/')`, que o `rtrim` deixa vazio), devolve a URI como
+  veio: a rota `/` não pode virar `''`, que nunca casa.
 - `config/routes.php`: as 8 linhas `admin.events.*` viram
   `Route::resource('/admin/events', AdminEventsController::class,
   'admin.events');`, no mesmo lugar (dentro de `auth` e `admin`).
   Nomes, URIs, verbos, ações e ordem iguais aos de antes.
 - Testes:
-  - `RouteTest` (Unit, 7 novos): 8 rotas com método, URI, ação e nome
+  - `RouteTest` (Unit, 7 novos; `Router::reset()` no `setUp` e no
+    `tearDown` da classe): 8 rotas com método, URI, ação e nome
     na ordem; `getRoutePathByName` (`admin.events.edit` com `id` 3 dá
     `/admin/events/3/edit`); `GET /admin/events/new` despacha para
     `new`, não `show`; `/page/2` vai para `index` com `page=2`; cada
@@ -53,14 +56,16 @@ the router`)
     `config/routes.php` real registra as 8 rotas com a mesma tabela
     de antes, logo depois de `admin.dashboard.index`, com
     `Authenticate` e `Admin`.
-  - `RoutePrefixTest` (Unit, novo, 6): prefixa só as rotas de dentro
-    do grupo; `/` vira o prefixo; grupos aninhados somam na ordem;
+  - `RoutePrefixTest` (Unit, novo, 7): prefixa só as rotas de dentro
+    do grupo; `/` vira o prefixo; `prefix('/')` mantém `/` e
+    `/events` (e `/` casa com `GET /`); grupos aninhados somam na ordem;
     exceção no callback não deixa o prefixo grudado; `prefix` +
     `resource` dá as mesmas URIs e `/admin/events/new` vai para
     `new`; prefixo dentro de `middleware` mantém o middleware.
   - `MockResourceController` (apoio): uma ação por rota, cada uma
     escreve o próprio nome e o parâmetro.
-  - Nenhum teste existente mudou.
+  - Nenhum teste existente mudou de asserção; o `RouteTest` só
+    ganhou o `setUp` e o `Router::reset()` no `tearDown`.
 
 ## Por que assim
 
@@ -101,7 +106,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 172, Integration 45, Acceptance 23
+Resultado obtido: Unit 173, Integration 45, Acceptance 23
 (base 159 / 45 / 23; nenhum teste de Integration ou Cest novo nem
 alterado). PHPCS e PHPStan (que cobre `core/`) sem erros; PSR-4
 estrito ok. Schema não mudou.
@@ -149,7 +154,7 @@ commit novo (SHA diferente); preserva conteúdo e mensagem.
 cd /caminho/do/seu/repositorio
 git remote add fvp-o10 <caminho>/projeto
 git fetch fvp-o10 fvp/o10-route-resource-prefix
-git cherry-pick 4822619
+git cherry-pick f4481ef
 git remote remove fvp-o10
 ```
 
@@ -158,7 +163,7 @@ git remote remove fvp-o10
 ```
 git fetch <caminho>/solucao.bundle \
   fvp/o10-route-resource-prefix:fvp-o10
-git cherry-pick 4822619
+git cherry-pick f4481ef
 # opcional, limpa a ref
 git branch -D fvp-o10
 ```
@@ -209,8 +214,14 @@ Depois de aplicar: `./run composer dump-autoload -o --strict-psr`
   middleware: qualquer um entra. O `group` só aplica middleware às
   rotas registradas DENTRO do callback.
 - Testes do roteador: o `Router` é singleton e vaza entre testes.
-  Use `Router::reset()` no início e no fim (o `RouterTest` zera por
+  Ponha `Router::reset()` no `setUp` e no `tearDown`, não no corpo
+  do teste: no fim do corpo ele não roda se uma asserção falhar, e
+  as rotas vazam para o teste seguinte (o `RouterTest` zera por
   reflexão no `tearDown`).
+- `prefix('/')` com a rota `/`: o `rtrim` deixa o prefixo vazio e
+  `$uri === '/' ? $prefix : ...` devolveria `''`, rota que nunca
+  casa (404 silencioso). Por isso `apply()` devolve a URI intacta
+  quando o prefixo efetivo é vazio; o teste cobre o caso.
 - Pilha de prefixo sem `finally`: uma exceção no callback deixa o
   prefixo grudado em todas as rotas seguintes.
 - Nome de parâmetro só com `[a-z,_]` (regex do `Route::isSameUri`):

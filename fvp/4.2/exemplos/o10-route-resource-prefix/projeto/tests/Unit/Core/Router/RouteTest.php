@@ -31,8 +31,17 @@ class RouteTest extends TestCase
         ['DELETE', '/admin/events/{id}', 'destroy', 'admin.events.destroy'],
     ];
 
+    // O Router é singleton: zera antes e depois de cada teste. No tearDown roda
+    // mesmo se o teste falhar, então nenhuma rota vaza para o teste seguinte.
+    public function setUp(): void
+    {
+        parent::setUp();
+        Router::reset();
+    }
+
     public function tearDown(): void
     {
+        Router::reset();
         parent::tearDown();
         $_REQUEST = [];
     }
@@ -239,7 +248,6 @@ class RouteTest extends TestCase
 
     public function test_resource_should_register_eight_routes_with_names_in_order(): void
     {
-        Router::reset();
         Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 
         $this->assertSame(8, Router::getInstance()->getRouteSize());
@@ -247,12 +255,10 @@ class RouteTest extends TestCase
         for ($i = 0; $i < 8; $i++) {
             $this->assertSame(MockResourceController::class, Router::getInstance()->getRoute($i)->getControllerName());
         }
-        Router::reset();
     }
 
     public function test_resource_route_names_should_build_the_paths(): void
     {
-        Router::reset();
         Route::resource('/admin/events', MockResourceController::class, 'admin.events');
         $router = Router::getInstance();
 
@@ -261,31 +267,25 @@ class RouteTest extends TestCase
         $this->assertSame('/admin/events/new', $router->getRoutePathByName('admin.events.new'));
         $this->assertSame('/admin/events/3', $router->getRoutePathByName('admin.events.show', ['id' => 3]));
         $this->assertSame('/admin/events/3/edit', $router->getRoutePathByName('admin.events.edit', ['id' => 3]));
-        Router::reset();
     }
 
     public function test_resource_new_should_dispatch_to_new_and_not_to_show(): void
     {
-        Router::reset();
         Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 
         $this->assertSame('new', $this->dispatchTo('GET', '/admin/events/new'));
-        Router::reset();
     }
 
     public function test_resource_page_should_dispatch_to_index_with_the_page_param(): void
     {
-        Router::reset();
         Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 
         $this->assertSame('index page=1', $this->dispatchTo('GET', '/admin/events'));
         $this->assertSame('index page=2', $this->dispatchTo('GET', '/admin/events/page/2'));
-        Router::reset();
     }
 
     public function test_resource_each_verb_should_dispatch_to_its_action(): void
     {
-        Router::reset();
         Route::resource('/admin/events', MockResourceController::class, 'admin.events');
 
         $this->assertSame('create', $this->dispatchTo('POST', '/admin/events'));
@@ -293,12 +293,10 @@ class RouteTest extends TestCase
         $this->assertSame('edit id=5', $this->dispatchTo('GET', '/admin/events/5/edit'));
         $this->assertSame('update id=5', $this->dispatchTo('POST', '/admin/events/5', 'PUT'));
         $this->assertSame('destroy id=5', $this->dispatchTo('POST', '/admin/events/5', 'DELETE'));
-        Router::reset();
     }
 
     public function test_resource_inside_middleware_groups_should_get_auth_and_admin(): void
     {
-        Router::reset();
         Route::get('/outside', [MockResourceController::class, 'index']);
         Route::middleware('auth')->group(function () {
             Route::middleware('admin')->group(function () {
@@ -311,12 +309,10 @@ class RouteTest extends TestCase
         for ($i = 1; $i <= 8; $i++) {
             $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
         }
-        Router::reset();
     }
 
     public function test_config_routes_should_keep_the_same_admin_events_routes(): void
     {
-        Router::reset();
         require Constants::rootPath()->join('config/routes.php');
         $router = Router::getInstance();
 
@@ -335,7 +331,6 @@ class RouteTest extends TestCase
             $this->assertSame(AdminEventsController::class, $router->getRoute($i)->getControllerName());
             $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
         }
-        Router::reset();
     }
 
     /**
