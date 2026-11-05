@@ -1275,6 +1275,12 @@ Prova: `EVT`; no navegador, título "   " mostra "não pode ser vazio!".
 
 Chance: média-alta. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m17-checkbox-certificado`.
+
+Forma do exemplo pronto: O exemplo usa `has_certificate` e normaliza `null` e
+`''` para `'0'` no fim de `validates()`, antes do `inclusion(['0', '1'])`, sem
+padrão no construtor: desmarcado nunca dá erro, nem num POST sem o campo.
+
 Pedido típico: "marque se o Evento emite certificado" ou "campo sim/não
 no formulário". Hoje não há coluna booleana. O erro clássico: checkbox
 desmarcado não vai no POST, o `fill` grava `null` (`EC:124`), o
@@ -1292,8 +1298,9 @@ construtor, molde), `EC:14` (`FIELDS`), `EC:123-126` (`?? null` e
 Passos:
 
 1. Testes. `EVT`: `new Event($this->params())` sem `certificate` ->
-   válido e grava `0`; `'1'` -> `findById` devolve `1` (int); `'2'`,
-   `''`, `null` -> `não é uma opção válida!`; Evento lido do banco com
+   válido e grava `0`; `'1'` -> `findById` devolve `1` (int); `'2'` ->
+   `não é uma opção válida!` (`''` e `null` também, se atribuídos depois
+   do construtor; na forma do exemplo viram `0`); Evento lido do banco com
    `0` e salvo de novo -> válido. `ECT`: create com `'1'` ->
    `assertSame(1, $event->certificate)`; update de `1` para `'0'` ->
    `0`; edit de Evento com `1` ->
@@ -1358,7 +1365,8 @@ Armadilhas:
 - Ordem: o PHP fica com o **último** valor de um nome repetido. Hidden
   depois do checkbox = sempre `0`.
 - O `DEFAULT 0` do schema não é usado: `save()` grava todas as colunas
-  (`MODEL:139-187`). Sem o padrão no construtor, `POP:134-143` cria
+  (`MODEL:139-187`). Sem padrão no construtor nem normalização antes
+  do `save()`, `POP:134-143` cria
   Eventos com `null` e lança `RuntimeException` (`POP:145-146`); o
   mesmo vale para `ECT:289-300` e `ACC:30-40`.
 - `TINYINT` volta do PDO como **int** (`1`, não `'1'`; PHP 8.3 com
@@ -1380,6 +1388,13 @@ salvar e ver "Não" no `show`.
 
 Chance: média-alta. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m18-janela-de-datas`.
+
+Forma do exemplo pronto: O exemplo estende `notPastDate` com `int $minDays =
+0, ?int $maxDays = null` no fim (argumentos nomeados no `Event`, constantes
+`STARTS_ON_MIN_DAYS` e `STARTS_ON_MAX_DAYS` = 3 e 365) em vez de uma função
+nova, e muda `ACT/BaseEventsCest.php:171` para +7 dias.
+
 Pedido típico: "o Evento precisa de 3 dias de antecedência" ou "não
 aceite data a mais de 1 ano". Hoje só existe "não passada"
 (`VAL:116-138`, chamada em `EV:98`): hoje é aceito e `9999-12-31`
@@ -1397,7 +1412,7 @@ Passos:
 1. Testes. `NumberAndDateValidationsTest` com `$now` fixo em
    `2026-11-05 10:00`, mínimo 3 e máximo 365: `2026-11-07` recusa,
    `2026-11-08` aceita, `2027-11-05` aceita, `2027-11-06` recusa,
-   `9999-12-31` recusa. `EVT`: hoje -> `deve ter ao menos 3 dias de
+   `9999-12-31` recusa. `EVT`: hoje -> `deve ter pelo menos 3 dias de
    antecedência!`; `+3 days` válido; `+366 days` inválido; ontem
    continua `não pode estar no passado!`; Evento passado editado sem
    mudar a data continua válido (`EVT:511-524`).
@@ -1430,7 +1445,7 @@ Passos:
        if ($date < $today->modify("+{$minDays} days")) {
            $obj->addError(
                $attribute,
-               "deve ter ao menos {$minDays} dias de antecedência!"
+               "deve ter pelo menos {$minDays} dias de antecedência!"
            );
            return false;
        }
@@ -1501,6 +1516,8 @@ navegador, data de amanhã mostra a mensagem de antecedência e
 ### M19. "Nenhuma alteração" ao salvar sem mudar nada
 
 Chance: média. Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m19-nenhuma-alteracao`.
 
 Pedido típico: "salvei sem mexer em nada e apareceu 'atualizado com
 sucesso'". Hoje o `update` chama `save()` direto (`EC:84-88`), que
@@ -1606,6 +1623,9 @@ Armadilhas:
 - Testes existentes continuam verdes: todo update de `ECT` e dos Cests
   muda ao menos um campo (`ECT:198`, `ECT:216`, `ECT:235`,
   `ACT/UpdateSuccessfullyCest.php:68,84`).
+- Textarea: o navegador manda as quebras de linha como `\r\n`; uma
+  descrição gravada com `\n` (testes, `update()` direto) sempre parece
+  alterada. Compare com `str_replace("\r\n", "\n", ...)` nos dois lados.
 
 Prova: `FlashMessageTest`, `EVT`, `ECT`; no navegador, abrir Editar,
 clicar Salvar sem mexer e ver o alerta amarelo no `show`.
@@ -1613,6 +1633,13 @@ clicar Salvar sem mexer e ver o alerta amarelo no `show`.
 ### M20. Preço em reais com vírgula, "Gratuito" se 0
 
 Chance: média. Tempo: 25-35 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m20-preco-em-reais`.
+
+Forma do exemplo pronto: O exemplo usa `price DECIMAL(8, 2) NOT NULL` sem
+`DEFAULT`, com `CHECK (price >= 0)`, campo obrigatório e `price` em todas as
+fixtures (POP, ACC, `EVT::params`, `ECT::validParams`, `BaseEventsCest`); a
+validação é `Validations::decimal($attr, $obj, $digits, $decimals)`.
 
 Pedido típico: "o Evento pode ser pago: aceite 10,50 e mostre
 R$ 10,50; se for 0, mostre Gratuito". Hoje não há coluna de preço.
@@ -1649,7 +1676,7 @@ Passos:
    public static function money($attribute, $obj, int $digits = 6)
    {
        $value = $obj->$attribute;
-       $pattern = '/^\d{1,' . $digits . '}([.,]\d{1,2})?$/';
+       $pattern = '/^\d{1,' . $digits . '}([.,]\d{1,2})?$/D';
 
        if (!is_string($value) || preg_match($pattern, $value) !== 1) {
            $obj->addError($attribute, 'deve ser um valor como 10,50!');
@@ -1711,7 +1738,7 @@ Armadilhas:
   `(float) '10,50'` é `10.0`. O `(float)` do `formattedPrice` só
   formata um valor já validado.
 - `DECIMAL` volta do PDO como string (`'10.50'`): compare com
-  `assertSame('10.50', ...)`, nunca `10.5`.
+  `assertSame('10.50', ...)`, nunca `assertSame(10.5, ...)`.
 - `type="number"` mostra vírgula em navegador pt-BR, mas com
   `novalidate` (`FORM:16`) um valor que o navegador não entende vai
   vazio. Prefira `type="text"` com `inputmode="decimal"`.
@@ -1722,6 +1749,8 @@ Armadilhas:
   `null` (`EC:124`) e o create reprova.
 - A normalização dentro de `validates()` altera o objeto. Diga isso;
   a alternativa limpa é o gancho do M16.
+- Sem o modificador `D`, o `$` da regex aceita uma quebra de linha no
+  fim: `preg_match` casa `"10\n"`. Teste esse caso.
 
 Prova: `EVT` e `ECT`; no navegador, cadastrar com `10,5`, ver
 `R$ 10,50` no `show`, editar para `0` e ver `Gratuito`.
@@ -1730,10 +1759,17 @@ Prova: `EVT` e `ECT`; no navegador, cadastrar com `10,5`, ver
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m21-vagas-ilimitadas`.
+
+Forma do exemplo pronto: O exemplo converte `''` em `null` no início de
+`validates()`, mostra "N (vagas ilimitadas)" com if/else nas views e uma dica
+`form-text` no form, sem `capacityLabel()`.
+
 Pedido típico: "Evento online não tem limite de vagas". Hoje
-`capacity` é obrigatório (`EV:79`, `SCH:31` `NOT NULL`). Se só tirar
-o `notEmpty`, o campo vazio vira `''` no `fill` (`EC:125`) e o MySQL
-recusa `''` num `INT` (`1366 Incorrect integer value`) -> 500.
+`capacity` é obrigatório (`EV:79`, `SCH:31` `NOT NULL`). Tirar só o
+`notEmpty` não basta: o `integerMin` (`VAL:81-85`) recusa `''`. O 500
+(`1366 Incorrect integer value`) aparece se a guarda tratar `''` como
+ilimitado sem convertê-lo para `null`.
 
 Arquivos: `SCH:31` (`capacity INT NOT NULL`), `SCH:34`
 (`CHECK (capacity >= 1)`, aceita NULL), `EV:20` (PHPDoc), `EV:79-81`,
@@ -1830,6 +1866,8 @@ branco e ver `sem limite` na listagem e no `show`.
 
 Chance: média-baixa. Tempo: 20-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m22-limite-por-dia`.
+
 Pedido típico: "no máximo 3 Eventos no mesmo dia". Hoje não há limite:
 qualquer quantidade de Eventos na mesma data passa (`EV:75-77` só
 olha formato e passado).
@@ -1838,13 +1876,13 @@ Arquivos: `EV:60-82` (`validates`), `EV:75-77`, `EV:88-99` (molde:
 regra só no create ou quando a data muda), `MODEL:300-330` (`where`,
 só igualdade), `ECT:39-57`, `ECT:289-300` (`createEvent` ignora o
 retorno de `save()`), `EVT:49-53` (`params` com `+30 days`),
-`EVT:390-429` (paginação), catálogo M6 (variante local + data) e N11
-(`count`).
+`EVT:390-429` (paginação), N11 (`count`).
 
 Passos:
 
 1. Testes. `EVT`: três Eventos no mesmo dia salvam; o quarto ->
-   `já há 3 eventos nesta data!` em `starts_on`; outro dia -> válido;
+   `já tem 3 eventos neste dia, escolha outra data!` em `starts_on`;
+   outro dia -> válido;
    editar o título de um dos três -> válido (não conta a si mesmo);
    mover um Evento de outro dia para o dia cheio -> inválido. `ECT`:
    create no dia cheio -> form com o erro e `Event::all()` com 3.
@@ -1862,7 +1900,10 @@ Passos:
 
        if (count($others) >= self::MAX_EVENTS_PER_DAY) {
            $max = self::MAX_EVENTS_PER_DAY;
-           $this->addError('starts_on', "já há {$max} eventos nesta data!");
+           $this->addError(
+               'starts_on',
+               "já tem {$max} eventos neste dia, escolha outra data!"
+           );
        }
    }
    ```
@@ -1917,6 +1958,16 @@ data e ver o erro no campo Data.
 ### M23. Data digitada como dd/mm/aaaa
 
 Chance: baixa. Tempo: 20-25 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/m23-data-dd-mm-aaaa`.
+
+Forma do exemplo pronto: O exemplo marca a data vinda do form
+(`setStartsOnInput()`): só ela é validada em `d/m/Y` e convertida no início de
+`validates()`; `Y-m-d` vindo do form é recusado, e o que vem do código ou do
+banco segue `Y-m-d`. `starts_on` sai de `EC::FIELDS` (`EC:14`, `EC:116-130`).
+Mudam `ECT:80`, `ACC:150`, `ACT/BaseEventsCest.php:148-153` e
+`UpdateSuccessfullyCest:37`, e entra um Cest em `CreateWithInvalidDataCest`;
+`EVT:212` não muda.
 
 Pedido típico: "quero digitar a data como dd/mm/aaaa". Hoje o campo é
 `type="date"` (`FORM:72`): o navegador em pt-BR já **mostra**
@@ -2783,6 +2834,8 @@ vagas" tira o Evento 1.
 
 Chance: baixa (mais de 40 min). Tempo: 40-60 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n14-query-builder`.
+
 Pedido típico: "em vez de SQL à mão no model, faça
 `Event::query()->where(...)->orderBy(...)->paginate(...)`" (aula de
 Builder). Junta N1 (filtro), N3 (ordem) e N13 (condição que não é
@@ -2797,7 +2850,7 @@ Arquivos: `MODEL:284-294` (`paginate` sem condições), `MODEL:300-330`
 Passos:
 
 1. Testes do builder sem banco: `toSql()` de
-   `where('kind', 'talk')->where('starts_on', '>=', '2026-11-05')
+   `where('kind', 'lecture')->where('starts_on', '>=', '2026-11-05')
    ->orderBy('starts_on')` gera
    `... WHERE kind = :p0 AND starts_on >= :p1 ORDER BY starts_on ASC`;
    operador fora da lista e coluna fora de `$columns` lançam
@@ -2807,7 +2860,7 @@ Passos:
    colunas, a lista de condições `[coluna, operador, valor]` e a lista
    de ordens; métodos `where(string $column, mixed $opOrValue,
    mixed $value = null): static`, `orderBy(string $column,
-   string $dir = 'ASC'): static`, `get(): array`, `count(): int`,
+   string $dir = 'ASC'): static`, `get(): array`, `count(): int` (opcional),
    `paginate(int $page, int $perPage, string $route): Paginator`.
 3. `Model::query(): QueryBuilder` com
    `new QueryBuilder(static::class, static::$table, static::$columns)`.
@@ -3402,6 +3455,8 @@ Prova: `RequestTest`; no navegador logado, abrir
 
 Chance: média-baixa. Tempo: 25-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o10-route-resource-prefix`.
+
 Pedido típico: "um atalho que registre as rotas RESTful de uma vez" ou
 "um prefixo `/admin` para o grupo, sem repetir em cada rota" (item de
 framework da rubrica).
@@ -3449,7 +3504,7 @@ Passos (`resource`):
    }
    ```
 
-3. `ROUTES:26-35` vira
+3. `ROUTES:25-35` vira
    `Route::resource('/admin/events', AdminEventsController::class,
    'admin.events');` dentro do grupo `admin` (o `group` conta as rotas
    antes e depois, então o middleware chega a todas).
@@ -3475,6 +3530,9 @@ Armadilhas:
 - Pilha de prefixo sem `finally`: uma exceção no callback deixa o
   prefixo grudado nas rotas seguintes.
 - PHPDoc da constante e dos parâmetros (phpstan nível 6).
+- Prefixo com barra final: a rota `'/'` dentro de `/admin` vira
+  `/admin/`, que não casa com `/admin`. Tire a barra final do prefixo e
+  trate `'/'` e o prefixo vazio.
 
 Prova: `RouteTest`; suíte inteira verde sem mudar nenhum teste.
 
@@ -5072,6 +5130,15 @@ Prova: testes; no navegador o arquivo baixa e abre no calendário.
 
 Chance: baixa (conteúdo da 4.3). Tempo: 35-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p21-banner-upload`.
+
+Forma do exemplo pronto: O exemplo valida a capa em `validates()` (erro no
+campo, barra o `save()`), grava o arquivo no `save()` sobrescrito, depois do
+`INSERT`, com nome aleatório (`bin2hex(random_bytes(16))`) numa pasta única
+`uploads/events/`, e lê `$_FILES` num método privado do controller; `url()`
+devolve `null` sem capa. As armadilhas do id e da pasta viram "salve a capa
+depois do `save()`" e "apague o arquivo".
+
 Pedido típico: "o Evento pode ter uma imagem de capa".
 
 Arquivos: `SCH` (coluna `cover_name VARCHAR(255) NULL`), `EV:48-58`
@@ -5094,8 +5161,8 @@ Passos:
 3. `app/Services/EventCover.php`: validações
    `['extension' => ['jpg', 'png'], 'size' => 2 * 1024 * 1024]`, nome
    gerado `cover.<ext>`, `path()` com imagem padrão.
-4. `Request::getFile(string $key): ?array` (core, com teste), em vez de
-   ler `$_FILES` no controller.
+4. `Request::getFile(string $key): ?array` (core, com teste), ou um
+   método privado do controller que leia `$_FILES`, como o molde.
 5. `FORM:16`: `enctype="multipart/form-data"`;
    `<input type="file" name="event_cover">` fora de `event[]`.
 6. `EC::create`/`update`: depois do `save()` com sucesso (a pasta usa o
