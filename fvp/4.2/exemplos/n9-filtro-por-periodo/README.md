@@ -125,8 +125,11 @@ docker compose exec web curl -s -b /tmp/c \
 - N5 (`n5-eventos-futuros-passados`): "só futuros" é um período aberto
   (`from` = hoje, `to` = null): `Event::paginateBetween(date('Y-m-d'),
   null, ...)`. Os dois juntos conflitam no `index` do controller.
-- N8 (outro agente): também filtra/pagina a listagem; o mesmo cuidado
-  com `queryParams` e com o `index` vale.
+- N8 (`n8-ordenar-pelo-cabecalho`): ordena a listagem pelo cabeçalho
+  (não filtra) e também usa `queryParams` para manter a ordem ao
+  paginar. Com os dois, os links de página e de cabeçalho precisam
+  levar `from`, `to` e a ordem juntos; o `index` do controller
+  conflita.
 - O2 (`o2-eventos-para-participante`) tem listagem própria
   (`events/index.phtml`); o filtro aqui é só no admin, mas o
   `_pages.phtml` mudado serve às duas (sem `queryParams`, os links não
@@ -203,9 +206,11 @@ Depois de aplicar: rode os testes e o `./run phpcs` de novo.
 
 ## Armadilhas
 
-- Validar só com `strtotime`: aceita "amanhã", "2026-02-30" (vira
-  março) e outros; por isso `createFromFormat('!Y-m-d')` + comparar o
-  `format()` com o valor digitado.
+- Validar só com `strtotime`: aceita expressões em inglês como
+  "tomorrow" e "+1 week" e datas impossíveis como "2026-02-30" (vira
+  02/03); "amanhã" devolve `false`, porque ele só entende inglês. Por
+  isso `createFromFormat('!Y-m-d')` + comparar o `format()` com o
+  valor digitado.
 - `?from[]=x` chega como array: `trim()`/comparação lançaria
   `TypeError` (500); o `dateParam` transforma em valor inválido.
 - Variável do controller dentro do `_pages.phtml`: o partial só
