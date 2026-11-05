@@ -15,9 +15,9 @@ Branch no clone: `fvp/p2-inscricao-participante`, empilhada sobre
 
 Commits (o primeiro é a base, O2):
 
-- `9d7c82f` `feat: Add events listing and details for participants`
+- `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
-- `95e5e82` `feat: Allow participants to enroll in events`
+- `458a05b` `feat: Allow participants to enroll in events`
 
 ## O que mudou
 
@@ -102,14 +102,15 @@ Resultado obtido: Unit 164 testes, Integration 68, Acceptance 29
 (eram 159 / 45 / 23 na base `f31006b`; 159 / 58 / 26 no O2). PHPCS e
 PHPStan sem erros. Schema não mudou.
 
-Na tela: `user@example.com` / `123456`, "Eventos", "Ver" num Evento,
-"Inscrever-se": aparece "Inscrição realizada com sucesso!". No Evento
-1 (3/3, "Lotado") a flash é "não há vagas neste evento!". Sem porta no
-host, o `POST` direto:
+Na tela: `fernanda@example.com` / `123456` (no populate ela não está
+inscrita nos Eventos 1 a 3; `user@example.com` já está no 1 e no 2),
+"Eventos", "Ver" no Evento 2, "Inscrever-se": aparece "Inscrição
+realizada com sucesso!". No Evento 1 (3/3, "Lotado") a flash é "não
+há vagas neste evento!". Sem porta no host, o `POST` direto:
 
 ```
 docker compose exec web curl -s -c /tmp/c \
-    -d 'user[email]=user@example.com&user[password]=123456' \
+    -d 'user[email]=fernanda@example.com&user[password]=123456' \
     http://localhost/login
 docker compose exec web curl -s -i -b /tmp/c \
     -X POST http://localhost/events/2/enrollments
@@ -121,8 +122,8 @@ docker compose exec web curl -s -i -b /tmp/c \
 - P3 (cancelar, `DELETE /events/{id}/enrollments`), P7 ("Meus
   eventos", usa `User::enrollments()`) e P9 (lista de espera, troca a
   regra de vagas do `validates()`) são feitos sobre este.
-- P1/P4 (código de check-in por Evento e confirmação de presença,
-  agente B): o P4 só faz sentido para quem tem Inscrição; com este
+- P1 e P4 (código de check-in por Evento e confirmação de
+  presença): o P4 só faz sentido para quem tem Inscrição; com este
   cenário aplicado, a confirmação pode exigir `isEnrolledIn($event)`.
   Não estão implementados aqui.
 
@@ -146,9 +147,9 @@ git remote add fvp-p2 \
     s50/fvp/4.2/exemplos/p2-inscricao-participante/projeto
 git fetch fvp-p2 fvp/p2-inscricao-participante
 # O2 + P2 (range: do commit depois de main até o topo)
-git cherry-pick 9d7c82f^..95e5e82
+git cherry-pick 0669a19^..458a05b
 # ou só o topo (P2), se já tem o O2
-git cherry-pick 95e5e82
+git cherry-pick 458a05b
 git remote remove fvp-p2
 ```
 
@@ -161,13 +162,13 @@ git fetch \
 # range com a base
 git cherry-pick main..fvp-p2
 # ou só o topo
-git cherry-pick 95e5e82
+git cherry-pick 458a05b
 # opcional, limpa a ref
 git branch -D fvp-p2
 ```
 
 Use `main..fvp-p2` só se o seu `main` for o `f31006b`; senão prefira
-`9d7c82f^..95e5e82`.
+`0669a19^..458a05b`.
 
 ### 3. A partir do `solucao.patch` (`git am`)
 
@@ -222,6 +223,12 @@ phpcs` e `./run db:populate` (o populate passa pela validação nova).
 - Concorrência: duas inscrições ao mesmo tempo podem passar na
   contagem de vagas; o `UNIQUE` só barra a duplicata do mesmo usuário.
   Uma vaga a mais por corrida é aceitável aqui; saiba explicar.
+- Corrida do mesmo usuário: dois POSTs simultâneos podem passar os
+  dois pela validação (`uniqueness` consulta antes do `INSERT`), e o
+  `UNIQUE` do banco lança `PDOException` no segundo (500). Se o
+  professor pedir, trate como o `safeDestroy` de `Event` faz (~l.
+  166-172): `try { ... } catch (PDOException $e)` com
+  `addError('base', ...)` e `return false`.
 - `redirectTo` sem `return` no "não encontrado": no teste de
   controller ele só ecoa `Location:` e o método seguiria.
 - No teste de controller, zerar `$_SESSION['flash'] = []` no meio do
