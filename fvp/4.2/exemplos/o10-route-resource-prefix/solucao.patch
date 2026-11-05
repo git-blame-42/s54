@@ -1,0 +1,581 @@
+From 48226194855a9e2cd1f58cb1cef94c88895a5635 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:26:48 -0300
+Subject: [PATCH] feat: Add Route::resource and Route::prefix to the router
+
+Route::resource registers the 8 RESTful routes (index, paginate, new,
+create, show, edit, update, destroy) in the order the Router needs,
+with "new" and "page/{page}" before "{id}". Route::prefix groups
+routes under a URI prefix. config/routes.php uses Route::resource for
+the admin events routes, keeping the same names, URIs and middlewares.
+---
+ config/routes.php                             |  14 +-
+ core/Router/Route.php                         |  44 ++++-
+ core/Router/RoutePrefix.php                   |  50 +++++
+ .../Core/Router/MockResourceController.php    |  43 +++++
+ tests/Unit/Core/Router/RoutePrefixTest.php    | 138 ++++++++++++++
+ tests/Unit/Core/Router/RouteTest.php          | 173 ++++++++++++++++++
+ 6 files changed, 447 insertions(+), 15 deletions(-)
+ create mode 100644 core/Router/RoutePrefix.php
+ create mode 100644 tests/Unit/Core/Router/MockResourceController.php
+ create mode 100644 tests/Unit/Core/Router/RoutePrefixTest.php
+
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..c892d30 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -22,16 +22,8 @@ Route::middleware('auth')->group(function () {
+     Route::middleware('admin')->group(function () {
+         Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+ 
+-        // Eventos (CRUD RESTful). 'new' vem antes de '{id}', senão 'new' seria capturado como id.
+-        Route::get('/admin/events', [AdminEventsController::class, 'index'])->name('admin.events.index');
+-        Route::get('/admin/events/page/{page}', [AdminEventsController::class, 'index'])
+-            ->name('admin.events.paginate');
+-        Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
+-        Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+-        Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+-        Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
+-        Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+-        Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+-            ->name('admin.events.destroy');
++        // Eventos (CRUD RESTful): as 8 rotas admin.events.* de uma vez, com 'new' e
++        // 'page/{page}' antes de '{id}' (ver Route::resource).
++        Route::resource('/admin/events', AdminEventsController::class, 'admin.events');
+     });
+ });
+diff --git a/core/Router/Route.php b/core/Router/Route.php
+index 2f068a0..cb08b87 100644
+--- a/core/Router/Route.php
++++ b/core/Router/Route.php
+@@ -7,6 +7,24 @@ use Core\Http\Request;
+ 
+ class Route
+ {
++    /**
++     * Rotas RESTful de Route::resource(): método, sufixo da URI, ação e sufixo do
++     * nome. A ordem importa: o Router casa a primeira rota, então 'page/{page}'
++     * e 'new' vêm antes de '{id}' (senão 'new' seria capturado como id).
++     *
++     * @var list<array{0: string, 1: string, 2: string, 3: string}>
++     */
++    private const RESOURCE = [
++        ['get', '', 'index', 'index'],
++        ['get', '/page/{page}', 'index', 'paginate'],
++        ['get', '/new', 'new', 'new'],
++        ['post', '', 'create', 'create'],
++        ['get', '/{id}', 'show', 'show'],
++        ['get', '/{id}/edit', 'edit', 'edit'],
++        ['put', '/{id}', 'update', 'update'],
++        ['delete', '/{id}', 'destroy', 'destroy'],
++    ];
++
+     private string $name = '';
+ 
+     /**
+@@ -110,7 +128,7 @@ class Route
+      */
+     public static function get(string $uri, $action): Route
+     {
+-        return Router::getInstance()->addRoute(new Route('GET', $uri, $action[0], $action[1]));
++        return Router::getInstance()->addRoute(new Route('GET', RoutePrefix::apply($uri), $action[0], $action[1]));
+     }
+ 
+     /**
+@@ -120,7 +138,7 @@ class Route
+      */
+     public static function post(string $uri, $action): Route
+     {
+-        return Router::getInstance()->addRoute(new Route('POST', $uri, $action[0], $action[1]));
++        return Router::getInstance()->addRoute(new Route('POST', RoutePrefix::apply($uri), $action[0], $action[1]));
+     }
+ 
+     /**
+@@ -130,7 +148,7 @@ class Route
+      */
+     public static function put(string $uri, $action): Route
+     {
+-        return Router::getInstance()->addRoute(new Route('PUT', $uri, $action[0], $action[1]));
++        return Router::getInstance()->addRoute(new Route('PUT', RoutePrefix::apply($uri), $action[0], $action[1]));
+     }
+ 
+     /**
+@@ -140,11 +158,29 @@ class Route
+      */
+     public static function delete(string $uri, $action): Route
+     {
+-        return Router::getInstance()->addRoute(new Route('DELETE', $uri, $action[0], $action[1]));
++        return Router::getInstance()->addRoute(new Route('DELETE', RoutePrefix::apply($uri), $action[0], $action[1]));
++    }
++
++    /**
++     * Registra as 8 rotas RESTful de um recurso (ver RESOURCE), com nomes
++     * "<name>.index", "<name>.paginate", ..., "<name>.destroy".
++     *
++     * Ex.: Route::resource('/admin/events', EventsController::class, 'admin.events')
++     */
++    public static function resource(string $uri, string $controller, string $name): void
++    {
++        foreach (self::RESOURCE as [$verb, $suffix, $action, $route]) {
++            self::$verb($uri . $suffix, [$controller, $action])->name("{$name}.{$route}");
++        }
+     }
+ 
+     public static function middleware(string $middleware): RouteWrapperMiddleware
+     {
+         return new RouteWrapperMiddleware($middleware);
+     }
++
++    public static function prefix(string $prefix): RoutePrefix
++    {
++        return new RoutePrefix($prefix);
++    }
+ }
+diff --git a/core/Router/RoutePrefix.php b/core/Router/RoutePrefix.php
+new file mode 100644
+index 0000000..664f4b1
+--- /dev/null
++++ b/core/Router/RoutePrefix.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace Core\Router;
++
++/**
++ * Prefixo de URI para um grupo de rotas:
++ * Route::prefix('/admin')->group(fn () => Route::get('/events', ...))
++ * registra '/admin/events'.
++ *
++ * Os prefixos ficam numa pilha estática enquanto o callback roda;
++ * Route::get/post/put/delete concatenam a pilha na URI (apply).
++ * Grupos aninhados somam os prefixos na ordem.
++ */
++class RoutePrefix
++{
++    /** @var list<string> */
++    private static array $stack = [];
++
++    public function __construct(
++        private string $prefix
++    ) {
++    }
++
++    public function group(callable $callback): void
++    {
++        self::$stack[] = rtrim($this->prefix, '/');
++
++        try {
++            $callback();
++        } finally {
++            // Desempilha mesmo se o callback lançar exceção, senão o prefixo
++            // grudaria nas rotas registradas depois.
++            array_pop(self::$stack);
++        }
++    }
++
++    /**
++     * URI com os prefixos ativos. A rota '/' dentro de '/admin' vira
++     * '/admin', não '/admin/' (que o Router não casaria com '/admin').
++     */
++    public static function apply(string $uri): string
++    {
++        if (self::$stack === []) {
++            return $uri;
++        }
++
++        $prefix = implode('', self::$stack);
++        return $uri === '/' ? $prefix : $prefix . $uri;
++    }
++}
+diff --git a/tests/Unit/Core/Router/MockResourceController.php b/tests/Unit/Core/Router/MockResourceController.php
+new file mode 100644
+index 0000000..9ce6e2b
+--- /dev/null
++++ b/tests/Unit/Core/Router/MockResourceController.php
+@@ -0,0 +1,43 @@
++<?php
++
++namespace Tests\Unit\Core\Router;
++
++use Core\Http\Request;
++
++class MockResourceController
++{
++    public function index(Request $request): void
++    {
++        echo 'index page=' . $request->getParam('page', '1');
++    }
++
++    public function new(Request $request): void
++    {
++        echo 'new';
++    }
++
++    public function create(Request $request): void
++    {
++        echo 'create';
++    }
++
++    public function show(Request $request): void
++    {
++        echo 'show id=' . $request->getParam('id');
++    }
++
++    public function edit(Request $request): void
++    {
++        echo 'edit id=' . $request->getParam('id');
++    }
++
++    public function update(Request $request): void
++    {
++        echo 'update id=' . $request->getParam('id');
++    }
++
++    public function destroy(Request $request): void
++    {
++        echo 'destroy id=' . $request->getParam('id');
++    }
++}
+diff --git a/tests/Unit/Core/Router/RoutePrefixTest.php b/tests/Unit/Core/Router/RoutePrefixTest.php
+new file mode 100644
+index 0000000..47384d6
+--- /dev/null
++++ b/tests/Unit/Core/Router/RoutePrefixTest.php
+@@ -0,0 +1,138 @@
++<?php
++
++namespace Tests\Unit\Core\Router;
++
++use App\Middleware\Authenticate;
++use Core\Constants\Constants;
++use Core\Http\Middleware\Middleware;
++use Core\Router\Route;
++use Core\Router\Router;
++use PHPUnit\Framework\TestCase as FrameworkTestCase;
++
++class RoutePrefixTest extends FrameworkTestCase
++{
++    public function setUp(): void
++    {
++        require_once Constants::rootPath()->join('tests/Unit/Core/Http/header_mock.php');
++        Router::reset();
++        $_REQUEST = [];
++    }
++
++    public function tearDown(): void
++    {
++        Router::reset();
++        $_REQUEST = [];
++    }
++
++    public function test_group_should_prefix_only_the_routes_registered_inside_it(): void
++    {
++        Route::get('/before', [MockController::class, 'action']);
++        Route::prefix('/admin')->group(function () {
++            Route::get('/events', [MockController::class, 'action'])->name('admin.events');
++            Route::post('/events', [MockController::class, 'action']);
++            Route::put('/events/{id}', [MockController::class, 'action']);
++            Route::delete('/events/{id}', [MockController::class, 'action']);
++        });
++        Route::get('/after', [MockController::class, 'action']);
++
++        $this->assertSame(
++            ['/before', '/admin/events', '/admin/events', '/admin/events/{id}', '/admin/events/{id}', '/after'],
++            $this->uris()
++        );
++        $this->assertSame('/admin/events', Router::getInstance()->getRoutePathByName('admin.events'));
++    }
++
++    public function test_root_route_should_become_the_prefix_itself(): void
++    {
++        Route::prefix('/admin/')->group(function () {
++            Route::get('/', [MockController::class, 'action']);
++            Route::get('/events', [MockController::class, 'action']);
++        });
++
++        $this->assertSame(['/admin', '/admin/events'], $this->uris());
++    }
++
++    public function test_nested_prefixes_should_be_concatenated_in_order(): void
++    {
++        Route::prefix('/api')->group(function () {
++            Route::prefix('/v1')->group(function () {
++                Route::get('/events', [MockController::class, 'action']);
++            });
++            Route::get('/status', [MockController::class, 'action']);
++        });
++
++        $this->assertSame(['/api/v1/events', '/api/status'], $this->uris());
++    }
++
++    public function test_prefix_should_be_removed_even_if_the_callback_throws(): void
++    {
++        try {
++            Route::prefix('/admin')->group(function () {
++                throw new \RuntimeException('falha no callback');
++            });
++        } catch (\RuntimeException) {
++            // esperado
++        }
++        Route::get('/events', [MockController::class, 'action']);
++
++        $this->assertSame(['/events'], $this->uris());
++    }
++
++    public function test_prefix_with_resource_should_give_the_same_routes(): void
++    {
++        Route::prefix('/admin')->group(function () {
++            Route::resource('/events', MockResourceController::class, 'admin.events');
++        });
++
++        $this->assertSame(
++            [
++                '/admin/events',
++                '/admin/events/page/{page}',
++                '/admin/events/new',
++                '/admin/events',
++                '/admin/events/{id}',
++                '/admin/events/{id}/edit',
++                '/admin/events/{id}',
++                '/admin/events/{id}',
++            ],
++            $this->uris()
++        );
++
++        $_SERVER['REQUEST_METHOD'] = 'GET';
++        $_SERVER['REQUEST_URI'] = '/admin/events/new';
++        ob_start();
++        Router::getInstance()->dispatch();
++        $this->assertSame('new', ob_get_clean());
++    }
++
++    public function test_prefix_inside_middleware_group_should_keep_the_middleware(): void
++    {
++        Route::middleware('auth')->group(function () {
++            Route::prefix('/admin')->group(function () {
++                Route::get('/events', [MockController::class, 'action']);
++            });
++        });
++
++        $route = Router::getInstance()->getRoute(0);
++        $property = (new \ReflectionObject($route))->getProperty('middlewares');
++        $property->setAccessible(true);
++        /** @var Middleware[] $middlewares */
++        $middlewares = $property->getValue($route);
++
++        $this->assertSame('/admin/events', $route->getUri());
++        $this->assertCount(1, $middlewares);
++        $this->assertInstanceOf(Authenticate::class, $middlewares[0]);
++    }
++
++    /**
++     * @return list<string>
++     */
++    private function uris(): array
++    {
++        $uris = [];
++        for ($i = 0; $i < Router::getInstance()->getRouteSize(); $i++) {
++            $uris[] = Router::getInstance()->getRoute($i)->getUri();
++        }
++        return $uris;
++    }
++}
+diff --git a/tests/Unit/Core/Router/RouteTest.php b/tests/Unit/Core/Router/RouteTest.php
+index 7946a53..cb5d640 100644
+--- a/tests/Unit/Core/Router/RouteTest.php
++++ b/tests/Unit/Core/Router/RouteTest.php
+@@ -2,6 +2,9 @@
+ 
+ namespace Tests\Unit\Core\Router;
+ 
++use App\Controllers\Admin\EventsController as AdminEventsController;
++use App\Middleware\Admin;
++use App\Middleware\Authenticate;
+ use Core\Constants\Constants;
+ use Core\Http\Middleware\Middleware;
+ use Core\Http\Request;
+@@ -11,6 +14,29 @@ use Tests\TestCase;
+ 
+ class RouteTest extends TestCase
+ {
++    /**
++     * Rotas que o config/routes.php registrava uma a uma antes do
++     * Route::resource (método, URI, ação, nome), na ordem.
++     *
++     * @var list<array{0: string, 1: string, 2: string, 3: string}>
++     */
++    private const ADMIN_EVENTS_ROUTES = [
++        ['GET', '/admin/events', 'index', 'admin.events.index'],
++        ['GET', '/admin/events/page/{page}', 'index', 'admin.events.paginate'],
++        ['GET', '/admin/events/new', 'new', 'admin.events.new'],
++        ['POST', '/admin/events', 'create', 'admin.events.create'],
++        ['GET', '/admin/events/{id}', 'show', 'admin.events.show'],
++        ['GET', '/admin/events/{id}/edit', 'edit', 'admin.events.edit'],
++        ['PUT', '/admin/events/{id}', 'update', 'admin.events.update'],
++        ['DELETE', '/admin/events/{id}', 'destroy', 'admin.events.destroy'],
++    ];
++
++    public function tearDown(): void
++    {
++        parent::tearDown();
++        $_REQUEST = [];
++    }
++
+     public function test_should_create_route_using_constructor(): void
+     {
+         $route = new Route(method: 'GET', uri: '/', controllerName: MockController::class, actionName: 'action');
+@@ -206,4 +232,151 @@ class RouteTest extends TestCase
+ 
+         $this->assertContains($middleware, $middlewares);
+     }
++
++    /*
++     * Route::resource
++    ________________________________________*/
++
++    public function test_resource_should_register_eight_routes_with_names_in_order(): void
++    {
++        Router::reset();
++        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++
++        $this->assertSame(8, Router::getInstance()->getRouteSize());
++        $this->assertSame(self::ADMIN_EVENTS_ROUTES, $this->routeTable(0));
++        for ($i = 0; $i < 8; $i++) {
++            $this->assertSame(MockResourceController::class, Router::getInstance()->getRoute($i)->getControllerName());
++        }
++        Router::reset();
++    }
++
++    public function test_resource_route_names_should_build_the_paths(): void
++    {
++        Router::reset();
++        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++        $router = Router::getInstance();
++
++        $this->assertSame('/admin/events', $router->getRoutePathByName('admin.events.index'));
++        $this->assertSame('/admin/events/page/2', $router->getRoutePathByName('admin.events.paginate', ['page' => 2]));
++        $this->assertSame('/admin/events/new', $router->getRoutePathByName('admin.events.new'));
++        $this->assertSame('/admin/events/3', $router->getRoutePathByName('admin.events.show', ['id' => 3]));
++        $this->assertSame('/admin/events/3/edit', $router->getRoutePathByName('admin.events.edit', ['id' => 3]));
++        Router::reset();
++    }
++
++    public function test_resource_new_should_dispatch_to_new_and_not_to_show(): void
++    {
++        Router::reset();
++        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++
++        $this->assertSame('new', $this->dispatchTo('GET', '/admin/events/new'));
++        Router::reset();
++    }
++
++    public function test_resource_page_should_dispatch_to_index_with_the_page_param(): void
++    {
++        Router::reset();
++        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++
++        $this->assertSame('index page=1', $this->dispatchTo('GET', '/admin/events'));
++        $this->assertSame('index page=2', $this->dispatchTo('GET', '/admin/events/page/2'));
++        Router::reset();
++    }
++
++    public function test_resource_each_verb_should_dispatch_to_its_action(): void
++    {
++        Router::reset();
++        Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++
++        $this->assertSame('create', $this->dispatchTo('POST', '/admin/events'));
++        $this->assertSame('show id=5', $this->dispatchTo('GET', '/admin/events/5'));
++        $this->assertSame('edit id=5', $this->dispatchTo('GET', '/admin/events/5/edit'));
++        $this->assertSame('update id=5', $this->dispatchTo('POST', '/admin/events/5', 'PUT'));
++        $this->assertSame('destroy id=5', $this->dispatchTo('POST', '/admin/events/5', 'DELETE'));
++        Router::reset();
++    }
++
++    public function test_resource_inside_middleware_groups_should_get_auth_and_admin(): void
++    {
++        Router::reset();
++        Route::get('/outside', [MockResourceController::class, 'index']);
++        Route::middleware('auth')->group(function () {
++            Route::middleware('admin')->group(function () {
++                Route::resource('/admin/events', MockResourceController::class, 'admin.events');
++            });
++        });
++
++        $this->assertSame(9, Router::getInstance()->getRouteSize());
++        $this->assertSame([], $this->middlewareClasses(0));
++        for ($i = 1; $i <= 8; $i++) {
++            $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
++        }
++        Router::reset();
++    }
++
++    public function test_config_routes_should_keep_the_same_admin_events_routes(): void
++    {
++        Router::reset();
++        require Constants::rootPath()->join('config/routes.php');
++        $router = Router::getInstance();
++
++        $start = null;
++        for ($i = 0; $i < $router->getRouteSize(); $i++) {
++            if ($router->getRoute($i)->getName() === 'admin.events.index') {
++                $start = $i;
++                break;
++            }
++        }
++        $this->assertNotNull($start);
++        $this->assertSame('admin.dashboard.index', $router->getRoute($start - 1)->getName());
++        $this->assertSame(self::ADMIN_EVENTS_ROUTES, $this->routeTable($start));
++
++        for ($i = $start; $i < $start + 8; $i++) {
++            $this->assertSame(AdminEventsController::class, $router->getRoute($i)->getControllerName());
++            $this->assertSame([Admin::class, Authenticate::class], $this->middlewareClasses($i));
++        }
++        Router::reset();
++    }
++
++    /**
++     * @return list<array{0: string, 1: string, 2: string, 3: string}>
++     */
++    private function routeTable(int $start): array
++    {
++        $table = [];
++        for ($i = $start; $i < $start + 8; $i++) {
++            $route = Router::getInstance()->getRoute($i);
++            $table[] = [$route->getMethod(), $route->getUri(), $route->getActionName(), $route->getName()];
++        }
++        return $table;
++    }
++
++    /**
++     * Classes dos middlewares da rota, em ordem alfabética.
++     *
++     * @return list<string>
++     */
++    private function middlewareClasses(int $index): array
++    {
++        $route = Router::getInstance()->getRoute($index);
++        $property = (new \ReflectionObject($route))->getProperty('middlewares');
++        $property->setAccessible(true);
++
++        /** @var Middleware[] $middlewares */
++        $middlewares = $property->getValue($route);
++        $classes = array_values(array_map(fn (Middleware $middleware) => get_class($middleware), $middlewares));
++        sort($classes);
++        return $classes;
++    }
++
++    private function dispatchTo(string $method, string $uri, ?string $override = null): string
++    {
++        require_once Constants::rootPath()->join('tests/Unit/Core/Http/header_mock.php');
++
++        $_SERVER['REQUEST_METHOD'] = $method;
++        $_SERVER['REQUEST_URI'] = $uri;
++        $_REQUEST = $override === null ? [] : ['_method' => $override];
++
++        return $this->getOutput(fn () => Router::getInstance()->dispatch());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
