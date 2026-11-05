@@ -82,8 +82,9 @@ Branch no clone: `fvp/p10-comentarios-evento`, a partir de `main`
 - Comentário inválido redireciona com flash em vez de renderizar o
   form de novo: o form é um campo só e a mensagem diz o motivo.
 - `ON DELETE CASCADE`: comentário não é motivo para impedir a remoção
-  (diferente da Inscrição, P03). Se o professor quiser bloquear, faça
-  como Inscrições em `safeDestroy()` e troque para `RESTRICT`.
+  (diferente da Inscrição: regra P03 do código-base,
+  `Event::safeDestroy`). Se o professor quiser bloquear, faça como
+  Inscrições em `safeDestroy()` e troque para `RESTRICT`.
 - Escape na saída (`htmlspecialchars` + `nl2br`). Os flashes deste
   cenário só têm textos fixos (nada digitado pelo usuário).
 
@@ -209,8 +210,10 @@ Arquivos que costumam conflitar neste cenário e por quê:
 - `database/schema.sql`: outros cenários acrescentam colunas/tabelas.
   Mantenha os dois; o `DROP TABLE IF EXISTS comments` precisa ficar
   antes do `DROP` de `events`.
-- `config/routes.php`: rotas novas no grupo `auth`. Fique com todas;
-  rota fixa antes de `{id}`.
+- `config/routes.php`: rotas novas no grupo `auth`. Junte as rotas
+  diferentes, mas com O2 aplicado a rota `GET /events/{id}`
+  (`events.show`) existe nos dois lados: mantenha UMA só, não
+  duplique. Rota fixa antes de `{id}`.
 - `app/Models/Event.php`: métodos novos lado a lado (fique com os
   dois).
 - `lib/Validations.php`: se o M2 já criou `maxLength`, fique com um só
@@ -219,6 +222,9 @@ Arquivos que costumam conflitar neste cenário e por quê:
 - Se o repositório alvo já tiver `App\Controllers\EventsController`
   (tela pública do O2), junte: mantenha o `show` de lá e inclua a
   parcial `events/_comments.phtml` na view dele.
+- `app/views/events/show.phtml`: com O2 aplicado, o arquivo existe nos
+  dois lados. Não escolha um lado: junte os trechos (detalhes do
+  Evento e botão de Inscrição do O2 + a parcial de comentários).
 
 Depois de aplicar: `./run composer dump-autoload -o --strict-psr`
 (classes novas), `./run db:populate` (schema novo), testes e

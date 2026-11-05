@@ -72,8 +72,8 @@ Branch no clone: `fvp/n5-eventos-futuros-passados`, a partir de
 - Passados em ordem decrescente: quem abre a aba quer ver o que
   acabou de acontecer primeiro. Se o professor pedir crescente,
   troque o `DESC` (e o teste de ordem).
-- Nome do parâmetro: `scope`, como no catálogo (o pedido original
-  do agente falava em `?when=`; é só trocar a chave e os links).
+- Nome do parâmetro: `scope`, como no catálogo. Se o professor
+  pedir outro nome (ex.: `?when=`), é só trocar a chave e os links.
 
 ## Como verificar
 

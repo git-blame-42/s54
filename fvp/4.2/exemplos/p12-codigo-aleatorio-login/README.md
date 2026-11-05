@@ -61,11 +61,10 @@ Commit:
 - Versão do catálogo, com o código no model: "valor gerado e validado
   no model" é o que o professor cobra; o controller só orquestra. A
   sessão guarda apenas quem está no meio do login.
-- Alternativa mais rápida (pedida no prompt original como opção):
-  guardar `$_SESSION['login_code']` e `$_SESSION['login_user_id']`,
-  sem schema. Funciona, mas a regra fica no controller e não há
-  validade. Dá para fazer em ~20 min se o tempo apertar; diga ao
-  professor qual escolheu e por quê.
+- Alternativa mais rápida: guardar `$_SESSION['login_code']` e
+  `$_SESSION['login_user_id']`, sem schema. Funciona, mas a regra fica
+  no controller e não há validade. Dá para fazer em ~20 min se o tempo
+  apertar; diga ao professor qual escolheu e por quê.
 - Mostrar o código no flash: o projeto não envia e-mail; o pedido diz
   que "o backend devolve o número". É a simulação do envio e permite
   que o Cest e o professor leiam o código na tela. Só aparece depois

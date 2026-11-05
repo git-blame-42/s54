@@ -53,9 +53,8 @@ Branch no clone: `fvp/r3-helper-formatacao`, a partir de `main`
   `Event::KINDS[$event->kind] ?? ...`. O professor já cobrou "rótulos
   num só lugar" (4.1, C8). Agora as views só chamam métodos do model,
   e o mapa de cores fica ao lado do mapa de rótulos.
-- Nomes do catálogo (`formattedStartsOn`, `excerpt`). O prompt
-  original chamava o corte de `shortDescription`; é o mesmo método,
-  só com outro nome.
+- Nomes do catálogo (`formattedStartsOn`, `excerpt`). Outro nome
+  possível para o corte: `shortDescription`; é o mesmo método.
 - `mb_strimwidth` com `'UTF-8'`: `substr` cortaria "ação" no meio de
   um caractere de 2 bytes e geraria texto inválido.
 - O corte acontece antes do `htmlspecialchars` (o model devolve

@@ -108,8 +108,9 @@ redireciona para `/admin/events/16` com o flash.
   generaliza).
 - Q1 (só o dono edita e remove): outro *early return* no mesmo ponto.
   Com os dois, dono primeiro, depois `isEditable()`.
-- P3 (remoção segura com inscrições): continua valendo; `isEditable()`
-  é checado antes do `safeDestroy()`.
+- Regra P03 do código-base (`Event::safeDestroy`, remoção barrada com
+  inscrições): continua valendo; `isEditable()` é checado antes do
+  `safeDestroy()`.
 - Sem P5, dá para fazer só a parte da data:
   `return $this->starts_on >= date('Y-m-d');`.
 

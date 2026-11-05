@@ -28,7 +28,9 @@ Job "Code Quality Check" de `.github/workflows/ci.yml`, nesta ordem:
 - `phpstan.neon`: nível 6, `paths` `app`, `core` e `tests`. `lib/`
   (onde está o `Validations.php`) **não** é analisado.
 - PSR-4 (`composer.json`): `App\` = `app/`, `Core\` = `core/`,
-  `Tests\` = `tests/`, `Database\` = `database/`.
+  `Tests\` = `tests/`, `Database\` = `database/`, `Lib\` = `lib/`,
+  `Config\` = `config/`. Classe nova em qualquer um deles segue a
+  regra do item 6.
 
 Os três falham a CI com código de saída 1, inclusive o `phpcs` com só
 um WARNING (conferido: `./run phpcs` com uma linha longa e nada mais
@@ -48,6 +50,9 @@ sai com 1).
 # 5. testes
 ./run test tests/Unit
 ./run test tests/Integration
+# 6. só se mexeu em view ou fluxo (precisa do selenium)
+docker compose up -d selenium && sleep 5
+./run test:browser
 ```
 
 ## Erros típicos reproduzidos, com a correção
@@ -138,7 +143,7 @@ public static function upcoming(array $conditions): array
 
 Outros formatos que o projeto já usa: `array<int, string>` (lista),
 `array<string, array{string, string}>` (data provider de teste),
-`array<Event>` (lista de Eventos fora de método estático).
+`array<int, Event>` (lista de Eventos fora de método estático).
 
 ### 4. `?Model` onde se espera `?Event` (phpstan, `return.type`)
 
@@ -248,7 +253,7 @@ Unit 159 testes na base, sem mudança.
 - M5 (`m5-validacao-condicional-modalidade`): a lista de campos do
   `errorsOf()` no `EventTest` passou de 130 colunas com `link`; virou
   `$fields = [...]` (item 1).
-- M6, S4: data providers precisam de
+- S4: data providers precisam de
   `@return array<string, array{...}>` (item 3).
 - Todo cenário que cria classe (service, controller novo): item 6.
 
@@ -258,9 +263,11 @@ Unit 159 testes na base, sem mudança.
 2. Para cada linha da saída, procure a mensagem nos itens 1 a 6 (o
    identificador, como `missingType.iterableValue` ou
    `Generic.Files.LineLength.TooLong`, é o que muda menos).
-3. Corrija, rode o comando de novo até ficar limpo, e só então faça
-   o commit (`type: Title`, em inglês).
-4. Na PR, confira na aba Actions que os jobs "Tests", "Acceptance
+3. Corrija, rode o comando de novo até ficar limpo. Rode os testes;
+   `./run test:browser` também, se mexeu em view ou fluxo.
+4. Faça o commit na branch com o nome pedido pelo professor
+   (`type: Title`, em inglês).
+5. Na PR, confira na aba Actions que os jobs "Tests", "Acceptance
    Tests" e "Code Quality Check" ficaram verdes.
 
 ## Armadilhas

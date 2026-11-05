@@ -177,10 +177,14 @@ Depois de aplicar sobre M2, M5 ou M6, ajuste os testes citados em
     `integerMax` (receita no M2).
   - Título com mais de 255 caracteres: mesmo efeito ("Data too
     long"). Correção: `maxLength` (M2), com limite ≤ 255.
-- O catálogo diz que `' 10 '` com espaços é rejeitado; não é: o
-  `filter_var(..., FILTER_VALIDATE_INT)` ignora espaços nas pontas e
-  aceita `'+5'`. Já `'010'` (zero à esquerda) é rejeitado.
+- `filter_var(..., FILTER_VALIDATE_INT)` ignora espaços nas pontas e
+  aceita o sinal: `' 10 '` e `'+5'` passam. Já `'010'` (zero à
+  esquerda) é rejeitado.
 - `notEmpty` não faz `trim`: título `'   '` é válido.
+- Não há teste "segundo admin edita o Evento de outro": a base não tem
+  regra de dono (qualquer Administrador edita e remove qualquer
+  Evento). Essa regra é o Q1 (`q1-so-dono-edita-remove`), que traz o
+  teste junto. Aqui, "não autorizado" é o Participante.
 - `errors()` guarda uma mensagem por campo; a última vence. Por isso
   cada caso confere a mensagem exata e o total de campos com erro.
 - `expectException` antes da linha que lança: o que vem depois do
