@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>q4-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="q4-passo-a-passo-perfil-organizador-com-crud-só-dos-próprios-eventos">Q4
+passo a passo: Perfil Organizador com CRUD só dos próprios Eventos</h1>
+<p>Pedido típico (como no exemplo): "crie o perfil Organizador. Ele
+entra numa área própria, <code>/organizer/events</code>, e faz o CRUD só
+dos Eventos que criou. Não entra na Área Administrativa, e o
+Administrador não entra na dele. No login, o Organizador vai direto para
+os Eventos dele" (A7 da 4.1 aplicado ao CRUD; junta Q1/O5 com um papel
+novo). Chance: média. Tempo: 35-40 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/q4-perfil-organizador/</code>
+(patch, bundle e árvore <code>projeto/</code>). Sem pré-requisito: um
+commit só, a partir da <code>main</code> (<code>f31006b</code>). Schema
+muda (ENUM). Duas classes novas em <code>app/</code>
+(<code>dump-autoload</code>).</p>
+<p>Variante: o catálogo sugere middleware <code>Staff</code> (admin ou
+organizer) nas mesmas rotas <code>/admin/events</code>, admin vendo
+tudo. O exemplo dá ao Organizador área separada,
+<code>/organizer/events</code>, e o admin segue igual em
+<code>/admin/events</code>. ENUM, <code>isOrganizer()</code>, middleware
+com alias, restrição por <code>events()</code>, navbar e populate valem
+nos dois caminhos. Se o pedido for "mesma tela do admin", siga o
+catálogo (ver Armadilhas).</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; middleware -&gt;
+rotas -&gt; controllers -&gt; views -&gt; dados -&gt; testes. Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/User.php</code></li>
+<li><code>app/Middleware/Organizer.php</code> (novo)</li>
+<li><code>config/App.php</code></li>
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/Controllers/Organizer/EventsController.php</code>
+(novo)</li>
+<li><code>app/Controllers/AuthenticationsController.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/new.phtml</code></li>
+<li><code>app/views/admin/events/edit.phtml</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>app/views/layouts/_navbar.phtml</code></li>
+<li><code>database/Populate/populate.php</code></li>
+<li><code>tests/Unit/Models/Users/UserTest.php</code></li>
+<li><code>tests/Integration/Controllers/AuthenticationsControllerTest.php</code></li>
+<li><code>tests/Integration/Controllers/Organizer/EventsControllerTest.php</code>
+(novo)</li>
+<li><code>tests/Integration/Access/OrganizerEventsAccessTest.php</code>
+(novo)</li>
+<li><code>tests/Acceptance/organizer/OrganizerEventsCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: <code>./run db:populate</code>,
+<code>./run composer dump-autoload -o --strict-psr</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE users</code> (linha ~12), coluna
+<code>role</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    encrypted_password <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">role</span> ENUM(<span class="st">&#39;admin&#39;</span>, <span class="st">&#39;organizer&#39;</span>, <span class="st">&#39;participant&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;participant&#39;</span>,</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Perfil mora no ENUM <code>role</code>, mesmo padrão do
+<code>admin</code> (A7 da 4.1).</li>
+<li>O model <code>User</code> não valida <code>role</code>: valor fora
+do ENUM só falha no banco.</li>
+</ul>
+<p>Armadilha: ENUM sem <code>organizer</code> -&gt; <code>save()</code>
+falha com <code>Data truncated</code>. Banco de dev não se recria
+sozinho: <code>./run db:populate</code> no fim.</p>
+<h2 id="2-appmodelsuserphp">2. <code>app/Models/User.php</code></h2>
+<p>a) Docblock de <code>events()</code> (linha ~50), só o texto:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> Eventos criados por este usuário (Administrador ou Organizador)<span class="op">.</span></span></code></pre></div>
+<p>b) Depois de <code>isAdmin()</code> (linha ~71-74), antes de
+<code>registerLogin()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;role <span class="op">===</span> <span class="st">&#39;admin&#39;</span><span class="ot">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * Organizador: cadastra e gerencia só os próprios Eventos, em /organizer/events.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> isOrganizer()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;role <span class="op">===</span> <span class="st">&#39;organizer&#39;</span><span class="ot">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Pergunta sobre o perfil fica no model; middleware, controller e
+navbar só chamam <code>isOrganizer()</code>, nunca comparam string.</li>
+<li><code>events(): HasMany</code> já existe (dono =
+<code>user_id</code>); o Organizador reaproveita a mesma relação.</li>
+<li>Sem constante <code>ROLES</code> nem <code>inclusion</code> na base:
+nada mais muda aqui. Se B10 da 4.1 estiver aplicado, acrescente
+<code>'organizer'</code> na lista.</li>
+</ul>
+<h2 id="3-appmiddlewareorganizerphp-novo">3.
+<code>app/Middleware/Organizer.php</code> (novo)</h2>
+<p>Cópia de <code>app/Middleware/Admin.php</code>, trocando classe,
+método e mensagem:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> App\Middleware<span class="ot">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Middleware\Middleware<span class="ot">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Request<span class="ot">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Authentication\Auth<span class="ot">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\FlashMessage<span class="ot">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Organizer <span class="kw">implements</span> Middleware</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> handle(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> Auth::user()<span class="ot">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O grupo de rotas mais interno roda primeiro: sem usuário logado este middleware não faz nada e</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// o Authenticate (grupo &#39;auth&#39;, externo, roda depois) redireciona para /login.</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$user</span> <span class="op">!==</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="va">$user</span>-&gt;isOrganizer()) {</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Acesso restrito a organizadores&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;dashboard.index&#39;</span>))<span class="ot">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> redirectTo(<span class="dt">string</span> <span class="va">$location</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">header</span>(<span class="st">&#39;Location: &#39;</span> <span class="op">.</span> <span class="va">$location</span>)<span class="ot">;</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">exit</span><span class="ot">;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Middleware = filtro antes da ação. Barra quem está logado e não é
+Organizador (Participante <strong>e</strong> Administrador) -&gt;
+<code>/dashboard</code>.</li>
+<li><code>RouteWrapperMiddleware::group</code> roda o callback antes de
+acrescentar o próprio middleware: o grupo <strong>interno</strong> roda
+primeiro. Aqui o <code>Organizer</code> roda antes do
+<code>Authenticate</code> (A17 da 4.1).</li>
+<li>Por isso o <code>$user !== null</code>: sem login ele deixa passar e
+o <code>Authenticate</code>, logo depois, manda para
+<code>/login</code>.</li>
+</ul>
+<p>Armadilha: chamar <code>$user-&gt;isOrganizer()</code> sem checar
+<code>null</code> -&gt; erro 500 para visitante, em vez do redirect para
+<code>/login</code>.</p>
+<h2 id="4-configappphp">4. <code>config/App.php</code></h2>
+<p>Em <code>$middlewareAliases</code>, depois de
+<code>'admin'</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;admin&#39;</span> =&gt; \App\Middleware\Admin::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;organizer&#39;</span> =&gt; \App\Middleware\Organizer::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>Route::middleware('organizer')</code> procura o nome
+neste array e instancia a classe. Esquecer -&gt;
+<code>Undefined array key "organizer"</code> (500) ao carregar o
+<code>routes.php</code>: quebra todas as páginas, não só o grupo.</p>
+<h2 id="5-configroutesphp">5. <code>config/routes.php</code></h2>
+<p>a) <code>use</code>, depois de <code>HomeController</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Controllers\HomeController<span class="ot">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Controllers\Organizer\EventsController <span class="kw">as</span> OrganizerEventsController<span class="ot">;</span></span></code></pre></div>
+<p>b) Dentro do grupo <code>auth</code>, depois do <code>});</code> que
+fecha o grupo <code>admin</code> (antes do <code>});</code> final):</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>        Route::delete(<span class="st">&#39;/admin/events/{id}&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.destroy&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    })<span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Área do Organizador (autenticado com perfil organizer): CRUD só dos próprios Eventos.</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fica dentro do grupo &#39;auth&#39;. O middleware do grupo interno roda antes do externo: sem login o</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Organizer deixa passar e o Authenticate redireciona para /login.</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    Route::middleware(<span class="st">&#39;organizer&#39;</span>)-&gt;group(<span class="kw">function</span> () {</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/organizer/events&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;index&#39;</span>])-&gt;name(<span class="st">&#39;organizer.events.index&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/organizer/events/page/{page}&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;index&#39;</span>])</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;organizer.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/organizer/events/new&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;new&#39;</span>])-&gt;name(<span class="st">&#39;organizer.events.new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        Route::post(<span class="st">&#39;/organizer/events&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;create&#39;</span>])-&gt;name(<span class="st">&#39;organizer.events.create&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/organizer/events/{id}&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;show&#39;</span>])-&gt;name(<span class="st">&#39;organizer.events.show&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/organizer/events/{id}/edit&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;edit&#39;</span>])</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;organizer.events.edit&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        Route::put(<span class="st">&#39;/organizer/events/{id}&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;update&#39;</span>])</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;organizer.events.update&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>        Route::delete(<span class="st">&#39;/organizer/events/{id}&#39;</span><span class="ot">,</span> [OrganizerEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;organizer.events.destroy&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    })<span class="ot">;</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>})<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Cópia das 8 rotas <code>admin.events.*</code> trocando URL, nome e
+controller. Os nomes <code>organizer.events.&lt;acao&gt;</code> são o
+que o <code>eventRoute()</code> monta.</li>
+<li><code>/new</code> antes de <code>/{id}</code>: senão
+<code>new</code> vira id.</li>
+<li>Grupo dentro do <code>auth</code>: precisa de login. Fora dele o
+<code>Organizer</code> não barra visitante (<code>Auth::user()</code> é
+<code>null</code>) e a ação roda sem usuário.</li>
+<li><code>/admin</code> continua só <code>admin</code>: Organizador
+barrado lá de graça pelo <code>Admin.php</code>. Não "libere" o
+Organizador dentro do <code>Admin.php</code>.</li>
+</ul>
+<h2 id="6-appcontrollersadmineventscontrollerphp">6.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Refatoração sem mudar o comportamento do admin: abre ganchos para a
+subclasse do Organizador.</p>
+<p>a) <code>use</code> e topo da classe (linha ~6-20):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\FlashMessage<span class="ot">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Paginator<span class="ot">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"> * CRUD de Eventos do Administrador (todos os Eventos). O Organizador reaproveita esta classe</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * (App</span><span class="an">\Controllers\Organizer\EventsController)</span><span class="co"> trocando o prefixo das rotas e a busca dos Eventos.</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EventsController <span class="kw">extends</span> Controller</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">const</span> <span class="cn">PER_PAGE</span> <span class="op">=</span> <span class="dv">5</span><span class="ot">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Prefixo dos nomes de rota (admin.events.index, admin.events.show...), usado também nas views. */</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">const</span> <span class="cn">ROUTE_PREFIX</span> <span class="op">=</span> <span class="st">&#39;admin.events&#39;</span><span class="ot">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">FIELDS</span> <span class="op">=</span> [<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;modality&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>]<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>index()</code>: troque o <code>Event::paginate(...)</code>
+por:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> <span class="va">$this</span>-&gt;paginateEvents(<span class="fu">max</span>(<span class="dv">1</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;page&#39;</span><span class="ot">,</span> <span class="dv">1</span>)))<span class="ot">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> <span class="va">$paginator</span>-&gt;registers()<span class="ot">;</span></span></code></pre></div>
+<p>c) <code>new()</code> e <code>create()</code>:
+<code>new Event()</code> vira <code>$this-&gt;newEvent()</code>. Em
+<code>create()</code>, <strong>apague</strong> a linha do
+<code>user_id</code> (agora vem no <code>newEvent()</code>):</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newEvent()<span class="ot">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fill(<span class="va">$event</span><span class="ot">,</span> <span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="op">-</span>       <span class="va">$event</span>-&gt;user_id <span class="op">=</span> <span class="va">$this</span>-&gt;currentUser()<span class="ot">?</span>-&gt;id<span class="ot">;</span></span></code></pre></div>
+<p>d) Redirects: <code>route('admin.events.x', ...)</code> vira
+<code>$this-&gt;eventRoute('x', ...)</code>. São 4: <code>create</code>
+e <code>update</code> (<code>show</code>), <code>destroy</code> e
+<code>eventNotFound()</code> (<code>index</code>):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(<span class="va">$this</span>-&gt;eventRoute(<span class="st">&#39;show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;redirectTo(<span class="va">$this</span>-&gt;eventRoute(<span class="st">&#39;index&#39;</span>))<span class="ot">;</span></span></code></pre></div>
+<p>e) Depois de <code>fill()</code>, troque
+<code>private function findEvent</code> por <code>eventRoute()</code> +
+os ganchos:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * URL da ação do CRUD com o prefixo deste controller. As views chamam `$this-&gt;eventRoute(&#39;edit&#39;, [...])`.</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $params</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> eventRoute(<span class="dt">string</span> <span class="va">$action</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$params</span> <span class="op">=</span> [])<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> route(<span class="kw">static</span>::<span class="cn">ROUTE_PREFIX</span> <span class="op">.</span> <span class="st">&quot;.</span>{<span class="va">$action</span>}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$params</span>)<span class="ot">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Página da listagem: o Administrador vê todos os Eventos. */</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> paginateEvents(<span class="dt">int</span> <span class="va">$page</span>)<span class="ot">:</span> Paginator</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Event::paginate(page<span class="ot">:</span> <span class="va">$page</span><span class="ot">,</span> per_page<span class="ot">:</span> <span class="kw">static</span>::<span class="cn">PER_PAGE</span><span class="ot">,</span> route<span class="ot">:</span> <span class="kw">static</span>::<span class="cn">ROUTE_PREFIX</span> <span class="op">.</span> <span class="st">&#39;.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Evento novo, já com o usuário logado como dono. */</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> newEvent()<span class="ot">:</span> Event</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">new</span> Event([<span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;currentUser()<span class="ot">?</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> findEvent(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="ot">?</span>Event</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Event::findById((<span class="dt">int</span>) <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>O CRUD (validação, flash, <code>fill</code>, P02/P03) é o mesmo;
+muda só de onde vêm os Eventos e o prefixo. Herança evita copiar 150
+linhas que divergiriam na primeira correção.</li>
+<li><code>private</code> não pode ser sobrescrito: ganchos e constantes
+viram <code>protected</code>, e a leitura usa <code>static::</code>
+(late static binding), não <code>self::</code>. <code>FIELDS</code> fica
+<code>private</code>: só o <code>fill()</code> do pai usa.</li>
+<li><code>eventRoute()</code> é <code>public</code> porque a view chama:
+a view roda dentro do <code>render()</code> do controller
+(<code>require</code>), então <code>$this</code> é o controller.</li>
+<li><code>user_id</code> no construtor: não vem do form
+(<code>FIELDS</code> é allowlist), então <code>user_id</code> injetado
+no POST é ignorado.</li>
+</ul>
+<p>Armadilha: conflita com quase todo cenário que mexe em
+<code>index</code>, <code>create</code>, <code>findEvent</code> ou
+redirects. A lógica do outro cenário entra dentro dos ganchos.</p>
+<h2 id="7-appcontrollersorganizereventscontrollerphp-novo">7.
+<code>app/Controllers/Organizer/EventsController.php</code> (novo)</h2>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> App\Controllers\Organizer<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Controllers\Admin\EventsController <span class="kw">as</span> AdminEventsController<span class="ot">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Request<span class="ot">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="bu">LogicException</span><span class="ot">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Paginator<span class="ot">;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co"> * CRUD de Eventos do Organizador: o mesmo do Administrador (ações, views e validações), mas</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="co"> * só com os Eventos dele (user_id = id do logado), pela relação User::events().</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EventsController <span class="kw">extends</span> AdminEventsController</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">const</span> <span class="cn">ROUTE_PREFIX</span> <span class="op">=</span> <span class="st">&#39;organizer.events&#39;</span><span class="ot">;</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> paginateEvents(<span class="dt">int</span> <span class="va">$page</span>)<span class="ot">:</span> Paginator</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;owner()-&gt;events()-&gt;paginate(</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="va">$page</span><span class="ot">,</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>            per_page<span class="ot">:</span> <span class="kw">static</span>::<span class="cn">PER_PAGE</span><span class="ot">,</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="kw">static</span>::<span class="cn">ROUTE_PREFIX</span> <span class="op">.</span> <span class="st">&#39;.paginate&#39;</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> newEvent()<span class="ot">:</span> Event</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;owner()-&gt;events()-&gt;<span class="kw">new</span>()<span class="ot">;</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$event</span> <span class="kw">instanceof</span> Event <span class="ot">?</span> <span class="va">$event</span> <span class="ot">:</span> <span class="kw">new</span> Event()<span class="ot">;</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a><span class="co">     * Evento de outro usuário vira null e cai em &quot;Evento não encontrado!&quot; (show, edit, update, destroy).</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> findEvent(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="ot">?</span>Event</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;owner()-&gt;events()-&gt;findById((<span class="dt">int</span>) <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$event</span> <span class="kw">instanceof</span> Event <span class="ot">?</span> <span class="va">$event</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> owner()<span class="ot">:</span> User</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="va">$this</span>-&gt;currentUser()<span class="ot">;</span></span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$user</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Não acontece: as rotas do Organizador ficam dentro do grupo &#39;auth&#39;.</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>            <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">LogicException</span>(<span class="st">&#39;Área do Organizador acessada sem usuário logado.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Pasta <code>Organizer/</code> = namespace
+<code>App\Controllers\Organizer</code> (PSR-4). Classe nova -&gt;
+<code>dump-autoload -o --strict-psr</code>.</li>
+<li>Troca só o prefixo e os 3 ganchos; ações e views vêm do pai.</li>
+<li>Restrição pela relação (<code>events()-&gt;findById</code>), como
+Q1/O5: Evento alheio nem é carregado e a resposta não revela que
+existe.</li>
+<li><code>HasMany::new()</code>/<code>findById()</code> devolvem
+<code>Model</code>: o <code>instanceof Event</code> acalma o
+<code>phpstan</code>.</li>
+<li><code>events()-&gt;new()</code> já põe <code>user_id</code> do
+dono.</li>
+<li><code>owner()</code> não devolve <code>null</code>:
+<code>phpstan</code> sem <code>?-&gt;</code> e erro claro se a rota sair
+do <code>auth</code>.</li>
+</ul>
+<p>Armadilha: <code>HasMany::paginate</code> usa <code>per_page</code>
+(com <code>_</code>) como nome do argumento.</p>
+<h2 id="8-appcontrollersauthenticationscontrollerphp">8.
+<code>app/Controllers/AuthenticationsController.php</code></h2>
+<p><code>authenticate()</code>, depois de
+<code>FlashMessage::success('Login realizado...')</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Organizador cai direto nos próprios Eventos; os demais perfis, no painel.</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(<span class="va">$user</span>-&gt;isOrganizer() <span class="ot">?</span> route(<span class="st">&#39;organizer.events.index&#39;</span>) <span class="ot">:</span> route(<span class="st">&#39;dashboard.index&#39;</span>))<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: o pedido inclui "no login, vai direto para os Eventos dele"
+(A9/A18 da 4.1). Sem isso o Organizador cai em
+<code>/dashboard</code>.</p>
+<h2 id="9-appviewsadmineventsindexphtml">9.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>Botão do topo e os 3 links da linha da tabela:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;new&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Novo Evento<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>...</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-secondary&quot;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>                            href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;show&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Ver<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-primary&quot;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>                            href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;edit&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Editar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;destroy&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Mesmas views para os dois controllers.
+<code>route('admin.events.x')</code> fixo mandaria o Organizador para
+<code>/admin</code>, onde o middleware barra.</li>
+<li><code>$this-&gt;eventRoute('x')</code> usa o
+<code>ROUTE_PREFIX</code> de quem renderizou.</li>
+<li>A paginação já sai certa: o <code>Paginator</code> recebe a rota
+<code>&lt;prefixo&gt;.paginate</code> no
+<code>paginateEvents()</code>.</li>
+</ul>
+<h2 id="10-appviewsadmineventsnewphtml">10.
+<code>app/views/admin/events/new.phtml</code></h2>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="va">$action</span> <span class="op">=</span> <span class="va">$this</span>-&gt;eventRoute(<span class="st">&#39;create&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<h2 id="11-appviewsadmineventseditphtml">11.
+<code>app/views/admin/events/edit.phtml</code></h2>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="va">$action</span> <span class="op">=</span> <span class="va">$this</span>-&gt;eventRoute(<span class="st">&#39;update&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span></code></pre></div>
+<p>Por quê (10 e 11): <code>$action</code> é o <code>action</code> do
+<code>&lt;form&gt;</code> no <code>_form.phtml</code>; o Organizador tem
+que postar em <code>/organizer/events</code>.</p>
+<h2 id="12-appviewsadminevents_formphtml">12.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Botão "Cancelar", no fim do form:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span><span class="op">&gt;</span>Salvar<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Cancelar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<h2 id="13-appviewsadmineventsshowphtml">13.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Botões do fim (linha ~35):</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;edit&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Editar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$this</span>-&gt;eventRoute<span class="st">(&#39;index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Voltar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê (12 e 13): mesmo motivo do <code>index</code>. Procure todo
+<code>route('admin.events</code> nas views: nenhum pode sobrar.</p>
+<h2 id="14-appviewslayouts_navbarphtml">14.
+<code>app/views/layouts/_navbar.phtml</code></h2>
+<p>Depois do <code>&lt;?php endif; ?&gt;</code> do bloco
+<code>isAdmin()</code> (linha ~20), antes do <code>dropdown</code>:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">if</span> (<span class="va">$this</span>-&gt;currentUser()-&gt;isOrganizer()) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>li <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-item&quot;</span><span class="op">&gt;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;organizer.events.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Meus Eventos<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>li<span class="op">&gt;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>li <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-item dropdown&quot;</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Link "Meus Eventos" só para Organizador; "Administração" e "Eventos"
+seguem só para admin.</li>
+<li>Aqui é <code>route(...)</code> fixo, não <code>eventRoute()</code>:
+a navbar é do layout, renderizada por qualquer controller.</li>
+</ul>
+<p>Armadilha: <code>isAdmin()</code>/<code>isOrganizer()</code>
+espalhados (navbar, login) = custo de não centralizar o perfil (H2 da
+4.1).</p>
+<h2 id="15-databasepopulatepopulatephp">15.
+<code>database/Populate/populate.php</code></h2>
+<p>a) Depois de <code>$user-&gt;save();</code> (Participante), troque o
+<code>echo</code>:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="va">$organizer</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;name&#39;</span> =&gt; <span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;email&#39;</span> =&gt; <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;role&#39;</span> =&gt; <span class="st">&#39;organizer&#39;</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>])<span class="ot">;</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="va">$organizer</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="kw">echo</span> <span class="st">&quot;Usuários criados: </span>{<span class="va">$admin</span>-&gt;email}<span class="st"> (admin), </span>{<span class="va">$organizer</span>-&gt;email}<span class="st"> (organizer) e </span>{<span class="va">$user</span>-&gt;email}<span class="st"> (participant), &quot;</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> <span class="st">&quot;senha 123456</span><span class="sc">\n</span><span class="st">&quot;</span><span class="ot">;</span></span></code></pre></div>
+<p>b) Antes do <code>foreach ($events ...)</code> (linha ~132), e no
+próprio <code>foreach</code> troque
+<code>'user_id' =&gt; $admin-&gt;id</code>:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Eventos 10 e 13 (índices 9 e 12, sem Inscrições) pertencem ao Organizador; os demais, ao Administrador.</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="co">// O total continua 16, e o Administrador continua vendo todos na listagem dele.</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="va">$organizerEventIndexes</span> <span class="op">=</span> [<span class="dv">9</span><span class="ot">,</span> <span class="dv">12</span>]<span class="ot">;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="va">$eventModels</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="cf">foreach</span> (<span class="va">$events</span> <span class="kw">as</span> <span class="va">$index</span> =&gt; [<span class="va">$title</span><span class="ot">,</span> <span class="va">$description</span><span class="ot">,</span> <span class="va">$kind</span><span class="ot">,</span> <span class="va">$modality</span><span class="ot">,</span> <span class="va">$audience</span><span class="ot">,</span> <span class="va">$daysAhead</span><span class="ot">,</span> <span class="va">$location</span><span class="ot">,</span> <span class="va">$capacity</span>]) {</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">$owner</span> <span class="op">=</span> <span class="fu">in_array</span>(<span class="va">$index</span><span class="ot">,</span> <span class="va">$organizerEventIndexes</span><span class="ot">,</span> <span class="kw">true</span>) <span class="ot">?</span> <span class="va">$organizer</span> <span class="ot">:</span> <span class="va">$admin</span><span class="ot">;</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event([</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$owner</span>-&gt;id<span class="ot">,</span></span></code></pre></div>
+<p>c) <code>echo</code> depois do <code>foreach</code>:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">echo</span> <span class="fu">count</span>(<span class="va">$eventModels</span>) <span class="op">.</span> <span class="st">&#39; Eventos criados (&#39;</span> <span class="op">.</span> <span class="fu">count</span>(<span class="va">$organizerEventIndexes</span>) <span class="op">.</span> <span class="st">&quot; do Organizador)</span><span class="sc">\n</span><span class="st">&quot;</span><span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Login de teste no navegador: <code>organizador@example.com</code> /
+<code>123456</code>.</li>
+<li>Eventos sem Inscrições: não mexe nas Inscrições (14) nem no Evento 1
+lotado, que outros testes e cenários usam.</li>
+<li><code>$index =&gt;</code> no <code>foreach</code>: o array é
+destruturado por posição; não mexa nas linhas de dados.</li>
+</ul>
+<h2 id="16-testsunitmodelsusersusertestphp">16.
+<code>tests/Unit/Models/Users/UserTest.php</code></h2>
+<p>Depois de
+<code>test_is_admin_should_return_true_for_admin_role</code> (linha
+~141-146):</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_is_organizer_should_return_false_by_default()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;user-&gt;isOrganizer())<span class="ot">;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_is_organizer_should_return_true_only_for_organizer_role()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$organizer</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="st">&#39;organizer&#39;</span><span class="ot">,</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$organizer</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> User::findById(<span class="va">$organizer</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$found</span>)<span class="ot">;</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;organizer&#39;</span><span class="ot">,</span> <span class="va">$found</span>-&gt;role)<span class="ot">;</span></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$found</span>-&gt;isOrganizer())<span class="ot">;</span></span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$found</span>-&gt;isAdmin())<span class="ot">;</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;user-&gt;role <span class="op">=</span> <span class="st">&#39;admin&#39;</span><span class="ot">;</span></span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;user-&gt;isOrganizer())<span class="ot">;</span></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: <code>save()</code> + <code>findById</code> prova que o ENUM
+aceita <code>organizer</code> (sem isso, <code>Data truncated</code>).
+Padrão = testes de <code>isAdmin()</code>.</p>
+<h2
+id="17-testsintegrationcontrollersauthenticationscontrollertestphp">17.
+<code>tests/Integration/Controllers/AuthenticationsControllerTest.php</code></h2>
+<p>Depois de
+<code>test_authenticate_with_valid_credentials_should_login</code>
+(linha ~33-42):</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_authenticate_organizer_should_redirect_to_organizer_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$organizer</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="st">&#39;organizer&#39;</span><span class="ot">,</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$organizer</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;authenticate&#39;</span><span class="ot">,</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="st">&#39;App\Controllers\AuthenticationsController&#39;</span><span class="ot">,</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;user&#39;</span> =&gt; [<span class="st">&#39;email&#39;</span> =&gt; <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span>]]</span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Auth::check())<span class="ot">;</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /organizer/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: o <code>ControllerTestCase</code> captura o
+<code>header('Location: ...')</code> e devolve como string; prova o
+redirect por perfil do item 8.</p>
+<h2
+id="18-testsintegrationcontrollersorganizereventscontrollertestphp-novo">18.
+<code>tests/Integration/Controllers/Organizer/EventsControllerTest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Integration\Controllers\Organizer<span class="ot">;</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Authentication\Auth<span class="ot">;</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Integration\Controllers\ControllerTestCase<span class="ot">;</span></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EventsControllerTest <span class="kw">extends</span> ControllerTestCase</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">CONTROLLER</span> <span class="op">=</span> <span class="st">&#39;App\Controllers\Organizer\EventsController&#39;</span><span class="ot">;</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> User <span class="va">$organizer</span><span class="ot">;</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> User <span class="va">$admin</span><span class="ot">;</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::setUp()<span class="ot">;</span></span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>] <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;admin <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Admin&#39;</span><span class="ot">,</span> <span class="st">&#39;admin@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;organizer <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span> <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;organizer&#39;</span>)<span class="ot">;</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>        Auth::login(<span class="va">$this</span>-&gt;organizer)<span class="ot">;</span></span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> tearDown()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::tearDown()<span class="ot">;</span></span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_lists_only_the_organizer_events_with_organizer_links()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$mine</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;organizer<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Meu Evento&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-36"><a href="#cb26-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;admin<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento do Admin&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-37"><a href="#cb26-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-38"><a href="#cb26-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb26-39"><a href="#cb26-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-40"><a href="#cb26-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Meu Evento&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-41"><a href="#cb26-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento do Admin&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-42"><a href="#cb26-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 1 de 1&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-43"><a href="#cb26-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/organizer/events/new&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-44"><a href="#cb26-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;href=</span><span class="sc">\&quot;</span><span class="st">/organizer/events/</span>{<span class="va">$mine</span>-&gt;id}<span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-45"><a href="#cb26-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;href=</span><span class="sc">\&quot;</span><span class="st">/organizer/events/</span>{<span class="va">$mine</span>-&gt;id}<span class="st">/edit</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-46"><a href="#cb26-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/organizer/events/</span>{<span class="va">$mine</span>-&gt;id}<span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-47"><a href="#cb26-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-48"><a href="#cb26-48" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-49"><a href="#cb26-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-50"><a href="#cb26-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_paginates_only_the_organizer_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">3</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb26-53"><a href="#cb26-53" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;admin<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Alheio </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb26-54"><a href="#cb26-54" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb26-55"><a href="#cb26-55" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">6</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb26-56"><a href="#cb26-56" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;organizer<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Próprio </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb26-57"><a href="#cb26-57" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb26-58"><a href="#cb26-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-59"><a href="#cb26-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page1</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb26-60"><a href="#cb26-60" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page2</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="dv">2</span>])<span class="ot">;</span></span>
+<span id="cb26-61"><a href="#cb26-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-62"><a href="#cb26-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 5 de 6&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb26-63"><a href="#cb26-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;/organizer/events/page/2&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb26-64"><a href="#cb26-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 6 - 6 de 6&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb26-65"><a href="#cb26-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Próprio 6&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb26-66"><a href="#cb26-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Alheio&#39;</span><span class="ot">,</span> <span class="va">$page1</span> <span class="op">.</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb26-67"><a href="#cb26-67" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-68"><a href="#cb26-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-69"><a href="#cb26-69" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_renders_form_posting_to_organizer_route()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-70"><a href="#cb26-70" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-71"><a href="#cb26-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;new&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb26-72"><a href="#cb26-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-73"><a href="#cb26-73" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Novo Evento\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-74"><a href="#cb26-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;action=&quot;/organizer/events&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-75"><a href="#cb26-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/organizer/events&quot;&gt;Cancelar&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-76"><a href="#cb26-76" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-77"><a href="#cb26-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-78"><a href="#cb26-78" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_saves_event_owned_by_the_organizer()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-79"><a href="#cb26-79" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-80"><a href="#cb26-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb26-81"><a href="#cb26-81" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb26-82"><a href="#cb26-82" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb26-83"><a href="#cb26-83" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;user_id&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$this</span>-&gt;admin-&gt;id])]</span>
+<span id="cb26-84"><a href="#cb26-84" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb26-85"><a href="#cb26-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-86"><a href="#cb26-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina do Organizador&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-87"><a href="#cb26-87" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertInstanceOf(Event::<span class="kw">class</span><span class="ot">,</span> <span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb26-88"><a href="#cb26-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$this</span>-&gt;organizer-&gt;id<span class="ot">,</span> <span class="va">$event</span>-&gt;user_id)<span class="ot">;</span></span>
+<span id="cb26-89"><a href="#cb26-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /organizer/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-90"><a href="#cb26-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento cadastrado com sucesso!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-91"><a href="#cb26-91" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-92"><a href="#cb26-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-93"><a href="#cb26-93" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_invalid_data_renders_form_again()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-94"><a href="#cb26-94" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-95"><a href="#cb26-95" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb26-96"><a href="#cb26-96" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb26-97"><a href="#cb26-97" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb26-98"><a href="#cb26-98" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;&#39;</span>])]</span>
+<span id="cb26-99"><a href="#cb26-99" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb26-100"><a href="#cb26-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-101"><a href="#cb26-101" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb26-102"><a href="#cb26-102" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;action=&quot;/organizer/events&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-103"><a href="#cb26-103" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;não pode ser vazio!&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-104"><a href="#cb26-104" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-105"><a href="#cb26-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-106"><a href="#cb26-106" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_edit_and_update_of_own_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-107"><a href="#cb26-107" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-108"><a href="#cb26-108" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;organizer<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Antes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-109"><a href="#cb26-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-110"><a href="#cb26-110" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-111"><a href="#cb26-111" aria-hidden="true" tabindex="-1"></a>        <span class="va">$edit</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;edit&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-112"><a href="#cb26-112" aria-hidden="true" tabindex="-1"></a>        <span class="va">$update</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(</span>
+<span id="cb26-113"><a href="#cb26-113" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb26-114"><a href="#cb26-114" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb26-115"><a href="#cb26-115" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Depois&#39;</span>])]</span>
+<span id="cb26-116"><a href="#cb26-116" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb26-117"><a href="#cb26-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-118"><a href="#cb26-118" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;href=</span><span class="sc">\&quot;</span><span class="st">/organizer/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/edit</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb26-119"><a href="#cb26-119" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/organizer/events/</span>{<span class="va">$event</span>-&gt;id}<span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$edit</span>)<span class="ot">;</span></span>
+<span id="cb26-120"><a href="#cb26-120" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /organizer/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$update</span>)<span class="ot">;</span></span>
+<span id="cb26-121"><a href="#cb26-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Depois&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">?</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb26-122"><a href="#cb26-122" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-123"><a href="#cb26-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-124"><a href="#cb26-124" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_of_own_event_removes_it()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-125"><a href="#cb26-125" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-126"><a href="#cb26-126" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;organizer)<span class="ot">;</span></span>
+<span id="cb26-127"><a href="#cb26-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-128"><a href="#cb26-128" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-129"><a href="#cb26-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-130"><a href="#cb26-130" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb26-131"><a href="#cb26-131" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /organizer/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb26-132"><a href="#cb26-132" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento removido com sucesso!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-133"><a href="#cb26-133" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-134"><a href="#cb26-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-135"><a href="#cb26-135" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_and_edit_of_another_user_event_redirect_to_index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-136"><a href="#cb26-136" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-137"><a href="#cb26-137" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;admin<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento do Admin&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-138"><a href="#cb26-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-139"><a href="#cb26-139" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;show&#39;</span><span class="ot">,</span> <span class="st">&#39;edit&#39;</span>] <span class="kw">as</span> <span class="va">$action</span>) {</span>
+<span id="cb26-140"><a href="#cb26-140" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="va">$action</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-141"><a href="#cb26-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-142"><a href="#cb26-142" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /organizer/events&#39;</span><span class="ot">,</span> <span class="va">$response</span><span class="ot">,</span> <span class="va">$action</span>)<span class="ot">;</span></span>
+<span id="cb26-143"><a href="#cb26-143" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>]<span class="ot">,</span> <span class="va">$action</span>)<span class="ot">;</span></span>
+<span id="cb26-144"><a href="#cb26-144" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb26-145"><a href="#cb26-145" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-146"><a href="#cb26-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-147"><a href="#cb26-147" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_update_and_destroy_of_another_user_event_do_not_change_it()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb26-148"><a href="#cb26-148" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-149"><a href="#cb26-149" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;admin<span class="ot">,</span> [<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento do Admin&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-150"><a href="#cb26-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-151"><a href="#cb26-151" aria-hidden="true" tabindex="-1"></a>        <span class="va">$update</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(</span>
+<span id="cb26-152"><a href="#cb26-152" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb26-153"><a href="#cb26-153" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb26-154"><a href="#cb26-154" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Invadido&#39;</span>])]</span>
+<span id="cb26-155"><a href="#cb26-155" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb26-156"><a href="#cb26-156" aria-hidden="true" tabindex="-1"></a>        <span class="va">$destroy</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-157"><a href="#cb26-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-158"><a href="#cb26-158" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /organizer/events&#39;</span><span class="ot">,</span> <span class="va">$update</span>)<span class="ot">;</span></span>
+<span id="cb26-159"><a href="#cb26-159" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /organizer/events&#39;</span><span class="ot">,</span> <span class="va">$destroy</span>)<span class="ot">;</span></span>
+<span id="cb26-160"><a href="#cb26-160" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento do Admin&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">?</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb26-161"><a href="#cb26-161" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-162"><a href="#cb26-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-163"><a href="#cb26-163" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createUser(<span class="dt">string</span> <span class="va">$name</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$role</span>)<span class="ot">:</span> User</span>
+<span id="cb26-164"><a href="#cb26-164" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-165"><a href="#cb26-165" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb26-166"><a href="#cb26-166" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="va">$name</span><span class="ot">,</span></span>
+<span id="cb26-167"><a href="#cb26-167" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb26-168"><a href="#cb26-168" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb26-169"><a href="#cb26-169" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb26-170"><a href="#cb26-170" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="va">$role</span><span class="ot">,</span></span>
+<span id="cb26-171"><a href="#cb26-171" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb26-172"><a href="#cb26-172" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb26-173"><a href="#cb26-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-174"><a href="#cb26-174" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb26-175"><a href="#cb26-175" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-176"><a href="#cb26-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-177"><a href="#cb26-177" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb26-178"><a href="#cb26-178" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $overrides</span></span>
+<span id="cb26-179"><a href="#cb26-179" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, mixed</span><span class="kw">&gt;</span></span>
+<span id="cb26-180"><a href="#cb26-180" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb26-181"><a href="#cb26-181" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validParams(<span class="dt">array</span> <span class="va">$overrides</span> <span class="op">=</span> [])<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb26-182"><a href="#cb26-182" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-183"><a href="#cb26-183" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">array_merge</span>([</span>
+<span id="cb26-184"><a href="#cb26-184" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina do Organizador&#39;</span><span class="ot">,</span></span>
+<span id="cb26-185"><a href="#cb26-185" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&#39;Oficina criada pelo Organizador.&#39;</span><span class="ot">,</span></span>
+<span id="cb26-186"><a href="#cb26-186" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span></span>
+<span id="cb26-187"><a href="#cb26-187" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;in_person&#39;</span><span class="ot">,</span></span>
+<span id="cb26-188"><a href="#cb26-188" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; [<span class="st">&#39;students&#39;</span>]<span class="ot">,</span></span>
+<span id="cb26-189"><a href="#cb26-189" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb26-190"><a href="#cb26-190" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Bloco A&#39;</span><span class="ot">,</span></span>
+<span id="cb26-191"><a href="#cb26-191" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="st">&#39;20&#39;</span><span class="ot">,</span></span>
+<span id="cb26-192"><a href="#cb26-192" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">,</span> <span class="va">$overrides</span>)<span class="ot">;</span></span>
+<span id="cb26-193"><a href="#cb26-193" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-194"><a href="#cb26-194" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-195"><a href="#cb26-195" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb26-196"><a href="#cb26-196" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $overrides</span></span>
+<span id="cb26-197"><a href="#cb26-197" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb26-198"><a href="#cb26-198" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createEvent(User <span class="va">$owner</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$overrides</span> <span class="op">=</span> [])<span class="ot">:</span> Event</span>
+<span id="cb26-199"><a href="#cb26-199" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb26-200"><a href="#cb26-200" aria-hidden="true" tabindex="-1"></a>        <span class="va">$params</span> <span class="op">=</span> <span class="fu">array_merge</span>(<span class="va">$this</span>-&gt;validParams()<span class="ot">,</span> <span class="va">$overrides</span>)<span class="ot">;</span></span>
+<span id="cb26-201"><a href="#cb26-201" aria-hidden="true" tabindex="-1"></a>        <span class="va">$audience</span> <span class="op">=</span> <span class="va">$params</span>[<span class="st">&#39;audience&#39;</span>]<span class="ot">;</span></span>
+<span id="cb26-202"><a href="#cb26-202" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$params</span>[<span class="st">&#39;audience&#39;</span>])<span class="ot">;</span></span>
+<span id="cb26-203"><a href="#cb26-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-204"><a href="#cb26-204" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$params</span> <span class="op">+</span> [<span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$owner</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb26-205"><a href="#cb26-205" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;setAudienceList(<span class="va">$audience</span>)<span class="ot">;</span></span>
+<span id="cb26-206"><a href="#cb26-206" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb26-207"><a href="#cb26-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-208"><a href="#cb26-208" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$event</span><span class="ot">;</span></span>
+<span id="cb26-209"><a href="#cb26-209" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb26-210"><a href="#cb26-210" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Chama as ações direto (sem HTTP, sem middleware): testa os ganchos e
+o <code>eventRoute()</code>.</li>
+<li>Listagem e paginação só dos dele, com links
+<code>/organizer/...</code> e nenhum <code>/admin/events</code> no HTML
+(prova a troca nas views).</li>
+<li><code>create</code> com <code>user_id</code> do admin no POST: grava
+o Organizador como dono (<code>FIELDS</code> ignora).</li>
+<li>Evento do admin:
+<code>show</code>/<code>edit</code>/<code>update</code>/<code>destroy</code>
+-&gt; "Evento não encontrado!" e nada muda (Q1).</li>
+<li>Classe nova em <code>tests/</code>: sem
+<code>dump-autoload</code>.</li>
+</ul>
+<h2 id="19-testsintegrationaccessorganizereventsaccesstestphp-novo">19.
+<code>tests/Integration/Access/OrganizerEventsAccessTest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Integration\Access<span class="ot">;</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> GuzzleHttp\Client<span class="ot">;</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\Attributes\DataProvider<span class="ot">;</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\TestCase<span class="ot">;</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a><span class="co"> * Rotas organizer.events.*: só o Organizador entra. Sem sessão vai para /login; Participante e</span></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a><span class="co"> * Administrador são barrados e vão para /dashboard. O Organizador também não entra em /admin.</span></span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> OrganizerEventsAccessTest <span class="kw">extends</span> TestCase</span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">PASSWORD</span> <span class="op">=</span> <span class="st">&#39;123456&#39;</span><span class="ot">;</span></span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** </span><span class="an">@var</span><span class="co"> </span><span class="do">array</span><span class="kw">&lt;string</span><span class="ot">, User</span><span class="kw">&gt;</span><span class="co"> */</span></span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="dt">array</span> <span class="va">$users</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> Event <span class="va">$event</span><span class="ot">;</span></span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::setUp()<span class="ot">;</span></span>
+<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;users[<span class="st">&#39;admin&#39;</span>] <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Administrador&#39;</span><span class="ot">,</span> <span class="st">&#39;admin@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;users[<span class="st">&#39;participant&#39;</span>] <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Participante&#39;</span><span class="ot">,</span> <span class="st">&#39;participante@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;participant&#39;</span>)<span class="ot">;</span></span>
+<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;users[<span class="st">&#39;organizer&#39;</span>] <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span> <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;organizer&#39;</span>)<span class="ot">;</span></span>
+<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;event <span class="op">=</span> <span class="kw">new</span> Event([</span>
+<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;users[<span class="st">&#39;organizer&#39;</span>]-&gt;id<span class="ot">,</span></span>
+<span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento da Organizadora&#39;</span><span class="ot">,</span></span>
+<span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&#39;Evento usado nos testes de acesso.&#39;</span><span class="ot">,</span></span>
+<span id="cb27-35"><a href="#cb27-35" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span><span class="ot">,</span></span>
+<span id="cb27-36"><a href="#cb27-36" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;online&#39;</span><span class="ot">,</span></span>
+<span id="cb27-37"><a href="#cb27-37" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; <span class="st">&#39;students&#39;</span><span class="ot">,</span></span>
+<span id="cb27-38"><a href="#cb27-38" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+30 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb27-39"><a href="#cb27-39" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Microsoft Teams&#39;</span><span class="ot">,</span></span>
+<span id="cb27-40"><a href="#cb27-40" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">10</span><span class="ot">,</span></span>
+<span id="cb27-41"><a href="#cb27-41" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb27-42"><a href="#cb27-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;event-&gt;save()<span class="ot">;</span></span>
+<span id="cb27-43"><a href="#cb27-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-44"><a href="#cb27-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-45"><a href="#cb27-45" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createUser(<span class="dt">string</span> <span class="va">$name</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$role</span>)<span class="ot">:</span> User</span>
+<span id="cb27-46"><a href="#cb27-46" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-47"><a href="#cb27-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb27-48"><a href="#cb27-48" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="va">$name</span><span class="ot">,</span></span>
+<span id="cb27-49"><a href="#cb27-49" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb27-50"><a href="#cb27-50" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="kw">self</span>::<span class="cn">PASSWORD</span><span class="ot">,</span></span>
+<span id="cb27-51"><a href="#cb27-51" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="kw">self</span>::<span class="cn">PASSWORD</span><span class="ot">,</span></span>
+<span id="cb27-52"><a href="#cb27-52" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="va">$role</span><span class="ot">,</span></span>
+<span id="cb27-53"><a href="#cb27-53" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb27-54"><a href="#cb27-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb27-55"><a href="#cb27-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-56"><a href="#cb27-56" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb27-57"><a href="#cb27-57" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-58"><a href="#cb27-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-59"><a href="#cb27-59" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> newClient()<span class="ot">:</span> Client</span>
+<span id="cb27-60"><a href="#cb27-60" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-61"><a href="#cb27-61" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">new</span> Client([<span class="st">&#39;allow_redirects&#39;</span> =&gt; <span class="kw">false</span><span class="ot">,</span> <span class="st">&#39;base_uri&#39;</span> =&gt; <span class="st">&#39;http://web:8080&#39;</span><span class="ot">,</span> <span class="st">&#39;cookies&#39;</span> =&gt; <span class="kw">true</span>])<span class="ot">;</span></span>
+<span id="cb27-62"><a href="#cb27-62" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-63"><a href="#cb27-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-64"><a href="#cb27-64" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> loggedClient(User <span class="va">$user</span>)<span class="ot">:</span> Client</span>
+<span id="cb27-65"><a href="#cb27-65" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-66"><a href="#cb27-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newClient()<span class="ot">;</span></span>
+<span id="cb27-67"><a href="#cb27-67" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span>-&gt;post(<span class="st">&#39;/login&#39;</span><span class="ot">,</span> [</span>
+<span id="cb27-68"><a href="#cb27-68" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;user&#39;</span> =&gt; [<span class="st">&#39;email&#39;</span> =&gt; <span class="va">$user</span>-&gt;email<span class="ot">,</span> <span class="st">&#39;password&#39;</span> =&gt; <span class="kw">self</span>::<span class="cn">PASSWORD</span>]]<span class="ot">,</span></span>
+<span id="cb27-69"><a href="#cb27-69" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb27-70"><a href="#cb27-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-71"><a href="#cb27-71" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$client</span><span class="ot">;</span></span>
+<span id="cb27-72"><a href="#cb27-72" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-73"><a href="#cb27-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-74"><a href="#cb27-74" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb27-75"><a href="#cb27-75" aria-hidden="true" tabindex="-1"></a><span class="co">     * As 8 rotas organizer.events.* (PUT e DELETE com _method, como o navegador envia).</span></span>
+<span id="cb27-76"><a href="#cb27-76" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb27-77"><a href="#cb27-77" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{string, string, array&lt;string, string</span><span class="kw">&gt;</span><span class="co">}&gt;</span></span>
+<span id="cb27-78"><a href="#cb27-78" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb27-79"><a href="#cb27-79" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> organizerRoutes()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb27-80"><a href="#cb27-80" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-81"><a href="#cb27-81" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb27-82"><a href="#cb27-82" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.index&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-83"><a href="#cb27-83" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.paginate&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/page/2&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-84"><a href="#cb27-84" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.new&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/new&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-85"><a href="#cb27-85" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.create&#39;</span> =&gt; [<span class="st">&#39;POST&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-86"><a href="#cb27-86" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.show&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/1&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-87"><a href="#cb27-87" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.edit&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/1/edit&#39;</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb27-88"><a href="#cb27-88" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.update&#39;</span> =&gt; [<span class="st">&#39;POST&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/1&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb27-89"><a href="#cb27-89" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;organizer.events.destroy&#39;</span> =&gt; [<span class="st">&#39;POST&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events/1&#39;</span><span class="ot">,</span> [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb27-90"><a href="#cb27-90" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb27-91"><a href="#cb27-91" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-92"><a href="#cb27-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-93"><a href="#cb27-93" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb27-94"><a href="#cb27-94" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, string&gt; $form</span></span>
+<span id="cb27-95"><a href="#cb27-95" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb27-96"><a href="#cb27-96" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;organizerRoutes&#39;</span>)<span class="at">]</span></span>
+<span id="cb27-97"><a href="#cb27-97" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_organizer_route_should_redirect_to_login_without_session(<span class="dt">string</span> <span class="va">$method</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$uri</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$form</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb27-98"><a href="#cb27-98" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-99"><a href="#cb27-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newClient()-&gt;request(<span class="va">$method</span><span class="ot">,</span> <span class="va">$uri</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; <span class="va">$form</span>])<span class="ot">;</span></span>
+<span id="cb27-100"><a href="#cb27-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-101"><a href="#cb27-101" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb27-102"><a href="#cb27-102" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/login&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb27-103"><a href="#cb27-103" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-104"><a href="#cb27-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-105"><a href="#cb27-105" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb27-106"><a href="#cb27-106" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, string&gt; $form</span></span>
+<span id="cb27-107"><a href="#cb27-107" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb27-108"><a href="#cb27-108" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;organizerRoutes&#39;</span>)<span class="at">]</span></span>
+<span id="cb27-109"><a href="#cb27-109" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_organizer_route_should_redirect_participant_and_admin_to_dashboard(</span>
+<span id="cb27-110"><a href="#cb27-110" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$method</span><span class="ot">,</span></span>
+<span id="cb27-111"><a href="#cb27-111" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$uri</span><span class="ot">,</span></span>
+<span id="cb27-112"><a href="#cb27-112" aria-hidden="true" tabindex="-1"></a>        <span class="dt">array</span> <span class="va">$form</span></span>
+<span id="cb27-113"><a href="#cb27-113" aria-hidden="true" tabindex="-1"></a>    )<span class="ot">:</span> <span class="dt">void</span> {</span>
+<span id="cb27-114"><a href="#cb27-114" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;participant&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>] <span class="kw">as</span> <span class="va">$role</span>) {</span>
+<span id="cb27-115"><a href="#cb27-115" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;users[<span class="va">$role</span>])-&gt;request(<span class="va">$method</span><span class="ot">,</span> <span class="va">$uri</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; <span class="va">$form</span>])<span class="ot">;</span></span>
+<span id="cb27-116"><a href="#cb27-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-117"><a href="#cb27-117" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode()<span class="ot">,</span> <span class="va">$role</span>)<span class="ot">;</span></span>
+<span id="cb27-118"><a href="#cb27-118" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/dashboard&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>)<span class="ot">,</span> <span class="va">$role</span>)<span class="ot">;</span></span>
+<span id="cb27-119"><a href="#cb27-119" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb27-120"><a href="#cb27-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-121"><a href="#cb27-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento da Organizadora&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$this</span>-&gt;event-&gt;id)<span class="ot">?</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb27-122"><a href="#cb27-122" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb27-123"><a href="#cb27-123" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-124"><a href="#cb27-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-125"><a href="#cb27-125" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_organizer_should_access_own_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb27-126"><a href="#cb27-126" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-127"><a href="#cb27-127" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;users[<span class="st">&#39;organizer&#39;</span>])<span class="ot">;</span></span>
+<span id="cb27-128"><a href="#cb27-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-129"><a href="#cb27-129" aria-hidden="true" tabindex="-1"></a>        <span class="va">$index</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&#39;/organizer/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb27-130"><a href="#cb27-130" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">200</span><span class="ot">,</span> <span class="va">$index</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb27-131"><a href="#cb27-131" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento da Organizadora&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$index</span>-&gt;getBody())<span class="ot">;</span></span>
+<span id="cb27-132"><a href="#cb27-132" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Meus Eventos&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$index</span>-&gt;getBody())<span class="ot">;</span></span>
+<span id="cb27-133"><a href="#cb27-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-134"><a href="#cb27-134" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&quot;/organizer/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb27-135"><a href="#cb27-135" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">200</span><span class="ot">,</span> <span class="va">$show</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb27-136"><a href="#cb27-136" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-137"><a href="#cb27-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-138"><a href="#cb27-138" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_organizer_should_not_access_admin_area()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb27-139"><a href="#cb27-139" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-140"><a href="#cb27-140" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;users[<span class="st">&#39;organizer&#39;</span>])<span class="ot">;</span></span>
+<span id="cb27-141"><a href="#cb27-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-142"><a href="#cb27-142" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;/admin&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> <span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span>] <span class="kw">as</span> <span class="va">$uri</span>) {</span>
+<span id="cb27-143"><a href="#cb27-143" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="va">$uri</span>)<span class="ot">;</span></span>
+<span id="cb27-144"><a href="#cb27-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-145"><a href="#cb27-145" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode()<span class="ot">,</span> <span class="va">$uri</span>)<span class="ot">;</span></span>
+<span id="cb27-146"><a href="#cb27-146" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/dashboard&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>)<span class="ot">,</span> <span class="va">$uri</span>)<span class="ot">;</span></span>
+<span id="cb27-147"><a href="#cb27-147" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb27-148"><a href="#cb27-148" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-149"><a href="#cb27-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-150"><a href="#cb27-150" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_organizer_login_should_redirect_to_organizer_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb27-151"><a href="#cb27-151" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb27-152"><a href="#cb27-152" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newClient()-&gt;post(<span class="st">&#39;/login&#39;</span><span class="ot">,</span> [</span>
+<span id="cb27-153"><a href="#cb27-153" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;user&#39;</span> =&gt; [<span class="st">&#39;email&#39;</span> =&gt; <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;password&#39;</span> =&gt; <span class="kw">self</span>::<span class="cn">PASSWORD</span>]]<span class="ot">,</span></span>
+<span id="cb27-154"><a href="#cb27-154" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb27-155"><a href="#cb27-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-156"><a href="#cb27-156" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/organizer/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb27-157"><a href="#cb27-157" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb27-158"><a href="#cb27-158" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Teste de acesso bate por HTTP (Guzzle em
+<code>http://web:8080</code>): é o único do PHPUnit que passa pelos
+middlewares de verdade.</li>
+<li>Provider com as 8 rotas: sem sessão -&gt; <code>/login</code> (prova
+a ordem <code>Organizer</code> antes de <code>Authenticate</code> +
+checagem de <code>null</code>); Participante e admin -&gt;
+<code>/dashboard</code>, Evento intacto.</li>
+<li>Organizador entra nos dele (200, link "Meus Eventos") e é barrado em
+<code>/admin</code> (middleware <code>Admin</code>, sem mudança).</li>
+<li><code>allow_redirects =&gt; false</code>: lê o <code>Location</code>
+em vez de seguir.</li>
+</ul>
+<h2 id="20-testsacceptanceorganizerorganizereventscestphp-novo">20.
+<code>tests/Acceptance/organizer/OrganizerEventsCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\organizer<span class="ot">;</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\<span class="fu">Assert</span><span class="ot">;</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Acceptance\BaseAcceptanceCest<span class="ot">;</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> OrganizerEventsCest <span class="kw">extends</span> BaseAcceptanceCest</span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> User <span class="va">$organizer</span><span class="ot">;</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> _before(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::_before(<span class="va">$page</span>)<span class="ot">;</span></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$admin</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Administrador&#39;</span><span class="ot">,</span> <span class="st">&#39;admin@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;organizer <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Organizadora&#39;</span><span class="ot">,</span> <span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;organizer&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent(<span class="va">$this</span>-&gt;organizer<span class="ot">,</span> <span class="st">&#39;Oficina da Organizadora&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent(<span class="va">$admin</span><span class="ot">,</span> <span class="st">&#39;Palestra do Administrador&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;resizeWindow(<span class="dv">1280</span><span class="ot">,</span> <span class="dv">2400</span>)<span class="ot">;</span></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> organizerLoginListsOnlyOwnEvents(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-30"><a href="#cb28-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Login do Organizador e listagem só dos Eventos dele&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-31"><a href="#cb28-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;login(<span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;123456&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-32"><a href="#cb28-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-33"><a href="#cb28-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/organizer/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-34"><a href="#cb28-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Login realizado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-35"><a href="#cb28-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeLink(<span class="st">&#39;Meus Eventos&#39;</span><span class="ot">,</span> <span class="st">&#39;/organizer/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-36"><a href="#cb28-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSeeLink(<span class="st">&#39;Administração&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-37"><a href="#cb28-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Oficina da Organizadora&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-38"><a href="#cb28-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Palestra do Administrador&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-39"><a href="#cb28-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 1 de 1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-40"><a href="#cb28-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-41"><a href="#cb28-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-42"><a href="#cb28-42" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> organizerCreatesEvent(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb28-43"><a href="#cb28-43" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-44"><a href="#cb28-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Organizador cadastra um Evento e ele fica como dono&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-45"><a href="#cb28-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;login(<span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;123456&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-46"><a href="#cb28-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-47"><a href="#cb28-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Novo Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-48"><a href="#cb28-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/organizer/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-49"><a href="#cb28-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#event_title&#39;</span><span class="ot">,</span> <span class="st">&#39;Minicurso da Organizadora&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-50"><a href="#cb28-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#event_description&#39;</span><span class="ot">,</span> <span class="st">&#39;Criado pela Organizadora.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-51"><a href="#cb28-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#event_kind&#39;</span><span class="ot">,</span> Event::<span class="cn">KINDS</span>[<span class="st">&#39;short_course&#39;</span>])<span class="ot">;</span></span>
+<span id="cb28-52"><a href="#cb28-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;checkOption(<span class="st">&#39;#event_modality_online&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-53"><a href="#cb28-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;checkOption(<span class="st">&#39;#event_audience_students&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-54"><a href="#cb28-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;executeJS(</span>
+<span id="cb28-55"><a href="#cb28-55" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;document.getElementById(&#39;event_starts_on&#39;).value = arguments[0];&quot;</span><span class="ot">,</span></span>
+<span id="cb28-56"><a href="#cb28-56" aria-hidden="true" tabindex="-1"></a>            [<span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+5 days&#39;</span>))]</span>
+<span id="cb28-57"><a href="#cb28-57" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb28-58"><a href="#cb28-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#event_location&#39;</span><span class="ot">,</span> <span class="st">&#39;Google Meet&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-59"><a href="#cb28-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#event_capacity&#39;</span><span class="ot">,</span> <span class="st">&#39;30&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-60"><a href="#cb28-60" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-61"><a href="#cb28-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-62"><a href="#cb28-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Minicurso da Organizadora&#39;</span>])<span class="ot">;</span></span>
+<span id="cb28-63"><a href="#cb28-63" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb28-64"><a href="#cb28-64" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertEquals(<span class="va">$this</span>-&gt;organizer-&gt;id<span class="ot">,</span> <span class="va">$event</span>-&gt;user_id)<span class="ot">;</span></span>
+<span id="cb28-65"><a href="#cb28-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/organizer/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb28-66"><a href="#cb28-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cadastrado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-67"><a href="#cb28-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-68"><a href="#cb28-68" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Voltar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-69"><a href="#cb28-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/organizer/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-70"><a href="#cb28-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 2 de 2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-71"><a href="#cb28-71" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-72"><a href="#cb28-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-73"><a href="#cb28-73" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> organizerCannotOpenAdminArea(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb28-74"><a href="#cb28-74" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-75"><a href="#cb28-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Organizador não entra na Área Administrativa&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-76"><a href="#cb28-76" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;login(<span class="st">&#39;organizador@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;123456&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-77"><a href="#cb28-77" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-78"><a href="#cb28-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-79"><a href="#cb28-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/dashboard&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-80"><a href="#cb28-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Acesso restrito a administradores&#39;</span>)<span class="ot">;</span></span>
+<span id="cb28-81"><a href="#cb28-81" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-82"><a href="#cb28-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-83"><a href="#cb28-83" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createUser(<span class="dt">string</span> <span class="va">$name</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$role</span>)<span class="ot">:</span> User</span>
+<span id="cb28-84"><a href="#cb28-84" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-85"><a href="#cb28-85" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb28-86"><a href="#cb28-86" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="va">$name</span><span class="ot">,</span></span>
+<span id="cb28-87"><a href="#cb28-87" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb28-88"><a href="#cb28-88" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb28-89"><a href="#cb28-89" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb28-90"><a href="#cb28-90" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="va">$role</span><span class="ot">,</span></span>
+<span id="cb28-91"><a href="#cb28-91" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb28-92"><a href="#cb28-92" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb28-93"><a href="#cb28-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-94"><a href="#cb28-94" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb28-95"><a href="#cb28-95" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-96"><a href="#cb28-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-97"><a href="#cb28-97" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createEvent(User <span class="va">$owner</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$title</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb28-98"><a href="#cb28-98" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb28-99"><a href="#cb28-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event([</span>
+<span id="cb28-100"><a href="#cb28-100" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$owner</span>-&gt;id<span class="ot">,</span></span>
+<span id="cb28-101"><a href="#cb28-101" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="va">$title</span><span class="ot">,</span></span>
+<span id="cb28-102"><a href="#cb28-102" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&quot;Descrição de </span>{<span class="va">$title</span>}<span class="st">.&quot;</span><span class="ot">,</span></span>
+<span id="cb28-103"><a href="#cb28-103" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span></span>
+<span id="cb28-104"><a href="#cb28-104" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;in_person&#39;</span><span class="ot">,</span></span>
+<span id="cb28-105"><a href="#cb28-105" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; <span class="st">&#39;students&#39;</span><span class="ot">,</span></span>
+<span id="cb28-106"><a href="#cb28-106" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+20 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb28-107"><a href="#cb28-107" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Sala 1&#39;</span><span class="ot">,</span></span>
+<span id="cb28-108"><a href="#cb28-108" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">20</span><span class="ot">,</span></span>
+<span id="cb28-109"><a href="#cb28-109" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb28-110"><a href="#cb28-110" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb28-111"><a href="#cb28-111" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb28-112"><a href="#cb28-112" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Herda <code>BaseAcceptanceCest</code>, não
+<code>BaseEventsCest</code>: este loga <code>admin@</code> e semeia 16
+Eventos; aqui o login é do Organizador (<code>LoginHelper::login</code>)
+e a base é mínima (1 dele, 1 do admin).</li>
+<li>Três casos no navegador real: login cai na lista só dos dele, sem
+"Administração"; cadastro grava o dono e volta para
+<code>/organizer/events</code>; <code>/admin/events</code> barrado.</li>
+<li>Os Cests do admin seguem válidos (logam <code>admin@</code>).</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate                               <span class="co"># ENUM novo + organizador@</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span>    <span class="co"># Organizer.php e Organizer/EventsController.php</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Users/UserTest.php</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Organizer/EventsControllerTest.php</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/OrganizerEventsAccessTest.php</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># Unit + Integration (o PHPUnit não roda os Cests)</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># Acceptance</span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Resultado do exemplo: Unit 161, Integration 74, Acceptance 26 (base:
+159 / 45 / 23). PHPCS e PHPStan sem erros.</p>
+<p>No navegador:</p>
+<ul>
+<li><code>organizador@example.com</code> / <code>123456</code> -&gt; cai
+em <code>/organizer/events</code>, 2 Eventos ("Mostrando 1 - 2 de 2"),
+link "Meus Eventos", sem "Administração". Ver/Editar/Remover/Novo ficam
+em <code>/organizer/...</code>.</li>
+<li>Como Organizador, <code>/admin/events</code> -&gt; painel com
+"Acesso restrito a administradores".</li>
+<li><code>admin@example.com</code>: <code>/organizer/events</code> -&gt;
+"Acesso restrito a organizadores"; <code>/admin/events</code> mostra os
+16.</li>
+</ul>
+<p>Commit (inglês):
+<code>feat: Add organizer role with its own events area</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>ENUM novo exige <code>./run db:populate</code>; ENUM sem
+<code>organizer</code> -&gt; <code>save()</code> falha com
+<code>Data truncated</code> (model não valida <code>role</code>). Com
+B10 da 4.1 (<code>ROLES</code> + <code>inclusion</code>), ponha o valor
+na lista ou o populate falha.</li>
+<li>Esquecer o alias em <code>config/App.php</code>:
+<code>Undefined array key</code> (500) em todas as páginas (o
+<code>routes.php</code> roda em toda requisição).</li>
+<li>Grupo <code>organizer</code> fora do <code>auth</code>: visitante
+passa e a ação roda sem usuário.</li>
+<li>Grupo interno roda primeiro: <code>Organizer</code> sem checar
+<code>null</code> -&gt; erro 500 em vez de <code>/login</code>.</li>
+<li>Não "libere" o Organizador dentro do <code>Admin.php</code>: mistura
+responsabilidades; crie o middleware.</li>
+<li>Views reaproveitadas com <code>route('admin.events...')</code>:
+links do Organizador apontam para <code>/admin</code> e o middleware
+barra. Use <code>$this-&gt;eventRoute(...)</code>.</li>
+<li>Ganchos <code>private</code> não são sobrescritos:
+<code>protected</code> + <code>static::</code>.</li>
+<li><code>HasMany::paginate</code> usa <code>per_page</code> (com
+<code>_</code>).</li>
+<li>Esquecer <code>dump-autoload -o</code> depois das classes
+novas.</li>
+<li>Login sem ajuste
+(<code>AuthenticationsController::authenticate</code>): Organizador cai
+em <code>/dashboard</code>.</li>
+<li>Cest de Organizador precisa de login próprio
+(<code>LoginHelper::login</code>); os do admin logam <code>admin@</code>
+(<code>BaseEventsCest:46</code>).</li>
+<li><code>isAdmin()</code>/<code>isOrganizer()</code> espalhados
+(navbar, login): custo de não centralizar o perfil (H2 da 4.1);
+<code>manageEvents()</code> ou <code>User::homeRoute()</code>
+concentrariam a decisão.</li>
+<li>Variante do catálogo (mesma tela do admin): middleware
+<code>Staff</code> com <code>!$user-&gt;manageEvents()</code>
+(<code>isAdmin() || isOrganizer()</code>), rotas de Eventos fora do
+grupo <code>admin</code>, e no <code>EventsController</code> admin -&gt;
+<code>Event::paginate</code>/<code>new Event</code>, organizer -&gt;
+<code>events()-&gt;...</code>.</li>
+</ul>
+</body>
+</html>

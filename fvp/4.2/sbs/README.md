@@ -1,7 +1,8 @@
 # Passo a passo (sbs) dos cenários FVP 4.2
 
 Um guia por cenário de chance **alta** ou **média-alta** do
-`catalogo.md` (mais Q3, Q4 e Q5, pedidos à parte), no formato "um arquivo por vez": para cada arquivo tocado,
+`catalogo.md` (mais Q3, Q4 e Q5, pedidos à parte), no formato "um arquivo
+por vez": para cada arquivo tocado,
 onde mexer, o que digitar e o motivo (o que aquilo ensina sobre o
 framework). Mesma solução dos `exemplos/<id>-*/` (patch, bundle,
 `projeto/`), só que em ordem de execução e com o porquê.
@@ -58,5 +59,5 @@ molde dos outros).
 | ID | Guia | Cenário | Chance |
 |---|---|---|---|
 | Q3 | `q3-sbs.md` | Ação só para Participante | média-baixa |
-| Q4 | `q4-sbs.md` | Perfil Organizador com CRUD dos próprios Eventos | média |
+| Q4 | `q4-sbs.md` | Perfil Organizador com CRUD dos próprios | média |
 | Q5 | `q5-sbs.md` | Token CSRF nos formulários de Evento | média-baixa |

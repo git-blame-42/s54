@@ -222,8 +222,9 @@ Arquivos que costumam conflitar neste cenário e por quê:
   login: cada perfil novo exige procurar todos os `if`. É o custo de
   não centralizar o perfil (H2 da 4.1); um método como
   `User::homeRoute()` ou `manageEvents()` concentraria a decisão.
-- Esquecer o alias em `config/App.php`: "middleware não encontrado"
-  em todas as rotas do grupo.
+- Esquecer o alias em `config/App.php`: `Undefined array key
+  "organizer"` (500) ao carregar o `routes.php`, em todas as páginas,
+  não só nas rotas do grupo.
 - ENUM sem `organizer`: `save()` falha com `Data truncated` (o model
   não valida `role`).
 - Reaproveitar as views sem trocar `route('admin.events...')`: os
