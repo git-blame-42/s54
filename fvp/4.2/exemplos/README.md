@@ -60,6 +60,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N1. Filtro por tipo com `where`, mantido na paginação
   `n1-filtro-por-tipo-paginacao/`
   - feat: Filter events by kind keeping the filter in pagination
+- N10. Página e id inválidos sem `(int)` silencioso
+  `n10-pagina-id-invalido/`
+  - fix: Validate page and id params without silent int casts
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title

@@ -1,0 +1,350 @@
+From c4d5d9353a17d1b34046b68e849c36e600445148 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:42:09 -0300
+Subject: [PATCH] fix: Validate page and id params without silent int casts
+
+Invalid page (non digits, 0, leading zero, overflow) redirects to the first
+page with a flash; a page after the last redirects to the last one using
+the new Paginator::isOutOfRange(). Ids like 'abc' or '1abc' are not found
+instead of being cast to 0 or 1.
+---
+ app/Controllers/Admin/EventsController.php    |  36 ++++++-
+ lib/Paginator.php                             |  13 ++-
+ .../admin/events/PaginateEventsCest.php       |  17 +++
+ tests/Integration/Access/EventsAccessTest.php |  17 +++
+ .../Admin/EventsControllerTest.php            | 101 ++++++++++++++++++
+ tests/Unit/Lib/PaginatorTest.php              |  58 ++++++++++
+ 6 files changed, 239 insertions(+), 3 deletions(-)
+ create mode 100644 tests/Unit/Lib/PaginatorTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..08ccf71 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,11 +15,23 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
++        $page = $request->getParam('page') === null ? 1 : $this->positiveInt($request->getParam('page'));
++        if ($page === null) {
++            FlashMessage::danger('Página inválida!');
++            $this->redirectTo(route('admin.events.index'));
++            return;
++        }
++
+         $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
++            page: $page,
+             per_page: self::PER_PAGE,
+             route: 'admin.events.paginate'
+         );
++        if ($paginator->isOutOfRange()) {
++            FlashMessage::danger('Página inexistente! Mostrando a última página.');
++            $this->redirectTo(route('admin.events.paginate', ['page' => max(1, $paginator->totalOfPages())]));
++            return;
++        }
+         $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+@@ -131,7 +143,27 @@ class EventsController extends Controller
+ 
+     private function findEvent(Request $request): ?Event
+     {
+-        return Event::findById((int) $request->getParam('id'));
++        // Sem (int) silencioso: "abc" viraria 0 e "1abc" viraria 1 (outro Evento!).
++        $id = $this->positiveInt($request->getParam('id'));
++
++        return $id === null ? null : Event::findById($id);
++    }
++
++    /**
++     * Inteiro >= 1 vindo da URL, ou null. Aceita só dígitos (ctype_digit), sem zero à esquerda e sem
++     * estourar PHP_INT_MAX; o int é aceito porque os testes de controller passam `['page' => 2]`.
++     */
++    private function positiveInt(mixed $value): ?int
++    {
++        if (is_int($value)) {
++            return $value >= 1 ? $value : null;
++        }
++
++        if (!is_string($value) || !ctype_digit($value) || $value !== (string) (int) $value) {
++            return null;
++        }
++
++        return (int) $value >= 1 ? (int) $value : null;
+     }
+ 
+     private function eventNotFound(): void
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..8671667 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -25,7 +25,9 @@ class Paginator
+         private ?string $route = null
+     ) {
+         $this->loadTotals();
+-        $this->loadRegisters();
++        if (!$this->isOutOfRange()) {
++            $this->loadRegisters();
++        }
+     }
+ 
+     public function getPage(): int
+@@ -78,6 +80,15 @@ class Paginator
+         return $this->page === $page;
+     }
+ 
++    /**
++     * A página pedida não existe: menor que 1 ou depois da última. Sem registros, só a página 1 é válida
++     * (a listagem vazia mostra "Nenhum evento cadastrado.").
++     */
++    public function isOutOfRange(): bool
++    {
++        return $this->page < 1 || $this->page > max(1, $this->totalOfPages());
++    }
++
+     public function entriesInfo(): string
+     {
+         $totalVisualizedBegin = $this->offset + 1;
+diff --git a/tests/Acceptance/admin/events/PaginateEventsCest.php b/tests/Acceptance/admin/events/PaginateEventsCest.php
+index b4ee6fc..6404328 100644
+--- a/tests/Acceptance/admin/events/PaginateEventsCest.php
++++ b/tests/Acceptance/admin/events/PaginateEventsCest.php
+@@ -54,6 +54,23 @@ class PaginateEventsCest extends BaseEventsCest
+         $page->dontSee($this->title(6));
+     }
+ 
++    public function openNonexistentPage(AcceptanceTester $page): void
++    {
++        $page->wantTo('Paginação dos registros (página inexistente ou inválida)');
++
++        // Depois da última: vai para a última (4) com aviso.
++        $page->amOnPage('/admin/events/page/9');
++        $page->seeCurrentUrlEquals('/admin/events/page/4');
++        $page->see('Página inexistente! Mostrando a última página.');
++        $this->seeEventsOfPage($page, 4);
++
++        // Não numérica: volta para a primeira com aviso.
++        $page->amOnPage('/admin/events/page/abc');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Página inválida!');
++        $this->seeEventsOfPage($page, 1);
++    }
++
+     /** Confere que a página mostra exatamente os Eventos dela (5 por página, ordem de data). */
+     private function seeEventsOfPage(AcceptanceTester $page, int $number): void
+     {
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..eabd04f 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,23 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_be_redirected_when_page_or_id_is_invalid(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $page = $client->get('/admin/events/page/abc');
++        $this->assertEquals(302, $page->getStatusCode());
++        $this->assertEquals('/admin/events', $page->getHeaderLine('Location'));
++
++        $outOfRange = $client->get('/admin/events/page/999');
++        $this->assertEquals(302, $outOfRange->getStatusCode());
++        $this->assertEquals('/admin/events/page/1', $outOfRange->getHeaderLine('Location'));
++
++        $id = $client->get("/admin/events/{$this->event->id}abc");
++        $this->assertEquals(302, $id->getStatusCode());
++        $this->assertEquals('/admin/events', $id->getHeaderLine('Location'));
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..bb8b78b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -56,6 +57,106 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_accepts_page_as_digit_string(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '2']);
++
++        $this->assertStringContainsString('Evento 6', $response);
++        $this->assertStringContainsString('Mostrando 6 - 7 de 7', $response);
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function invalidPageProvider(): array
++    {
++        return [
++            'texto' => ['abc'],
++            'zero' => ['0'],
++            'negativo' => ['-1'],
++            'dígitos com sufixo' => ['2abc'],
++            'zero à esquerda' => ['02'],
++            'decimal' => ['1.5'],
++            'estouro de inteiro' => ['99999999999999999999'],
++            'array' => [['2']],
++        ];
++    }
++
++    #[DataProvider('invalidPageProvider')]
++    public function test_index_with_invalid_page_redirects_to_first_page(mixed $page): void
++    {
++        $this->createEvent();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => $page]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Página inválida!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_index_with_page_after_the_last_redirects_to_last_page(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '999']);
++
++        $this->assertSame('Location: /admin/events/page/2', $response);
++        $this->assertEquals('Página inexistente! Mostrando a última página.', $_SESSION['flash']['danger']);
++    }
++
++    public function test_index_with_page_two_and_no_events_redirects_to_page_one(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => '2']);
++
++        $this->assertSame('Location: /admin/events/page/1', $response);
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function invalidIdSuffixProvider(): array
++    {
++        return [
++            'texto' => ['abc'],
++            'dígitos com sufixo' => ['{id}abc'],
++            'zero à esquerda' => ['0{id}'],
++            'negativo' => ['-{id}'],
++        ];
++    }
++
++    #[DataProvider('invalidIdSuffixProvider')]
++    public function test_show_with_invalid_id_redirects_to_index(string $pattern): void
++    {
++        $event = $this->createEvent();
++        $id = str_replace('{id}', (string) $event->id, $pattern);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $id]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_id_followed_by_letters_does_not_remove_the_event(): void
++    {
++        // Antes, (int) "1abc" virava 1 e removia o Evento 1.
++        $event = $this->createEvent();
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => "{$event->id}abc"]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Lib/PaginatorTest.php b/tests/Unit/Lib/PaginatorTest.php
+new file mode 100644
+index 0000000..16e0ffd
+--- /dev/null
++++ b/tests/Unit/Lib/PaginatorTest.php
+@@ -0,0 +1,58 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use App\Models\User;
++use Tests\TestCase;
++
++class PaginatorTest extends TestCase
++{
++    private function createUsers(int $total): void
++    {
++        for ($i = 1; $i <= $total; $i++) {
++            $user = new User([
++                'name' => "Usuário {$i}",
++                'email' => "usuario{$i}@example.com",
++                'password' => '123456',
++                'password_confirmation' => '123456',
++            ]);
++            $user->save();
++        }
++    }
++
++    public function test_is_out_of_range_should_be_false_for_existing_pages(): void
++    {
++        $this->createUsers(7);
++
++        $this->assertFalse(User::paginate(1, 5)->isOutOfRange());
++        $this->assertFalse(User::paginate(2, 5)->isOutOfRange());
++    }
++
++    public function test_is_out_of_range_should_be_true_after_the_last_page(): void
++    {
++        $this->createUsers(7);
++
++        $paginator = User::paginate(3, 5);
++
++        $this->assertTrue($paginator->isOutOfRange());
++        $this->assertEquals(2, $paginator->totalOfPages());
++        $this->assertSame([], $paginator->registers());
++    }
++
++    public function test_is_out_of_range_should_be_true_below_page_one(): void
++    {
++        $this->createUsers(2);
++
++        $this->assertTrue(User::paginate(0, 5)->isOutOfRange());
++        $this->assertTrue(User::paginate(-1, 5)->isOutOfRange());
++    }
++
++    public function test_page_one_of_an_empty_table_should_not_be_out_of_range(): void
++    {
++        $paginator = User::paginate(1, 5);
++
++        $this->assertEquals(0, $paginator->totalOfPages());
++        $this->assertFalse($paginator->isOutOfRange());
++        $this->assertTrue(User::paginate(2, 5)->isOutOfRange());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
