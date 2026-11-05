@@ -63,6 +63,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M18. Janela de datas: antecedência mínima e limite máximo
   `m18-janela-de-datas/`
   - feat: Event date window with minimum advance and maximum
+- M19. "Nenhuma alteração" ao salvar sem mudar nada
+  `m19-nenhuma-alteracao/`
+  - feat: Warn when saving an event without changes
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100

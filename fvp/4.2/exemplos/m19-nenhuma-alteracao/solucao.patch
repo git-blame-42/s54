@@ -1,0 +1,295 @@
+From 1aa2c910709fb4a03f2fdf7bd34014b084ec2263 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:29:55 -0300
+Subject: [PATCH] feat: Warn when saving an event without changes
+
+Event::hasChanges() loads the stored event once and compares every column
+with normalized values (int vs string capacity, SET order, CRLF line
+breaks). The update action shows a warning flash and skips the save.
+---
+ app/Controllers/Admin/EventsController.php    |  6 ++
+ app/Models/Event.php                          | 44 +++++++++++
+ lib/FlashMessage.php                          |  5 ++
+ .../admin/events/UpdateSuccessfullyCest.php   | 34 +++++++++
+ .../Admin/EventsControllerTest.php            | 29 ++++++++
+ tests/Unit/Lib/FlashMessageTest.php           |  9 +++
+ tests/Unit/Models/Events/EventTest.php        | 74 +++++++++++++++++++
+ 7 files changed, 201 insertions(+)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..49774ed 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -83,6 +83,12 @@ class EventsController extends Controller
+         }
+         $this->fill($event, $request);
+ 
++        if (!$event->hasChanges()) {
++            FlashMessage::warning('Nenhuma alteração foi feita no evento.');
++            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++            return;
++        }
++
+         if ($event->save()) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..27f36b0 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -114,6 +114,50 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Diz se algum campo difere do que está gravado. O original é buscado UMA vez e
++     * comparado coluna a coluna, com os valores normalizados (ver comparableValue).
++     * Registro novo (ou que sumiu do banco) sempre tem alterações.
++     */
++    public function hasChanges(): bool
++    {
++        if ($this->newRecord()) {
++            return true;
++        }
++
++        $original = self::findById($this->id);
++        if ($original === null) {
++            return true;
++        }
++
++        foreach (static::$columns as $column) {
++            if (self::comparableValue($column, $original->$column) !== self::comparableValue($column, $this->$column)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    /**
++     * Valor em forma comparável. O banco devolve capacity como int (20) e o formulário como
++     * string ('20'); o SET volta na ordem da definição da coluna, não na ordem enviada; o
++     * navegador envia as quebras de linha do textarea como \r\n.
++     */
++    private static function comparableValue(string $column, mixed $value): string
++    {
++        $value = is_scalar($value) ? (string) $value : '';
++
++        if ($column === 'audience') {
++            $values = explode(',', $value);
++            sort($values);
++
++            return implode(',', $values);
++        }
++
++        return str_replace("\r\n", "\n", $value);
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/lib/FlashMessage.php b/lib/FlashMessage.php
+index 081732f..30b9a6f 100644
+--- a/lib/FlashMessage.php
++++ b/lib/FlashMessage.php
+@@ -14,6 +14,11 @@ class FlashMessage
+         self::message('danger', $value);
+     }
+ 
++    public static function warning(string $value): void
++    {
++        self::message('warning', $value);
++    }
++
+     public static function get(): array
+     {
+         $flash = $_SESSION['flash'] ?? [];
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..9bf9ffb 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -90,4 +90,38 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         Assert::assertEquals(10, $stored->capacity);
+         Assert::assertSame(3, $stored->enrollmentsCount());
+     }
++
++    public function saveWithoutChangesShowsWarning(AcceptanceTester $page): void
++    {
++        $event = $this->events[3];
++        // Quebra de linha gravada como \n: o navegador devolve o textarea com \r\n.
++        Assert::assertTrue($event->update(['description' => "Linha 1\nLinha 2"]));
++
++        $page->wantTo('Salvar sem mudar nada avisa "Nenhuma alteração" e não diz que atualizou');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Nenhuma alteração foi feita no evento.', '.alert-warning');
++        $page->dontSee('Evento atualizado com sucesso!');
++        $page->see('Evento 03', 'h1');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertSame("Linha 1\nLinha 2", $stored->description);
++        Assert::assertSame(['students', 'professors'], $stored->audienceList());
++    }
++
++    public function saveAfterChangingOnlyOneFieldStillUpdates(AcceptanceTester $page): void
++    {
++        $event = $this->events[3];
++
++        $page->wantTo('Mudar só a capacidade continua atualizando');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $this->fillEventForm($page, ['capacity' => (string) ((int) $event->capacity + 1)]);
++        $page->click('Salvar');
++
++        $page->see('Evento atualizado com sucesso!', '.alert-success');
++        $page->dontSee('Nenhuma alteração foi feita no evento.');
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..faf3bb3 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -206,6 +206,35 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
++    public function test_update_without_changes_warns_and_redirects_to_show(): void
++    {
++        $event = $this->createEvent();
++
++        // Mesmos valores, como o formulário envia: tudo string (capacity '20').
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams()]
++        );
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Nenhuma alteração foi feita no evento.', $_SESSION['flash']['warning']);
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++    }
++
++    public function test_update_with_audience_in_another_order_is_not_a_change(): void
++    {
++        $event = $this->createEvent(['audience' => ['students', 'staff']]);
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['audience' => ['staff', 'students']])]
++        );
++
++        $this->assertEquals('Nenhuma alteração foi feita no evento.', $_SESSION['flash']['warning']);
++    }
++
+     public function test_update_with_invalid_data_renders_form_and_keeps_record(): void
+     {
+         $event = $this->createEvent(['title' => 'Original']);
+diff --git a/tests/Unit/Lib/FlashMessageTest.php b/tests/Unit/Lib/FlashMessageTest.php
+index 5712587..0ba2fdb 100644
+--- a/tests/Unit/Lib/FlashMessageTest.php
++++ b/tests/Unit/Lib/FlashMessageTest.php
+@@ -25,6 +25,15 @@ class FlashMessageTest extends TestCase
+         $this->assertEquals('Danger message', $flash['danger']);
+     }
+ 
++    public function test_warning(): void
++    {
++        FlashMessage::warning('Warning message');
++        $flash = FlashMessage::get();
++
++        $this->assertArrayHasKey('warning', $flash);
++        $this->assertEquals('Warning message', $flash['warning']);
++    }
++
+     public function test_get(): void
+     {
+         FlashMessage::success('Success message');
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..889ebac 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,78 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- hasChanges (nenhuma alteração) ------------------- */
++
++    public function test_has_changes_should_be_true_for_a_new_record(): void
++    {
++        $this->assertTrue((new Event($this->params()))->hasChanges());
++    }
++
++    public function test_has_changes_should_be_false_right_after_loading(): void
++    {
++        $event = $this->createEvent();
++
++        $found = Event::findById($event->id);
++
++        $this->assertInstanceOf(Event::class, $found);
++        $this->assertFalse($found->hasChanges());
++    }
++
++    public function test_has_changes_should_be_false_with_the_same_values_as_form_strings(): void
++    {
++        $event = $this->createEvent(['capacity' => 20]);
++
++        // O formulário entrega tudo como string: capacity '20' contra o int 20 do banco.
++        foreach ($this->params(['capacity' => 20]) as $column => $value) {
++            $event->$column = (string) $value;
++        }
++
++        $this->assertFalse($event->hasChanges());
++    }
++
++    public function test_has_changes_should_ignore_the_order_of_audience(): void
++    {
++        $event = $this->createEvent(['audience' => 'students,professors']);
++
++        $event->setAudienceList(['professors', 'students']);
++
++        $this->assertFalse($event->hasChanges());
++    }
++
++    public function test_has_changes_should_ignore_crlf_line_breaks_in_description(): void
++    {
++        $event = $this->createEvent(['description' => "Linha 1\nLinha 2"]);
++
++        $event->description = "Linha 1\r\nLinha 2";
++
++        $this->assertFalse($event->hasChanges());
++    }
++
++    /**
++     * @return array<string, array{string, string}>
++     */
++    public static function changedFieldProvider(): array
++    {
++        return [
++            'title' => ['title', 'Outro título'],
++            'description' => ['description', 'Outra descrição.'],
++            'kind' => ['kind', 'workshop'],
++            'modality' => ['modality', 'online'],
++            'audience' => ['audience', 'students'],
++            'starts_on' => ['starts_on', date('Y-m-d', strtotime('+31 days'))],
++            'location' => ['location', 'Bloco B'],
++            'capacity' => ['capacity', '11'],
++        ];
++    }
++
++    #[DataProvider('changedFieldProvider')]
++    public function test_has_changes_should_detect_each_changed_field(string $field, string $value): void
++    {
++        $event = $this->createEvent();
++
++        $event->$field = $value;
++
++        $this->assertTrue($event->hasChanges());
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
