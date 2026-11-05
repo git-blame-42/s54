@@ -62,6 +62,8 @@ confirmation code to remove it`.
 Como o usuário obtém código novo: ao voltar para o `show` (o redirect
 do erro já faz isso), o código expirado ou esgotado é trocado, e a tela
 mostra o novo. Por isso as mensagens dizem "Um novo foi gerado".
+Atenção: isso faz o `show` gravar no banco num GET (ver "Por que
+assim").
 
 ## Por que assim
 
@@ -80,6 +82,13 @@ mostra o novo. Por isso as mensagens dizem "Um novo foi gerado".
   tentativas (o código vivo é mantido), e um código morto é trocado ao
   voltar. Sem isso, o limite não serviria para nada ou o usuário
   ficaria sem código.
+- Efeito colateral: o `show` grava no banco num GET. É idempotente
+  (só troca código morto; código vivo fica como está), mas muda o
+  `updated_at` do Evento, e o estado é do Evento: compartilhado entre
+  admins e abas (um admin que abre o `show` troca o código que outro
+  estava digitando, se ele já tinha morrido). Alternativa mais
+  ortodoxa: o `show` só exibe "expirado"/"esgotado" e um botão
+  `POST` "gerar novo código" chama `issueConfirmationCode()`.
 - Esgotado antes de expirado, e nenhum dos dois compara o código:
   depois do bloqueio, nem o certo remove.
 - Vazio, `null` e array contam tentativa: são entradas erradas como
@@ -134,7 +143,9 @@ Testes novos:
   301)` para expirado, `attempts = 3` para esgotado, terceira tentativa
   errada); `show` troca código esgotado e expirado e mantém o vivo com
   as tentativas. Os testes de P23 com código errado passaram a esperar
-  "Código incorreto! Tente de novo.".
+  "Código incorreto! Tente de novo.", também em
+  `tests/Integration/Access/EventsAccessTest.php:186` e
+  `tests/Acceptance/admin/events/DeleteEventCest.php:64`.
 - `DeleteEventCest`: `threeWrongCodesGiveANewCode` (duas vezes
   "incorreto", depois "esgotadas", código novo na tela, acerta e
   remove) e `expiredCodeGivesANewCode`.

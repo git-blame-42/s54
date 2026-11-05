@@ -87,6 +87,8 @@ outros cenários").
     2 com `?q=1&sort=title&dir=desc` na URL e Evento 01 na última
     linha; Palestra junto (Eventos 13 e 01). E
     `?kind=party&sort=title&dir=desc` com o aviso e a ordem mantida.
+    O termo é "1", e não "Evento 1": "Evento 01" não contém
+    "Evento 1", e a busca daria 7 Eventos em vez de 8.
 
 ## Por que assim
 

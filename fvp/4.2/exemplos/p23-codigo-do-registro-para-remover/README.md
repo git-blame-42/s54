@@ -75,7 +75,8 @@ Branch no clone: `fvp/p23-codigo-do-registro-para-remover`, a partir de
 - Na view, `htmlspecialchars((string) ...)` em vez do `(int)` que o
   catálogo sugere: mesma saída, e segue a regra de escapar toda saída
   sem conversão silenciosa.
-- Variante (editar): o mesmo `input` dentro do `if ($isUpdate)` do
+- Variante (editar): não implementada, para manter o escopo do
+  pedido. Para fazer: o mesmo `input` dentro do `if ($isUpdate)` do
   `_form.phtml`; no `update`, depois do `fill`, código errado →
   `FlashMessage::danger(...)`, `render` do `edit` e `return`. Código
   errado com dados inválidos mostra só o erro do código (proposital).

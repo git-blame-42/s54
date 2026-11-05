@@ -113,14 +113,17 @@ docker compose exec web curl -s -i -b /tmp/c \
     'http://localhost/admin/events?sort=x'
 ```
 
-Saída obtida (fim do primeiro e o segundo):
+Saída obtida (fim do primeiro e o segundo; dos cabeçalhos que o
+`curl -i` imprime, só a linha de status). O corpo vem com os acentos
+escapados porque o `renderJson` usa `json_encode` sem
+`JSON_UNESCAPED_UNICODE`:
 
 ```
 ..."page":1,"per_page":5,"total":14,"total_pages":3,
 "filters":{"q":"de","kind":null,"sort":"title","dir":"desc"}}
 
 HTTP/1.1 422
-{"errors":{"sort":"Ordenação inválida."}}
+{"errors":{"sort":"Ordena\u00e7\u00e3o inv\u00e1lida."}}
 ```
 
 ## Relação com outros cenários
