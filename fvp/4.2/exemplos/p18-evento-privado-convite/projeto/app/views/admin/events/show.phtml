@@ -28,7 +28,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
     <dt class="col-sm-3">Visibilidade</dt>
     <dd class="col-sm-9 visibility">
         <?php if ($event->isPrivate()) : ?>
-            Privado (código de convite: <strong><?= (int) $event->invite_code ?></strong>)
+            Privado (código de convite: <strong><?= htmlspecialchars((string) $event->invite_code) ?></strong>)
         <?php else : ?>
             Público
         <?php endif; ?>

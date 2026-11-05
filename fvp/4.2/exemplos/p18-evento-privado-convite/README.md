@@ -17,9 +17,9 @@ tela `/events/{id}`), que não existe em `main`.
 |-----------|-----------------------------------------------------------|
 | `0669a19` | `feat: Add events listing and details for participants` * |
 | `458a05b` | `feat: Allow participants to enroll in events` *          |
-| `695045f` | `feat: Add private events with invite code`               |
+| `8e91ab7` | `feat: Add private events with invite code`               |
 
-`*` commits da base (O2 e P2); o deste cenário é só o `695045f`.
+`*` commits da base (O2 e P2); o deste cenário é só o `8e91ab7`.
 
 ## O que mudou
 
@@ -28,8 +28,10 @@ tela `/events/{id}`), que não existe em `main`.
 - `app/Models/Event.php`:
   - `'is_private'` e `'invite_code'` em `$columns`, `@property`,
     `INVITE_CODE_MIN = 1000` e `INVITE_CODE_MAX = 9999`.
-  - Construtor: `is_private` nulo vira `0` (o `DEFAULT` do schema
-    não vale, porque o `Model::save()` grava todas as colunas).
+  - Construtor: `is_private` nulo vira `0`, para o objeto novo já
+    ser público antes de salvar (o formulário de `new` usa
+    `isPrivate()`). Para o banco não é necessário: o `save()`
+    também normaliza.
   - `save()` sobrescrito: normaliza `is_private` para `1`/`0`;
     público fica com `invite_code` `NULL`; privado sem código ganha
     `random_int(1000, 9999)`. Salvar de novo não troca o código.
@@ -81,9 +83,12 @@ tela `/events/{id}`), que não existe em `main`.
 
 - O código é regra de negócio: nasce no `save()` do Evento (mesmo
   mecanismo do P1), não vem do formulário nem do controller.
-- A checagem do convite fica em `Enrollment::validates()`, junto
-  com "evento não encontrado" e "não há vagas": o controller só
-  repassa o que o Participante digitou.
+- A checagem do convite fica em
+  `Enrollment::validatesAvailableSpots()`, o método de
+  `validates()` que só roda na criação, junto com "evento não
+  encontrado" e "não há vagas". Assim, salvar de novo uma Inscrição
+  existente não pede o código, e o controller só repassa o que o
+  Participante digitou.
 - `withInviteCode()` em vez de coluna: o código digitado não é dado
   da Inscrição, só serve para validar. A propriedade precisa estar
   declarada: o `Model::__set` lança exceção para nomes fora de
@@ -124,7 +129,7 @@ o código (inscrito).
 ## Relação com outros cenários
 
 - P2 (`p2-inscricao-participante`): base direta (inscrição e
-  `Enrollment::validates()`).
+  `Enrollment::validatesAvailableSpots()`).
 - O2 (`o2-eventos-para-participante`): base do P2 (telas do
   Participante); a listagem dele não mostra o código.
 - P1 (`p1-codigo-checkin-aleatorio`): mesmo mecanismo de código
@@ -145,8 +150,8 @@ Pré-requisito: o repositório alvo descende de `f31006b` do público
 `s50/fvp/4.2/exemplos/p18-evento-privado-convite`.
 
 Este cenário é empilhado: sem O2 e P2 no alvo, aplique o range
-inteiro (`0669a19`, `458a05b` e `695045f`); com O2 e P2 já
-aplicados, aplique só o topo (`695045f`).
+inteiro (`0669a19`, `458a05b` e `8e91ab7`); com O2 e P2 já
+aplicados, aplique só o topo (`8e91ab7`).
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -156,9 +161,9 @@ git remote add fvp-p18 \
     s50/fvp/4.2/exemplos/p18-evento-privado-convite/projeto
 git fetch fvp-p18 fvp/p18-evento-privado-convite
 # sem O2 e P2: o range inteiro (base + topo)
-git cherry-pick 0669a19^..695045f
+git cherry-pick 0669a19^..8e91ab7
 # com O2 e P2 já aplicados: só o topo
-# git cherry-pick 695045f
+# git cherry-pick 8e91ab7
 git remote remove fvp-p18
 ```
 
@@ -169,8 +174,8 @@ git fetch \
     s50/fvp/4.2/exemplos/p18-evento-privado-convite/solucao.bundle \
     fvp/p18-evento-privado-convite:fvp-p18
 # o bundle traz os objetos; o cherry-pick cria commits novos
-git cherry-pick 0669a19^..695045f
-# ou, com O2 e P2 já aplicados: git cherry-pick 695045f
+git cherry-pick 0669a19^..8e91ab7
+# ou, com O2 e P2 já aplicados: git cherry-pick 8e91ab7
 # opcional, limpa a ref
 git branch -D fvp-p18
 ```
@@ -220,11 +225,16 @@ o `./run phpcs`.
 
 ## Armadilhas
 
-- Checkbox desmarcado não é enviado: sem normalizar, `is_private`
-  vai `NULL` e quebra o `NOT NULL` (ou o Evento nunca volta a ser
-  público).
-- Construtor sem o padrão `0`: `new Event([...])` sem `is_private`
-  manda `NULL` no `INSERT` (o `DEFAULT 0` do schema não é usado).
+- Checkbox desmarcado não é enviado: sem normalizar no `save()`,
+  `is_private` vai `NULL` e quebra o `NOT NULL` (o `DEFAULT 0` do
+  schema não vale, porque o `Model::save()` grava todas as
+  colunas). A normalização no `save()` resolve o cadastro e a
+  edição; o padrão `0` no construtor é só conveniência.
+- Checar o convite em `validates()` direto (fora do ramo de
+  criação): ao salvar de novo uma Inscrição existente, o código
+  seria exigido outra vez e o `save()` falharia.
+- Saída do código no `show` do admin com `htmlspecialchars((string)
+  ...)`, como os demais campos, e não com `(int)`.
 - `invite_code` em `FIELDS`: o admin escolheria o código pelo POST;
   o teste do controller manda `invite_code=1` e confere que foi
   ignorado.

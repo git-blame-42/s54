@@ -71,7 +71,7 @@ class Event extends Model
     {
         parent::__construct($params);
 
-        // Público por padrão: Model::save() grava todas as colunas, e o DEFAULT do schema não vale.
+        // Público por padrão já no objeto novo (o formulário de new usa isPrivate()); o save() também normaliza.
         if ($this->is_private === null) {
             $this->is_private = 0;
         }

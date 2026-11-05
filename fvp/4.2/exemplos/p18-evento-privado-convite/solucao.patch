@@ -1185,7 +1185,7 @@ index 5780e2e..2d7f66a 100644
 2.54.0 (Apple Git-157)
 
 
-From 695045fac8ba6edbaefefadeaa444a8b96d49689 Mon Sep 17 00:00:00 2001
+From 8e91ab7ccc1b20a85ce6413f590ebd112030bb1f Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:12:55 -0300
 Subject: [PATCH 3/3] feat: Add private events with invite code
@@ -1282,7 +1282,7 @@ index 640846a..050fbb7 100644
              $this->addError('base', 'não há vagas neste evento!');
          }
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..0f91169 100644
+index ba66870..b4e9f31 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -18,6 +18,8 @@ use PDOException;
@@ -1312,7 +1312,7 @@ index ba66870..0f91169 100644
 +    {
 +        parent::__construct($params);
 +
-+        // Público por padrão: Model::save() grava todas as colunas, e o DEFAULT do schema não vale.
++        // Público por padrão já no objeto novo (o formulário de new usa isPrivate()); o save() também normaliza.
 +        if ($this->is_private === null) {
 +            $this->is_private = 0;
 +        }
@@ -1375,7 +1375,7 @@ index 2e98c21..d2c74a1 100644
      <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
  </form>
 diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
-index 6cab74e..a7905d4 100644
+index 6cab74e..b262225 100644
 --- a/app/views/admin/events/show.phtml
 +++ b/app/views/admin/events/show.phtml
 @@ -25,6 +25,15 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
@@ -1385,7 +1385,7 @@ index 6cab74e..a7905d4 100644
 +    <dt class="col-sm-3">Visibilidade</dt>
 +    <dd class="col-sm-9 visibility">
 +        <?php if ($event->isPrivate()) : ?>
-+            Privado (código de convite: <strong><?= (int) $event->invite_code ?></strong>)
++            Privado (código de convite: <strong><?= htmlspecialchars((string) $event->invite_code) ?></strong>)
 +        <?php else : ?>
 +            Público
 +        <?php endif; ?>
