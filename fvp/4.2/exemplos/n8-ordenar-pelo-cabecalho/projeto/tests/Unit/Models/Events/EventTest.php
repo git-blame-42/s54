@@ -438,7 +438,7 @@ class EventTest extends TestCase
         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
     }
 
-    /* ------------------- N8: ordenação da listagem ------------------- */
+    /* ------------------- ordenação da listagem ------------------- */
 
     public function test_normalize_sort_should_accept_only_the_allowed_columns_and_directions(): void
     {

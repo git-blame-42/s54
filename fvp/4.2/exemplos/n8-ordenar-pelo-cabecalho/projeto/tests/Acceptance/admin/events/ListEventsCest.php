@@ -16,7 +16,7 @@ class ListEventsCest extends BaseEventsCest
         $page->see('Novo Evento');
         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
 
-        // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
+        // Primeira página: os 5 Eventos mais próximos (ordem padrão: data crescente, desempate por id).
         $rows = $page->grabMultiple('table tbody tr');
         foreach ($rows as $index => $row) {
             $number = $index + 1;

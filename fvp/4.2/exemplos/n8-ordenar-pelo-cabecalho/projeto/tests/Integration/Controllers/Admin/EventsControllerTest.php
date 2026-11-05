@@ -56,7 +56,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringNotContainsString('Evento 5', $page2);
     }
 
-    /* ------------------- N8: ordenar pelo cabeçalho ------------------- */
+    /* ------------------- ordenar pelo cabeçalho ------------------- */
 
     /**
      * Confere que os textos aparecem na resposta nesta ordem.

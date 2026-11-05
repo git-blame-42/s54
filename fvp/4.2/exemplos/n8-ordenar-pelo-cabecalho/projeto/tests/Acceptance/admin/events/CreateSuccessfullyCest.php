@@ -29,7 +29,7 @@ class CreateSuccessfullyCest extends BaseEventsCest
         $page->see($data['title'], 'h1');
         $page->see($data['location']);
 
-        // A listagem é ordenada por data por padrão (N8): o Evento novo (amanhã) é o mais próximo e abre
+        // A listagem é ordenada por data por padrão: o Evento novo (amanhã) é o mais próximo e abre
         // a 1ª página, antes do Evento 01 (hoje + 14 dias). Sem ORDER BY ele ficaria no fim (4ª página).
         $page->amOnPage('/admin/events');
         $page->see($data['title'], 'table tbody tr:first-child');

@@ -13,7 +13,7 @@ Branch no clone: `fvp/n8-ordenar-pelo-cabecalho`, a partir de `main`
 
 | Commit    | Mensagem                                                  |
 |-----------|-----------------------------------------------------------|
-| `e49c968` | `feat: Sort events listing by clicking the table header`  |
+| `0868108` | `feat: Sort events listing by clicking the table header`  |
 
 ## O que mudou
 
@@ -64,7 +64,8 @@ Branch no clone: `fvp/n8-ordenar-pelo-cabecalho`, a partir de `main`
     vagas asc e desc; URL inválida cai em "Data ▲".
   - `CreateSuccessfullyCest` ajustado: com data crescente por padrão,
     o Evento novo (amanhã) abre a 1ª página em vez de ir para a 4ª.
-    Comentário do `BaseEventsCest` atualizado.
+    Comentários do `BaseEventsCest` e do `ListEventsCest` atualizados
+    (a ordem padrão agora é por data, não a do banco).
 
 ## Por que assim
 
@@ -173,7 +174,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-n8 \
     s50/fvp/4.2/exemplos/n8-ordenar-pelo-cabecalho/projeto
 git fetch fvp-n8 fvp/n8-ordenar-pelo-cabecalho
-git cherry-pick e49c968
+git cherry-pick 0868108
 git remote remove fvp-n8
 ```
 
@@ -182,7 +183,7 @@ git remote remove fvp-n8
 ```
 D=s50/fvp/4.2/exemplos/n8-ordenar-pelo-cabecalho
 git fetch $D/solucao.bundle fvp/n8-ordenar-pelo-cabecalho:fvp-n8
-git cherry-pick e49c968
+git cherry-pick 0868108
 # opcional, limpa a ref
 git branch -D fvp-n8
 ```
@@ -234,6 +235,13 @@ Arquivos que costumam conflitar e por quê:
   depois do `WHERE`.
 - Sem `id` no desempate, a paginação pode repetir ou pular Eventos
   com valor igual (o teste da página 2 pega isso).
+- Ordem de texto é a da collation da tabela (`utf8mb4_0900_ai_ci`):
+  ignora maiúsculas e acentos. "Álgebra", "algoritmos" e "Arte"
+  saem em ordem alfabética "natural", não na ordem de bytes que um
+  `strcmp`/`usort` daria (onde "Á" e minúsculas vão para o fim).
+  Títulos iguais a menos de caixa/acento empatam, e quem decide é o
+  `id`. Se o professor quiser diferenciar, `ORDER BY title COLLATE
+  utf8mb4_0900_as_cs`, ainda vindo da lista fechada.
 - `$sort` e `$dir` fora do `compact`: a closure do cabeçalho usa
   variável indefinida, warning, 500.
 - `route()` com chaves que não estão na URI vira query string

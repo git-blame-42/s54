@@ -1,4 +1,4 @@
-From e49c968ed5e35a0529c4ede1969d2d954722e4c4 Mon Sep 17 00:00:00 2001
+From 0868108f0e70fa8e8e34a663344eda879ef64fce Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:51:55 -0300
 Subject: [PATCH] feat: Sort events listing by clicking the table header
@@ -13,11 +13,12 @@ Paginator and Model::paginate accept an ORDER BY clause built from a closed list
  lib/Paginator.php                             |  20 ++-
  .../admin/events/BaseEventsCest.php           |   4 +-
  .../admin/events/CreateSuccessfullyCest.php   |   8 +-
+ .../admin/events/ListEventsCest.php           |   2 +-
  .../admin/events/SortEventsCest.php           |  60 +++++++++
  .../Admin/EventsControllerTest.php            | 123 ++++++++++++++++++
  tests/Unit/Lib/PaginatorTest.php              | 111 ++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        |  19 +++
- 12 files changed, 426 insertions(+), 17 deletions(-)
+ 13 files changed, 427 insertions(+), 18 deletions(-)
  create mode 100644 tests/Acceptance/admin/events/SortEventsCest.php
  create mode 100644 tests/Unit/Lib/PaginatorTest.php
 
@@ -293,7 +294,7 @@ index e511b9c..89f334e 100644
      private function seedEvents(): void
      {
 diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
-index f051af8..da15bd8 100644
+index f051af8..2fadc84 100644
 --- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
 +++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
 @@ -29,9 +29,13 @@ class CreateSuccessfullyCest extends BaseEventsCest
@@ -301,7 +302,7 @@ index f051af8..da15bd8 100644
          $page->see($data['location']);
  
 -        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
-+        // A listagem é ordenada por data por padrão (N8): o Evento novo (amanhã) é o mais próximo e abre
++        // A listagem é ordenada por data por padrão: o Evento novo (amanhã) é o mais próximo e abre
 +        // a 1ª página, antes do Evento 01 (hoje + 14 dias). Sem ORDER BY ele ficaria no fim (4ª página).
 +        $page->amOnPage('/admin/events');
 +        $page->see($data['title'], 'table tbody tr:first-child');
@@ -312,6 +313,19 @@ index f051af8..da15bd8 100644
          $page->see('Mostrando 16 - 17 de 17');
  
          Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..c46df4c 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -16,7 +16,7 @@ class ListEventsCest extends BaseEventsCest
+         $page->see('Novo Evento');
+         $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
+ 
+-        // Primeira página: os 5 primeiros Eventos (ordem do banco, que no populate coincide com a data).
++        // Primeira página: os 5 Eventos mais próximos (ordem padrão: data crescente, desempate por id).
+         $rows = $page->grabMultiple('table tbody tr');
+         foreach ($rows as $index => $row) {
+             $number = $index + 1;
 diff --git a/tests/Acceptance/admin/events/SortEventsCest.php b/tests/Acceptance/admin/events/SortEventsCest.php
 new file mode 100644
 index 0000000..875cd84
@@ -379,14 +393,14 @@ index 0000000..875cd84
 +    }
 +}
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..4ca1c50 100644
+index bc62d1d..ac6557f 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -56,6 +56,129 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertStringNotContainsString('Evento 5', $page2);
      }
  
-+    /* ------------------- N8: ordenar pelo cabeçalho ------------------- */
++    /* ------------------- ordenar pelo cabeçalho ------------------- */
 +
 +    /**
 +     * Confere que os textos aparecem na resposta nesta ordem.
@@ -630,14 +644,14 @@ index 0000000..4b660eb
 +    }
 +}
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..3cce164 100644
+index f961b4c..4c05311 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -438,6 +438,25 @@ class EventTest extends TestCase
          $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
      }
  
-+    /* ------------------- N8: ordenação da listagem ------------------- */
++    /* ------------------- ordenação da listagem ------------------- */
 +
 +    public function test_normalize_sort_should_accept_only_the_allowed_columns_and_directions(): void
 +    {
