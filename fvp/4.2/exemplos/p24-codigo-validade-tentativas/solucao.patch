@@ -1,0 +1,1179 @@
+From 2af97ce35e1f9fc349e121437b177a98bea60e7b Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:28:37 -0300
+Subject: [PATCH 1/2] feat: Require the Event confirmation code to remove it
+
+Each Event gets a random 4-digit confirmation code, generated in the
+constructor when empty and stored in the record. It is shown on the show
+page and must be typed in the removal form; a wrong or missing code keeps
+the Event.
+---
+ app/Controllers/Admin/EventsController.php    |   7 +
+ app/Models/Event.php                          |  35 +++++
+ app/views/admin/events/index.phtml            |   5 +-
+ app/views/admin/events/show.phtml             |  13 ++
+ database/schema.sql                           |   2 +
+ .../admin/events/DeleteEventCest.php          |  31 +++-
+ tests/Integration/Access/EventsAccessTest.php |  20 +++
+ .../Admin/EventsControllerTest.php            | 143 +++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        |  58 +++++++
+ 9 files changed, 305 insertions(+), 9 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..6675efa 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -101,6 +101,13 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        // Confere o código antes do safeDestroy: código errado não revela se o Evento tem Inscrições.
++        if (!$event->confirmsCode($request->getParam('confirmation_code'))) {
++            FlashMessage::danger('Código de confirmação incorreto!');
++            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++            return;
++        }
++
+         if ($event->safeDestroy()) {
+             FlashMessage::success('Evento removido com sucesso!');
+         } else {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..5f31a8a 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string|null $confirmation_code gerado no construtor quando vazio; nunca vem do formulário
+  */
+ class Event extends Model
+ {
+@@ -44,6 +45,10 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Faixa do código de confirmação (4 dígitos). */
++    public const CODE_MIN = 1000;
++    public const CODE_MAX = 9999;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -55,8 +60,38 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'confirmation_code',
+     ];
+ 
++    /**
++     * Sorteia o código de confirmação só se ele estiver vazio. O construtor também roda a cada leitura do
++     * banco (findById, where, Paginator); com o "só se vazio", o código lido nunca é trocado.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        $code = $this->confirmation_code;
++        if ($code === null || $code === '') {
++            $this->confirmation_code = random_int(self::CODE_MIN, self::CODE_MAX);
++        }
++    }
++
++    /**
++     * Confere o código digitado sem conversão: só string de dígitos igual ao código ('04321', ' 4321',
++     * null e array não valem). hash_equals compara strings, sem as conversões do ==.
++     */
++    public function confirmsCode(mixed $input): bool
++    {
++        if (!is_string($input) || !ctype_digit($input)) {
++            return false;
++        }
++
++        return hash_equals((string) $this->confirmation_code, $input);
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..502189b 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -27,10 +27,7 @@
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
++                        <a class="btn btn-sm btn-outline-danger" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Remover</a>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..b118269 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,7 +30,20 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Código de confirmação</dt>
++    <dd class="col-sm-9">
++        <span id="confirmation_code_value"><?= htmlspecialchars((string) $event->confirmation_code) ?></span>
++    </dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++
++<form class="mt-3" method="post" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>">
++    <input type="hidden" name="_method" value="DELETE">
++    <label for="confirmation_code" class="form-label">Digite o código para remover</label>
++    <input type="text" class="form-control" id="confirmation_code" name="confirmation_code" inputmode="numeric"
++        maxlength="4" autocomplete="off">
++    <button type="submit" class="btn btn-danger mt-2">Confirmar remoção</button>
++</form>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..bb24423 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,8 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Código de 4 dígitos gerado pelo model ao criar; o admin digita para remover o Evento.
++    confirmation_code SMALLINT UNSIGNED NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..33f636e 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -47,9 +47,38 @@ class DeleteEventCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function deleteWithWrongCodeGoesBackToShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $wrong = $event->confirmation_code === 1000 ? '1001' : '1000';
++
++        $page->wantTo('Remoção com código de confirmação errado');
++        $page->amOnPage('/admin/events');
++        $page->click('Remover', $this->rowOf('Evento 02'));
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->fillField('#confirmation_code', $wrong);
++        $page->click('Confirmar remoção');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Código de confirmação incorreto!');
++        $page->dontSee('Evento removido com sucesso!');
++        $page->see((string) $event->confirmation_code, '#confirmation_code_value');
++        Assert::assertNotNull(Event::findById((int) $event->id));
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++
++    /**
++     * "Remover" na listagem leva ao show do Evento; lá o código aparece em #confirmation_code_value e é
++     * digitado em #confirmation_code antes de "Confirmar remoção" (form com _method=DELETE).
++     */
+     private function clickRemove(AcceptanceTester $page, string $title): void
+     {
+-        // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+         $page->click('Remover', $this->rowOf($title));
++        $page->see($title, 'h1');
++
++        $code = $page->grabTextFrom('#confirmation_code_value');
++        $page->fillField('#confirmation_code', $code);
++        $page->click('Confirmar remoção');
+     }
+ }
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..96ce8ed 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,26 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_remove_only_with_the_confirmation_code(): void
++    {
++        $client = $this->loggedClient($this->admin);
++        $uri = "/admin/events/{$this->event->id}";
++
++        $response = $client->post($uri, ['form_params' => ['_method' => 'DELETE', 'confirmation_code' => '0000']]);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals($uri, $response->getHeaderLine('Location'));
++        $this->assertNotNull(Event::findById($this->event->id));
++
++        $show = (string) $client->get($uri)->getBody();
++        $this->assertStringContainsString('Código de confirmação incorreto!', $show);
++        $this->assertSame(1, preg_match('/id="confirmation_code_value">(\d{4})</', $show, $matches));
++
++        $response = $client->post($uri, ['form_params' => ['_method' => 'DELETE', 'confirmation_code' => $matches[1]]]);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/admin/events', $response->getHeaderLine('Location'));
++        $this->assertNull(Event::findById($this->event->id));
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..5bd1169 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -239,23 +239,89 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
+-    public function test_destroy_removes_event_without_enrollments(): void
++    public function test_index_remove_button_links_to_the_show_page(): void
+     {
+         $event = $this->createEvent();
+ 
+-        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression(
++            "#<a [^>]*href=\"/admin/events/{$event->id}\">Remover</a>#",
++            $response
++        );
++        $this->assertStringNotContainsString('value="DELETE"', $response);
++    }
++
++    public function test_show_displays_the_confirmation_code_and_the_removal_form(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('id="confirmation_code_value">4321<', $response);
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}\"", $response);
++        $this->assertStringContainsString('name="_method" value="DELETE"', $response);
++        $this->assertStringContainsString('name="confirmation_code"', $response);
++        $this->assertDoesNotMatchRegularExpression('/name="confirmation_code"[^>]*value=/', $response);
++    }
++
++    public function test_create_ignores_confirmation_code_sent_by_the_form(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['confirmation_code' => '42'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertGreaterThanOrEqual(Event::CODE_MIN, $event->confirmation_code);
++        $this->assertLessThanOrEqual(Event::CODE_MAX, $event->confirmation_code);
++    }
++
++    public function test_update_keeps_the_confirmation_code(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: [
++                'id' => $event->id,
++                'event' => $this->validParams(['title' => 'Título Novo', 'confirmation_code' => '1234']),
++            ]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertEquals('Título Novo', $updated->title);
++        $this->assertSame(4321, $updated->confirmation_code);
++    }
++
++    public function test_destroy_with_right_code_removes_event_without_enrollments(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $event->confirmation_code]
++        );
+ 
+         $this->assertNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+         $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+-    public function test_destroy_keeps_event_with_enrollments(): void
++    public function test_destroy_with_right_code_keeps_event_with_enrollments(): void
+     {
+         $event = $this->createEvent();
+         $this->enroll($event);
+ 
+-        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $event->confirmation_code]
++        );
+ 
+         $this->assertNotNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+@@ -265,6 +331,75 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_destroy_without_code_keeps_event_and_goes_back_to_show(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++    }
++
++    public function test_destroy_with_wrong_code_keeps_event_and_goes_back_to_show(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '1234']
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_code_as_array_keeps_event(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => ['4321']]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_destroy_with_wrong_code_does_not_reveal_enrollments(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++        $this->enroll($event);
++
++        $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '1234']
++        );
++
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_code_of_another_event_keeps_both(): void
++    {
++        $event = $this->createEvent(['title' => 'Alvo', 'confirmation_code' => 1111]);
++        $this->createEvent(['title' => 'Outro', 'confirmation_code' => 2222]);
++
++        $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '2222']
++        );
++
++        $this->assertCount(2, Event::all());
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..8034ffe 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,62 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- código de confirmação ------------------- */
++
++    public function test_new_event_should_get_a_confirmation_code_in_range(): void
++    {
++        for ($i = 0; $i < 200; $i++) {
++            $code = (new Event($this->params()))->confirmation_code;
++
++            $this->assertIsInt($code);
++            $this->assertGreaterThanOrEqual(Event::CODE_MIN, $code);
++            $this->assertLessThanOrEqual(Event::CODE_MAX, $code);
++        }
++    }
++
++    public function test_confirmation_code_given_to_the_constructor_should_be_kept(): void
++    {
++        $event = new Event($this->params(['confirmation_code' => 4321]));
++        $this->assertTrue($event->save());
++
++        $this->assertSame(4321, Event::findById($event->id)->confirmation_code);
++    }
++
++    public function test_confirmation_code_should_be_kept(): void
++    {
++        $event = $this->createEvent();
++        $code = Event::findById($event->id)->confirmation_code;
++
++        $this->assertIsInt($code);
++        $this->assertGreaterThanOrEqual(1000, $code);
++        $this->assertLessThanOrEqual(9999, $code);
++
++        $event->title = 'Outro título';
++        $this->assertTrue($event->save());
++        $found = Event::findById($event->id);
++        $this->assertSame($code, $found->confirmation_code);
++        $this->assertSame($code, Event::where(['id' => $event->id])[0]->confirmation_code);
++        $this->assertSame($code, Event::paginate(1, 5)->registers()[0]->confirmation_code);
++    }
++
++    public function test_confirms_code_should_accept_only_the_code(): void
++    {
++        $event = new Event($this->params(['confirmation_code' => 4321]));
++
++        $this->assertTrue($event->confirmsCode('4321'));
++        foreach (['1234', '12a', ' 4321', '4321 ', '04321', '', '-4321', '4321.0', '4e3'] as $bad) {
++            $this->assertFalse($event->confirmsCode($bad), $bad);
++        }
++        $this->assertFalse($event->confirmsCode(null));
++        $this->assertFalse($event->confirmsCode(['4321']));
++        $this->assertFalse($event->confirmsCode(4321));
++    }
++
++    public function test_confirms_code_should_work_with_the_code_read_from_the_database(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $this->assertTrue(Event::findById($event->id)->confirmsCode('4321'));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 522e02874be044dde4ac4f7318b8a9e418f0c581 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:44:10 -0300
+Subject: [PATCH 2/2] feat: Expire the confirmation code and limit wrong
+ attempts
+
+The Event confirmation code is valid for 5 minutes and accepts 3 wrong
+attempts. Wrong, expired and exhausted codes get distinct messages, and the
+show page issues a new code when the old one is no longer valid. The clock
+is injectable (epoch $now) so the rule is tested in the model without sleep.
+---
+ app/Controllers/Admin/EventsController.php    |   9 +-
+ app/Models/Event.php                          | 104 ++++++++
+ app/views/admin/events/show.phtml             |   3 +
+ database/schema.sql                           |   3 +
+ lib/CodeCheck.php                             |  24 ++
+ .../admin/events/DeleteEventCest.php          |  51 +++-
+ tests/Integration/Access/EventsAccessTest.php |   2 +-
+ .../Admin/EventsControllerTest.php            |  86 ++++++-
+ .../Events/EventConfirmationCodeTest.php      | 230 ++++++++++++++++++
+ 9 files changed, 505 insertions(+), 7 deletions(-)
+ create mode 100644 lib/CodeCheck.php
+ create mode 100644 tests/Unit/Models/Events/EventConfirmationCodeTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index 6675efa..70fd397 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
+ use App\Models\Event;
+ use Core\Http\Controllers\Controller;
+ use Core\Http\Request;
++use Lib\CodeCheck;
+ use Lib\FlashMessage;
+ 
+ class EventsController extends Controller
+@@ -34,6 +35,9 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        // Código expirado ou esgotado é trocado ao voltar para a tela; o que ainda vale é mantido.
++        $event->currentConfirmationCode();
++
+         $title = htmlspecialchars($event->title);
+         $this->render('admin/events/show', compact('event', 'title'));
+     }
+@@ -102,8 +106,9 @@ class EventsController extends Controller
+         }
+ 
+         // Confere o código antes do safeDestroy: código errado não revela se o Evento tem Inscrições.
+-        if (!$event->confirmsCode($request->getParam('confirmation_code'))) {
+-            FlashMessage::danger('Código de confirmação incorreto!');
++        $result = $event->checkConfirmationCode($request->getParam('confirmation_code'));
++        if ($result !== CodeCheck::Ok) {
++            FlashMessage::danger($result->message());
+             $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+             return;
+         }
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index 5f31a8a..29646d2 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\CodeCheck;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -19,6 +20,8 @@ use PDOException;
+  * @property string $location
+  * @property int|string $capacity
+  * @property int|string|null $confirmation_code gerado no construtor quando vazio; nunca vem do formulário
++ * @property int|string|null $confirmation_code_issued_at instante (epoch) em que o código atual foi gerado
++ * @property int|string|null $confirmation_code_attempts tentativas erradas com o código atual
+  */
+ class Event extends Model
+ {
+@@ -49,6 +52,10 @@ class Event extends Model
+     public const CODE_MIN = 1000;
+     public const CODE_MAX = 9999;
+ 
++    /** O código vale 5 minutos e aceita 3 tentativas erradas. */
++    public const CODE_TTL_SECONDS = 300;
++    public const CODE_MAX_ATTEMPTS = 3;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -61,6 +68,8 @@ class Event extends Model
+         'location',
+         'capacity',
+         'confirmation_code',
++        'confirmation_code_issued_at',
++        'confirmation_code_attempts',
+     ];
+ 
+     /**
+@@ -77,6 +86,14 @@ class Event extends Model
+         if ($code === null || $code === '') {
+             $this->confirmation_code = random_int(self::CODE_MIN, self::CODE_MAX);
+         }
++
++        // save() grava todas as colunas e ignora DEFAULT: o instante e as tentativas precisam de valor.
++        if ($this->confirmation_code_issued_at === null || $this->confirmation_code_issued_at === '') {
++            $this->confirmation_code_issued_at = time();
++        }
++        if ($this->confirmation_code_attempts === null || $this->confirmation_code_attempts === '') {
++            $this->confirmation_code_attempts = 0;
++        }
+     }
+ 
+     /**
+@@ -92,6 +109,93 @@ class Event extends Model
+         return hash_equals((string) $this->confirmation_code, $input);
+     }
+ 
++    /**
++     * Gera outro código, com validade a partir de $now e tentativas zeradas. Em registro salvo, grava na hora.
++     *
++     * $now é o relógio (epoch): os testes passam um instante fixo; em produção fica null e vale time().
++     */
++    public function issueConfirmationCode(?int $now = null): int
++    {
++        $code = random_int(self::CODE_MIN, self::CODE_MAX);
++        $data = [
++            'confirmation_code' => $code,
++            'confirmation_code_issued_at' => $now ?? time(),
++            'confirmation_code_attempts' => 0,
++        ];
++
++        if ($this->newRecord()) {
++            foreach ($data as $column => $value) {
++                $this->$column = $value;
++            }
++        } else {
++            // update() devolve false se nada mudou; aqui o retorno não indica erro.
++            $this->update($data);
++        }
++
++        return $code;
++    }
++
++    /**
++     * Código que ainda vale. Se o atual expirou ou esgotou as tentativas, gera outro; senão devolve o mesmo
++     * sem zerar as tentativas (recarregar a página não dá tentativas novas).
++     */
++    public function currentConfirmationCode(?int $now = null): int
++    {
++        if ($this->confirmationCodeState($now ?? time()) === null) {
++            return $this->codeAttribute('confirmation_code');
++        }
++
++        return $this->issueConfirmationCode($now);
++    }
++
++    /**
++     * Confere o código digitado. Ok invalida o código (uso único); errado conta uma tentativa (inclusive
++     * vazio, null ou array) e a terceira já devolve Exhausted. Código esgotado ou expirado nem é comparado.
++     */
++    public function checkConfirmationCode(mixed $given, ?int $now = null): CodeCheck
++    {
++        $state = $this->confirmationCodeState($now ?? time());
++        if ($state !== null) {
++            return $state;
++        }
++
++        if ($this->confirmsCode($given)) {
++            $this->update(['confirmation_code_issued_at' => 0]);
++            return CodeCheck::Ok;
++        }
++
++        $attempts = $this->codeAttribute('confirmation_code_attempts') + 1;
++        $this->update(['confirmation_code_attempts' => $attempts]);
++
++        return $attempts >= self::CODE_MAX_ATTEMPTS ? CodeCheck::Exhausted : CodeCheck::Wrong;
++    }
++
++    /**
++     * null se o código ainda vale; senão o motivo. Esgotado vem antes de expirado.
++     */
++    private function confirmationCodeState(int $now): ?CodeCheck
++    {
++        if ($this->codeAttribute('confirmation_code_attempts') >= self::CODE_MAX_ATTEMPTS) {
++            return CodeCheck::Exhausted;
++        }
++
++        if ($now - $this->codeAttribute('confirmation_code_issued_at') > self::CODE_TTL_SECONDS) {
++            return CodeCheck::Expired;
++        }
++
++        return null;
++    }
++
++    /**
++     * Valor inteiro de uma coluna do código (o banco devolve int; atribuído à mão pode vir string).
++     */
++    private function codeAttribute(string $column): int
++    {
++        $value = filter_var($this->$column, FILTER_VALIDATE_INT);
++
++        return $value === false ? 0 : $value;
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index b118269..be4b834 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -34,6 +34,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dt class="col-sm-3">Código de confirmação</dt>
+     <dd class="col-sm-9">
+         <span id="confirmation_code_value"><?= htmlspecialchars((string) $event->confirmation_code) ?></span>
++        <small class="text-muted ms-2">
++            vale <?= Event::CODE_TTL_SECONDS / 60 ?> minutos e aceita <?= Event::CODE_MAX_ATTEMPTS ?> tentativas
++        </small>
+     </dd>
+ </dl>
+ 
+diff --git a/database/schema.sql b/database/schema.sql
+index bb24423..43472ba 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -31,6 +31,9 @@ CREATE TABLE events (
+     capacity    INT NOT NULL,
+     -- Código de 4 dígitos gerado pelo model ao criar; o admin digita para remover o Evento.
+     confirmation_code SMALLINT UNSIGNED NOT NULL,
++    -- Instante em que o código foi gerado (epoch do PHP, sem fuso) e tentativas erradas desde então.
++    confirmation_code_issued_at INT UNSIGNED NOT NULL,
++    confirmation_code_attempts TINYINT UNSIGNED NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/lib/CodeCheck.php b/lib/CodeCheck.php
+new file mode 100644
+index 0000000..87558b6
+--- /dev/null
++++ b/lib/CodeCheck.php
+@@ -0,0 +1,24 @@
++<?php
++
++namespace Lib;
++
++/**
++ * Resultado da conferência de um código de confirmação, com a mensagem mostrada ao usuário.
++ */
++enum CodeCheck
++{
++    case Ok;
++    case Wrong;
++    case Expired;
++    case Exhausted;
++
++    public function message(): string
++    {
++        return match ($this) {
++            self::Ok => 'Código confirmado!',
++            self::Wrong => 'Código incorreto! Tente de novo.',
++            self::Expired => 'Código expirado! Um novo foi gerado.',
++            self::Exhausted => 'Tentativas esgotadas! Um novo código foi gerado.',
++        };
++    }
++}
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index 33f636e..4b9daa3 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -61,13 +61,62 @@ class DeleteEventCest extends BaseEventsCest
+         $page->click('Confirmar remoção');
+ 
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+-        $page->see('Código de confirmação incorreto!');
++        $page->see('Código incorreto! Tente de novo.');
+         $page->dontSee('Evento removido com sucesso!');
+         $page->see((string) $event->confirmation_code, '#confirmation_code_value');
+         Assert::assertNotNull(Event::findById((int) $event->id));
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function threeWrongCodesGiveANewCode(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $wrong = $event->confirmation_code === 1000 ? '1001' : '1000';
++
++        $page->wantTo('Código de confirmação esgotado depois de 3 tentativas erradas');
++        $page->amOnPage("/admin/events/{$event->id}");
++
++        foreach (['Código incorreto! Tente de novo.', 'Código incorreto! Tente de novo.'] as $message) {
++            $page->fillField('#confirmation_code', $wrong);
++            $page->click('Confirmar remoção');
++            $page->see($message);
++        }
++        $page->fillField('#confirmation_code', $wrong);
++        $page->click('Confirmar remoção');
++        $page->see('Tentativas esgotadas! Um novo código foi gerado.');
++
++        // A tela já mostra o código novo, com as tentativas zeradas.
++        $found = Event::findById((int) $event->id);
++        Assert::assertNotNull($found);
++        Assert::assertSame(0, $found->confirmation_code_attempts);
++        $page->see((string) $found->confirmation_code, '#confirmation_code_value');
++
++        $page->fillField('#confirmation_code', $page->grabTextFrom('#confirmation_code_value'));
++        $page->click('Confirmar remoção');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->see('Evento removido com sucesso!');
++        Assert::assertNull(Event::findById((int) $event->id));
++    }
++
++    public function expiredCodeGivesANewCode(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Código de confirmação expirado');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $code = $page->grabTextFrom('#confirmation_code_value');
++        $event->update(['confirmation_code_issued_at' => time() - Event::CODE_TTL_SECONDS - 1]);
++
++        $page->fillField('#confirmation_code', $code);
++        $page->click('Confirmar remoção');
++        $page->see('Código expirado! Um novo foi gerado.');
++        Assert::assertNotNull(Event::findById((int) $event->id));
++
++        $page->fillField('#confirmation_code', $page->grabTextFrom('#confirmation_code_value'));
++        $page->click('Confirmar remoção');
++        $page->see('Evento removido com sucesso!');
++    }
++
+     /**
+      * "Remover" na listagem leva ao show do Evento; lá o código aparece em #confirmation_code_value e é
+      * digitado em #confirmation_code antes de "Confirmar remoção" (form com _method=DELETE).
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 96ce8ed..3aef339 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -183,7 +183,7 @@ class EventsAccessTest extends TestCase
+         $this->assertNotNull(Event::findById($this->event->id));
+ 
+         $show = (string) $client->get($uri)->getBody();
+-        $this->assertStringContainsString('Código de confirmação incorreto!', $show);
++        $this->assertStringContainsString('Código incorreto! Tente de novo.', $show);
+         $this->assertSame(1, preg_match('/id="confirmation_code_value">(\d{4})</', $show, $matches));
+ 
+         $response = $client->post($uri, ['form_params' => ['_method' => 'DELETE', 'confirmation_code' => $matches[1]]]);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index 5bd1169..801095f 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -339,7 +339,7 @@ class EventsControllerTest extends ControllerTestCase
+ 
+         $this->assertNotNull(Event::findById($event->id));
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++        $this->assertEquals('Código incorreto! Tente de novo.', $_SESSION['flash']['danger']);
+         $this->assertArrayNotHasKey('success', $_SESSION['flash']);
+     }
+ 
+@@ -355,7 +355,7 @@ class EventsControllerTest extends ControllerTestCase
+ 
+         $this->assertNotNull(Event::findById($event->id));
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++        $this->assertEquals('Código incorreto! Tente de novo.', $_SESSION['flash']['danger']);
+     }
+ 
+     public function test_destroy_with_code_as_array_keeps_event(): void
+@@ -383,7 +383,7 @@ class EventsControllerTest extends ControllerTestCase
+             params: ['id' => $event->id, 'confirmation_code' => '1234']
+         );
+ 
+-        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++        $this->assertEquals('Código incorreto! Tente de novo.', $_SESSION['flash']['danger']);
+     }
+ 
+     public function test_destroy_with_code_of_another_event_keeps_both(): void
+@@ -400,6 +400,86 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertCount(2, Event::all());
+     }
+ 
++    public function test_destroy_with_expired_code_keeps_event_with_its_own_message(): void
++    {
++        $event = $this->createEvent();
++        $code = $event->issueConfirmationCode(time() - Event::CODE_TTL_SECONDS - 1);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $code]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Código expirado! Um novo foi gerado.', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_exhausted_attempts_keeps_event_with_its_own_message(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['confirmation_code_attempts' => Event::CODE_MAX_ATTEMPTS]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $event->confirmation_code]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Tentativas esgotadas! Um novo código foi gerado.', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_third_wrong_code_exhausts_the_attempts(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++        $event->update(['confirmation_code_attempts' => Event::CODE_MAX_ATTEMPTS - 1]);
++
++        $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '1234']
++        );
++
++        $this->assertEquals('Tentativas esgotadas! Um novo código foi gerado.', $_SESSION['flash']['danger']);
++        $this->assertSame(Event::CODE_MAX_ATTEMPTS, Event::findById($event->id)->confirmation_code_attempts);
++    }
++
++    public function test_show_issues_a_new_code_when_the_old_one_is_exhausted(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['confirmation_code_attempts' => Event::CODE_MAX_ATTEMPTS]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $found = Event::findById($event->id);
++        $this->assertSame(0, $found->confirmation_code_attempts);
++        $this->assertStringContainsString("id=\"confirmation_code_value\">{$found->confirmation_code}<", $response);
++    }
++
++    public function test_show_issues_a_new_code_when_the_old_one_expired(): void
++    {
++        $event = $this->createEvent();
++        $event->issueConfirmationCode(time() - Event::CODE_TTL_SECONDS - 1);
++
++        $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertGreaterThanOrEqual(time() - 5, Event::findById($event->id)->confirmation_code_issued_at);
++    }
++
++    public function test_show_keeps_a_live_code_and_its_attempts(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++        $event->update(['confirmation_code_attempts' => 1]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('id="confirmation_code_value">4321<', $response);
++        $this->assertSame(1, Event::findById($event->id)->confirmation_code_attempts);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventConfirmationCodeTest.php b/tests/Unit/Models/Events/EventConfirmationCodeTest.php
+new file mode 100644
+index 0000000..de943d9
+--- /dev/null
++++ b/tests/Unit/Models/Events/EventConfirmationCodeTest.php
+@@ -0,0 +1,230 @@
++<?php
++
++namespace Tests\Unit\Models\Events;
++
++use App\Models\Event;
++use App\Models\User;
++use Lib\CodeCheck;
++use PHPUnit\Framework\Attributes\DataProvider;
++use Tests\TestCase;
++
++/**
++ * Validade e limite de tentativas do código de confirmação, testados no model, sem controller.
++ * O instante entra como parâmetro ($now, epoch): nada de sleep.
++ */
++class EventConfirmationCodeTest extends TestCase
++{
++    private const T = 1_000_000;
++
++    private Event $event;
++    private int $code;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++
++        $admin = new User([
++            'name' => 'Administrador',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin',
++        ]);
++        $admin->save();
++
++        $this->event = new Event([
++            'user_id' => $admin->id,
++            'title' => 'Semana Acadêmica',
++            'description' => 'Palestras e minicursos.',
++            'kind' => 'lecture',
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+30 days')),
++            'location' => 'Auditório Central',
++            'capacity' => 10,
++        ]);
++        $this->assertTrue($this->event->save());
++
++        $this->code = $this->event->issueConfirmationCode(self::T);
++    }
++
++    private function wrongCode(): string
++    {
++        return $this->code === 1000 ? '1001' : '1000';
++    }
++
++    private function storedAttempts(): mixed
++    {
++        return Event::findById($this->event->id)->confirmation_code_attempts;
++    }
++
++    /* ------------------- geração ------------------- */
++
++    public function test_new_event_should_start_with_the_current_time_and_no_attempts(): void
++    {
++        $before = time();
++        $event = new Event();
++
++        $this->assertGreaterThanOrEqual($before, $event->confirmation_code_issued_at);
++        $this->assertLessThanOrEqual(time(), $event->confirmation_code_issued_at);
++        $this->assertSame(0, $event->confirmation_code_attempts);
++    }
++
++    public function test_issue_should_store_the_code_the_instant_and_zero_attempts(): void
++    {
++        $found = Event::findById($this->event->id);
++
++        $this->assertSame($this->code, $found->confirmation_code);
++        $this->assertGreaterThanOrEqual(Event::CODE_MIN, $this->code);
++        $this->assertLessThanOrEqual(Event::CODE_MAX, $this->code);
++        $this->assertSame(self::T, $found->confirmation_code_issued_at);
++        $this->assertSame(0, $found->confirmation_code_attempts);
++    }
++
++    /* ------------------- validade ------------------- */
++
++    public function test_right_code_at_the_last_second_should_be_ok(): void
++    {
++        $this->assertSame(
++            CodeCheck::Ok,
++            $this->event->checkConfirmationCode((string) $this->code, self::T + Event::CODE_TTL_SECONDS)
++        );
++    }
++
++    public function test_right_code_one_second_later_should_be_expired(): void
++    {
++        $this->assertSame(
++            CodeCheck::Expired,
++            $this->event->checkConfirmationCode((string) $this->code, self::T + Event::CODE_TTL_SECONDS + 1)
++        );
++        $this->assertSame(0, $this->storedAttempts());
++    }
++
++    public function test_right_code_should_be_used_only_once(): void
++    {
++        $this->assertSame(CodeCheck::Ok, $this->event->checkConfirmationCode((string) $this->code, self::T + 1));
++        $this->assertSame(CodeCheck::Expired, $this->event->checkConfirmationCode((string) $this->code, self::T + 2));
++    }
++
++    /* ------------------- tentativas ------------------- */
++
++    public function test_third_wrong_code_should_exhaust_the_attempts(): void
++    {
++        $this->assertSame(CodeCheck::Wrong, $this->event->checkConfirmationCode($this->wrongCode(), self::T + 1));
++        $this->assertSame(CodeCheck::Wrong, $this->event->checkConfirmationCode($this->wrongCode(), self::T + 2));
++        $this->assertSame(CodeCheck::Exhausted, $this->event->checkConfirmationCode($this->wrongCode(), self::T + 3));
++        $this->assertSame(3, $this->storedAttempts());
++
++        $this->assertSame(CodeCheck::Exhausted, $this->event->checkConfirmationCode((string) $this->code, self::T + 4));
++        $this->assertSame(3, $this->storedAttempts());
++    }
++
++    public function test_right_code_after_two_wrong_ones_should_be_ok(): void
++    {
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 1);
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 2);
++
++        $this->assertSame(CodeCheck::Ok, $this->event->checkConfirmationCode((string) $this->code, self::T + 3));
++    }
++
++    public function test_attempts_should_survive_reloading_the_event(): void
++    {
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 1);
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 2);
++
++        $found = Event::findById($this->event->id);
++        $this->assertSame(CodeCheck::Exhausted, $found->checkConfirmationCode($this->wrongCode(), self::T + 3));
++    }
++
++    public function test_exhausted_should_win_over_expired(): void
++    {
++        $this->event->update(['confirmation_code_attempts' => Event::CODE_MAX_ATTEMPTS]);
++
++        $this->assertSame(CodeCheck::Exhausted, $this->event->checkConfirmationCode((string) $this->code, self::T + 999));
++    }
++
++    /**
++     * @return array<string, array{mixed}>
++     */
++    public static function malformedCodes(): array
++    {
++        return [
++            'letras' => ['12a'],
++            'espaço' => [' 1234'],
++            'vazio' => [''],
++            'null' => [null],
++            'array' => [['1234']],
++        ];
++    }
++
++    #[DataProvider('malformedCodes')]
++    public function test_malformed_code_should_be_wrong_and_count_an_attempt(mixed $given): void
++    {
++        $this->assertSame(CodeCheck::Wrong, $this->event->checkConfirmationCode($given, self::T + 1));
++        $this->assertSame(1, $this->storedAttempts());
++    }
++
++    public function test_updating_the_event_should_keep_the_attempts_and_the_instant(): void
++    {
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 1);
++
++        $found = Event::findById($this->event->id);
++        $found->title = 'Outro título';
++        $this->assertTrue($found->save());
++
++        $found = Event::findById($this->event->id);
++        $this->assertSame(1, $found->confirmation_code_attempts);
++        $this->assertSame(self::T, $found->confirmation_code_issued_at);
++        $this->assertSame($this->code, $found->confirmation_code);
++    }
++
++    /* ------------------- código vivo ------------------- */
++
++    public function test_current_should_keep_a_live_code_and_its_attempts(): void
++    {
++        $this->event->checkConfirmationCode($this->wrongCode(), self::T + 1);
++
++        $this->assertSame($this->code, $this->event->currentConfirmationCode(self::T + 2));
++
++        $found = Event::findById($this->event->id);
++        $this->assertSame(1, $found->confirmation_code_attempts);
++        $this->assertSame(self::T, $found->confirmation_code_issued_at);
++    }
++
++    public function test_current_after_exhausted_should_issue_a_new_entry(): void
++    {
++        for ($i = 1; $i <= Event::CODE_MAX_ATTEMPTS; $i++) {
++            $this->event->checkConfirmationCode($this->wrongCode(), self::T + $i);
++        }
++
++        $code = $this->event->currentConfirmationCode(self::T + 10);
++
++        $found = Event::findById($this->event->id);
++        $this->assertSame($code, $found->confirmation_code);
++        $this->assertSame(0, $found->confirmation_code_attempts);
++        $this->assertSame(self::T + 10, $found->confirmation_code_issued_at);
++        $this->assertSame(CodeCheck::Ok, $found->checkConfirmationCode((string) $code, self::T + 11));
++    }
++
++    public function test_current_after_expired_should_issue_a_new_entry(): void
++    {
++        $now = self::T + Event::CODE_TTL_SECONDS + 1;
++
++        $code = $this->event->currentConfirmationCode($now);
++
++        $this->assertSame($now, Event::findById($this->event->id)->confirmation_code_issued_at);
++        $this->assertSame(CodeCheck::Ok, $this->event->checkConfirmationCode((string) $code, $now + 60));
++    }
++
++    /* ------------------- mensagens ------------------- */
++
++    public function test_each_result_should_have_its_own_message(): void
++    {
++        $messages = array_map(fn(CodeCheck $result) => $result->message(), CodeCheck::cases());
++
++        $this->assertCount(4, array_unique($messages));
++        $this->assertSame('Código incorreto! Tente de novo.', CodeCheck::Wrong->message());
++        $this->assertSame('Código expirado! Um novo foi gerado.', CodeCheck::Expired->message());
++        $this->assertSame('Tentativas esgotadas! Um novo código foi gerado.', CodeCheck::Exhausted->message());
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
