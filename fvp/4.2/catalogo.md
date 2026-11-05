@@ -229,6 +229,8 @@ mantidos (`ECT:114-138` é o modelo do teste).
 
 Chance: alta. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m2-validacao-maxlength`.
+
 Pedido típico: "o título não pode passar de 100 caracteres"
 (`maxLength`), "descrição com no mínimo 10" (`minLength`), "vagas no
 máximo 500" (`integerMax`), "local só letras, números e espaços"
@@ -283,6 +285,8 @@ Armadilhas:
 - `lib/` não é analisado pelo `phpstan` (`phpstan.neon` cobre `app`,
   `core`, `tests`); tipe os parâmetros novos mesmo assim, o `phpcs`
   roda em tudo.
+- `integerMax` tem caso real: `capacity` acima de 2147483647 (`INT`)
+  passa no `integerMin` e estoura no `INSERT` com `PDOException` (500).
 - `format`: use `preg_match('/^[\p{L}\p{N} ]+$/u', $value) !== 1`
   (flag `u` para acentos).
 
@@ -590,6 +594,8 @@ navegador, busca vazia mostra a listagem normal.
 
 Chance: média-alta. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n3-ordenar-por-data`.
+
 Pedido típico: "ordene os Eventos pela data (mais próximos primeiro)".
 Hoje a listagem segue o `id`; o `Paginator` não tem `ORDER BY`.
 
@@ -633,6 +639,8 @@ amanhã e veja-o subir para a página 1.
 
 Chance: alta. Tempo: 5-10 min (mais 10 com a escolha pelo usuário).
 
+Exemplo pronto: `fvp/4.2/exemplos/n4-per-page`.
+
 Pedido típico: "mostre 10 por página", "3 por página", "deixe o
 usuário escolher".
 
@@ -640,7 +648,8 @@ Arquivos: `EC:12` (`PER_PAGE = 5`), `EC:18-22`, `ECT:39-57` (assume 5),
 `PAG:113-114` (divisão por `per_page`), `ACT/BaseEventsCest.php:23`
 (`PER_PAGE = 5`), `ACT/ListEventsCest.php:17,43`,
 `ACT/PaginateEventsCest.php` (textos "Mostrando 1 - 5 de 16", número de
-itens da paginação).
+itens da paginação), `ACT/CreateSuccessfullyCest.php:32-35` (abre
+`/admin/events/page/4` e espera "Mostrando 16 - 17 de 17").
 
 Passos:
 
@@ -705,6 +714,8 @@ crie um passado pelo `db:console` ou pelo teste.
 
 Chance: média. Tempo: 10-15 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n6-badge-lotado-contador`.
+
 Pedido típico: "mostre 'Lotado' quando não houver vagas" ou "quantos
 Eventos existem no painel administrativo".
 
@@ -742,6 +753,8 @@ Prova: teste de controller; o primeiro Evento mostra "Lotado".
 ### O1. Rota RESTful nova com página (lotados)
 
 Chance: média-alta. Tempo: 20-30 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/o1-rota-eventos-lotados`.
 
 Pedido típico: "uma página que lista os Eventos lotados"
 (`GET /admin/events/full`, `admin.events.full`). Só existem `get`,
@@ -781,7 +794,8 @@ Passos:
    botão Remover). Link em `IDX:1-3`.
 5. `ACC`: `'admin.events.full' => ['GET', '/admin/events/full']` em
    `eventRoutes()` e um teste com admin logado (cópia de `:162-173`)
-   esperando 200 e "Eventos lotados".
+   esperando 200 e "Eventos lotados". É o cenário S2: o exemplo
+   `s2-teste-acesso-rota-nova` empilha esse teste sobre o `o1-...`.
 
 Armadilhas:
 
@@ -802,6 +816,8 @@ primeiro Evento do populate (3/3).
 ### O2. Listagem e detalhe de Eventos para o Participante
 
 Chance: média-alta. Tempo: 25-35 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/o2-eventos-para-participante`.
 
 Pedido típico: "o Participante precisa ver os Eventos" (`/events` e
 `/events/{id}`, só leitura). Variante: pública, sem login. É a base de
@@ -839,7 +855,9 @@ Route::get('/events/{id}', [EventsController::class, 'show'])
 4. `app/views/events/index.phtml` e `show.phtml`: copie `IDX` e `SHOW`
    sem "Novo", "Editar", "Remover"; links para `events.show`.
 5. `NAV:10-12`: `<li><a href="<?= route('events.index') ?>">Eventos</a></li>`
-   para todo logado (o link admin de `NAV:17-19` continua).
+   para todo logado (o link admin de `NAV:17-19` continua). O exemplo
+   põe o link no `else` do `isAdmin()` (`NAV:13-20`): o admin fica só
+   com `/admin/events` e acessa `/events` pela URL; as duas formas valem.
 6. Acesso: teste HTTP (cópia de `DashboardAccessTest`): sem sessão 302
    `/login`; Participante 200; admin 200.
 
@@ -971,6 +989,8 @@ Prova: teste de controller;
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
 Chance: alta. Tempo: 25-35 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/p1-codigo-checkin-aleatorio`.
 
 Pedido típico: "cada Evento recebe, ao ser criado, um código numérico
 aleatório de 4 dígitos (1000 a 9999), único, gerado pelo backend, que
@@ -1900,6 +1920,8 @@ vez e acertar.
 
 Chance: média-alta. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/q1-so-dono-edita-remove`.
+
 Pedido típico: "só o Administrador que criou o Evento pode editar ou
 remover" (cenário D8 da 4.1 aplicado a Eventos). Variante: "o `show`
 continua aberto a todo admin".
@@ -2012,6 +2034,8 @@ URL direta `/admin/events/16/edit` redireciona.
 
 Chance: média-alta. Tempo: 10-15 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r1-flash-titulo-warning`.
+
 Pedido típico: "troque o texto do flash ao remover", "mostre o título
 do Evento na mensagem" ou "um flash de aviso (`warning`)".
 
@@ -2020,7 +2044,8 @@ Arquivos: `EC:56, 59, 87, 90, 105, 107, 139` (textos), `FLASH:7-15`
 `app/views/layouts/_flash_message.phtml:3`
 (imprime `$msg` sem escape), `ECT:98, 137, 168, 206, 223, 250, 262-265`
 (asserções de texto), `tests/Unit/Lib/FlashMessageTest.php`,
-`ACT/DeleteEventCest.php:23,41` (textos exatos).
+`ACT/DeleteEventCest.php:23,41`, `ACT/CreateSuccessfullyCest.php:28` e
+`ACT/UpdateSuccessfullyCest.php:45,71,87` (textos exatos dos flashes).
 
 Passos:
 
@@ -2223,6 +2248,8 @@ Prova: o teste passa; quebre a funcionalidade e ele deve falhar.
 
 Chance: alta. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/s2-teste-acesso-rota-nova`.
+
 Pedido típico: "prove que quem não é admin não acessa a rota nova" ou
 "que sem login vai para `/login`".
 
@@ -2323,9 +2350,14 @@ Passos:
 
 Armadilhas:
 
-- `integerMin` aceita `'10'` e `10`, rejeita `'1.5'` e `'1e1'`
-  (`filter_var` com `FILTER_VALIDATE_INT`, `VAL:81`); `' 10 '` com
-  espaços também é rejeitado.
+- `integerMin` aceita `'10'`, `10`, `' 10 '` (espaços nas pontas) e
+  `'+5'`; rejeita `'1.5'`, `'1e1'` e `'010'` (zero à esquerda). É o
+  comportamento de `filter_var` com `FILTER_VALIDATE_INT` (`VAL:81`).
+- `notEmpty` não faz `trim` (`VAL:9-17`): título só com espaços passa.
+  Se pedirem, normalize no model (`trim`) antes de validar, não no
+  controller.
+- `capacity` acima de 2147483647 (`INT`) passa no `integerMin` e
+  estoura no `INSERT` (`PDOException`, 500): `integerMax` (M2) resolve.
 - Mensagens exatas com `!`.
 - Teste de borda que depende da ordem dos erros: `errors()` guarda uma
   mensagem por campo (`MODEL:131-134`), a última vence.
@@ -2431,7 +2463,8 @@ Armadilhas:
 - Logout ainda é `GET /logout` (`ROUTES:15`, `NAV:26`): o cenário A2
   da 4.1 (DELETE) continua em aberto e pode ser pedido junto.
 - `phpcs`: 130 colunas, PSR-12; `phpstan` nível 6 em `app`, `core`,
-  `tests`.
+  `tests`. O `phpcs.xml` só varre `.php`: as views `.phtml` ficam de
+  fora (algumas da base já passam de 130); quebre à mão.
 - Parâmetro de query ou de form pode vir array: `is_string`/`is_array`
   antes de usar; nunca `(int)` silencioso em valor que o model vai
   validar.
