@@ -79,8 +79,10 @@ A validação prática (FVP) de cada entrega tem o seu escopo. O diretório
   4.2` só os da 4.2; `./fvp.sh 4.2 termo` filtra pelo termo (título
   vale mais) e aponta o exemplo pronto; frase entre aspas conta como
   um só termo; `./fvp.sh -s B10` mostra o cenário inteiro; `./fvp.sh
-  -h` lista as opções. Só bash, awk, grep e sort; roda no Ubuntu do
-  laboratório.
+  -c` ordena todos por chance (alta primeiro) com o tempo estimado e
+  `./fvp.sh -c 4.2` só os da 4.2; `./fvp.sh -l [4.2]` lista só os
+  títulos, com escopo e linha; `./fvp.sh -h` lista as opções. Só bash,
+  awk, grep e sort; roda no Ubuntu do laboratório.
 
 ## Scripts
 
