@@ -1715,7 +1715,7 @@ Pedido típico: "o Evento ganha um identificador legível (`slug`) gerado
 a partir do título, único, usado na URL `/events/{slug}`". Mesmo padrão
 de P1 (valor gerado e validado no servidor), com texto em vez de número.
 
-Arquivos: `SCH:21-38`, `EV:48-58`, `EV:60-82`, `MODEL:138-184` (`save()`
+Arquivos: `SCH:21-38`, `EV:48-58`, `EV:60-82`, `MODEL:139-184` (`save()`
 a sobrescrever, como em P1), `MODEL:335` (`findBy`), `MODEL:347`
 (`exists`), `lib/StringUtils.php:5-27` (lugar do `slugify`),
 `tests/Unit/Lib/StringUtilsTest.php`, `ROUTES:26-35` (admin continua por
@@ -2288,7 +2288,7 @@ Armadilhas:
 - Ordem: o PHP fica com o **último** valor de um nome repetido. Hidden
   depois do checkbox = sempre `0`.
 - O `DEFAULT 0` do schema não é usado: `save()` grava todas as colunas
-  (`MODEL:138-184`). Sem padrão no construtor nem normalização antes
+  (`MODEL:139-184`). Sem padrão no construtor nem normalização antes
   do `save()`, `POP:134-143` cria
   Eventos com `null` e lança `RuntimeException` (`POP:145-146`); o
   mesmo vale para `ECT:289-300` e `ACC:30-40`.
@@ -2665,7 +2665,7 @@ Armadilhas:
 - `type="number"` mostra vírgula em navegador pt-BR, mas com
   `novalidate` (`FORM:16`) um valor que o navegador não entende vai
   vazio. Prefira `type="text"` com `inputmode="decimal"`.
-- `save()` grava todas as colunas (`MODEL:138-184`): sem o padrão no
+- `save()` grava todas as colunas (`MODEL:139-184`): sem o padrão no
   construtor, `POP:134-143`, `ACC:30-40` e `ECT:289-300` gravam
   `null` e falham.
 - `ECT:85-112` posta `validParams()`: sem `price` o `fill` põe
@@ -5116,7 +5116,7 @@ aparece no detalhe e na listagem". É a transposição direta do pedido
 real da FVP 4.1 (P12) para o CRUD: campo gerado no servidor, não
 editável pelo form, validado no model.
 
-Arquivos: `SCH:21-38`, `EV:10-21`, `EV:48-58`, `EV:60-82`, `MODEL:138-184`
+Arquivos: `SCH:21-38`, `EV:10-21`, `EV:48-58`, `EV:60-82`, `MODEL:139-184`
 (`save()`, que `Event` vai sobrescrever), `MODEL:347` (`exists()`),
 `VAL:78-94` (`integerMin`) e `VAL:155-205` (`uniqueness`), `EC:14`
 (`FIELDS`: o código **não** entra), `EC:49-63`, `IDX:11-26`, `SHOW:6-33`,
@@ -5592,7 +5592,7 @@ Pedido típico: "um botão 'Duplicar' cria uma cópia do Evento (título
 com '(cópia)', data daqui a 7 dias, sem inscrições) e abre a edição".
 
 Arquivos: `EV:48-58` (`$columns`), `MODEL:20-44` (`$attributes` é
-**privado** em `Model`: copie via `$this->$column`), `MODEL:138-184`,
+**privado** em `Model`: copie via `$this->$column`), `MODEL:139-184`,
 `EC:49-63` (`create`, modelo de redirect), `ROUTES:26-35`, `IDX:28-33`,
 `ECT:85-99`, `ACC:85-97`, `EVT`. Os testes de model do exemplo estão em
 `s3-teste-unitario-model`, empilhado sobre o `p6-...`; a rota POST entra
@@ -8267,7 +8267,7 @@ Pedido típico: "mostre quando o Evento foi cadastrado e alterado pela
 `$columns`, então o ActiveRecord nem as lê.
 
 Arquivos: `SCH:32-33`, `EV:48-58`, `MODEL:233-256` (`findById` só
-seleciona `$columns`), `MODEL:138-184` (`save()` grava **todas** as
+seleciona `$columns`), `MODEL:139-184` (`save()` grava **todas** as
 colunas de `$columns`: pôr `created_at` lá faz o `INSERT` mandar `NULL`),
 `SHOW:6-33`, `IDX:11-26`, `US:76-79` (`registerLogin` grava hora do PHP),
 `Dockerfile:10` (PHP em `America/Sao_Paulo`; o MySQL do compose fica em
@@ -9364,7 +9364,7 @@ requisição).
 ## 9. Armadilhas gerais do CRUD de Eventos
 
 - `Model::save()` grava **todas** as colunas de `$columns`
-  (`MODEL:138-184`): coluna sem valor vai como `NULL`, o `DEFAULT` do
+  (`MODEL:139-184`): coluna sem valor vai como `NULL`, o `DEFAULT` do
   schema não é usado. Padrões ficam no construtor (`US:28-35`).
 - `Model::update([...])` não valida (`MODEL:189`); `save()` valida.
 - `Model::where` só faz igualdade (`MODEL:309-311`); `all()` e o
