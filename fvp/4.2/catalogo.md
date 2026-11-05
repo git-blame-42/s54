@@ -115,11 +115,11 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M3 | Valor novo em ENUM/SET | média | 10-15 min |
 | M4 | Data de término não anterior ao início | média-alta | 25-35 min |
 | M5 | Validação condicional por modalidade | média | 15-25 min |
-| M6 | Unicidade (título único na mesma data) | média | 15-20 min |
-| N1 | Filtro por tipo com `where` na paginação | média-alta | 25-35 min |
+| M6 | Unicidade (título único na mesma data) | média-alta | 15-20 min |
+| N1 | Filtro por tipo com `where` na paginação | alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
-| N4 | Mudar `per_page` ou deixar o usuário escolher | alta | 5-10 min |
+| N4 | Mudar `per_page` ou deixar o usuário escolher | média-alta | 5-10 min |
 | N5 | Só Eventos futuros ou passados | média | 20-30 min |
 | N6 | Dado calculado na tela (badge "Lotado", total) | média | 10-15 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
@@ -127,9 +127,9 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
 | O4 | Resposta JSON da listagem | baixa | 20 min |
 | P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
-| P2 | Inscrição do Participante em um Evento | alta | 30-40 min |
+| P2 | Inscrição do Participante em um Evento | média-alta | 30-40 min |
 | P3 | Cancelar a própria inscrição | média | 15-20 min |
-| P4 | Confirmar presença pelo código do Evento | média-alta | 30-40 min |
+| P4 | Confirmar presença pelo código do Evento | média-baixa | 30-40 min |
 | P5 | Status do Evento: cancelar e encerrar | alta | 25-35 min |
 | P6 | Duplicar Evento | média-alta | 20-30 min |
 | P7 | "Meus eventos" do Participante | média-alta | 20-30 min |
@@ -140,7 +140,7 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P12 | Login por código aleatório (FVP real 4.1) | média-baixa | 30-40 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
-| R1 | Flash: texto, título do Evento, `warning` | média-alta | 10-15 min |
+| R1 | Flash: texto, título do Evento, `warning` | média | 10-15 min |
 | R2 | Nome do criador no `show` e na listagem | média-alta | 10-15 min |
 | R3 | Formatação na view com helper num só lugar | média | 10-15 min |
 | R4 | Confirmar antes de remover (JS em arquivo) | média | 10-15 min |
@@ -340,6 +340,8 @@ navegador e ver o rótulo na listagem e no `show`.
 
 Chance: média-alta. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m4-segunda-data-ends-on`.
+
 Pedido típico: "o Evento tem data de término, que não pode ser antes
 do início". Variante: "prazo de inscrição (`registration_deadline`)
 até a data do Evento".
@@ -368,23 +370,32 @@ Passos:
 ```php
 private function validatesEndsOnAfterStartsOn(): void
 {
-    $start = \DateTimeImmutable::createFromFormat(
-        '!Y-m-d',
-        (string) $this->starts_on
-    );
-    $end = \DateTimeImmutable::createFromFormat(
-        '!Y-m-d',
-        (string) $this->ends_on
-    );
+    $start = $this->parseDate($this->starts_on);
+    $end = $this->parseDate($this->ends_on);
 
-    if ($start !== false && $end !== false && $end < $start) {
+    if ($start !== null && $end !== null && $end < $start) {
         $this->addError(
             'ends_on',
             'não pode ser anterior à data de início!'
         );
     }
 }
+
+private function parseDate(mixed $value): ?\DateTimeImmutable
+{
+    if (!is_string($value)) {
+        return null;
+    }
+
+    $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+    return $date !== false && $date->format('Y-m-d') === $value ? $date : null;
+}
 ```
+
+   A conferência `format() === $value` é a mesma de `VAL:140-153`:
+   `createFromFormat('!Y-m-d', '2030-02-31')` devolve 03/03/2030, não
+   `false`, e sem ela a comparação roda com uma data "válida" errada.
 
 5. Form, listagem, show, populate
    (`'ends_on' => date('Y-m-d', strtotime("+{$daysAhead} days"))`
@@ -459,7 +470,8 @@ sem local.
 
 ### M6. Unicidade (título único na mesma data)
 
-Chance: média. Tempo: 15-20 min.
+Chance: média-alta (duplicidade cobrada na issue 4.2 do grupo 5;
+`uniqueness` está na rubrica). Tempo: 15-20 min.
 
 Exemplo pronto: `fvp/4.2/exemplos/m6-unicidade-titulo-data`.
 
@@ -498,7 +510,8 @@ Prova: `EventTest`; no navegador, cadastrar o mesmo título duas vezes.
 
 ### N1. Filtro por tipo com `where`, mantido na paginação
 
-Chance: média-alta. Tempo: 25-35 min.
+Chance: alta (`where` é a linha nova da rubrica; manter o filtro na
+paginação expõe os limites do framework). Tempo: 25-35 min.
 
 Exemplo pronto: `fvp/4.2/exemplos/n1-filtro-por-tipo-paginacao`.
 
@@ -565,6 +578,8 @@ tipos em rodízio (`:79,87`), útil para um Cest.
 ### N2. Busca por título (`LIKE`)
 
 Chance: média. Tempo: 20-30 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/n2-busca-por-titulo`.
 
 Pedido típico: "campo de busca por título na listagem".
 
@@ -661,7 +676,9 @@ amanhã e veja-o subir para a página 1.
 
 ### N4. Mudar `per_page` ou deixar o usuário escolher
 
-Chance: alta. Tempo: 5-10 min (mais 10 com a escolha pelo usuário).
+Chance: média-alta (micro-ajuste; a FVP real pediu feature nova, mas é
+rápido e serve de aquecimento). Tempo: 5-10 min (mais 10 com a escolha
+pelo usuário).
 
 Exemplo pronto: `fvp/4.2/exemplos/n4-per-page`.
 
@@ -702,6 +719,8 @@ Prova: `EventsControllerTest`; no navegador, 16 Eventos em 2 páginas e
 
 Chance: média. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n5-eventos-futuros-passados`.
+
 Pedido típico: "mostre só os Eventos que ainda vão acontecer" ou
 "uma aba de Eventos passados".
 
@@ -715,8 +734,9 @@ Passos:
    `createPastEvent`, `EVT:499-509`); `Event::upcoming()` traz só o
    futuro.
 2. `EV`: `upcoming()` e `past()` com SQL no model:
-   `WHERE starts_on >= CURDATE() ORDER BY starts_on, id` (e `<` para
-   passados), `@return array<static>`.
+   `WHERE starts_on >= :today ORDER BY starts_on, id` com
+   `bindValue(':today', date('Y-m-d'))` (e `<` para passados),
+   `@return array<static>`. Não use `CURDATE()`: ver a 1ª armadilha.
 3. `EC::index`: `$scope = $request->getParam('scope');` validado em
    `['upcoming', 'past']`; com escopo, `$events = Event::upcoming()` e
    `$paginator = null`; sem, o caminho atual. `$scope` no `compact`.
@@ -1110,7 +1130,8 @@ Evento e ver o código no `show` e na listagem; `db:console` com
 
 ### P2. Inscrição do Participante (`POST /events/{id}/enrollments`)
 
-Chance: alta. Tempo: 30-40 min.
+Chance: média-alta (RF05 e a feature natural seguinte; não "alta" porque
+o NxN é o tema da 4.4, que o professor pode reservar). Tempo: 30-40 min.
 
 Exemplo pronto: `fvp/4.2/exemplos/p2-inscricao-participante`.
 
@@ -1290,7 +1311,10 @@ Prova: testes; no navegador, inscrever e cancelar.
 
 ### P4. Confirmar presença pelo código do Evento
 
-Chance: média-alta. Tempo: 30-40 min.
+Chance: média-baixa (empilha P1 e P2; sozinho passa dos 40 min).
+Tempo: 30-40 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/p4-confirmar-presenca-codigo`.
 
 Pedido típico: "o Participante inscrito confirma presença digitando o
 código do Evento (o número de 4 dígitos); o backend valida e registra
@@ -1343,6 +1367,9 @@ public function isConfirmed(): bool
        [EnrollmentsController::class, 'confirm']
    )->name('events.enrollments.confirm');
    ```
+
+   O exemplo usa `POST /events/{id}/checkin` (`events.checkin`, ação
+   `checkin`), mais curto; as duas formas valem.
 5. `EnrollmentsController::confirm`: acha a inscrição do logado
    (`findBy`, como P3); `$code = $request->getParam('code');` e
    `$code = is_string($code) ? trim($code) : '';`;
@@ -1488,13 +1515,17 @@ badge, tentar inscrever-se (P2) e receber a recusa.
 
 Chance: média-alta. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p6-duplicar-evento`.
+
 Pedido típico: "um botão 'Duplicar' cria uma cópia do Evento (título
 com '(cópia)', data daqui a 7 dias, sem inscrições) e abre a edição".
 
-Arquivos: `EV:47-58` (`$columns`), `MODEL:20-44` (`$attributes` é
+Arquivos: `EV:48-58` (`$columns`), `MODEL:20-44` (`$attributes` é
 **privado** em `Model`: copie via `$this->$column`), `MODEL:139-187`,
 `EC:49-63` (`create`, modelo de redirect), `ROUTES:26-35`, `IDX:28-33`,
-`ECT:85-99`, `ACC:85-97`.
+`ECT:85-99`, `ACC:85-97`, `EVT`. Os testes de model do exemplo estão em
+`s3-teste-unitario-model`, empilhado sobre o `p6-...`; a rota POST entra
+em `eventRoutes()` (`ACC:85-97`), não em `methodOverrideRoutes()`.
 
 Passos:
 
@@ -1807,12 +1838,20 @@ Prova: testes; no navegador, comentar e ver na lista.
 
 Chance: baixa. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p11-soft-delete-arquivar`.
+
 Pedido típico: "em vez de remover, arquive o Evento; arquivados não
 aparecem na listagem e podem ser restaurados".
 
 Arquivos: `SCH:21-38`, `EV:48-58`, `EV:151-173` (`safeDestroy`),
-`MODEL:261-282` (`all()` sem filtro), `PAG:147-158` (`buildConditions`,
-só igualdade: `IS NULL` não dá), `EC:96-111`, `IDX`, `ECT:242-251`.
+`MODEL:261-282` (`all()` sem filtro), `PAG:147-169` (`buildConditions` e
+`bindConditions`, só igualdade: `IS NULL` não dá), `EC:96-111`,
+`ROUTES:26-35` (rota `archived` antes de `{id}`, `restore`), `IDX`,
+`ECT:242-251`, `EVT:634-680`, `ACC:85-110`, `ACT/DeleteEventCest.php`.
+Terceira opção (a do exemplo): `deleted_at DATETIME NULL` e o
+`Paginator` aprende `coluna IS NULL` quando a condição vale `null`
+(`buildConditions` e `bindConditions` juntos), ficando em `lib/`, não em
+`core/`.
 
 Passos:
 
@@ -2093,7 +2132,8 @@ URL direta `/admin/events/16/edit` redireciona.
 
 ### R1. Flash: texto, título do Evento, tipo `warning`
 
-Chance: média-alta. Tempo: 10-15 min.
+Chance: média (micro-ajuste de texto; costuma vir dentro de outro
+pedido). Tempo: 10-15 min.
 
 Exemplo pronto: `fvp/4.2/exemplos/r1-flash-titulo-warning`.
 
@@ -2361,6 +2401,8 @@ Prova: `./run test tests/Integration/Access`.
 ### S3. Teste unitário do método novo do model
 
 Chance: alta. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/s3-teste-unitario-model`.
 
 Pedido típico: "escreva o teste do método que você criou"
 (`searchByTitle`, `upcoming`, `cancel`, `duplicate`, `participants`).
