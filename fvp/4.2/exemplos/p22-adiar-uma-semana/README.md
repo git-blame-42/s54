@@ -12,7 +12,7 @@ Branch no clone: `fvp/p22-adiar-uma-semana`, a partir de `main`
 
 | Commit    | Mensagem                                            |
 |-----------|-----------------------------------------------------|
-| `7e8bb65` | `feat: Add button to postpone an event by one week` |
+| `5089dbe` | `feat: Add button to postpone an event by one week` |
 
 ## O que mudou
 
@@ -124,7 +124,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p22 \
     s50/fvp/4.2/exemplos/p22-adiar-uma-semana/projeto
 git fetch fvp-p22 fvp/p22-adiar-uma-semana
-git cherry-pick 7e8bb65
+git cherry-pick 5089dbe
 git remote remove fvp-p22
 ```
 
@@ -135,7 +135,7 @@ git fetch \
     s50/fvp/4.2/exemplos/p22-adiar-uma-semana/solucao.bundle \
     fvp/p22-adiar-uma-semana:fvp-p22
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 7e8bb65
+git cherry-pick 5089dbe
 # opcional, limpa a ref
 git branch -D fvp-p22
 ```

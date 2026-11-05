@@ -102,7 +102,7 @@ class EventsController extends Controller
         }
 
         if ($event->postpone()) {
-            $date = date('d/m/Y', (int) strtotime($event->starts_on));
+            $date = date('d/m/Y', strtotime($event->starts_on));
             FlashMessage::success("Evento adiado para {$date}!");
         } else {
             $reason = $event->errors('starts_on') ?? $event->errors('base') ?? 'dados inválidos!';
