@@ -22,7 +22,7 @@ Commits (os dois primeiros são a base):
 - `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
 - `458a05b` `feat: Allow participants to enroll in events` (base, P2)
-- `fbc831e` `feat: Add waiting list for full events`
+- `5df6940` `feat: Add waiting list for full events`
 
 ## O que mudou
 
@@ -37,7 +37,10 @@ Commits (os dois primeiros são a base):
     de recusar (sai o erro "não há vagas neste evento!" do P2);
   - `isWaiting()`, `waitingPosition()` (1 = próximo da fila);
   - `destroy()` sobrescrito: se a Inscrição removida era `confirmed`,
-    chama `Event::promoteFirstWaiting()`.
+    chama `Event::promoteFirstWaiting()`;
+  - `Event::findById($this->event_id)` sem `(int)`: o `event_id` vem
+    do banco ou do controller, não do usuário, e o `@property int`
+    satisfaz o PHPStan.
 - `app/Models/Event.php`:
   - `enrollmentsCount()` conta só `confirmed` (é o que ocupa vaga; o
     "3/3", `availableSpots()` e a regra de capacidade na edição usam
@@ -154,9 +157,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p9 s50/fvp/4.2/exemplos/p9-lista-de-espera/projeto
 git fetch fvp-p9 fvp/p9-lista-de-espera
 # O2 + P2 + P9 (range)
-git cherry-pick 0669a19^..fbc831e
+git cherry-pick 0669a19^..5df6940
 # ou só o topo (P9), se já tem O2 e P2
-git cherry-pick fbc831e
+git cherry-pick 5df6940
 git remote remove fvp-p9
 ```
 
@@ -168,7 +171,7 @@ git fetch s50/fvp/4.2/exemplos/p9-lista-de-espera/solucao.bundle \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p9
 # ou só o topo
-git cherry-pick fbc831e
+git cherry-pick 5df6940
 # opcional, limpa a ref
 git branch -D fvp-p9
 ```

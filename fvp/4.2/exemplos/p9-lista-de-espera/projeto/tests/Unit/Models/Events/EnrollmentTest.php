@@ -99,7 +99,7 @@ class EnrollmentTest extends TestCase
         $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
 
         $this->assertTrue($enrollment->save());
-        $stored = Enrollment::findById((int) $enrollment->id);
+        $stored = Enrollment::findBy(['id' => $enrollment->id]);
         $this->assertNotNull($stored);
         $this->assertEquals('confirmed', $stored->status);
         $this->assertFalse($stored->isWaiting());
@@ -115,7 +115,7 @@ class EnrollmentTest extends TestCase
         $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
 
         $this->assertTrue($enrollment->save());
-        $stored = Enrollment::findById((int) $enrollment->id);
+        $stored = Enrollment::findBy(['id' => $enrollment->id]);
         $this->assertNotNull($stored);
         $this->assertEquals('waiting', $stored->status);
         $this->assertSame(1, $stored->waitingPosition());
@@ -146,9 +146,9 @@ class EnrollmentTest extends TestCase
 
         $this->assertTrue($confirmed->destroy());
 
-        $this->assertEquals('confirmed', Enrollment::findById((int) $second->id)?->status);
-        $this->assertEquals('waiting', Enrollment::findById((int) $third->id)?->status);
-        $this->assertSame(1, Enrollment::findById((int) $third->id)?->waitingPosition());
+        $this->assertEquals('confirmed', Enrollment::findBy(['id' => $second->id])?->status);
+        $this->assertEquals('waiting', Enrollment::findBy(['id' => $third->id])?->status);
+        $this->assertSame(1, Enrollment::findBy(['id' => $third->id])?->waitingPosition());
         $this->assertSame(1, $this->event->enrollmentsCount());
         $this->assertSame(1, $this->event->waitingCount());
     }
@@ -162,7 +162,7 @@ class EnrollmentTest extends TestCase
 
         $this->assertTrue($second->destroy());
 
-        $this->assertEquals('waiting', Enrollment::findById((int) $third->id)?->status);
+        $this->assertEquals('waiting', Enrollment::findBy(['id' => $third->id])?->status);
         $this->assertSame(1, $this->event->enrollmentsCount());
         $this->assertSame(1, $this->event->waitingCount());
     }
@@ -176,7 +176,7 @@ class EnrollmentTest extends TestCase
         $waiting = $this->enrollNew('segundo@example.com');
 
         $this->assertFalse($this->event->promoteFirstWaiting());
-        $this->assertEquals('waiting', Enrollment::findById((int) $waiting->id)?->status);
+        $this->assertEquals('waiting', Enrollment::findBy(['id' => $waiting->id])?->status);
     }
 
     public function test_invalid_status_should_be_rejected(): void

@@ -64,7 +64,7 @@ class Enrollment extends Model
             return;
         }
 
-        $event = Event::findById((int) $this->event_id);
+        $event = Event::findById($this->event_id);
 
         if ($event === null) {
             $this->addError('event_id', 'evento não encontrado!');
@@ -87,7 +87,7 @@ class Enrollment extends Model
             return 0;
         }
 
-        $event = Event::findById((int) $this->event_id);
+        $event = Event::findById($this->event_id);
         if ($event === null) {
             return 0;
         }
@@ -113,7 +113,7 @@ class Enrollment extends Model
         }
 
         if ($wasConfirmed) {
-            Event::findById((int) $this->event_id)?->promoteFirstWaiting();
+            Event::findById($this->event_id)?->promoteFirstWaiting();
         }
 
         return true;
