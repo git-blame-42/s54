@@ -138,6 +138,10 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
 | O4 | Resposta JSON da listagem | baixa | 20 min |
+| O5 | Admin vê e lista só os próprios Eventos | média-alta | 15-25 min |
+| O6 | Inscritos em página própria, paginada | média-baixa | 25-35 min |
+| O7 | `Route::patch` no core | média-baixa | 15-20 min |
+| O8 | Status HTTP corretos (404, 422) | baixa | 15-20 min |
 | P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
 | P2 | Inscrição do Participante em um Evento | média-alta | 30-40 min |
 | P3 | Cancelar a própria inscrição | média | 15-20 min |
@@ -150,6 +154,12 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P10 | Comentários do Evento (recurso filho 1xN) | média | 35-40 min |
 | P11 | Soft delete (arquivar Evento) | baixa | 30-40 min |
 | P12 | Login por código aleatório (FVP real 4.1) | média-baixa | 30-40 min |
+| P13 | Admin inscreve e remove um Participante | média-alta | 30-40 min |
+| P14 | Comprovante de inscrição com número gerado | média | 25-35 min |
+| P15 | Inscrição via JSON | média-baixa | 20-30 min |
+| P16 | Remover só com código de confirmação | média-alta | 30-40 min |
+| P17 | Remover com inscrições, em cascata e confirmado | média | 20-30 min |
+| P18 | Evento privado com código de convite | baixa | 30-40 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
 | R1 | Flash: texto, título do Evento, `warning` | média | 10-15 min |
@@ -1276,8 +1286,11 @@ Armadilhas:
 - `AdminDashboardCest` (`tests/Acceptance/admin/AdminDashboardCest.php`)
   roda sem dados: a view precisa funcionar com zero Eventos.
 
-Prova: testes; no navegador o populate mostra 4/4/4/4 por tipo e 14
-Inscrições.
+Prova: testes; no navegador o populate mostra Palestra 5, Oficina 4,
+Minicurso 4, Semana acadêmica 3 (`POP:49-130`) e 14 Inscrições. O
+exemplo chama `Event::upcoming(int $limit)` (mesmo nome de N5) em vez de
+`nextEvents()` e cria `Enrollment::total()` com `COUNT(*)`; nomes
+equivalentes.
 
 ### N8. Ordenar clicando no cabeçalho da listagem
 
@@ -1769,6 +1782,211 @@ Armadilhas:
 
 Prova: teste de controller;
 `curl -H 'Accept: application/json' -b <cookie> http://localhost/admin/events`.
+
+### O5. Admin vê e lista só os próprios Eventos
+
+Chance: média-alta. Tempo: 15-25 min.
+
+Pedido típico: "cada Administrador só enxerga e cadastra os Eventos
+dele" (Q1 fecha editar/remover; aqui a listagem e a criação). Usa
+`HasMany::paginate`, que já repassa a condição `user_id`.
+
+Arquivos: `EC:16-27` (`index`), `EC:49-63` (`create`), `US:52-55`
+(`events(): HasMany`), `HASMANY:27-32` (`new()`, já põe o `user_id`) e
+`:44-55` (`paginate` com `conditions`), `ECT:17-57`, `POP:12-19` (um
+admin só; T1 traz o segundo), `ACT/BaseEventsCest.php:84-94` (todos os
+Eventos são do mesmo admin: os Cests continuam valendo).
+
+Passos:
+
+1. Teste em `ECT`: dois admins, dois Eventos de cada; logado como o
+   primeiro, `index` mostra só os dele (e `Mostrando 1 - 2 de 2`).
+2. `EC::index`:
+
+   ```php
+   $admin = $this->currentUser();
+   if ($admin === null) {
+       $this->redirectTo(route('users.login'));
+       return;
+   }
+
+   $paginator = $admin->events()->paginate(
+       page: max(1, (int) $request->getParam('page', 1)),
+       per_page: self::PER_PAGE,
+       route: 'admin.events.paginate'
+   );
+   ```
+
+3. `EC::create`: `$event = $admin->events()->new();` no lugar de
+   `new Event()` + `user_id` manual (`EC:51-53`).
+4. Q1 para `findEvent` (edit/update/destroy/show restritos).
+5. T1: segundo admin no populate para ver a diferença.
+
+Armadilhas:
+
+- `currentUser()` é `?User`: o `phpstan` exige tratar `null` mesmo com o
+  middleware garantindo sessão; o `return` após `redirectTo` evita o 500.
+- `HasMany::paginate` não recebe `queryParams`/`orderBy` (N1/N3): se
+  esses cenários já existirem, repasse também lá (`HASMANY:44-55`).
+- O painel (N6/N7) passa a ser "meus" ou "todos"? Decida e nomeie.
+- `test_index_lists_five_events_per_page` (`ECT:39-57`) cria tudo com
+  `$this->admin`: continua verde.
+
+Prova: `EventsControllerTest`; no navegador, logar como `admin2@` (T1)
+e ver só os Eventos dele.
+
+### O6. Inscritos em página própria, paginada
+
+Chance: média-baixa. Tempo: 25-35 min.
+
+Pedido típico: "a lista de inscritos sai do `show` e vai para uma página
+própria, paginada" (`GET /admin/events/{id}/enrollments`).
+
+Arquivos: `ROUTES:26-35`, `EV:117-120` (relação; falta
+`enrollments(): HasMany`), `HASMANY:44-55` (`paginate` com condição),
+`PAG:99-102` (`getRouteName`), `PAGES:6,16,22` (links só com `page`),
+`core/Router/Router.php:59-72` (`route()` substitui `{id}` **e** `{page}`
+se os dois vierem nos params), N1 forma 2 (`queryParams`), `SHOW:28-36`,
+O3 (`participants()`), `ACC:85-97`.
+
+Passos:
+
+1. Testes: `ECT` (ou `Admin\EnrollmentsControllerTest`): 7 inscritos,
+   `per_page` 5, página 1 com 5 nomes, link para
+   `/admin/events/{id}/enrollments/page/2`.
+2. `ROUTES` (admin): `GET /admin/events/{id}/enrollments` ->
+   `admin.events.enrollments.index` e
+   `GET /admin/events/{id}/enrollments/page/{page}` ->
+   `admin.events.enrollments.paginate`.
+3. `EV`: `enrollments(): HasMany` com
+   `$this->hasMany(Enrollment::class, 'event_id')`.
+4. `Admin\EnrollmentsController::index`: `findEvent` e
+
+   ```php
+   $paginator = $event->enrollments()->paginate(
+       page: $page,
+       per_page: 5,
+       route: 'admin.events.enrollments.paginate'
+   );
+   ```
+
+   view com nome/e-mail via `$enrollment->user()->get()`.
+5. Links de página: o partial só manda `page`; `{id}` ficaria sem valor.
+   Com N1 forma 2, passe `queryParams: ['id' => $event->id]`: o
+   `route()` usa o `id` para preencher `{id}` e não o repete na query.
+   Sem N1, troque `PAGES` por uma cópia que receba o `id`.
+
+Armadilhas:
+
+- `route('x.paginate', ['page' => 2])` com `{id}` na URI deixa `{id}`
+  literal no link (`Router.php:63-65`): é o erro mais comum aqui.
+- Rota `.../enrollments/page/{page}` tem 6 partes, `.../{id}/edit` tem 4:
+  sem conflito (`Route.php:77-100` compara o tamanho).
+- `HasMany::paginate` exige `HasMany` em `Event`; `participants()` (O3)
+  é `BelongsToMany`, que não pagina.
+- Nomes de parâmetro só com `[a-z_]` (`Route.php:90`): `{event_id}` sim,
+  `{eventId}` não (vira texto literal e 404).
+
+Prova: teste de controller e HTTP (`ACC`: admin 200, Participante
+redirecionado); no navegador, Evento 9 do populate (4 inscritos) com
+`per_page` 2.
+
+### O7. `Route::patch` no core
+
+Chance: média-baixa. Tempo: 15-20 min.
+
+Pedido típico: "o framework só tem `get/post/put/delete`; acrescente
+`patch` e use numa alteração parcial (ex.: mudar só o status)".
+
+Arquivos: `core/Router/Route.php:111-141` (os quatro métodos estáticos,
+copiar), `core/Http/Request.php:18` (`_method` aceita qualquer texto),
+`core/Router/Route.php:72-75` (`isSameMethod`),
+`tests/Unit/Core/Router/RouteTest.php:78-104` (teste do `put`, copiar),
+`ROUTES:33-35`, P5 (ação de status), `ACC:104-110`
+(`methodOverrideRoutes`).
+
+Passos:
+
+1. Teste em `RouteTest`: cópia de
+   `test_should_add_route_to_the_router_method_put` com `PATCH`.
+2. `Route.php`, depois de `delete()`:
+
+   ```php
+   /**
+    * @param string $uri
+    * @param mixed[] $action
+    */
+   public static function patch(string $uri, $action): Route
+   {
+       $route = new Route('PATCH', $uri, $action[0], $action[1]);
+
+       return Router::getInstance()->addRoute($route);
+   }
+   ```
+
+3. Uso:
+
+   ```php
+   Route::patch(
+       '/admin/events/{id}/status',
+       [AdminEventsController::class, 'updateStatus']
+   )->name('admin.events.status');
+   ```
+
+   com form `post` + `<input type="hidden" name="_method" value="PATCH">`.
+4. `ACC::methodOverrideRoutes()`: `['PATCH', '/admin/events/1/status']`.
+
+Armadilhas:
+
+- `PATCH` por HTML só existe via `_method` (`Request.php:18`), como
+  PUT/DELETE; o navegador nunca manda PATCH nativo em form.
+- Mudança em `core/`: mínima, com teste no `tests/Unit/Core`, e PHPDoc
+  no padrão dos vizinhos (`Route.php:106-110`).
+- A ação parcial continua validando pelo model (`save()` roda
+  `validates()` inteiro); se quiser pular, `update()` (`MODEL:189`) e
+  diga por quê.
+
+Prova: `RouteTest`; a ação funciona no navegador com o `_method`.
+
+### O8. Status HTTP corretos
+
+Chance: baixa. Tempo: 15-20 min.
+
+Pedido típico: "Evento inexistente deve responder 404 (não 302) e form
+inválido 422" (A8 da 4.1 aplicado ao CRUD).
+
+Arquivos: `EC:137-141` (`eventNotFound`: flash + redirect), `EC:58-62`
+e `:89-93` (render do form inválido), `core/Errors/ErrorsHandler.php:21-47`
+(exceção HTTP -> `header('HTTP/1.1 404 ...')` com stack trace),
+`core/Exceptions/HTTPException.php`, `ECT:163-168` e `:175-183 (ACC)`
+(esperam 302), `CTC:92-108` (o teste de controller não vê status).
+
+Passos:
+
+1. Testes **por HTTP** (`ACC`): `GET /admin/events/999999` com admin ->
+   200? não: 404 e corpo com "Evento não encontrado"; `POST
+   /admin/events` inválido -> 422. O `CTC` roda em CLI: `http_response_code()`
+   não funciona ali, então o `ECT` não consegue testar status.
+2. `eventNotFound()`: `http_response_code(404);` +
+   `render('errors/404', ['title' => 'Evento não encontrado'])` (view
+   nova) em vez de flash + redirect.
+3. `create`/`update` inválidos: `http_response_code(422);` antes do
+   `render`.
+4. Ajuste `ECT:163-168` (não há mais `Location`) e `ACC:175-183`.
+
+Armadilhas:
+
+- `http_response_code()` precisa vir antes de qualquer saída: o
+  `render` imprime; chame antes.
+- Em CLI (`ECT`) `http_response_code()` devolve `false` e não falha:
+  o teste passa sem testar; por isso o HTTP.
+- Lançar `HTTPException` (`Router.php:122` faz isso para rota
+  inexistente) dá 404 com **stack trace** na tela (`ErrorsHandler:32-45`):
+  não use para "Evento não encontrado"; é feio e expõe caminhos (O11).
+- Flash + redirect é o padrão da base e do professor nas demos; 404/422
+  é melhoria opcional, diga o custo (testes a mudar).
+
+Prova: `curl -i` com cookie de admin em `/admin/events/999999`.
 
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
@@ -2744,6 +2962,409 @@ Armadilhas:
 
 Prova: testes; no navegador, logar, ler o código no alerta, errar uma
 vez e acertar.
+
+### P13. Admin inscreve e remove um Participante
+
+Chance: média-alta. Tempo: 30-40 min.
+
+Pedido típico: "no detalhe do Evento, o administrador escolhe um usuário
+e o inscreve; pode também remover uma inscrição". Aqui o `user_id` vem
+do form e por isso precisa ser **validado no model** (existe, é
+Participante, há vaga, não duplica).
+
+Arquivos: `ROUTES:26-35` (grupo admin), `EN:15-29` (`validates()` de
+P2, ou criar), `US:71-74` (`isAdmin`), `SHOW:28-36`, O3
+(`participants()` para listar), `EV:137-140` (`availableSpots`),
+`MODEL:335` (`findBy` com duas condições), `core/Router/Route.php:90`
+(nomes de parâmetro só `[a-z_]`), `ACC:85-110`, `ECT:17-31`.
+
+Passos:
+
+1. Testes: `Admin\EnrollmentsControllerTest`: `create` com `user_id`
+   de Participante grava; com admin, inexistente, duplicado ou lotado
+   não grava e flash `danger` com a mensagem do model; `destroy` remove
+   só a inscrição daquele Evento; `destroy` com `id` de outro Evento não
+   remove. `ACC`: as duas rotas em `eventRoutes()`/`methodOverrideRoutes()`.
+2. `ROUTES` (admin):
+
+   ```php
+   Route::post(
+       '/admin/events/{id}/enrollments',
+       [AdminEnrollmentsController::class, 'create']
+   )->name('admin.events.enrollments.create');
+   Route::delete(
+       '/admin/events/{event_id}/enrollments/{id}',
+       [AdminEnrollmentsController::class, 'destroy']
+   )->name('admin.events.enrollments.destroy');
+   ```
+
+3. `EN::validates()` (P2 + validação do usuário):
+
+   ```php
+   private function validatesUserIsParticipant(): void
+   {
+       $user = User::findById((int) $this->user_id);
+
+       if ($user === null || $user->isAdmin()) {
+           $this->addError('user_id', 'deve ser um participante existente!');
+       }
+   }
+   ```
+
+4. `Admin\EnrollmentsController::create`: `findEvent`;
+   `$userId = $request->getParam('user_id')` com `is_string` +
+   `ctype_digit`;
+   `new Enrollment(['event_id' => $event->id, 'user_id' => (int) $userId])`;
+   `save()` -> flash; redirect para `admin.events.show`. `destroy`:
+   `Enrollment::findBy(['id' => (int) $id, 'event_id' => (int) $eventId])`
+   (os dois da rota, ambos `ctype_digit`); `null` -> `danger`.
+5. `SHOW`: `<select name="user_id">` com
+   `User::where(['role' => 'participant'])` (ou `User::participants()`),
+   botão "Inscrever"; na lista de inscritos (O3), form `DELETE` por linha.
+
+Armadilhas:
+
+- `user_id` do form é a exceção à regra "nunca do form": por isso toda a
+  validação fica no model e o teste cobre admin/inexistente.
+- Nome de parâmetro `{eventId}` não é reconhecido (`Route.php:90`
+  aceita só `[a-z,_]`): vira texto literal e a rota nunca casa, sem
+  erro. Use `{event_id}`.
+- `findBy` com `id` **e** `event_id`: sem o `event_id`, um admin remove
+  inscrição de outro Evento trocando o `id` na URL.
+- `select` com centenas de usuários: aceitável aqui; cite a busca (N2)
+  como evolução.
+- Com P2 na pilha, a mesma `validates()` serve aos dois fluxos
+  (autoinscrição e admin): não duplique regra no controller.
+
+Prova: testes; no navegador, inscrever `fernanda@` no Evento 2 e
+remover.
+
+### P14. Comprovante de inscrição com número gerado
+
+Chance: média. Tempo: 25-35 min.
+
+Pedido típico: "cada inscrição recebe um número de comprovante de 4
+dígitos (1000-9999), único dentro do Evento, mostrado ao Participante e
+ao admin". É P1 no nível da Inscrição.
+
+Arquivos: `SCH:43-53` (`event_user`), `EN:17-18` (`$columns`), P1
+(`save()` sobrescrito e laço de unicidade, `EV`), `MODEL:347`
+(`exists`), P2 (tela do Participante), P7 ("Meus eventos"), O3 (lista
+de inscritos), `tests/Unit/Models/Events/EnrollmentTest.php`.
+
+Passos:
+
+1. Testes em `EnrollmentTest`: após `save()`, `ticket_code` entre 1000 e
+   9999; dois inscritos no mesmo Evento têm códigos diferentes; o mesmo
+   código pode repetir em Eventos diferentes; `save()` de novo não troca.
+2. `SCH`: `ticket_code SMALLINT UNSIGNED NOT NULL` e
+   `UNIQUE KEY uq_event_user_ticket (event_id, ticket_code)`.
+3. `EN`: `'ticket_code'` em `$columns`; `save()` sobrescrito gera quando
+   `newRecord()` e vazio:
+
+
+   ```php
+   do {
+       $code = random_int(1000, 9999);
+       $taken = ['event_id' => $this->event_id, 'ticket_code' => $code];
+   } while (self::exists($taken));
+   ```
+
+   `validates()`: faixa (P1) com a guarda para registro novo.
+4. Views: P2/P7 mostram "Comprovante nº 1234"; O3 mostra na lista.
+5. Populate: nada (o `save()` gera).
+
+Armadilhas:
+
+- Unicidade é **por Evento** (`event_id` + código), 9000 valores por
+  Evento: o laço raramente repete; com `UNIQUE` composto o banco fecha a
+  corrida.
+- `exists()` com duas condições usa `findBy` (`MODEL:335`): ok.
+- Mostrar o código só a quem é dono da inscrição ou admin.
+- `BaseEventsCest`/`EnrollmentTest` criam Inscrições com `new
+  Enrollment([...])->save()`: ganham código sozinhas.
+
+Prova: testes; no navegador, inscrever-se (P2) e ver o número.
+
+### P15. Inscrição via JSON
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "o `POST /events/{id}/enrollments` deve responder JSON
+quando o cliente pedir `Accept: application/json`" (prévia do Ajax da
+4.4, sobre P2).
+
+Arquivos: P2 (`EnrollmentsController::create`), `CTRL:44-55`
+(`renderJson`, view `.json.php`), `core/Http/Request.php:52-55`
+(`acceptJson`), O4 (mesmo mecanismo na listagem), `ECT` de P2,
+`core/Http/Request.php:41-44` (`getHeaders`).
+
+Passos:
+
+1. Teste: `$_SERVER['HTTP_ACCEPT'] = 'application/json'`; `post('create', ...)`
+   devolve JSON com `ok`, `message` e `available_spots`; sem o header,
+   continua `Location:`.
+2. `create`, depois do `save()`:
+
+   ```php
+   if ($request->acceptJson()) {
+       $ok = $saved;
+       $message = $saved
+           ? 'Inscrição realizada!'
+           : ($enrollment->errors('base') ?? 'Inválido');
+       $this->renderJson(
+           'enrollments/create',
+           compact('ok', 'message', 'event')
+       );
+       return;
+   }
+   ```
+
+3. `app/views/enrollments/create.json.php`:
+
+   ```php
+   $json = [
+       'ok' => $ok,
+       'message' => $message,
+       'available_spots' => $event->availableSpots(),
+   ];
+   ```
+4. Sem flash no caminho JSON (ninguém lê a sessão).
+
+Armadilhas:
+
+- `acceptJson()` exige igualdade exata do header (`Request.php:54`);
+  `fetch()` do navegador manda `application/json` se você setar.
+- Status 201/422 só com `http_response_code()` e só fora do CLI (O8);
+  no teste, cheque o corpo.
+- `renderJson` tem `chartset` no header (`CTRL:51`); não é seu.
+- Não misture: ou redireciona, ou responde JSON. `return` após o
+  `renderJson`.
+
+Prova: teste e `curl -X POST -H 'Accept: application/json' -b <cookie>`
+em `localhost/events/2/enrollments`.
+
+### P16. Remover só com código de confirmação gerado no backend
+
+Chance: média-alta. Tempo: 30-40 min.
+
+Pedido típico: "para remover um Evento o sistema mostra um código de 4
+dígitos gerado na hora; o admin digita o código e só então a remoção
+acontece". É a FVP real da 4.1 (P12) aplicada à remoção.
+
+Arquivos: `ROUTES:26-35` (rota `GET /admin/events/{id}/delete`: 4 partes,
+não conflita com `{id}`), `EC:96-111` (`destroy`), `IDX:30-33` (form
+de remoção vira link), `EC:137-141`, `lib/` (classe nova para gerar e
+conferir, testável sem controller), `ECT:242-270` (destroy),
+`ACT/DeleteEventCest.php:50-54`, `ACC:85-97`, R4 (confirm em JS, a
+alternativa fraca).
+
+Passos:
+
+1. Testes: `tests/Unit/Lib/ConfirmationCodeTest.php` (gera 1000-9999,
+   confere, apaga depois de usar, rejeita `'12a'`); `ECT`: `delete`
+   renderiza a tela com o código na sessão; `destroy` sem código ou com
+   código errado não remove e volta para a tela; com o código remove.
+2. `lib/ConfirmationCode.php`:
+
+   ```php
+   final class ConfirmationCode
+   {
+       public static function issue(string $key): int
+       {
+           $code = random_int(1000, 9999);
+           $_SESSION['confirmation'][$key] = $code;
+
+           return $code;
+       }
+
+       public static function check(string $key, mixed $given): bool
+       {
+           $expected = $_SESSION['confirmation'][$key] ?? null;
+           $ok = is_int($expected)
+               && is_string($given)
+               && ctype_digit($given)
+               && (int) $given === $expected;
+           unset($_SESSION['confirmation'][$key]);
+
+           return $ok;
+       }
+   }
+   ```
+
+3. `ROUTES` (admin):
+
+   ```php
+   Route::get(
+       '/admin/events/{id}/delete',
+       [AdminEventsController::class, 'delete']
+   )->name('admin.events.delete');
+   ```
+
+4. `EC::delete`: `findEvent`;
+   `$code = ConfirmationCode::issue("event-{$event->id}")`;
+   `render('admin/events/delete', compact('event', 'code', 'title'))`
+   com a tela mostrando o código e um form `DELETE` com
+   `<input name="confirmation_code">`.
+5. `EC::destroy`, antes de `safeDestroy()`:
+
+   ```php
+   $given = $request->getParam('confirmation_code');
+   if (!ConfirmationCode::check("event-{$event->id}", $given)) {
+       FlashMessage::danger('Código de confirmação inválido!');
+       $this->redirectTo(route('admin.events.delete', ['id' => $event->id]));
+       return;
+   }
+   ```
+
+6. `IDX:30-33`: o form vira um link para `admin.events.delete`.
+7. `DeleteEventCest`: clicar Remover,
+   `grabTextFrom('#confirmation_code_value')`, `fillField`, confirmar.
+   `ACC`: a rota `GET` em `eventRoutes()`.
+
+Armadilhas:
+
+- Código na sessão **por Evento** (`event-{id}`): sem a chave, confirmar
+  o Evento 2 removeria o 3.
+- Apague o código depois de conferir (uso único) e ao errar (gera outro
+  na próxima tela): evita força bruta trivial.
+- `destroy` antigo (form direto da listagem) deixa de funcionar: os
+  testes de `ECT:242-270` precisam passar pela sessão
+  (`$_SESSION['confirmation'][...] = 1234` no teste, ou chamar `issue`).
+- Mostrar o código na própria tela é o que o professor pediu na 4.1
+  ("o backend devolve"); não é segurança contra o usuário, é prova de
+  que ele leu. Diga isso.
+- `lib/` está fora do `phpstan`: tipe tudo; teste unitário cobre.
+- Com P12 na base, reaproveite a mesma classe para o login.
+
+Prova: testes; no navegador, Remover -> tela com código -> errar ->
+acertar -> listagem sem o Evento.
+
+### P17. Remover Evento com inscrições, em cascata e com confirmação
+
+Chance: média. Tempo: 20-30 min.
+
+Pedido típico: "hoje Evento com inscritos não pode ser removido; permita,
+apagando as inscrições, mas só depois de confirmar". Fica melhor em cima
+de P16 (a confirmação); sem P16, use um parâmetro `force` vindo de um
+segundo botão.
+
+Arquivos: `EV:151-173` (`safeDestroy` bloqueia), `SCH:49-50` (FK
+`ON DELETE RESTRICT`), `MODEL:215-231` (`destroy`),
+`core/Database/Database.php:10` (`getDatabaseConn`, uma conexão só: a
+transação envolve tudo), `EC:96-111`,
+`EVT:643-680` e `ECT:253-270` (hoje provam o bloqueio),
+`ACT/DeleteEventCest.php:30-48`.
+
+Passos:
+
+1. Testes: `EVT`: `forceDestroy()` apaga Evento e Inscrições; falha no
+   meio desfaz tudo. `ECT`: `destroy` sem confirmação em Evento com
+   inscritos continua bloqueando; com `force`/código, remove e o flash
+   diz quantas inscrições saíram.
+2. `EV`:
+
+   ```php
+   public function forceDestroy(): bool
+   {
+       $pdo = Database::getDatabaseConn();
+       $pdo->beginTransaction();
+
+       try {
+           $enrollments = Enrollment::where(['event_id' => $this->id]);
+           foreach ($enrollments as $enrollment) {
+               $enrollment->destroy();
+           }
+           $ok = $this->destroy();
+           $pdo->commit();
+
+           return $ok;
+       } catch (\Throwable $e) {
+           $pdo->rollBack();
+           $this->addError(
+               'base',
+               'não foi possível remover o evento e suas inscrições!'
+           );
+
+           return false;
+       }
+   }
+   ```
+
+3. `EC::destroy`: `$force = $request->getParam('force') === '1';`
+   (ou a confirmação de P16) -> `forceDestroy()`; senão `safeDestroy()`.
+4. Tela de P16 (ou a listagem) avisa "Este Evento tem N inscrições; elas
+   serão removidas".
+5. Alternativa de schema: `ON DELETE CASCADE` em `SCH:49-50` e
+   `destroy()` direto; então `EVT:675-680` (FK bloqueia) inverte.
+
+Armadilhas:
+
+- Transação: `Model::destroy()` usa a mesma conexão singleton
+  (`Database.php:10`), então `beginTransaction` envolve os `DELETE`.
+  `migrate()` nos testes recria o schema com `foreign_key_checks` ok.
+- Não troque o padrão (`safeDestroy`) sem confirmação explícita: a
+  rubrica e as issues cobram regra clara para excluir pai com filhos.
+- Os testes atuais de bloqueio (`EVT:643-680`, `ECT:253-270`,
+  `DeleteEventCest:30-48`) continuam válidos para o caminho **sem**
+  `force`; acrescente os do caminho com.
+- Flash: um por tipo (`FLASH:27`): junte a contagem na mesma mensagem.
+
+Prova: testes; no navegador, Evento 1 (3 inscritos) com confirmação.
+
+### P18. Evento privado com código de convite
+
+Chance: baixa. Tempo: 30-40 min.
+
+Pedido típico: "um Evento pode ser privado: só se inscreve quem informar
+o código de convite, gerado pelo sistema e visível ao admin". Combina P1
+(código gerado) e P2 (inscrição).
+
+Arquivos: `SCH:21-38`, `EV:48-58`, P1 (`save()` gera código), P2
+(`EN::validates()` e `EnrollmentsController::create`), `FORM`
+(checkbox "privado"), `SHOW` (admin vê o código), tela do Participante
+(O2/P2) com o campo.
+
+Passos:
+
+1. Testes: Evento privado gera `invite_code` 1000-9999 e público fica
+   `null`; inscrição em privado sem código ou com código errado falha
+   com `errors('base')`; com o código certo grava; público ignora o campo.
+2. `SCH`: `is_private TINYINT(1) NOT NULL DEFAULT 0` e
+   `invite_code SMALLINT UNSIGNED NULL`.
+3. `EV`: `'private'`, `'invite_code'` em `$columns` (padrão `0` no
+   construtor, `US:28-35`); `save()` gera `invite_code` quando
+   `private` e vazio (P1); `isPrivate()`, `matchesInviteCode(?string)`
+   com `ctype_digit` + `(int)`.
+4. `EN`: propriedade **não persistida** `private ?string $inviteCode`
+   com `withInviteCode(?string $code): static`; em `validates()`:
+
+
+   ```php
+   if ($event->isPrivate() && !$event->matchesInviteCode($this->inviteCode)) {
+       $this->addError('base', 'código de convite inválido!');
+   }
+   ```
+5. `EnrollmentsController::create` (P2): lê `invite_code` com
+   `is_string` e passa por `withInviteCode()`.
+6. `FORM`: checkbox `event[private]` (em `FIELDS`); `SHOW` do admin
+   mostra o código; tela do Participante mostra o campo quando privado.
+
+Armadilhas:
+
+- Checkbox desmarcado **não é enviado**: `fill()` recebe `null`;
+  normalize para `'0'` no model (`$this->private = $value ? 1 : 0`).
+- `private` é palavra reservada só como modificador; como nome de
+  coluna/propriedade funciona (`$event->private`), mas evite confusão:
+  `is_private` é mais claro (coluna em inglês, ok).
+- O código do convite não vai em `FIELDS`: gerado no model.
+- Propriedade extra no model (`$inviteCode`) precisa existir como
+  propriedade declarada: `Model::__set` (`MODEL:74-87`) lança exceção para
+  nome fora de `$columns`/propriedades.
+- Listagem pública (O2) deve ocultar o código.
+
+Prova: testes; no navegador, criar privado, ver o código no `show` do
+admin e inscrever-se como Participante com e sem o código.
 
 ### Q1. Só o dono edita e remove
 
