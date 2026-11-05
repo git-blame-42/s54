@@ -1,0 +1,288 @@
+From d80b3c8c44053e9f1cff171c61cef0f8b7ad39cf Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:10:07 -0300
+Subject: [PATCH] feat: Return to the same listing page after removing an event
+
+The remove form sends the current page and destroy redirects back to it (or to the last page that still exists). The form's Cancel button goes to the event's show page when editing.
+---
+ app/Controllers/Admin/EventsController.php    |  19 ++-
+ app/views/admin/events/_form.phtml            |   3 +-
+ app/views/admin/events/edit.phtml             |   1 +
+ app/views/admin/events/index.phtml            |   1 +
+ app/views/admin/events/new.phtml              |   1 +
+ .../admin/events/DeleteEventCest.php          |  20 +++
+ .../admin/events/UpdateSuccessfullyCest.php   |  14 ++
+ .../Admin/EventsControllerTest.php            | 122 ++++++++++++++++++
+ 8 files changed, 179 insertions(+), 2 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..8eddf19 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -107,7 +107,24 @@ class EventsController extends Controller
+             FlashMessage::danger($event->errors('base') ?? 'Não foi possível remover o evento!');
+         }
+ 
+-        $this->redirectTo(route('admin.events.index'));
++        $this->redirectTo($this->indexUrl($request->getParam('page')));
++    }
++
++    /**
++     * URL da listagem na página de onde o usuário veio (campo oculto `page` do form de remoção).
++     * Página ausente, inválida ou 1 volta para /admin/events. Se a página deixou de existir (removeu o
++     * último Evento dela), volta para a última página que ainda existe.
++     */
++    private function indexUrl(mixed $page): string
++    {
++        if (!is_string($page) || !ctype_digit($page) || (int) $page <= 1) {
++            return route('admin.events.index');
++        }
++
++        $lastPage = Event::paginate(page: 1, per_page: self::PER_PAGE)->totalOfPages();
++        $page = min((int) $page, $lastPage);
++
++        return $page > 1 ? route('admin.events.paginate', ['page' => $page]) : route('admin.events.index');
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..c7e60a9 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -5,6 +5,7 @@
+  * @var \App\Models\Event $event
+  * @var string $action URL de envio
+  * @var bool $isUpdate quando true, envia _method=PUT
++ * @var string $cancelUrl destino do botão Cancelar (show na edição, listagem no cadastro)
+  */
+ use App\Models\Event;
+ 
+@@ -89,5 +90,5 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </div>
+ 
+     <button type="submit" class="btn btn-primary">Salvar</button>
+-    <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Cancelar</a>
++    <a class="btn btn-secondary" href="<?= $cancelUrl ?>">Cancelar</a>
+ </form>
+diff --git a/app/views/admin/events/edit.phtml b/app/views/admin/events/edit.phtml
+index 5a7f91f..e1a239d 100644
+--- a/app/views/admin/events/edit.phtml
++++ b/app/views/admin/events/edit.phtml
+@@ -1,4 +1,5 @@
+ <?php
+ $action = route('admin.events.update', ['id' => $event->id]);
+ $isUpdate = true;
++$cancelUrl = route('admin.events.show', ['id' => $event->id]);
+ require __DIR__ . '/_form.phtml';
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..c502c92 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -29,6 +29,7 @@
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                         <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+                             <input type="hidden" name="_method" value="DELETE">
++                            <input type="hidden" name="page" value="<?= $paginator->getPage() ?>">
+                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                         </form>
+                     </td>
+diff --git a/app/views/admin/events/new.phtml b/app/views/admin/events/new.phtml
+index e7ea1d1..ac2ed0c 100644
+--- a/app/views/admin/events/new.phtml
++++ b/app/views/admin/events/new.phtml
+@@ -1,4 +1,5 @@
+ <?php
+ $action = route('admin.events.create');
+ $isUpdate = false;
++$cancelUrl = route('admin.events.index');
+ require __DIR__ . '/_form.phtml';
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..2047f96 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -47,6 +47,26 @@ class DeleteEventCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function deleteEventKeepsTheCurrentPage(AcceptanceTester $page): void
++    {
++        $event = $this->events[7];
++        Assert::assertFalse($event->hasEnrollments());
++
++        $page->wantTo('Remoção do registro na página 2 volta para a página 2');
++        $page->amOnPage('/admin/events/page/2');
++        $page->see('Evento 07', $this->rowOf('Evento 07'));
++
++        $this->clickRemove($page, 'Evento 07');
++
++        $page->seeCurrentUrlEquals('/admin/events/page/2');
++        $page->see('Evento removido com sucesso!');
++        $page->dontSee('Evento 07', 'table');
++        $page->see('Evento 06', 'table');
++        $page->see('Evento 11', 'table');
++        $page->see(sprintf('Mostrando 6 - 10 de %d', self::TOTAL_EVENTS - 1));
++        Assert::assertNull(Event::findById((int) $event->id));
++    }
++
+     private function clickRemove(AcceptanceTester $page, string $title): void
+     {
+         // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..ba48d06 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -90,4 +90,18 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         Assert::assertEquals(10, $stored->capacity);
+         Assert::assertSame(3, $stored->enrollmentsCount());
+     }
++
++    public function cancelEditGoesBackToShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Cancelar a edição volta para o detalhe do Evento');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->fillField('#event_title', 'Não deve salvar');
++        $page->click('Cancelar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento 02', 'h1');
++        Assert::assertSame('Evento 02', Event::findById((int) $event->id)?->title);
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..2c2839a 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,128 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- voltar à mesma página ------------------- */
++
++    /**
++     * @return array<int, Event>
++     */
++    private function createEvents(int $total): array
++    {
++        $events = [];
++        for ($i = 1; $i <= $total; $i++) {
++            $events[$i] = $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        return $events;
++    }
++
++    public function test_index_remove_form_sends_the_current_page(): void
++    {
++        $this->createEvents(7);
++
++        $page1 = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $page2 = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++
++        $this->assertStringContainsString('<input type="hidden" name="page" value="1">', $page1);
++        $this->assertStringContainsString('<input type="hidden" name="page" value="2">', $page2);
++    }
++
++    public function test_destroy_returns_to_the_page_it_came_from(): void
++    {
++        $events = $this->createEvents(12);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $events[7]->id, 'page' => '2']
++        );
++
++        $this->assertNull(Event::findById($events[7]->id));
++        $this->assertSame('Location: /admin/events/page/2', $response);
++        $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
++    }
++
++    public function test_destroy_with_missing_invalid_or_first_page_returns_to_index(): void
++    {
++        $events = $this->createEvents(12);
++
++        foreach (['1', '0', 'abc', '-2', '2.5', ['2']] as $index => $page) {
++            $response = $this->delete(
++                action: 'destroy',
++                controllerName: self::CONTROLLER,
++                params: ['id' => $events[$index + 1]->id, 'page' => $page]
++            );
++
++            $this->assertSame('Location: /admin/events', $response, var_export($page, true));
++        }
++    }
++
++    public function test_destroy_of_the_last_event_of_a_page_returns_to_the_previous_page(): void
++    {
++        $events = $this->createEvents(11);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $events[11]->id, 'page' => '3']
++        );
++
++        $this->assertSame('Location: /admin/events/page/2', $response);
++    }
++
++    public function test_destroy_far_beyond_the_last_page_returns_to_the_last_one(): void
++    {
++        $events = $this->createEvents(12);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $events[1]->id, 'page' => '99']
++        );
++
++        $this->assertSame('Location: /admin/events/page/3', $response);
++    }
++
++    public function test_blocked_destroy_also_returns_to_the_same_page(): void
++    {
++        $events = $this->createEvents(12);
++        $this->enroll($events[8]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $events[8]->id, 'page' => '2']
++        );
++
++        $this->assertNotNull(Event::findById($events[8]->id));
++        $this->assertSame('Location: /admin/events/page/2', $response);
++        $this->assertEquals('não é possível remover um evento com inscrições (1)!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_cancel_goes_to_show_on_edit_and_to_index_on_new(): void
++    {
++        $event = $this->createEvent();
++
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $new = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}\">Cancelar</a>", $edit);
++        $this->assertStringContainsString('href="/admin/events">Cancelar</a>', $new);
++    }
++
++    public function test_invalid_update_keeps_cancel_pointing_to_show(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => ''])]
++        );
++
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}\">Cancelar</a>", $response);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+

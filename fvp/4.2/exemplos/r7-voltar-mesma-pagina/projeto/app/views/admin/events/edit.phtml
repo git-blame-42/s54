@@ -1,0 +1,5 @@
+<?php
+$action = route('admin.events.update', ['id' => $event->id]);
+$isUpdate = true;
+$cancelUrl = route('admin.events.show', ['id' => $event->id]);
+require __DIR__ . '/_form.phtml';
