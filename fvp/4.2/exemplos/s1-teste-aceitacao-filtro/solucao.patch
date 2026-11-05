@@ -1,4 +1,4 @@
-From 0fe3c48c0320c9fde1bf6fc2f14fe7f0a5b0a752 Mon Sep 17 00:00:00 2001
+From 8c3a3165219f8aac14361fe079701673f3443d7a Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:07:49 -0300
 Subject: [PATCH 1/2] feat: Filter events by kind keeping the filter in
@@ -10,12 +10,12 @@ conditions and extra query params to the Paginator, and page links keep
 ---
  app/Controllers/Admin/EventsController.php    | 19 ++++-
  app/views/admin/events/index.phtml            | 19 ++++-
- app/views/paginator/_pages.phtml              |  6 +-
+ app/views/paginator/_pages.phtml              | 10 ++-
  core/Database/ActiveRecord/Model.php          | 17 ++++-
  lib/Paginator.php                             | 17 ++++-
  .../Admin/EventsControllerTest.php            | 70 +++++++++++++++++++
  tests/Unit/Models/Events/EventTest.php        | 25 +++++++
- 7 files changed, 163 insertions(+), 10 deletions(-)
+ 7 files changed, 167 insertions(+), 10 deletions(-)
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
 index ca4ada1..f9e119a 100644
@@ -93,31 +93,37 @@ index 6835d74..339f019 100644
      <table class="table table-striped align-middle">
          <thead>
 diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
-index 2ace0d2..82ec7f1 100644
+index 2ace0d2..66d132e 100644
 --- a/app/views/paginator/_pages.phtml
 +++ b/app/views/paginator/_pages.phtml
-@@ -3,7 +3,7 @@
+@@ -1,9 +1,13 @@
++<?php
++// URL de cada link: a página mais os parâmetros extras guardados no Paginator (ex.: filtros).
++$pageUrl = fn (int $p) => route($paginator->getRouteName(), array_merge(['page' => $p], $paginator->queryParams()));
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
  
          <?php if ($paginator->hasPreviousPage()) : ?>
              <li class="page-item">
 -                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
-+                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->previousPage()], $paginator->queryParams())) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
              </li>
          <?php else : ?>
              <li class="page-item disabled">
-@@ -13,13 +13,13 @@
+@@ -13,13 +17,13 @@
  
          <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
              <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
 -                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
-+                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $page], $paginator->queryParams())) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
              </li>
          <?php endfor; ?>
  
          <?php if ($paginator->hasNextPage()) : ?>
              <li class="page-item">
 -                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
-+                <a class="page-link" href="<?= route($paginator->getRouteName(), array_merge(['page' => $paginator->nextPage()], $paginator->queryParams())) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
              </li>
          <?php else : ?>
              <li class="page-item disabled">
@@ -325,7 +331,7 @@ index f961b4c..7222744 100644
 2.54.0 (Apple Git-157)
 
 
-From 1ec7865e84fb9a5635f0df550058634f17878a6a Mon Sep 17 00:00:00 2001
+From 1f86e10ccff1fab56853bdb7cb4c2cfc1475b53b Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:10:51 -0300
 Subject: [PATCH 2/2] test: Add acceptance test for the events kind filter

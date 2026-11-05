@@ -13,10 +13,10 @@ Branch no clone: `fvp/s1-teste-aceitacao-filtro`, empilhada sobre
 
 | Commit    | Mensagem                                                       |
 |-----------|----------------------------------------------------------------|
-| `0fe3c48` | `feat: Filter events by kind keeping the filter in pagination` |
-| `1ec7865` | `test: Add acceptance test for the events kind filter`         |
+| `8c3a316` | `feat: Filter events by kind keeping the filter in pagination` |
+| `1f86e10` | `test: Add acceptance test for the events kind filter`         |
 
-O primeiro commit é a base (N1); o deste cenário é só o `1ec7865`.
+O primeiro commit é a base (N1); o deste cenário é só o `1f86e10`.
 
 ## O que mudou
 
@@ -115,8 +115,8 @@ Pré-requisito: o repositório alvo descende de `f31006b` do público
 `s50/fvp/4.2/exemplos/s1-teste-aceitacao-filtro`.
 
 Este cenário é empilhado: se o alvo ainda não tem o N1, aplique o
-range inteiro (base + topo, `0fe3c48` e `1ec7865`); se já tem o N1,
-aplique só o topo (`1ec7865`).
+range inteiro (base + topo, `8c3a316` e `1f86e10`); se já tem o N1,
+aplique só o topo (`1f86e10`).
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -125,10 +125,10 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-s1 \
     s50/fvp/4.2/exemplos/s1-teste-aceitacao-filtro/projeto
 git fetch fvp-s1 fvp/s1-teste-aceitacao-filtro
-# sem o N1: range f31006b..1ec7865 (0fe3c48 e 1ec7865)
-git cherry-pick f31006b..1ec7865
+# sem o N1: range f31006b..1f86e10 (8c3a316 e 1f86e10)
+git cherry-pick f31006b..1f86e10
 # com o N1 já aplicado: só o topo
-# git cherry-pick 1ec7865
+# git cherry-pick 1f86e10
 git remote remove fvp-s1
 ```
 
@@ -139,8 +139,8 @@ git fetch \
     s50/fvp/4.2/exemplos/s1-teste-aceitacao-filtro/solucao.bundle \
     fvp/s1-teste-aceitacao-filtro:fvp-s1
 # o bundle traz os objetos; o cherry-pick cria commits novos
-git cherry-pick f31006b..1ec7865
-# ou, com o N1 já aplicado: git cherry-pick 1ec7865
+git cherry-pick f31006b..1f86e10
+# ou, com o N1 já aplicado: git cherry-pick 1f86e10
 # opcional, limpa a ref
 git branch -D fvp-s1
 ```
