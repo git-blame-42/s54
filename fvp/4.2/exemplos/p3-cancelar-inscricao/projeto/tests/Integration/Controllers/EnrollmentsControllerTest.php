@@ -143,6 +143,20 @@ class EnrollmentsControllerTest extends ControllerTestCase
         $this->assertCount(1, Enrollment::all());
     }
 
+    public function test_destroy_with_non_numeric_id_removes_nothing(): void
+    {
+        $event = $this->createEvent();
+        (new Enrollment(['event_id' => $event->id, 'user_id' => $this->participant->id]))->save();
+
+        foreach (['abc', "{$event->id}x", '-1', ''] as $id) {
+            $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $id]);
+
+            $this->assertSame('Location: /events', $response, "id '{$id}'");
+        }
+        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
+        $this->assertCount(1, Enrollment::all());
+    }
+
     private function createUser(string $name, string $email, string $role): User
     {
         $user = new User([

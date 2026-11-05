@@ -18,7 +18,7 @@ Commits (os dois primeiros são a base):
 - `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
 - `458a05b` `feat: Allow participants to enroll in events` (base, P2)
-- `9e02f31` `feat: Allow participants to cancel their enrollment`
+- `3046831` `feat: Allow participants to cancel their enrollment`
 
 ## O que mudou
 
@@ -26,7 +26,10 @@ Commits (os dois primeiros são a base):
   `DELETE /events/{id}/enrollments` → `EnrollmentsController::destroy`,
   nome `events.enrollments.destroy` (mesma URI do `create`, outro
   verbo).
-- `app/Controllers/EnrollmentsController.php`: `destroy` busca
+- `app/Controllers/EnrollmentsController.php`: `destroy` valida o
+  `{id}` da rota com `filter_var(..., FILTER_VALIDATE_INT, min_range
+  1)` (sem `(int)`: "abc", "2x", "-1" e vazio dão "Evento não
+  encontrado!" e voltam para `/events`, sem remover nada) e busca
   `Enrollment::findBy(['event_id' => <id da rota>, 'user_id' =>
   <logado>])`. `null` → flash `danger` "Você não está inscrito neste
   evento!"; senão `destroy()` e `success` "Inscrição cancelada!".
@@ -36,9 +39,10 @@ Commits (os dois primeiros são a base):
   `<input type="hidden" name="_method" value="DELETE">` e o botão
   "Cancelar inscrição". Quando não inscrito, continua "Inscrever-se".
 - Testes:
-  - `EnrollmentsControllerTest` (+3): cancela a própria inscrição e
+  - `EnrollmentsControllerTest` (+4): cancela a própria inscrição e
     libera a vaga; `user_id` do form é ignorado (a do outro
-    Participante fica); sem inscrição → `danger`, nada removido.
+    Participante fica); sem inscrição → `danger`, nada removido; id
+    não numérico não remove nada.
   - `EventsControllerTest`: o form de cancelar (com `_method=DELETE`)
     só aparece para o inscrito.
   - `ParticipantEventsAccessTest` (+2): `DELETE` e `POST` com
@@ -72,7 +76,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 164 testes, Integration 73, Acceptance 31
+Resultado obtido: Unit 164 testes, Integration 74, Acceptance 31
 (eram 159 / 45 / 23 na base `f31006b`; 164 / 68 / 29 no P2). PHPCS e
 PHPStan sem erros. Schema não mudou; nenhuma classe nova.
 
@@ -121,9 +125,9 @@ git remote add fvp-p3 \
     s50/fvp/4.2/exemplos/p3-cancelar-inscricao/projeto
 git fetch fvp-p3 fvp/p3-cancelar-inscricao
 # O2 + P2 + P3 (range)
-git cherry-pick 0669a19^..9e02f31
+git cherry-pick 0669a19^..3046831
 # ou só o topo (P3), se já tem O2 e P2
-git cherry-pick 9e02f31
+git cherry-pick 3046831
 git remote remove fvp-p3
 ```
 
@@ -136,7 +140,7 @@ git fetch \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p3
 # ou só o topo
-git cherry-pick 9e02f31
+git cherry-pick 3046831
 # opcional, limpa a ref
 git branch -D fvp-p3
 ```
@@ -189,7 +193,9 @@ Depois de aplicar: testes e `./run phpcs` de novo.
   `danger` cobre isso.
 - Com a mesma URI para `create` e `destroy`, o teste de acesso precisa
   cobrir `DELETE` direto e `POST` com `_method`.
-- Evento inexistente no `destroy`: cai em "Você não está inscrito
-  neste evento!" e o `show` depois manda para `/events` com "Evento
-  não encontrado!". Aceitável; um `findById` antes deixaria a mensagem
-  mais precisa.
+- Evento inexistente com id numérico no `destroy`: cai em "Você não
+  está inscrito neste evento!" e o `show` depois manda para `/events`
+  com "Evento não encontrado!". Aceitável; um `findById` antes
+  deixaria a mensagem mais precisa.
+- `(int) $request->getParam('id')` transforma "2x" em 2 e "abc" em 0
+  sem avisar; por isso o `filter_var` com `min_range`.

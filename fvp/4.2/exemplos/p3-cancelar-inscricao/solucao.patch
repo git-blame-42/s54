@@ -1185,27 +1185,27 @@ index 5780e2e..2d7f66a 100644
 2.54.0 (Apple Git-157)
 
 
-From 9e02f31abb376595ed1958887d03453d97d26d93 Mon Sep 17 00:00:00 2001
+From 30468318746eca3af9a650397a89df81572b4a02 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:11:29 -0300
 Subject: [PATCH 3/3] feat: Allow participants to cancel their enrollment
 
 ---
- app/Controllers/EnrollmentsController.php     | 19 +++++++
+ app/Controllers/EnrollmentsController.php     | 26 ++++++++
  app/views/events/show.phtml                   |  4 ++
  config/routes.php                             |  2 +
- .../ParticipantCancelEnrollmentCest.php       | 53 +++++++++++++++++++
- .../Access/ParticipantEventsAccessTest.php    | 27 ++++++++++
- .../Controllers/EnrollmentsControllerTest.php | 46 +++++++++++++++-
+ .../ParticipantCancelEnrollmentCest.php       | 53 ++++++++++++++++
+ .../Access/ParticipantEventsAccessTest.php    | 27 +++++++++
+ .../Controllers/EnrollmentsControllerTest.php | 60 ++++++++++++++++++-
  .../Controllers/EventsControllerTest.php      |  4 ++
- 7 files changed, 154 insertions(+), 1 deletion(-)
+ 7 files changed, 175 insertions(+), 1 deletion(-)
  create mode 100644 tests/Acceptance/events/ParticipantCancelEnrollmentCest.php
 
 diff --git a/app/Controllers/EnrollmentsController.php b/app/Controllers/EnrollmentsController.php
-index bf577d9..8a8b12a 100644
+index bf577d9..a1c1fa5 100644
 --- a/app/Controllers/EnrollmentsController.php
 +++ b/app/Controllers/EnrollmentsController.php
-@@ -32,4 +32,23 @@ class EnrollmentsController extends Controller
+@@ -32,4 +32,30 @@ class EnrollmentsController extends Controller
  
          $this->redirectTo(route('events.show', ['id' => $event->id]));
      }
@@ -1215,7 +1215,14 @@ index bf577d9..8a8b12a 100644
 +     */
 +    public function destroy(Request $request): void
 +    {
-+        $eventId = (int) $request->getParam('id');
++        // id que não é inteiro positivo ("abc", "2x", "-1") não é convertido: é Evento inexistente.
++        $eventId = filter_var($request->getParam('id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
++        if ($eventId === false) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('events.index'));
++            return;
++        }
++
 +        $enrollment = Enrollment::findBy(['event_id' => $eventId, 'user_id' => $this->currentUser()?->id]);
 +
 +        if ($enrollment === null) {
@@ -1353,7 +1360,7 @@ index e606ad3..3091dd5 100644
 +    }
  }
 diff --git a/tests/Integration/Controllers/EnrollmentsControllerTest.php b/tests/Integration/Controllers/EnrollmentsControllerTest.php
-index 8a5a68d..755610f 100644
+index 8a5a68d..2a4c1f4 100644
 --- a/tests/Integration/Controllers/EnrollmentsControllerTest.php
 +++ b/tests/Integration/Controllers/EnrollmentsControllerTest.php
 @@ -8,7 +8,8 @@ use App\Models\User;
@@ -1366,7 +1373,7 @@ index 8a5a68d..755610f 100644
   */
  class EnrollmentsControllerTest extends ControllerTestCase
  {
-@@ -99,6 +100,49 @@ class EnrollmentsControllerTest extends ControllerTestCase
+@@ -99,6 +100,63 @@ class EnrollmentsControllerTest extends ControllerTestCase
          $this->assertCount(0, Enrollment::all());
      }
  
@@ -1410,6 +1417,20 @@ index 8a5a68d..755610f 100644
 +
 +        $this->assertSame("Location: /events/{$event->id}", $response);
 +        $this->assertEquals('Você não está inscrito neste evento!', $_SESSION['flash']['danger']);
++        $this->assertCount(1, Enrollment::all());
++    }
++
++    public function test_destroy_with_non_numeric_id_removes_nothing(): void
++    {
++        $event = $this->createEvent();
++        (new Enrollment(['event_id' => $event->id, 'user_id' => $this->participant->id]))->save();
++
++        foreach (['abc', "{$event->id}x", '-1', ''] as $id) {
++            $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $id]);
++
++            $this->assertSame('Location: /events', $response, "id '{$id}'");
++        }
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
 +        $this->assertCount(1, Enrollment::all());
 +    }
 +

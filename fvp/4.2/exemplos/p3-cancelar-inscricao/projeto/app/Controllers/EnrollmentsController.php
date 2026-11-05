@@ -38,7 +38,14 @@ class EnrollmentsController extends Controller
      */
     public function destroy(Request $request): void
     {
-        $eventId = (int) $request->getParam('id');
+        // id que não é inteiro positivo ("abc", "2x", "-1") não é convertido: é Evento inexistente.
+        $eventId = filter_var($request->getParam('id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($eventId === false) {
+            FlashMessage::danger('Evento não encontrado!');
+            $this->redirectTo(route('events.index'));
+            return;
+        }
+
         $enrollment = Enrollment::findBy(['event_id' => $eventId, 'user_id' => $this->currentUser()?->id]);
 
         if ($enrollment === null) {
