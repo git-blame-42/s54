@@ -1,0 +1,653 @@
+From 3572e7f8750364e52c8634c67f3c54151fc990eb Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:12:47 -0300
+Subject: [PATCH] feat: List event enrollments on a paginated page
+
+Add GET /admin/events/{id}/enrollments (and /page/{page}) handled by
+Admin\EnrollmentsController::index, listing name, e-mail and enrollment
+date with 5 per page via Event::enrollments()->paginate(). Paginator
+gains fixed route params so page links keep the event id, and
+Enrollment now stores created_at.
+---
+ .../Admin/EnrollmentsController.php           |  37 +++++
+ app/Models/Enrollment.php                     |  16 +-
+ app/Models/Event.php                          |   6 +
+ app/views/admin/enrollments/index.phtml       |  31 ++++
+ app/views/admin/events/show.phtml             |   3 +
+ app/views/paginator/_pages.phtml              |   6 +-
+ config/routes.php                             |   7 +
+ core/Database/ActiveRecord/HasMany.php        |   8 +-
+ lib/Paginator.php                             |  12 +-
+ .../admin/events/ListEnrollmentsCest.php      |  80 ++++++++++
+ tests/Integration/Access/EventsAccessTest.php |  24 ++-
+ .../Admin/EnrollmentsControllerTest.php       | 145 ++++++++++++++++++
+ .../Admin/EventsControllerTest.php            |   4 +
+ tests/Unit/Models/Events/EnrollmentTest.php   |  46 ++++++
+ 14 files changed, 417 insertions(+), 8 deletions(-)
+ create mode 100644 app/Controllers/Admin/EnrollmentsController.php
+ create mode 100644 app/views/admin/enrollments/index.phtml
+ create mode 100644 tests/Acceptance/admin/events/ListEnrollmentsCest.php
+ create mode 100644 tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
+
+diff --git a/app/Controllers/Admin/EnrollmentsController.php b/app/Controllers/Admin/EnrollmentsController.php
+new file mode 100644
+index 0000000..edc0a0b
+--- /dev/null
++++ b/app/Controllers/Admin/EnrollmentsController.php
+@@ -0,0 +1,37 @@
++<?php
++
++namespace App\Controllers\Admin;
++
++use App\Models\Event;
++use Core\Http\Controllers\Controller;
++use Core\Http\Request;
++use Lib\FlashMessage;
++
++/**
++ * Inscritos de um Evento, em página própria e paginada (área administrativa).
++ */
++class EnrollmentsController extends Controller
++{
++    private const PER_PAGE = 5;
++
++    public function index(Request $request): void
++    {
++        $event = Event::findById((int) $request->getParam('id'));
++        if ($event === null) {
++            FlashMessage::danger('Evento não encontrado!');
++            $this->redirectTo(route('admin.events.index'));
++            return;
++        }
++
++        $paginator = $event->enrollments()->paginate(
++            page: max(1, (int) $request->getParam('page', 1)),
++            per_page: self::PER_PAGE,
++            route: 'admin.events.enrollments.paginate',
++            routeParams: ['id' => $event->id]
++        );
++        $enrollments = $paginator->registers();
++
++        $title = 'Inscritos: ' . htmlspecialchars($event->title);
++        $this->render('admin/enrollments/index', compact('event', 'enrollments', 'paginator', 'title'));
++    }
++}
+diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
+index 3afd7c5..837ec32 100644
+--- a/app/Models/Enrollment.php
++++ b/app/Models/Enrollment.php
+@@ -11,11 +11,25 @@ use Core\Database\ActiveRecord\Model;
+  * @property int $id
+  * @property int $event_id
+  * @property int $user_id
++ * @property string|null $created_at data e hora da inscrição (Y-m-d H:i:s)
+  */
+ class Enrollment extends Model
+ {
+     protected static string $table = 'event_user';
+-    protected static array $columns = ['event_id', 'user_id'];
++    protected static array $columns = ['event_id', 'user_id', 'created_at'];
++
++    /**
++     * `Model::save()` grava todas as colunas de `$columns`: sem valor, `created_at` iria como NULL
++     * explícito e o DEFAULT CURRENT_TIMESTAMP do schema não valeria. Por isso a data é definida aqui.
++     */
++    public function save(): bool
++    {
++        if ($this->newRecord() && $this->created_at === null) {
++            $this->created_at = date('Y-m-d H:i:s');
++        }
++
++        return parent::save();
++    }
+ 
+     public function event(): BelongsTo
+     {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..bb68417 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -3,6 +3,7 @@
+ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
++use Core\Database\ActiveRecord\HasMany;
+ use Core\Database\ActiveRecord\Model;
+ use Lib\Validations;
+ use PDOException;
+@@ -119,6 +120,11 @@ class Event extends Model
+         return $this->belongsTo(User::class, 'user_id');
+     }
+ 
++    public function enrollments(): HasMany
++    {
++        return $this->hasMany(Enrollment::class, 'event_id');
++    }
++
+     /**
+      * Total de Inscrições (linhas em event_user) deste Evento.
+      */
+diff --git a/app/views/admin/enrollments/index.phtml b/app/views/admin/enrollments/index.phtml
+new file mode 100644
+index 0000000..9bf8718
+--- /dev/null
++++ b/app/views/admin/enrollments/index.phtml
+@@ -0,0 +1,31 @@
++<p>
++    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= (int) $event->capacity ?> vagas.
++</p>
++
++<?php if (empty($enrollments)) : ?>
++    <p>Nenhum inscrito neste evento.</p>
++<?php else : ?>
++    <table class="table table-striped align-middle">
++        <thead>
++            <tr>
++                <th>Nome</th>
++                <th>E-mail</th>
++                <th>Inscrito em</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($enrollments as $enrollment) : ?>
++                <?php $participant = $enrollment->user; ?>
++                <tr>
++                    <td><?= htmlspecialchars((string) $participant?->name) ?></td>
++                    <td><?= htmlspecialchars((string) $participant?->email) ?></td>
++                    <td><?= date('d/m/Y H:i', strtotime((string) $enrollment->created_at)) ?></td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++
++    <?php $paginator->renderPagesNavigation(); ?>
++<?php endif; ?>
++
++<a class="btn btn-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Voltar ao evento</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..cdae5a9 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -33,4 +33,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<a class="btn btn-outline-primary" href="<?= route('admin.events.enrollments.index', ['id' => $event->id]) ?>">
++    Inscritos (<?= $event->enrollmentsCount() ?>)
++</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..58b0763 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -3,7 +3,7 @@
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), $paginator->routeParams($paginator->previousPage())) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +13,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), $paginator->routeParams($page)) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= route($paginator->getRouteName(), $paginator->routeParams($paginator->nextPage())) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..801a44b 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -1,6 +1,7 @@
+ <?php
+ 
+ use App\Controllers\Admin\DashboardController as AdminDashboardController;
++use App\Controllers\Admin\EnrollmentsController as AdminEnrollmentsController;
+ use App\Controllers\Admin\EventsController as AdminEventsController;
+ use App\Controllers\AuthenticationsController;
+ use App\Controllers\DashboardController;
+@@ -33,5 +34,11 @@ Route::middleware('auth')->group(function () {
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
++
++        // Inscritos de um Evento, paginados (5 por página).
++        Route::get('/admin/events/{id}/enrollments', [AdminEnrollmentsController::class, 'index'])
++            ->name('admin.events.enrollments.index');
++        Route::get('/admin/events/{id}/enrollments/page/{page}', [AdminEnrollmentsController::class, 'index'])
++            ->name('admin.events.enrollments.paginate');
+     });
+ });
+diff --git a/core/Database/ActiveRecord/HasMany.php b/core/Database/ActiveRecord/HasMany.php
+index 6f94760..76a53e4 100644
+--- a/core/Database/ActiveRecord/HasMany.php
++++ b/core/Database/ActiveRecord/HasMany.php
+@@ -41,7 +41,10 @@ class HasMany
+         );
+     }
+ 
+-    public function paginate(int $page = 1, int $per_page = 10, string $route = null): Paginator
++    /**
++     * @param array<string, mixed> $routeParams parâmetros fixos da rota de paginação (ex.: ['id' => 5])
++     */
++    public function paginate(int $page = 1, int $per_page = 10, string $route = null, array $routeParams = []): Paginator
+     {
+         return new Paginator(
+             class: $this->related,
+@@ -50,7 +53,8 @@ class HasMany
+             table: $this->related::table(),
+             attributes: $this->related::columns(),
+             conditions: [$this->foreignKey => $this->model->id],
+-            route: $route
++            route: $route,
++            routeParams: $routeParams
+         );
+     }
+ }
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..3a8b07c 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -22,7 +22,8 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private array $routeParams = []
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -101,6 +102,15 @@ class Paginator
+         return $this->route ?? "$this->table.paginate";
+     }
+ 
++    /**
++     * Parâmetros da rota de cada página: os fixos da rota (ex.: ['id' => 5] em
++     * /admin/events/{id}/enrollments/page/{page}) mais o número da página.
++     */
++    public function routeParams(int $page): array
++    {
++        return array_merge($this->routeParams, ['page' => $page]);
++    }
++
+     private function loadTotals(): void
+     {
+         $pdo = Database::getDatabaseConn();
+diff --git a/tests/Acceptance/admin/events/ListEnrollmentsCest.php b/tests/Acceptance/admin/events/ListEnrollmentsCest.php
+new file mode 100644
+index 0000000..4f1d0b0
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ListEnrollmentsCest.php
+@@ -0,0 +1,80 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Enrollment;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Inscritos do Evento em página própria (5 por página). Além dos dados da base, o Evento 02 (sem
++ * Inscrições na base) recebe 7 Inscrições: os 3 Participantes da base e mais 4 criados aqui.
++ */
++class ListEnrollmentsCest extends BaseEventsCest
++{
++    private const ENROLLED = 7;
++
++    public function _before(AcceptanceTester $page): void
++    {
++        // O Codeception reaproveita a instância do Cest entre cenários: sem limpar, os Participantes 4 a 7
++        // do cenário anterior (já apagados do banco) seriam inscritos pelo seedEvents da base.
++        $this->participants = [];
++        parent::_before($page);
++
++        for ($i = 4; $i <= self::ENROLLED; $i++) {
++            $this->participants[$i] = $this->createUser("Participante {$i}", "participante{$i}@example.com", 'participant');
++        }
++
++        foreach ($this->participants as $participant) {
++            (new Enrollment(['event_id' => $this->events[2]->id, 'user_id' => $participant->id]))->save();
++        }
++    }
++
++    public function openFromShowAndPaginate(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Ver os inscritos de um Evento a partir do detalhe e paginar');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->click('Inscritos (7)');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}/enrollments");
++        $page->see('Inscritos: Evento 02', 'h1');
++        $page->see('7 inscrito(s) de 22 vagas.');
++        $page->see('Inscrito em', 'table thead');
++        $page->seeNumberOfElements('table tbody tr', 5);
++        $page->see('participante1@example.com', 'table');
++        $page->see('Participante 5', 'table');
++        $page->dontSee('Participante 6', 'table');
++        $page->see(date('d/m/Y'), 'table');
++        $page->see('Mostrando 1 - 5 de 7');
++
++        $page->click('Próxima', '.pagination');
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}/enrollments/page/2");
++        $page->seeNumberOfElements('table tbody tr', 2);
++        $page->see('Participante 6', 'table');
++        $page->see('participante7@example.com', 'table');
++        $page->dontSee('Participante 1', 'table');
++        $page->see('Mostrando 6 - 7 de 7');
++
++        $page->click('1', '.pagination');
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}/enrollments/page/1");
++        $page->see('Participante 1', 'table');
++
++        $page->click('Voltar ao evento');
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++    }
++
++    public function eventWithoutEnrollments(AcceptanceTester $page): void
++    {
++        $event = $this->events[4];
++
++        $page->wantTo('Ver a página de inscritos de um Evento sem Inscrições');
++        $page->amOnPage("/admin/events/{$event->id}");
++        $page->click('Inscritos (0)');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}/enrollments");
++        $page->see('Nenhum inscrito neste evento.');
++        $page->dontSeeElement('table');
++        $page->dontSeeElement('.pagination');
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..0c6dbd3 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -2,6 +2,7 @@
+ 
+ namespace Tests\Integration\Access;
+ 
++use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use GuzzleHttp\Client;
+@@ -78,7 +79,8 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy e
++     * enrollments.index/enrollments.paginate).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -93,6 +95,8 @@ class EventsAccessTest extends TestCase
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.enrollments.index' => ['GET', '/admin/events/1/enrollments'],
++            'admin.events.enrollments.paginate' => ['GET', '/admin/events/1/enrollments/page/2'],
+         ];
+     }
+ 
+@@ -172,6 +176,24 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_access_event_enrollments(): void
++    {
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]))->save();
++        $client = $this->loggedClient($this->admin);
++
++        $index = $client->get("/admin/events/{$this->event->id}/enrollments");
++        $this->assertEquals(200, $index->getStatusCode());
++        $this->assertStringContainsString('participante@example.com', (string) $index->getBody());
++
++        $page = $client->get("/admin/events/{$this->event->id}/enrollments/page/1");
++        $this->assertEquals(200, $page->getStatusCode());
++        $this->assertStringContainsString('participante@example.com', (string) $page->getBody());
++
++        $missing = $client->get('/admin/events/999999/enrollments');
++        $this->assertEquals(302, $missing->getStatusCode());
++        $this->assertEquals('/admin/events', $missing->getHeaderLine('Location'));
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
+new file mode 100644
+index 0000000..5a38eb0
+--- /dev/null
++++ b/tests/Integration/Controllers/Admin/EnrollmentsControllerTest.php
+@@ -0,0 +1,145 @@
++<?php
++
++namespace Tests\Integration\Controllers\Admin;
++
++use App\Models\Enrollment;
++use App\Models\Event;
++use App\Models\User;
++use Lib\Authentication\Auth;
++use Tests\Integration\Controllers\ControllerTestCase;
++
++class EnrollmentsControllerTest extends ControllerTestCase
++{
++    private const CONTROLLER = 'App\Controllers\Admin\EnrollmentsController';
++
++    private User $admin;
++    private Event $event;
++
++    public function setUp(): void
++    {
++        parent::setUp();
++        $_SESSION['flash'] = [];
++
++        $this->admin = new User([
++            'name' => 'Admin',
++            'email' => 'admin@example.com',
++            'password' => '123456',
++            'password_confirmation' => '123456',
++            'role' => 'admin'
++        ]);
++        $this->admin->save();
++        Auth::login($this->admin);
++
++        $this->event = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Oficina de Testes',
++            'description' => 'Aprenda a testar.',
++            'kind' => 'workshop',
++            'modality' => 'in_person',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Bloco A',
++            'capacity' => 20,
++        ]);
++        $this->event->save();
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['flash']);
++        parent::tearDown();
++    }
++
++    public function test_index_lists_first_five_participants_with_email_and_date(): void
++    {
++        $this->enrollParticipants($this->event, 7);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertMatchesRegularExpression('/<h1>\s*Inscritos: Oficina de Testes\s*<\/h1>/', $response);
++        $this->assertStringContainsString('7 inscrito(s) de 20 vagas.', $response);
++        $this->assertStringContainsString('Participante 1', $response);
++        $this->assertStringContainsString('participante5@example.com', $response);
++        $this->assertStringNotContainsString('Participante 6', $response);
++        $this->assertStringContainsString(date('d/m/Y'), $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$this->event->id}/enrollments/page/2\"", $response);
++        $this->assertStringContainsString('Mostrando 1 - 5 de 7', $response);
++    }
++
++    public function test_page_two_lists_remaining_participants(): void
++    {
++        $this->enrollParticipants($this->event, 7);
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $this->event->id, 'page' => '2']
++        );
++
++        $this->assertStringContainsString('Participante 6', $response);
++        $this->assertStringContainsString('participante7@example.com', $response);
++        $this->assertStringNotContainsString('Participante 5<', $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$this->event->id}/enrollments/page/1\"", $response);
++        $this->assertStringContainsString('Mostrando 6 - 7 de 7', $response);
++    }
++
++    public function test_index_does_not_list_participants_of_other_events(): void
++    {
++        $other = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Outro Evento',
++            'description' => 'Outro.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+20 days')),
++            'location' => 'Online',
++            'capacity' => 5,
++        ]);
++        $other->save();
++        $this->enrollParticipants($other, 2);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertStringNotContainsString('participante1@example.com', $response);
++        $this->assertStringContainsString('Nenhum inscrito neste evento.', $response);
++    }
++
++    public function test_index_of_event_without_enrollments_shows_message(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => $this->event->id]);
++
++        $this->assertStringContainsString('0 inscrito(s) de 20 vagas.', $response);
++        $this->assertStringContainsString('Nenhum inscrito neste evento.', $response);
++        $this->assertStringNotContainsString('<table', $response);
++        $this->assertStringContainsString("href=\"/admin/events/{$this->event->id}\"", $response);
++    }
++
++    public function test_index_with_unknown_event_redirects_to_events_index(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['id' => 999999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    private function enrollParticipants(Event $event, int $total): void
++    {
++        for ($number = 1; $number <= $total; $number++) {
++            $email = "participante{$number}@example.com";
++            $user = User::findByEmail($email);
++
++            if ($user === null) {
++                $user = new User([
++                    'name' => "Participante {$number}",
++                    'email' => $email,
++                    'password' => '123456',
++                    'password_confirmation' => '123456'
++                ]);
++                $user->save();
++            }
++
++            (new Enrollment(['event_id' => $event->id, 'user_id' => $user->id]))->save();
++        }
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..9e76459 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -158,6 +158,10 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Palestra Final', $response);
+         $this->assertStringContainsString('1/4', $response);
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
++        $this->assertMatchesRegularExpression(
++            "#href=\"/admin/events/{$event->id}/enrollments\">\\s*Inscritos \\(1\\)#",
++            $response
++        );
+     }
+ 
+     public function test_show_with_unknown_id_redirects_to_index(): void
+diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
+index dab557d..75b4fce 100644
+--- a/tests/Unit/Models/Events/EnrollmentTest.php
++++ b/tests/Unit/Models/Events/EnrollmentTest.php
+@@ -76,4 +76,50 @@ class EnrollmentTest extends TestCase
+ 
+         (new Enrollment($params))->save();
+     }
++
++    public function test_save_should_set_created_at(): void
++    {
++        $before = date('Y-m-d H:i:s');
++        $enrollment = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);
++        $enrollment->save();
++        $after = date('Y-m-d H:i:s');
++
++        $found = Enrollment::findById($enrollment->id);
++        $this->assertNotNull($found);
++        $this->assertGreaterThanOrEqual($before, $found->created_at);
++        $this->assertLessThanOrEqual($after, $found->created_at);
++    }
++
++    public function test_event_enrollments_should_paginate_only_its_enrollments(): void
++    {
++        $other = new Event([
++            'user_id' => $this->admin->id,
++            'title' => 'Outro',
++            'description' => 'Descrição',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => 'students',
++            'starts_on' => date('Y-m-d', strtotime('+20 days')),
++            'location' => 'Online',
++            'capacity' => 5,
++        ]);
++        $other->save();
++
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]))->save();
++        (new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->admin->id]))->save();
++        (new Enrollment(['event_id' => $other->id, 'user_id' => $this->participant->id]))->save();
++
++        $paginator = $this->event->enrollments()->paginate(
++            page: 2,
++            per_page: 1,
++            route: 'admin.events.enrollments.paginate',
++            routeParams: ['id' => $this->event->id]
++        );
++
++        $this->assertEquals(2, $paginator->totalOfRegisters());
++        $this->assertEquals(2, $paginator->totalOfPages());
++        $this->assertCount(1, $paginator->registers());
++        $this->assertEquals($this->event->id, $paginator->registers()[0]->event_id);
++        $this->assertEquals(['id' => $this->event->id, 'page' => 1], $paginator->routeParams(1));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

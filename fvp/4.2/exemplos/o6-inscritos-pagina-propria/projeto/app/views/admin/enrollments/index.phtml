@@ -1,0 +1,31 @@
+<p>
+    <?= $paginator->totalOfRegisters() ?> inscrito(s) de <?= (int) $event->capacity ?> vagas.
+</p>
+
+<?php if (empty($enrollments)) : ?>
+    <p>Nenhum inscrito neste evento.</p>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Inscrito em</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($enrollments as $enrollment) : ?>
+                <?php $participant = $enrollment->user; ?>
+                <tr>
+                    <td><?= htmlspecialchars((string) $participant?->name) ?></td>
+                    <td><?= htmlspecialchars((string) $participant?->email) ?></td>
+                    <td><?= date('d/m/Y H:i', strtotime((string) $enrollment->created_at)) ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php $paginator->renderPagesNavigation(); ?>
+<?php endif; ?>
+
+<a class="btn btn-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Voltar ao evento</a>
