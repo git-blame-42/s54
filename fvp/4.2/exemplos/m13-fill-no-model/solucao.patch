@@ -1,0 +1,239 @@
+From 830d921938c9f41779e64939659aa0b2e13c1f55 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:05:18 -0300
+Subject: [PATCH] refactor: Move event form filling to the model
+
+Event::FORM_FIELDS and Event::fillFromForm() replace the controller's FIELDS and fill(); create and update now call $event->fillFromForm($this->eventParams($request)).
+---
+ app/Controllers/Admin/EventsController.php    | 23 ++----
+ app/Models/Event.php                          | 25 +++++++
+ .../Admin/EventsControllerTest.php            | 25 +++++++
+ tests/Unit/Models/Events/EventTest.php        | 74 +++++++++++++++++++
+ 4 files changed, 131 insertions(+), 16 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..da97437 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,8 +11,6 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
+-    private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+-
+     public function index(Request $request): void
+     {
+         $paginator = Event::paginate(
+@@ -49,7 +47,7 @@ class EventsController extends Controller
+     public function create(Request $request): void
+     {
+         $event = new Event();
+-        $this->fill($event, $request);
++        $event->fillFromForm($this->eventParams($request));
+         $event->user_id = $this->currentUser()?->id;
+ 
+         if ($event->save()) {
+@@ -81,7 +79,7 @@ class EventsController extends Controller
+             $this->eventNotFound();
+             return;
+         }
+-        $this->fill($event, $request);
++        $event->fillFromForm($this->eventParams($request));
+ 
+         if ($event->save()) {
+             FlashMessage::success('Evento atualizado com sucesso!');
+@@ -111,22 +109,15 @@ class EventsController extends Controller
+     }
+ 
+     /**
+-     * Copia para o Evento só os campos do formulário (nunca user_id nem id).
++     * Parâmetros `event[...]` do formulário; qualquer coisa que não seja array vira [].
++     *
++     * @return array<string, mixed>
+      */
+-    private function fill(Event $event, Request $request): void
++    private function eventParams(Request $request): array
+     {
+         $params = $request->getParam('event', []);
+-        if (!is_array($params)) {
+-            $params = [];
+-        }
+-
+-        foreach (self::FIELDS as $field) {
+-            $value = $params[$field] ?? null;
+-            $event->$field = is_scalar($value) ? (string) $value : null;
+-        }
+ 
+-        $audience = $params['audience'] ?? [];
+-        $event->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
++        return is_array($params) ? $params : [];
+     }
+ 
+     private function findEvent(Request $request): ?Event
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e475108 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -44,6 +44,9 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Campos que o formulário pode preencher (fillFromForm). Nunca id nem user_id. */
++    public const FORM_FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -114,6 +117,28 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Copia os dados do formulário para o Evento: só as chaves de FORM_FIELDS (user_id, id e
++     * qualquer outra são ignoradas). Campo ausente ou não escalar vira null, para a validação
++     * acusar. `audience` aceita array (checkboxes `audience[]`) ou string "a,b".
++     *
++     * @param array<string, mixed> $params
++     */
++    public function fillFromForm(array $params): void
++    {
++        foreach (self::FORM_FIELDS as $field) {
++            $value = $params[$field] ?? null;
++            $this->$field = is_scalar($value) ? (string) $value : null;
++        }
++
++        $audience = $params['audience'] ?? [];
++        if (is_string($audience)) {
++            $audience = explode(',', $audience);
++        }
++
++        $this->setAudienceList(is_array($audience) ? array_filter($audience, 'is_scalar') : []);
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..299cc8d 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -206,6 +206,31 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('Evento atualizado com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
++    public function test_update_ignores_user_id_and_id_sent_by_the_form(): void
++    {
++        $event = $this->createEvent();
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['user_id' => '999', 'id' => '777'])]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertNotNull($updated);
++        $this->assertEquals($this->admin->id, $updated->user_id);
++        $this->assertNull(Event::findById(777));
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_create_with_non_array_event_param_renders_errors(): void
++    {
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => 'texto']);
++
++        $this->assertCount(0, Event::all());
++        $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
++    }
++
+     public function test_update_with_invalid_data_renders_form_and_keeps_record(): void
+     {
+         $event = $this->createEvent(['title' => 'Original']);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..d9abb95 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -385,6 +385,80 @@ class EventTest extends TestCase
+         $this->assertFalse(Event::exists(['title' => 'Outro']));
+     }
+ 
++    /* ------------------- fillFromForm ------------------- */
++
++    /**
++     * @param array<string, mixed> $overrides
++     * @return array<string, mixed>
++     */
++    private function formParams(array $overrides = []): array
++    {
++        return array_merge([
++            'title' => 'Oficina de Testes',
++            'description' => 'Aprenda a testar.',
++            'kind' => 'workshop',
++            'modality' => 'online',
++            'audience' => ['students', 'staff'],
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Bloco A',
++            'capacity' => '20',
++        ], $overrides);
++    }
++
++    public function test_fill_from_form_should_copy_the_allowed_fields(): void
++    {
++        $event = new Event(['user_id' => $this->admin->id]);
++        $event->fillFromForm($this->formParams());
++
++        foreach (Event::FORM_FIELDS as $field) {
++            $this->assertSame((string) $this->formParams()[$field], $event->$field, $field);
++        }
++        $this->assertSame('students,staff', $event->audience);
++        $this->assertTrue($event->save());
++    }
++
++    public function test_fill_from_form_should_ignore_user_id_id_and_unknown_keys(): void
++    {
++        $event = new Event(['user_id' => $this->admin->id]);
++        $event->fillFromForm($this->formParams(['user_id' => '999', 'id' => '42', 'created_at' => '2000-01-01']));
++
++        $this->assertEquals($this->admin->id, $event->user_id);
++        $this->assertTrue($event->newRecord());
++        $this->assertTrue($event->save());
++        $this->assertNotEquals(42, $event->id);
++    }
++
++    public function test_fill_from_form_should_turn_missing_or_non_scalar_values_into_null(): void
++    {
++        $params = $this->formParams(['title' => ['array'], 'location' => null]);
++        unset($params['capacity']);
++
++        $event = new Event();
++        $event->fillFromForm($params);
++
++        $this->assertFalse($event->isValid());
++        foreach (['title', 'location', 'capacity'] as $field) {
++            $this->assertEquals('não pode ser vazio!', $event->errors($field), $field);
++        }
++        $this->assertNull($event->errors('description'));
++    }
++
++    public function test_fill_from_form_should_accept_audience_as_array_or_string(): void
++    {
++        $event = new Event();
++
++        $event->fillFromForm($this->formParams(['audience' => ['students', '', 'students', ['x'], 'community']]));
++        $this->assertSame(['students', 'community'], $event->audienceList());
++
++        $event->fillFromForm($this->formParams(['audience' => 'professors,staff']));
++        $this->assertSame(['professors', 'staff'], $event->audienceList());
++
++        $params = $this->formParams();
++        unset($params['audience']);
++        $event->fillFromForm($params);
++        $this->assertSame([], $event->audienceList());
++    }
++
+     /* ------------------- paginate ------------------- */
+ 
+     public function test_paginate_should_return_five_events_per_page(): void
+-- 
+2.54.0 (Apple Git-157)
+
