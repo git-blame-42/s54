@@ -113,22 +113,22 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | M1 | Campo novo em `events` com validação | alta | 25-35 min |
 | M2 | Validação nova em `lib/Validations.php` | alta | 15-20 min |
 | M3 | Valor novo em ENUM/SET | média | 10-15 min |
-| M4 | Segunda data (`ends_on`) não anterior a `starts_on` | média-alta | 25-35 min |
+| M4 | Data de término não anterior ao início | média-alta | 25-35 min |
 | M5 | Validação condicional por modalidade | média | 15-25 min |
 | M6 | Unicidade (título único na mesma data) | média | 15-20 min |
-| N1 | Filtro por tipo com `where`, mantido na paginação | média-alta | 25-35 min |
+| N1 | Filtro por tipo com `where` na paginação | média-alta | 25-35 min |
 | N2 | Busca por título (`LIKE`) | média | 20-30 min |
 | N3 | Ordenar por data no `Paginator` | média-alta | 15-25 min |
 | N4 | Mudar `per_page` ou deixar o usuário escolher | alta | 5-10 min |
 | N5 | Só Eventos futuros ou passados | média | 20-30 min |
 | N6 | Dado calculado na tela (badge "Lotado", total) | média | 10-15 min |
 | O1 | Rota RESTful nova com página (lotados) | média-alta | 20-30 min |
-| O2 | Listagem e detalhe de Eventos para o Participante | média-alta | 25-35 min |
+| O2 | Eventos para o Participante (lista e detalhe) | média-alta | 25-35 min |
 | O3 | Inscritos no `show` (`participants()`) | média | 20-30 min |
 | O4 | Resposta JSON da listagem | baixa | 20 min |
-| P1 | Código de check-in aleatório (1000-9999) por Evento | alta | 25-35 min |
-| P2 | Inscrição do Participante (`POST /events/{id}/enroll`) | alta | 30-40 min |
-| P3 | Cancelar inscrição (`DELETE /events/{id}/enroll`) | média | 15-20 min |
+| P1 | Código de check-in aleatório (1000-9999) | alta | 25-35 min |
+| P2 | Inscrição do Participante em um Evento | alta | 30-40 min |
+| P3 | Cancelar a própria inscrição | média | 15-20 min |
 | P4 | Confirmar presença pelo código do Evento | média-alta | 30-40 min |
 | P5 | Status do Evento: cancelar e encerrar | alta | 25-35 min |
 | P6 | Duplicar Evento | média-alta | 20-30 min |
@@ -137,13 +137,13 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P9 | Lista de espera quando lotado | média-baixa | 35-40 min |
 | P10 | Comentários do Evento (recurso filho 1xN) | média | 35-40 min |
 | P11 | Soft delete (arquivar Evento) | baixa | 30-40 min |
-| P12 | Código aleatório no login (a FVP real da 4.1) | média-baixa | 30-40 min |
+| P12 | Login por código aleatório (FVP real 4.1) | média-baixa | 30-40 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
-| Q2 | Bloquear edição e remoção de Evento passado ou cancelado | média | 15-25 min |
-| R1 | Flash: texto, título do Evento, tipo `warning` | média-alta | 10-15 min |
+| Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
+| R1 | Flash: texto, título do Evento, `warning` | média-alta | 10-15 min |
 | R2 | Nome do criador no `show` e na listagem | média-alta | 10-15 min |
 | R3 | Formatação na view com helper num só lugar | média | 10-15 min |
-| R4 | Confirmação antes de remover, JS em arquivo próprio | média | 10-15 min |
+| R4 | Confirmar antes de remover (JS em arquivo) | média | 10-15 min |
 | S1 | Teste de aceitação da modificação | alta | 20-30 min |
 | S2 | Teste de acesso por HTTP da rota nova | alta | 15-20 min |
 | S3 | Teste unitário do método novo do model | alta | 10-15 min |
@@ -187,7 +187,11 @@ Passos:
 2. `SCH`: `workload_hours INT NOT NULL` depois de `capacity` (`SCH:31`).
 3. `EV`: `@property int|string $workload_hours`, a chave em `$columns`,
    e em `validates()`:
-   `Validations::notEmpty('workload_hours', $this) && Validations::integerMin('workload_hours', $this, 1);`
+
+   ```php
+   Validations::notEmpty('workload_hours', $this) &&
+       Validations::integerMin('workload_hours', $this, 1);
+   ```
 4. `EC:14`: acrescente `'workload_hours'` em `FIELDS`.
 5. `FORM`: copie o `<div class="mb-3">` de `capacity` trocando `id`,
    `name="event[workload_hours]"` e o `value`; mantenha `$invalid()` e
@@ -231,7 +235,8 @@ máximo 500" (`integerMax`), "local só letras, números e espaços"
 (`format` com regex).
 
 Arquivos: `VAL:78-94` (`integerMin`, o modelo), `EV:62-64` e `EV:79`
-(onde chamar), `tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php:13-48`
+(onde chamar),
+`tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php:13-48`
 (modelo do teste; o model anônimo está em `:15-17`), `EVT:185-208`.
 
 Passos:
@@ -258,7 +263,13 @@ public static function maxLength($attribute, $obj, int $max)
 }
 ```
 
-4. `EV:62`: `Validations::notEmpty('title', $this) && Validations::maxLength('title', $this, 100);`
+4. `EV:62`:
+
+   ```php
+   Validations::notEmpty('title', $this) &&
+       Validations::maxLength('title', $this, 100);
+   ```
+
    (encadeamento com `&&`, padrão de `EV:66-77`).
 5. Teste em `EVT` (cópia de `EVT:185-194`) com título de 101 caracteres
    (`str_repeat('a', 101)`).
@@ -334,22 +345,37 @@ Passos:
 2. M1 completo para a coluna `ends_on DATE NOT NULL` (ou `NULL` se
    opcional).
 3. Em `validates()`:
-   `Validations::notEmpty('ends_on', $this) && Validations::validDate('ends_on', $this) && $this->validatesEndsOnAfterStartsOn();`
+
+   ```php
+   Validations::notEmpty('ends_on', $this) &&
+       Validations::validDate('ends_on', $this) &&
+       $this->validatesEndsOnAfterStartsOn();
+   ```
 4. Método privado:
 
 ```php
 private function validatesEndsOnAfterStartsOn(): void
 {
-    $start = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $this->starts_on);
-    $end = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $this->ends_on);
+    $start = \DateTimeImmutable::createFromFormat(
+        '!Y-m-d',
+        (string) $this->starts_on
+    );
+    $end = \DateTimeImmutable::createFromFormat(
+        '!Y-m-d',
+        (string) $this->ends_on
+    );
 
     if ($start !== false && $end !== false && $end < $start) {
-        $this->addError('ends_on', 'não pode ser anterior à data de início!');
+        $this->addError(
+            'ends_on',
+            'não pode ser anterior à data de início!'
+        );
     }
 }
 ```
 
-5. Form, listagem, show, populate (`'ends_on' => date('Y-m-d', strtotime("+{$daysAhead} days"))`
+5. Form, listagem, show, populate
+   (`'ends_on' => date('Y-m-d', strtotime("+{$daysAhead} days"))`
    ou +1 dia), testes de controller e Cests (`fillEventForm` precisa de
    um `executeJS` para o campo novo, cópia de `:148-154`).
 
@@ -461,8 +487,15 @@ Arquivos: `EC:16-27` (`index`), `IDX:1-3` e `IDX:40`, `MODEL:284-294`
 
 Passos (forma 1, segura; forma 2, completa):
 
-1. `index()`: `$kind = $request->getParam('kind');` e
-   `$kind = is_string($kind) && array_key_exists($kind, Event::KINDS) ? $kind : null;`.
+1. `index()`:
+
+   ```php
+   $kind = $request->getParam('kind');
+   $kind = is_string($kind) && array_key_exists($kind, Event::KINDS)
+       ? $kind
+       : null;
+   ```
+
 2. Forma 1 (sem paginação quando há filtro): com `$kind`,
    `$events = Event::where(['kind' => $kind]); $paginator = null;`;
    sem, o caminho atual. Na `IDX:40`, só chame
@@ -474,7 +507,8 @@ Passos (forma 1, segura; forma 2, completa):
    - `MODEL:284-294`: parâmetros `array $conditions = []` e
      `array $queryParams = []` repassados (modelo `HASMANY:44-55`), com
      `@param array<string, mixed>` em cada um.
-   - `EC:18-22`: `conditions: $kind !== null ? ['kind' => $kind] : [], queryParams: ...`.
+   - `EC:18-22`: `conditions: $kind !== null ? ['kind' => $kind] : []`
+     e `queryParams` igual.
    - `PAGES:6,16,22`: `array_merge(['page' => X], $paginator->queryParams())`;
      `route()` põe o que não está na URI como query string.
 4. `IDX`: `<form method="get" action="<?= route('admin.events.index') ?>">`
@@ -526,12 +560,15 @@ public static function searchByTitle(string $term): array
     $stmt->bindValue(':term', "%{$term}%");
     $stmt->execute();
 
-    return array_map(fn($row) => new static($row), $stmt->fetchAll(PDO::FETCH_ASSOC));
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return array_map(fn($row) => new static($row), $rows);
 }
 ```
 
    Imports: `Core\Database\Database`, `PDO`.
-3. `EC::index`: `$q = $request->getParam('q'); $q = is_string($q) ? trim($q) : '';`.
+3. `EC::index`: `$q = $request->getParam('q');` e
+   `$q = is_string($q) ? trim($q) : '';`.
    Se `$q !== ''`, `$events = Event::searchByTitle($q); $paginator = null;`
    (como N1 forma 1); senão o caminho atual.
 4. `$q` **sempre** no `compact`. `IDX`: `<form method="get">` com
@@ -612,7 +649,8 @@ Passos:
    10 falha. Ajuste (ex.: 12 Eventos) e rode.
 3. `BaseEventsCest::PER_PAGE` e reescreva o `PaginateEventsCest`: com
    10 por página e 16 Eventos há só 2 páginas (ele clica na 3 e na 4).
-4. Variante `?per_page=`: `$perPage = (int) $request->getParam('per_page', self::PER_PAGE);`
+4. Variante `?per_page=`:
+   `$perPage = (int) $request->getParam('per_page', self::PER_PAGE);`
    e `in_array($perPage, [5, 10, 20], true) ? $perPage : self::PER_PAGE;`
    repassado aos links (mecanismo `queryParams` de N1 forma 2).
 
@@ -681,7 +719,12 @@ Passos:
 1. Teste em `ECT`: copie `:59-68` e confira `Lotado` para um Evento
    com `capacity` igual às Inscrições (`enroll`, `ECT:302-313`).
 2. `IDX:26`: mantenha `x/y` e acrescente
-   `<?php if ($event->availableSpots() === 0) : ?><span class="badge text-bg-danger">Lotado</span><?php endif; ?>`.
+
+   ```php
+   <?php if ($event->availableSpots() === 0) : ?>
+       <span class="badge text-bg-danger">Lotado</span>
+   <?php endif; ?>
+   ```
 3. Contador: `DashboardController::index` com
    `$total = count(Event::all());` (importar `App\Models\Event`) e
    `compact('title', 'total')`; imprima na view.
@@ -716,12 +759,24 @@ Passos:
 
 1. Teste de controller: `get(action: 'full', ...)` com um Evento lotado
    (`enroll`, `ECT:302-313`, `capacity => '1'`) e um não.
-2. `ROUTES`: `Route::get('/admin/events/full', [AdminEventsController::class, 'full'])->name('admin.events.full');`
-   **antes** de `/admin/events/{id}` (`:31`), junto de `new` (`:29`).
+2. `ROUTES`, **antes** de `/admin/events/{id}` (`:31`), junto de `new`
+   (`:29`):
+
+   ```php
+   Route::get('/admin/events/full', [AdminEventsController::class, 'full'])
+       ->name('admin.events.full');
+   ```
 3. `EC::full(): void`:
-   `$events = array_filter(Event::all(), fn(Event $e) => $e->availableSpots() === 0);`,
-   `$title = 'Eventos lotados';`,
-   `$this->render('admin/events/full', compact('events', 'title'));`.
+
+   ```php
+   $events = array_filter(
+       Event::all(),
+       fn(Event $e) => $e->availableSpots() === 0
+   );
+   $title = 'Eventos lotados';
+   $this->render('admin/events/full', compact('events', 'title'));
+   ```
+
 4. `full.phtml`: tabela (copie `IDX:8-38` sem o paginador e sem o
    botão Remover). Link em `IDX:1-3`.
 5. `ACC`: `'admin.events.full' => ['GET', '/admin/events/full']` em
@@ -757,7 +812,8 @@ novas entram aqui, fora de `admin`), `ROUTES:4` (o admin já é importado
 com alias; `use App\Controllers\EventsController;` fica livre),
 `EC:16-39` (modelo de `index` e `show`), `IDX`, `SHOW`, `NAV:10-12`
 (link para todos os logados), `MODEL:284-294` (`paginate` com nome de
-rota), `ECT:17-57` (modelo de teste), `tests/Integration/Access/DashboardAccessTest.php`
+rota), `ECT:17-57` (modelo de teste),
+`tests/Integration/Access/DashboardAccessTest.php`
 (modelo de acesso sem admin), `app/views/dashboard/index.phtml`.
 
 Passos:
@@ -770,8 +826,10 @@ Passos:
 
 ```php
 Route::get('/events', [EventsController::class, 'index'])->name('events.index');
-Route::get('/events/page/{page}', [EventsController::class, 'index'])->name('events.paginate');
-Route::get('/events/{id}', [EventsController::class, 'show'])->name('events.show');
+Route::get('/events/page/{page}', [EventsController::class, 'index'])
+    ->name('events.paginate');
+Route::get('/events/{id}', [EventsController::class, 'show'])
+    ->name('events.show');
 ```
 
 3. `app/Controllers/EventsController.php` (namespace `App\Controllers`):
@@ -810,7 +868,8 @@ Pedido típico: "no detalhe do Evento, liste quem está inscrito (nome e
 e-mail)".
 
 Arquivos: `EV:117-120` (`user()`, modelo de relação), `MODEL:365`
-(`BelongsToMany(string $related, string $pivot_table, string $from_foreign_key, string $to_foreign_key)`,
+(`BelongsToMany(string $related, string $pivot_table,
+string $from_foreign_key, string $to_foreign_key)`,
 com B maiúsculo), `core/Database/ActiveRecord/BelongsToMany.php:22-57`
 (`get()`) e `:59-82` (`count()`), `EN:20-28`, `SHOW:28-32`, `EVT:67-76`
 (`enroll`), `ECT:151-161` e `ECT:302-313`.
@@ -824,7 +883,12 @@ Passos:
 ```php
 public function participants(): BelongsToMany
 {
-    return $this->BelongsToMany(User::class, 'event_user', 'event_id', 'user_id');
+    return $this->BelongsToMany(
+        User::class,
+        'event_user',
+        'event_id',
+        'user_id'
+    );
 }
 ```
 
@@ -843,7 +907,8 @@ Armadilhas:
   `/** @var User $participant */` ou `instanceof User`.
 - O `__get` mágico (`MODEL:55-68`) também permite `$event->participants`
   (sem parênteses) devolvendo o array; use a forma explícita.
-- Alternativa sem `BelongsToMany`: `Enrollment::where(['event_id' => $this->id])`
+- Alternativa sem `BelongsToMany`:
+  `Enrollment::where(['event_id' => $this->id])`
   e `->user()->get()` por linha (N+1).
 - `count()` da relação (`BelongsToMany:59-82`) pode substituir
   `enrollmentsCount()`; não troque sem pedido (testes conferem).
@@ -900,7 +965,8 @@ Armadilhas:
   framework; use o header.
 - `$json` precisa existir na view (`CTRL:50` inicializa `[]`).
 
-Prova: teste de controller; `curl -H 'Accept: application/json' -b <cookie> http://localhost/admin/events`.
+Prova: teste de controller;
+`curl -H 'Accept: application/json' -b <cookie> http://localhost/admin/events`.
 
 ### P1. Código de check-in aleatório (1000-9999) por Evento
 
@@ -934,7 +1000,9 @@ Passos:
 ```php
 public function save(): bool
 {
-    if ($this->newRecord() && ($this->checkin_code === null || $this->checkin_code === '')) {
+    $code = $this->checkin_code;
+
+    if ($this->newRecord() && ($code === null || $code === '')) {
         $this->checkin_code = self::newCheckinCode();
     }
 
@@ -953,7 +1021,13 @@ public static function newCheckinCode(): int
 
    com `public const CHECKIN_CODE_MIN = 1000;` e `MAX = 9999`. Em
    `validates()`:
-   `Validations::integerMin('checkin_code', $this, self::CHECKIN_CODE_MIN) && $this->validatesCheckinCodeMax() && Validations::uniqueness('checkin_code', $this);`
+
+   ```php
+   Validations::integerMin('checkin_code', $this, self::CHECKIN_CODE_MIN) &&
+       $this->validatesCheckinCodeMax() &&
+       Validations::uniqueness('checkin_code', $this);
+   ```
+
    (método privado: `(int) $this->checkin_code > self::CHECKIN_CODE_MAX`
    -> `addError('checkin_code', 'deve ser menor ou igual a 9999!')`;
    ou crie `integerMax` em `VAL`, cenário M2).
@@ -1024,7 +1098,9 @@ public function validates(): void
         return;
     }
 
-    if (Enrollment::exists(['event_id' => $this->event_id, 'user_id' => $this->user_id])) {
+    $same = ['event_id' => $this->event_id, 'user_id' => $this->user_id];
+
+    if (Enrollment::exists($same)) {
         $this->addError('base', 'você já está inscrito neste evento!');
         return;
     }
@@ -1039,7 +1115,13 @@ public function validates(): void
    Import `Lib\Validations`. `exists()` com duas condições usa
    `findBy` (`MODEL:335`), que aceita várias.
 3. `ROUTES`, dentro de `auth`:
-   `Route::post('/events/{id}/enrollments', [EnrollmentsController::class, 'create'])->name('events.enrollments.create');`
+
+   ```php
+   Route::post(
+       '/events/{id}/enrollments',
+       [EnrollmentsController::class, 'create']
+   )->name('events.enrollments.create');
+   ```
 4. `app/Controllers/EnrollmentsController.php`:
 
 ```php
@@ -1052,12 +1134,16 @@ public function create(Request $request): void
         return;
     }
 
-    $enrollment = new Enrollment(['event_id' => $event->id, 'user_id' => $this->currentUser()?->id]);
+    $enrollment = new Enrollment([
+        'event_id' => $event->id,
+        'user_id' => $this->currentUser()?->id,
+    ]);
 
     if ($enrollment->save()) {
         FlashMessage::success('Inscrição realizada com sucesso!');
     } else {
-        FlashMessage::danger($enrollment->errors('base') ?? 'Não foi possível realizar a inscrição!');
+        $error = $enrollment->errors('base');
+        FlashMessage::danger($error ?? 'Não foi possível se inscrever!');
     }
 
     $this->redirectTo(route('events.show', ['id' => $event->id]));
@@ -1069,7 +1155,15 @@ public function create(Request $request): void
    botão "Inscrever-se"; mostre "Você já está inscrito" quando
    `Enrollment::exists([...])` (ou `User::isEnrolledIn(Event)` no
    model) e "Lotado" quando `availableSpots() === 0`.
-6. `US`: `public function enrollments(): HasMany { return $this->hasMany(Enrollment::class, 'user_id'); }`
+6. `US`:
+
+   ```php
+   public function enrollments(): HasMany
+   {
+       return $this->hasMany(Enrollment::class, 'user_id');
+   }
+   ```
+
    e `isEnrolledIn(Event $event): bool`.
 7. Acesso: teste HTTP `POST /events/1/enrollments` sem sessão -> 302
    `/login`.
@@ -1113,12 +1207,20 @@ Passos:
 1. Teste de controller: inscrito cancela, `Enrollment::all()` vazio,
    flash `success`; não inscrito recebe `danger`.
 2. `ROUTES` (grupo `auth`):
-   `Route::delete('/events/{id}/enrollments', [EnrollmentsController::class, 'destroy'])->name('events.enrollments.destroy');`
-3. `EnrollmentsController::destroy`: `Enrollment::findBy(['event_id' => $id, 'user_id' => $this->currentUser()?->id])`;
+
+   ```php
+   Route::delete(
+       '/events/{id}/enrollments',
+       [EnrollmentsController::class, 'destroy']
+   )->name('events.enrollments.destroy');
+   ```
+3. `EnrollmentsController::destroy`: `Enrollment::findBy([...])` com
+   `event_id` da rota e `user_id` do logado;
    `null` -> `danger('Você não está inscrito neste evento!')`; senão
    `->destroy()` e `success('Inscrição cancelada!')`; redireciona para
    `events.show`.
-4. View: form `method="post"` + `<input type="hidden" name="_method" value="DELETE">`
+4. View: form `method="post"` +
+   `<input type="hidden" name="_method" value="DELETE">`
    (como `IDX:30-33`) no lugar do botão "Inscrever-se" quando inscrito.
 
 Armadilhas:
@@ -1151,7 +1253,8 @@ Passos:
    mantém a primeira data. Controller: não inscrito recebe `danger`;
    código em formato errado (`'12a'`, array) recebe `danger` sem 500.
 2. `SCH:43-53`: `confirmed_at TIMESTAMP NULL,` em `event_user`;
-   `EN:18`: `'confirmed_at'` em `$columns`; `@property string|null $confirmed_at`.
+   `EN:18`: `'confirmed_at'` em `$columns`;
+   `@property string|null $confirmed_at`.
 3. `EN`:
 
 ```php
@@ -1178,16 +1281,25 @@ public function isConfirmed(): bool
 ```
 
 4. `ROUTES` (`auth`):
-   `Route::post('/events/{id}/enrollments/confirmation', [EnrollmentsController::class, 'confirm'])->name('events.enrollments.confirm');`
+
+   ```php
+   Route::post(
+       '/events/{id}/enrollments/confirmation',
+       [EnrollmentsController::class, 'confirm']
+   )->name('events.enrollments.confirm');
+   ```
 5. `EnrollmentsController::confirm`: acha a inscrição do logado
-   (`findBy`, como P3); `$code = $request->getParam('code'); $code = is_string($code) ? trim($code) : '';`;
+   (`findBy`, como P3); `$code = $request->getParam('code');` e
+   `$code = is_string($code) ? trim($code) : '';`;
    `confirm($code)` -> flash `success('Presença confirmada!')` ou
    `danger($enrollment->errors('base') ?? 'Não foi possível confirmar!')`;
    redireciona para `events.show`.
-6. View do Participante: form com `<input name="code" inputmode="numeric" maxlength="4">`
+6. View do Participante: form com
+   `<input name="code" inputmode="numeric" maxlength="4">`
    visível só para inscrito não confirmado; "Presença confirmada em
    dd/mm" quando confirmado.
-7. Admin: no `SHOW`, "confirmados/inscritos" (`Enrollment::where(['event_id' => $id])`
+7. Admin: no `SHOW`, "confirmados/inscritos"
+   (`Enrollment::where(['event_id' => $id])`
    filtrando `isConfirmed()`).
 
 Armadilhas:
@@ -1230,12 +1342,26 @@ Passos:
    `canceled` e persiste; `status` fora da lista é inválido
    (`inclusion`). `ECT`: `put('cancel', ...)` com `id` -> `Location:
    /admin/events/{id}` e status cancelado; cancelar de novo dá `danger`.
-2. `SCH`: `status ENUM('scheduled', 'canceled', 'finished') NOT NULL DEFAULT 'scheduled',`.
-3. `EV`: `public const STATUSES = ['scheduled' => 'Agendado', 'canceled' => 'Cancelado', 'finished' => 'Encerrado'];`,
-   `'status'` em `$columns`, construtor (cópia de `US:28-35`) com
-   `if ($this->status === null) { $this->status = 'scheduled'; }`, em
-   `validates()`:
-   `Validations::notEmpty('status', $this) && Validations::inclusion('status', $this, array_keys(self::STATUSES));`
+2. `SCH`: `status ENUM('scheduled', 'canceled', 'finished')`
+   `NOT NULL DEFAULT 'scheduled',`.
+3. `EV`: `'status'` em `$columns`, construtor (cópia de `US:28-35`) com
+   `if ($this->status === null) { $this->status = 'scheduled'; }`, e:
+
+   ```php
+   public const STATUSES = [
+       'scheduled' => 'Agendado',
+       'canceled' => 'Cancelado',
+       'finished' => 'Encerrado',
+   ];
+   ```
+
+   Em `validates()`:
+
+   ```php
+   Validations::notEmpty('status', $this) &&
+       Validations::inclusion('status', $this, array_keys(self::STATUSES));
+   ```
+
    e:
 
 ```php
@@ -1258,11 +1384,19 @@ public function isCanceled(): bool
 ```
 
 4. `ROUTES` (grupo admin, depois de `update`):
-   `Route::put('/admin/events/{id}/cancel', [AdminEventsController::class, 'cancel'])->name('admin.events.cancel');`
+
+   ```php
+   Route::put(
+       '/admin/events/{id}/cancel',
+       [AdminEventsController::class, 'cancel']
+   )->name('admin.events.cancel');
+   ```
 5. `EC::cancel(Request $request)`: `findEvent` (`EC:132-135`), não
-   achou -> `eventNotFound()`; `$event->cancel()` -> `success('Evento cancelado!')`
-   ou `danger($event->errors('base') ?? ...)`; `redirectTo(route('admin.events.show', ...))`.
-6. `IDX`: badge `<span class="badge text-bg-secondary"><?= Event::STATUSES[$event->status] ?></span>`
+   achou -> `eventNotFound()`; `$event->cancel()` ->
+   `success('Evento cancelado!')` ou `danger($event->errors('base') ?? ...)`;
+   `redirectTo(route('admin.events.show', ...))`.
+6. `IDX`: badge `<span class="badge text-bg-secondary">` com
+   `<?= Event::STATUSES[$event->status] ?>` dentro,
    ao lado do título; botão "Cancelar" como form `post` + `_method=PUT`
    (não confundir com o link "Cancelar" do form, `FORM:92`: renomeie
    para "Cancelar Evento"). `SHOW`: linha "Situação".
@@ -1331,8 +1465,15 @@ public function duplicate(): Event
    Com P1, zere `checkin_code` (`$copy->checkin_code = null;`) para
    gerar outro; com P5, `status = 'scheduled'`.
 3. `ROUTES` (admin):
-   `Route::post('/admin/events/{id}/duplicate', [AdminEventsController::class, 'duplicate'])->name('admin.events.duplicate');`
-4. `EC::duplicate(Request $request)`: `findEvent`; `$copy = $event->duplicate();`
+
+   ```php
+   Route::post(
+       '/admin/events/{id}/duplicate',
+       [AdminEventsController::class, 'duplicate']
+   )->name('admin.events.duplicate');
+   ```
+4. `EC::duplicate(Request $request)`: `findEvent`;
+   `$copy = $event->duplicate();`
    `if ($copy->save())` -> `success('Evento duplicado! Revise os dados.')`
    e `redirectTo(route('admin.events.edit', ['id' => $copy->id]))`;
    senão `danger` e volta ao `show`.
@@ -1373,9 +1514,14 @@ Passos:
 1. Testes: controller logando `user@` com duas Inscrições e uma de
    outro Participante: a resposta tem os dois títulos e não o terceiro.
    Acesso: sem sessão -> `/login`.
-2. `US`: `public function enrollments(): HasMany { return $this->hasMany(Enrollment::class, 'user_id'); }`.
+2. `US`: `enrollments(): HasMany` com
+   `$this->hasMany(Enrollment::class, 'user_id')` (código em P2).
 3. `ROUTES` (`auth`):
-   `Route::get('/enrollments', [EnrollmentsController::class, 'index'])->name('enrollments.index');`
+
+   ```php
+   Route::get('/enrollments', [EnrollmentsController::class, 'index'])
+       ->name('enrollments.index');
+   ```
 4. `EnrollmentsController::index`:
    `$enrollments = $this->currentUser()?->enrollments()->get() ?? [];`
    `$title = 'Meus eventos';` `render('enrollments/index', ...)`.
@@ -1411,8 +1557,14 @@ Passos:
 
 1. Teste em `ECT`: `get('export', ...)` com dois Eventos: a resposta
    começa com a linha de cabeçalho e contém os títulos.
-2. `ROUTES`: `Route::get('/admin/events/export', [AdminEventsController::class, 'export'])->name('admin.events.export');`
-   antes de `/admin/events/{id}`.
+2. `ROUTES`, antes de `/admin/events/{id}`:
+
+   ```php
+   Route::get(
+       '/admin/events/export',
+       [AdminEventsController::class, 'export']
+   )->name('admin.events.export');
+   ```
 3. `EC::export(): void`:
 
 ```php
@@ -1422,7 +1574,10 @@ public function export(): void
     header('Content-Disposition: attachment; filename="events.csv"');
 
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['id', 'title', 'kind', 'starts_on', 'location', 'capacity', 'enrollments']);
+    fputcsv($out, [
+        'id', 'title', 'kind', 'starts_on',
+        'location', 'capacity', 'enrollments',
+    ]);
 
     foreach (Event::all() as $event) {
         fputcsv($out, [
@@ -1474,9 +1629,16 @@ Passos:
    padrão (`US:28-35`), `STATUSES`.
 3. `EN::validates()` (P2): em vez de recusar sem vaga, defina
    `$this->status = 'waiting'` quando `availableSpots() === 0`.
-4. `EV:131`: `Enrollment::where(['event_id' => $this->id, 'status' => 'confirmed'])`.
+4. `EV:131`:
+   `Enrollment::where(['event_id' => $this->id, 'status' => 'confirmed'])`.
 5. `EV::promoteFirstWaiting(): void`: SQL no model,
-   `SELECT id FROM event_user WHERE event_id = :id AND status = 'waiting' ORDER BY created_at, id LIMIT 1`,
+
+   ```sql
+   SELECT id FROM event_user
+   WHERE event_id = :id AND status = 'waiting'
+   ORDER BY created_at, id LIMIT 1
+   ```
+
    depois `Enrollment::findById(...)->update(['status' => 'confirmed'])`.
    Chamado por `EnrollmentsController::destroy` (P3) após remover uma
    inscrição `confirmed`.
@@ -1523,8 +1685,10 @@ CREATE TABLE comments (
     user_id    INT NOT NULL,
     body       TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_comments_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
-    CONSTRAINT fk_comments_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT
+    CONSTRAINT fk_comments_event FOREIGN KEY (event_id)
+        REFERENCES events (id) ON DELETE CASCADE,
+    CONSTRAINT fk_comments_user FOREIGN KEY (user_id)
+        REFERENCES users (id) ON DELETE RESTRICT
 );
 ```
 
@@ -1532,9 +1696,17 @@ CREATE TABLE comments (
 3. `app/Models/Comment.php`: `$table = 'comments'`,
    `$columns = ['event_id', 'user_id', 'body']`, `event()` e `user()`
    (`BelongsTo`), `validates()` com `notEmpty('body')` e `maxLength`
-   (M2). `EV`: `public function comments(): HasMany { return $this->hasMany(Comment::class, 'event_id'); }`.
-4. `ROUTES` (`auth`): `Route::post('/events/{id}/comments', [CommentsController::class, 'create'])->name('events.comments.create');`
-5. `CommentsController::create`: acha o Evento; `new Comment(['event_id' => ..., 'user_id' => $this->currentUser()?->id, 'body' => $body])`
+   (M2). `EV`: `comments(): HasMany` com
+   `$this->hasMany(Comment::class, 'event_id')`.
+4. `ROUTES` (`auth`):
+
+   ```php
+   Route::post('/events/{id}/comments', [CommentsController::class, 'create'])
+       ->name('events.comments.create');
+   ```
+
+5. `CommentsController::create`: acha o Evento; `new Comment([...])` com
+   `event_id` do Evento, `user_id` do logado e `body`
    com `$body = $request->getParam('comment')['body'] ?? null` validado
    como escalar (`is_array($params)`, `is_string`); `save()` -> flash e
    redirect para `events.show`; inválido -> `danger` com
@@ -1612,7 +1784,8 @@ Arquivos: `app/Controllers/AuthenticationsController.php:19-32`
 (`authenticate`: `:24` valida a senha, `:25` chama `Auth::login`, `:27`
 redireciona), `lib/Authentication/Auth.php:9-13` (`login`), `ROUTES:13-15`,
 `app/views/authentications/new.phtml`, `US:19-20` (`$columns`),
-`SCH:7-17`, `tests/Integration/Controllers/AuthenticationsControllerTest.php:32-54`
+`SCH:7-17`,
+`tests/Integration/Controllers/AuthenticationsControllerTest.php:32-54`
 (`test_authenticate_with_valid_credentials_should_login` espera
 `Auth::check()` verdadeiro e `Location: /dashboard`),
 `tests/Acceptance/authentications/LoginCest.php:31-38` e
@@ -1628,7 +1801,8 @@ Passos (versão com o código no model, a mais defensável):
    /login/code` com o código certo -> `Auth::check()` verdadeiro e
    `Location: /dashboard`; errado -> falso, `Location: /login/code`;
    sem código pendente -> `Location: /login`.
-2. `SCH:7-17`: `login_code SMALLINT UNSIGNED NULL, login_code_expires_at TIMESTAMP NULL`;
+2. `SCH:7-17`: `login_code SMALLINT UNSIGNED NULL,`
+   `login_code_expires_at TIMESTAMP NULL`;
    `US:20`: as duas colunas em `$columns` e `@property`.
 3. `US`:
 
@@ -1650,7 +1824,9 @@ public function verifyLoginCode(string $code): bool
         return false;
     }
 
-    if (strtotime($this->login_code_expires_at) < time() || !ctype_digit($code)) {
+    $expired = strtotime($this->login_code_expires_at) < time();
+
+    if ($expired || !ctype_digit($code)) {
         return false;
     }
 
@@ -1668,17 +1844,31 @@ public function verifyLoginCode(string $code): bool
    `Auth::login($user)`, `$code = $user->generateLoginCode();`
    `$_SESSION['pending_user_id'] = $user->id;` e
    `FlashMessage::success("Seu código de acesso é {$code}")` (é assim
-   que "o backend devolve o número" sem e-mail), `redirectTo(route('users.code'))`.
+   que "o backend devolve o número" sem e-mail),
+   `redirectTo(route('users.code'))`.
 5. Rotas públicas (fora de `auth`), ao lado de `:13-15`:
-   `Route::get('/login/code', [AuthenticationsController::class, 'code'])->name('users.code');`
-   `Route::post('/login/code', [AuthenticationsController::class, 'verifyCode'])->name('users.verify_code');`
+
+   ```php
+   Route::get('/login/code', [AuthenticationsController::class, 'code'])
+       ->name('users.code');
+   Route::post('/login/code', [AuthenticationsController::class, 'verifyCode'])
+       ->name('users.verify_code');
+   ```
 6. `code()`: sem `pending_user_id` -> `redirectTo(route('users.login'))`;
    senão `render('authentications/code', ['title' => 'Código de acesso'])`
    com `<input name="code" inputmode="numeric" maxlength="4">`.
-7. `verifyCode(Request $request)`: `$user = User::findById((int) ($_SESSION['pending_user_id'] ?? 0));`
-   `$code = $request->getParam('code'); $code = is_string($code) ? trim($code) : '';`
-   certo -> `unset($_SESSION['pending_user_id'])`, `Auth::login($user)`,
-   `success('Login realizado com sucesso!')`, `redirectTo(route('dashboard.index'))`;
+7. `verifyCode(Request $request)`:
+
+   ```php
+   $user = User::findById((int) ($_SESSION['pending_user_id'] ?? 0));
+   $code = $request->getParam('code');
+   $code = is_string($code) ? trim($code) : '';
+   ```
+
+   `$user` nulo -> `redirectTo(route('users.login'))`; código certo ->
+   `unset($_SESSION['pending_user_id'])`, `Auth::login($user)`,
+   `success('Login realizado com sucesso!')`,
+   `redirectTo(route('dashboard.index'))`;
    errado -> `danger('Código inválido!')`, `redirectTo(route('users.code'))`.
 8. Testes existentes: `AuthenticationsControllerTest:32-42` passa a
    esperar `/login/code`; `LoginHelper::login()` precisa ler o código
@@ -1731,7 +1921,8 @@ Passos:
 ```php
 private function findEvent(Request $request): ?Event
 {
-    $event = $this->currentUser()?->events()->findById((int) $request->getParam('id'));
+    $id = (int) $request->getParam('id');
+    $event = $this->currentUser()?->events()->findById($id);
 
     return $event instanceof Event ? $event : null;
 }
@@ -1744,7 +1935,8 @@ private function findEvent(Request $request): ?Event
 3. O `show` (`EC:31`) também usa `findEvent`: para manter o `show`
    amplo, troque `EC:31` por `Event::findById((int) $request->getParam('id'))`
    e deixe `findEvent` para edit/update/destroy. Pergunte ao professor.
-4. `IDX:28-33`: `<?php if ((int) $event->user_id === (int) $this->currentUser()?->id) : ?>`
+4. `IDX:28-33`:
+   `<?php if ((int) $event->user_id === (int) $this->currentUser()?->id) : ?>`
    em volta de Editar e Remover.
 
 Armadilhas:
@@ -1771,7 +1963,8 @@ ser editado nem removido".
 Arquivos: `EV:84-99` (hoje a regra permite editar Evento passado sem
 mudar a data), `EC:65-111`, `EC:32-35` (padrão de *early return*),
 `IDX:28-33`, `SHOW:35`, `EVT:499-547` (testes que **garantem** a edição
-de Evento passado: `test_past_event_can_be_edited_when_starts_on_does_not_change`
+de Evento passado:
+`test_past_event_can_be_edited_when_starts_on_does_not_change`
 em `:511`), `ECT:191-207`.
 
 Passos:
@@ -1790,7 +1983,14 @@ public function isEditable(): bool
 
    (`isCanceled()` de P5; sem P5, só a data).
 3. `EC` edit/update/destroy, logo após o `findEvent`:
-   `if (!$event->isEditable()) { FlashMessage::danger('Evento encerrado não pode ser alterado!'); $this->redirectTo(route('admin.events.show', ['id' => $event->id])); return; }`
+
+   ```php
+   if (!$event->isEditable()) {
+       FlashMessage::danger('Evento encerrado não pode ser alterado!');
+       $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+       return;
+   }
+   ```
 4. `IDX:28-33` e `SHOW:35`: botões só se `isEditable()`.
 
 Armadilhas:
@@ -1816,7 +2016,8 @@ Pedido típico: "troque o texto do flash ao remover", "mostre o título
 do Evento na mensagem" ou "um flash de aviso (`warning`)".
 
 Arquivos: `EC:56, 59, 87, 90, 105, 107, 139` (textos), `FLASH:7-15`
-(tipos) e `FLASH:25-28` (um valor por tipo), `app/views/layouts/_flash_message.phtml:3`
+(tipos) e `FLASH:25-28` (um valor por tipo),
+`app/views/layouts/_flash_message.phtml:3`
 (imprime `$msg` sem escape), `ECT:98, 137, 168, 206, 223, 250, 262-265`
 (asserções de texto), `tests/Unit/Lib/FlashMessageTest.php`,
 `ACT/DeleteEventCest.php:23,41` (textos exatos).
@@ -1828,7 +2029,8 @@ Passos:
    `FlashMessage::success("Evento \"{$event->title}\" removido!")`.
 3. Escape em um lugar só, o partial: `_flash_message.phtml:3` passa a
    `<div><?= htmlspecialchars($msg) ?></div>`.
-4. Tipo novo: `public static function warning(string $value): void { self::message('warning', $value); }`
+4. Tipo novo: `warning(string $value): void` chamando
+   `self::message('warning', $value)`
    em `FLASH`; o partial já monta `alert-warning`.
 5. Teste unitário copiando `test_danger`.
 
@@ -1865,7 +2067,8 @@ Passos:
 
 1. Teste em `ECT`: `show` contém `Admin` (nome do admin do `setUp`,
    `ECT:23`).
-2. `SHOW`: par `<dt>Criado por</dt><dd><?= htmlspecialchars($event->user()->get()->name) ?></dd>`.
+2. `SHOW`: par `<dt>Criado por</dt>` e
+   `<dd><?= htmlspecialchars($event->user()->get()->name) ?></dd>`.
 3. `IDX`: coluna "Criado por" (opcional; é uma consulta por linha).
 
 Armadilhas:
@@ -1897,12 +2100,15 @@ apresentação no model), `ECT:59-68`, `ACT/ListEventsCest.php:28`
 Passos:
 
 1. Teste em `ECT` com a string esperada.
-2. Método no model: `public function formattedStartsOn(): string { return date('d/m/Y', strtotime($this->starts_on)); }`
-   e `excerpt(int $max = 80): string` com `mb_strimwidth($this->description, 0, $max, '...')`.
+2. Métodos no model: `formattedStartsOn(): string` com
+   `date('d/m/Y', strtotime($this->starts_on))` e
+   `excerpt(int $max = 80): string` com
+   `mb_strimwidth($this->description, 0, $max, '...')`.
    Use nas duas views.
 3. Badge: `public const KIND_BADGES = ['lecture' => 'primary', ...]`
    em `EV` ao lado de `KINDS`; na view
-   `<span class="badge text-bg-<?= Event::KIND_BADGES[$event->kind] ?? 'secondary' ?>">`.
+   `<span class="badge text-bg-<?= Event::KIND_BADGES[$event->kind]`
+   `?? 'secondary' ?>">`.
 
 Armadilhas:
 
@@ -1987,7 +2193,8 @@ Passos:
    `see`, `seeCurrentUrlEquals`. Filtro (N1):
    `amOnPage('/admin/events?kind=workshop')`, `see('Evento 02', 'table')`,
    `dontSee('Evento 01', 'table')`.
-3. Formulário: `fillEventForm($page, $this->validEventData(['title' => '...']))`
+3. Formulário:
+   `fillEventForm($page, $this->validEventData(['title' => '...']))`
    e `click('Salvar')`. A data é definida por `executeJS`
    (`:148-154`); não digite no `date`.
 4. Cenário de Participante (O2, P2): a base loga o admin; para logar
