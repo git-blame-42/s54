@@ -47,8 +47,11 @@ title to 100 characters`.
 - `&&` depois de `notEmpty`: título vazio mostra só "não pode ser
   vazio!", nunca duas mensagens. É o mesmo encadeamento de `kind`,
   `modality` e `starts_on` no `validates()`.
-- `is_scalar`: array (`event[title][]=x`) não estoura `Array to string
-  conversion` (que o `ErrorsHandler` transforma em 500).
+- `is_scalar`: protege quando um array é atribuído direto ao model
+  (teste ou código novo); não estoura `Array to string conversion`
+  (que o `ErrorsHandler` transforma em 500). Pelo form
+  (`event[title][]=x`) o array nem chega: o `fill()` do controller já
+  troca valor não escalar por `null`.
 - Só `maxLength` foi implementada: é o que o pedido exige. `minLength`
   e `integerMax` ficam como receita abaixo (5 min cada), para não
   deixar código sem uso no framework.

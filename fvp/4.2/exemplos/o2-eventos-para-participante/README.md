@@ -53,8 +53,10 @@ Branch no clone: `fvp/o2-eventos-para-participante`, a partir de
   protege o controller inteiro pelo middleware; misturar ações de
   Participante ali obrigaria a tirar a proteção ou duplicar rotas.
 - `Event::paginate` com `route: 'events.paginate'`: o `_pages.phtml`
-  monta os links com `$paginator->getRouteName()`. Sem trocar a rota,
-  os links da paginação levariam o Participante para `/admin/...`.
+  monta os links com `$paginator->getRouteName()`. Sem `route:` o
+  padrão é `"$table.paginate"` = `events.paginate`, que já é o nome
+  certo; o erro é copiar o `route: 'admin.events.paginate'` do admin
+  sem trocar, aí os links levariam o Participante para `/admin/...`.
 - Views próprias em vez de `if isAdmin()` nas do admin: o Participante
   nunca recebe HTML com links de edição, e os testes do admin ficam
   intactos.
@@ -167,8 +169,10 @@ rode os testes e o `./run phpcs` de novo.
 
 - Rotas dentro do grupo `admin` barram o Participante (vai para
   `/dashboard`); precisam ficar só no `auth`.
-- Esquecer `route: 'events.paginate'` no `paginate`: a página 1
-  funciona, mas os links da paginação vão para `/admin/events/page/N`.
+- Copiar `route: 'admin.events.paginate'` do admin sem trocar: a
+  página 1 funciona, mas os links da paginação vão para
+  `/admin/events/page/N`. Sem `route:` o padrão (`events.paginate`)
+  já acerta.
 - `_pages.phtml` só enxerga `$paginator`; não tente passar variável do
   controller para ele.
 - Copiar a view do admin e esquecer o "Voltar": ele aponta para

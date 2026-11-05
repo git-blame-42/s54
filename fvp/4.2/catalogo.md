@@ -4561,7 +4561,10 @@ Passos:
 Armadilhas:
 
 - `currentUser()` é `?User`: o `phpstan` exige tratar `null` mesmo com o
-  middleware garantindo sessão; o `return` após `redirectTo` evita o 500.
+  middleware garantindo sessão. O `return` após `redirectTo`: em
+  produção `redirectTo` já faz `exit`; no `ControllerTestCase` ele é
+  trocado por um `echo`, e sem o `return` a ação seguiria chamando
+  `->events()` em `null`.
 - `HasMany::paginate` não recebe `queryParams`/`orderBy` (N1/N3): se
   esses cenários já existirem, repasse também lá (`HASMANY:44-55`).
 - O painel (N6/N7) passa a ser "meus" ou "todos"? Decida e nomeie.
@@ -5188,14 +5191,17 @@ Armadilhas:
   recusa. Gerar na view: nunca.
 - `rand()`/`mt_rand()` servem, mas `random_int()` é o correto para
   valor imprevisível; diga isso se perguntarem.
-- Sem o laço de unicidade há colisão (9000 valores); com `UNIQUE KEY`
-  no schema a colisão vira `PDOException` no `INSERT`. O `uniqueness`
-  em `validates()` cobre quem tenta forçar um código repetido via
+- Sem o laço de unicidade há colisão (9000 valores): o `uniqueness`
+  roda em `validates()`, antes do `INSERT`, então o `save()` só devolve
+  `false` e o admin vê "dados incorretos" sem saber por quê. O
+  `uniqueness` também cobre quem tenta forçar um código repetido via
   `update`.
 - Como o código é gerado em `save()`, `isValid()` chamado antes de
-  `save()` em um registro novo acusa `checkin_code` vazio: o teste
-  `test_empty_event_should_have_error_in_every_field` (`EVT:86-99`)
-  pode passar a listar `checkin_code`; ajuste a expectativa. Se
+  `save()` em um registro novo acusa `checkin_code` vazio: os testes
+  que chamam `isValid()` num Evento novo (`test_valid_event_should_be_valid`
+  e os que criam Evento sem código) quebram. O
+  `test_empty_event_should_have_error_in_every_field` não quebra: só
+  confere os 8 campos antigos. Se
   preferir, gere no construtor (padrão `US:28-35`) e não em `save()`.
 - `exists()` (`MODEL:347-350`) usa `where`: aceita uma ou mais
   condições de igualdade.
@@ -5263,7 +5269,7 @@ public function validates(): void
 ```
 
    Import `Lib\Validations`. `exists()` com duas condições usa
-   `findBy` (`MODEL:335`), que aceita várias.
+   `where` (`MODEL:347-351`), que junta várias com `AND`.
 3. `ROUTES`, dentro de `auth`:
 
    ```php

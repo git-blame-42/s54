@@ -58,7 +58,7 @@ Branch no clone: `fvp/o1-rota-eventos-lotados`, a partir de `main`
 - Rota fixa antes de `{id}`, como `new` (o Router casa na ordem).
 - Nome no padrão `admin.events.*`; está dentro do grupo
   `auth` + `admin`, então herda os middlewares.
-- `$title` no `compact`: o layout usa no `<h1>` e no `<title>`.
+- `$title` no `compact`: o layout usa no `<h1>` (o `<title>` é fixo).
 - Saída com `htmlspecialchars`; tipo pelo rótulo de `Event::KINDS`.
 
 ## Como verificar
@@ -175,7 +175,7 @@ Depois de aplicar: rode `./run phpcs` e os testes de novo.
   `ControllerTestCase` chama a ação direto, sem Router. Só o teste
   por HTTP com admin logado pega (cenário S2).
 - Esquecer `$title` no `compact`: o layout usa `$title` no `<h1>` e
-  quebra.
+  quebra (o `<title>` é fixo, não depende dele).
 - `array_filter` mantém as chaves: sem `array_values`, `$events[0]`
   pode não existir (o teste unitário usa `[0]`).
 - `availableSpots()` usa `max(0, ...)`: um Evento com mais Inscrições

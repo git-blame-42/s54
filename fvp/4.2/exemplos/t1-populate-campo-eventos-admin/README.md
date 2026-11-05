@@ -190,8 +190,9 @@ Depois de aplicar: `./run db:populate`, os testes e o `./run phpcs`.
 - Inserir os Eventos novos no meio do array `$events`: os índices
   das Inscrições passam a apontar para outros Eventos (e o Evento
   lotado deixa de ser o primeiro).
-- Data no passado ou menor que +14: a validação barra o `save()` e o
-  populate aborta com `RuntimeException`.
+- Data no passado: a validação (`notPastDate`) barra o `save()` e o
+  populate aborta com `RuntimeException`. O `+14` é só convenção do
+  populate (folga para os testes de navegador), não regra do model.
 - Título repetido não é erro, mas confunde os testes manuais; use
   `sprintf('Evento %02d', ...)`.
 - Campo novo esquecido em um dos laços: `NULL` no `INSERT`, erro de
