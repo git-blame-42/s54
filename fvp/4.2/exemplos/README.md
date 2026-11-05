@@ -244,6 +244,13 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P22. Adiar o Evento uma semana com um botão
   `p22-adiar-uma-semana/`
   - feat: Add button to postpone an event by one week
+- P23. Código gravado no registro, exigido para remover
+  `p23-codigo-do-registro-para-remover/`
+  - feat: Require the Event confirmation code to remove it
+- P24. Código de confirmação com validade e limite de tentativas
+  `p24-codigo-validade-tentativas/`
+  - feat: Require the Event confirmation code to remove it
+  - feat: Expire the confirmation code and limit wrong
 - P25. Histórico de alterações dos Eventos
   `p25-historico-alteracoes/`
   - feat: Record the change history of events

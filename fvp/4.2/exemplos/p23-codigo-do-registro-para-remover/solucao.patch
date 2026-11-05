@@ -1,0 +1,474 @@
+From 2af97ce35e1f9fc349e121437b177a98bea60e7b Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 19:28:37 -0300
+Subject: [PATCH] feat: Require the Event confirmation code to remove it
+
+Each Event gets a random 4-digit confirmation code, generated in the
+constructor when empty and stored in the record. It is shown on the show
+page and must be typed in the removal form; a wrong or missing code keeps
+the Event.
+---
+ app/Controllers/Admin/EventsController.php    |   7 +
+ app/Models/Event.php                          |  35 +++++
+ app/views/admin/events/index.phtml            |   5 +-
+ app/views/admin/events/show.phtml             |  13 ++
+ database/schema.sql                           |   2 +
+ .../admin/events/DeleteEventCest.php          |  31 +++-
+ tests/Integration/Access/EventsAccessTest.php |  20 +++
+ .../Admin/EventsControllerTest.php            | 143 +++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        |  58 +++++++
+ 9 files changed, 305 insertions(+), 9 deletions(-)
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..6675efa 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -101,6 +101,13 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        // Confere o código antes do safeDestroy: código errado não revela se o Evento tem Inscrições.
++        if (!$event->confirmsCode($request->getParam('confirmation_code'))) {
++            FlashMessage::danger('Código de confirmação incorreto!');
++            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++            return;
++        }
++
+         if ($event->safeDestroy()) {
+             FlashMessage::success('Evento removido com sucesso!');
+         } else {
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..5f31a8a 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property int|string|null $confirmation_code gerado no construtor quando vazio; nunca vem do formulário
+  */
+ class Event extends Model
+ {
+@@ -44,6 +45,10 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Faixa do código de confirmação (4 dígitos). */
++    public const CODE_MIN = 1000;
++    public const CODE_MAX = 9999;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -55,8 +60,38 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'confirmation_code',
+     ];
+ 
++    /**
++     * Sorteia o código de confirmação só se ele estiver vazio. O construtor também roda a cada leitura do
++     * banco (findById, where, Paginator); com o "só se vazio", o código lido nunca é trocado.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        $code = $this->confirmation_code;
++        if ($code === null || $code === '') {
++            $this->confirmation_code = random_int(self::CODE_MIN, self::CODE_MAX);
++        }
++    }
++
++    /**
++     * Confere o código digitado sem conversão: só string de dígitos igual ao código ('04321', ' 4321',
++     * null e array não valem). hash_equals compara strings, sem as conversões do ==.
++     */
++    public function confirmsCode(mixed $input): bool
++    {
++        if (!is_string($input) || !ctype_digit($input)) {
++            return false;
++        }
++
++        return hash_equals((string) $this->confirmation_code, $input);
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..502189b 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -27,10 +27,7 @@
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
++                        <a class="btn btn-sm btn-outline-danger" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Remover</a>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..b118269 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,7 +30,20 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Código de confirmação</dt>
++    <dd class="col-sm-9">
++        <span id="confirmation_code_value"><?= htmlspecialchars((string) $event->confirmation_code) ?></span>
++    </dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
++
++<form class="mt-3" method="post" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>">
++    <input type="hidden" name="_method" value="DELETE">
++    <label for="confirmation_code" class="form-label">Digite o código para remover</label>
++    <input type="text" class="form-control" id="confirmation_code" name="confirmation_code" inputmode="numeric"
++        maxlength="4" autocomplete="off">
++    <button type="submit" class="btn btn-danger mt-2">Confirmar remoção</button>
++</form>
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..bb24423 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,8 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Código de 4 dígitos gerado pelo model ao criar; o admin digita para remover o Evento.
++    confirmation_code SMALLINT UNSIGNED NOT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/DeleteEventCest.php b/tests/Acceptance/admin/events/DeleteEventCest.php
+index a7af30a..33f636e 100644
+--- a/tests/Acceptance/admin/events/DeleteEventCest.php
++++ b/tests/Acceptance/admin/events/DeleteEventCest.php
+@@ -47,9 +47,38 @@ class DeleteEventCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function deleteWithWrongCodeGoesBackToShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $wrong = $event->confirmation_code === 1000 ? '1001' : '1000';
++
++        $page->wantTo('Remoção com código de confirmação errado');
++        $page->amOnPage('/admin/events');
++        $page->click('Remover', $this->rowOf('Evento 02'));
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->fillField('#confirmation_code', $wrong);
++        $page->click('Confirmar remoção');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Código de confirmação incorreto!');
++        $page->dontSee('Evento removido com sucesso!');
++        $page->see((string) $event->confirmation_code, '#confirmation_code_value');
++        Assert::assertNotNull(Event::findById((int) $event->id));
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++
++    /**
++     * "Remover" na listagem leva ao show do Evento; lá o código aparece em #confirmation_code_value e é
++     * digitado em #confirmation_code antes de "Confirmar remoção" (form com _method=DELETE).
++     */
+     private function clickRemove(AcceptanceTester $page, string $title): void
+     {
+-        // Remover é um form com _method=DELETE e botão "Remover", sem confirm() (contrato-ui-eventos.md).
+         $page->click('Remover', $this->rowOf($title));
++        $page->see($title, 'h1');
++
++        $code = $page->grabTextFrom('#confirmation_code_value');
++        $page->fillField('#confirmation_code', $code);
++        $page->click('Confirmar remoção');
+     }
+ }
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..96ce8ed 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,26 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_remove_only_with_the_confirmation_code(): void
++    {
++        $client = $this->loggedClient($this->admin);
++        $uri = "/admin/events/{$this->event->id}";
++
++        $response = $client->post($uri, ['form_params' => ['_method' => 'DELETE', 'confirmation_code' => '0000']]);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals($uri, $response->getHeaderLine('Location'));
++        $this->assertNotNull(Event::findById($this->event->id));
++
++        $show = (string) $client->get($uri)->getBody();
++        $this->assertStringContainsString('Código de confirmação incorreto!', $show);
++        $this->assertSame(1, preg_match('/id="confirmation_code_value">(\d{4})</', $show, $matches));
++
++        $response = $client->post($uri, ['form_params' => ['_method' => 'DELETE', 'confirmation_code' => $matches[1]]]);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/admin/events', $response->getHeaderLine('Location'));
++        $this->assertNull(Event::findById($this->event->id));
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..5bd1169 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -239,23 +239,89 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('não pode ser menor que o total de inscrições (2)!', $response);
+     }
+ 
+-    public function test_destroy_removes_event_without_enrollments(): void
++    public function test_index_remove_button_links_to_the_show_page(): void
+     {
+         $event = $this->createEvent();
+ 
+-        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertMatchesRegularExpression(
++            "#<a [^>]*href=\"/admin/events/{$event->id}\">Remover</a>#",
++            $response
++        );
++        $this->assertStringNotContainsString('value="DELETE"', $response);
++    }
++
++    public function test_show_displays_the_confirmation_code_and_the_removal_form(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('id="confirmation_code_value">4321<', $response);
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}\"", $response);
++        $this->assertStringContainsString('name="_method" value="DELETE"', $response);
++        $this->assertStringContainsString('name="confirmation_code"', $response);
++        $this->assertDoesNotMatchRegularExpression('/name="confirmation_code"[^>]*value=/', $response);
++    }
++
++    public function test_create_ignores_confirmation_code_sent_by_the_form(): void
++    {
++        $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['confirmation_code' => '42'])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertGreaterThanOrEqual(Event::CODE_MIN, $event->confirmation_code);
++        $this->assertLessThanOrEqual(Event::CODE_MAX, $event->confirmation_code);
++    }
++
++    public function test_update_keeps_the_confirmation_code(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: [
++                'id' => $event->id,
++                'event' => $this->validParams(['title' => 'Título Novo', 'confirmation_code' => '1234']),
++            ]
++        );
++
++        $updated = Event::findById($event->id);
++        $this->assertEquals('Título Novo', $updated->title);
++        $this->assertSame(4321, $updated->confirmation_code);
++    }
++
++    public function test_destroy_with_right_code_removes_event_without_enrollments(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $event->confirmation_code]
++        );
+ 
+         $this->assertNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+         $this->assertEquals('Evento removido com sucesso!', $_SESSION['flash']['success']);
+     }
+ 
+-    public function test_destroy_keeps_event_with_enrollments(): void
++    public function test_destroy_with_right_code_keeps_event_with_enrollments(): void
+     {
+         $event = $this->createEvent();
+         $this->enroll($event);
+ 
+-        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => (string) $event->confirmation_code]
++        );
+ 
+         $this->assertNotNull(Event::findById($event->id));
+         $this->assertSame('Location: /admin/events', $response);
+@@ -265,6 +331,75 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_destroy_without_code_keeps_event_and_goes_back_to_show(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++        $this->assertArrayNotHasKey('success', $_SESSION['flash']);
++    }
++
++    public function test_destroy_with_wrong_code_keeps_event_and_goes_back_to_show(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '1234']
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_code_as_array_keeps_event(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $response = $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => ['4321']]
++        );
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_destroy_with_wrong_code_does_not_reveal_enrollments(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++        $this->enroll($event);
++
++        $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '1234']
++        );
++
++        $this->assertEquals('Código de confirmação incorreto!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_with_code_of_another_event_keeps_both(): void
++    {
++        $event = $this->createEvent(['title' => 'Alvo', 'confirmation_code' => 1111]);
++        $this->createEvent(['title' => 'Outro', 'confirmation_code' => 2222]);
++
++        $this->delete(
++            action: 'destroy',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'confirmation_code' => '2222']
++        );
++
++        $this->assertCount(2, Event::all());
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..8034ffe 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,62 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    /* ------------------- código de confirmação ------------------- */
++
++    public function test_new_event_should_get_a_confirmation_code_in_range(): void
++    {
++        for ($i = 0; $i < 200; $i++) {
++            $code = (new Event($this->params()))->confirmation_code;
++
++            $this->assertIsInt($code);
++            $this->assertGreaterThanOrEqual(Event::CODE_MIN, $code);
++            $this->assertLessThanOrEqual(Event::CODE_MAX, $code);
++        }
++    }
++
++    public function test_confirmation_code_given_to_the_constructor_should_be_kept(): void
++    {
++        $event = new Event($this->params(['confirmation_code' => 4321]));
++        $this->assertTrue($event->save());
++
++        $this->assertSame(4321, Event::findById($event->id)->confirmation_code);
++    }
++
++    public function test_confirmation_code_should_be_kept(): void
++    {
++        $event = $this->createEvent();
++        $code = Event::findById($event->id)->confirmation_code;
++
++        $this->assertIsInt($code);
++        $this->assertGreaterThanOrEqual(1000, $code);
++        $this->assertLessThanOrEqual(9999, $code);
++
++        $event->title = 'Outro título';
++        $this->assertTrue($event->save());
++        $found = Event::findById($event->id);
++        $this->assertSame($code, $found->confirmation_code);
++        $this->assertSame($code, Event::where(['id' => $event->id])[0]->confirmation_code);
++        $this->assertSame($code, Event::paginate(1, 5)->registers()[0]->confirmation_code);
++    }
++
++    public function test_confirms_code_should_accept_only_the_code(): void
++    {
++        $event = new Event($this->params(['confirmation_code' => 4321]));
++
++        $this->assertTrue($event->confirmsCode('4321'));
++        foreach (['1234', '12a', ' 4321', '4321 ', '04321', '', '-4321', '4321.0', '4e3'] as $bad) {
++            $this->assertFalse($event->confirmsCode($bad), $bad);
++        }
++        $this->assertFalse($event->confirmsCode(null));
++        $this->assertFalse($event->confirmsCode(['4321']));
++        $this->assertFalse($event->confirmsCode(4321));
++    }
++
++    public function test_confirms_code_should_work_with_the_code_read_from_the_database(): void
++    {
++        $event = $this->createEvent(['confirmation_code' => 4321]);
++
++        $this->assertTrue(Event::findById($event->id)->confirmsCode('4321'));
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+
