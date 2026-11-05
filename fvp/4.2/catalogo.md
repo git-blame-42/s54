@@ -1211,6 +1211,8 @@ nome no `show`.
 
 Chance: baixa. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m16-before-validation`.
+
 Pedido típico: "tire os espaços das pontas antes de validar". Hoje um
 título só com espaços passa: `Validations::notEmpty` só recusa `null` e
 `''` (`VAL:9-17`), e o `fill` copia o texto cru (`EC:116-130`).
@@ -2892,6 +2894,8 @@ Prova: testes do builder; listagem ordenada e filtrada pelo builder.
 
 Chance: baixa. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n15-dois-paginadores`.
+
 Pedido típico: "na listagem, uma tabela de próximos e outra de passados,
 cada uma com a sua paginação".
 
@@ -2908,24 +2912,27 @@ Passos:
 2. Consultas: cada lista precisa de `starts_on >= :today` ou `<`, que o
    `Paginator` não faz (`PAG:147-158`). Use o `Paginator` estendido do
    N14 ou dois métodos no model com `LIMIT/OFFSET` e `COUNT(*)` próprios
-   (molde N13).
+   (molde N13). O exemplo pronto põe `comparisons` (operador fixo do
+   model) e `orderBy` no `Paginator` e cria `Event::paginateUpcoming` e
+   `paginatePast`.
 3. `Paginator`: parâmetros `string $pageParam = 'page'` e
-   `array $keepParams = []` no construtor e um método
+   `array $otherParams = []` no construtor e um método (mesmo nome do
+   O6):
 
    ```php
-   public function linkTo(int $page): string
+   /** @return array<string, mixed> */
+   public function routeParams(int $page): array
    {
-       return route(
-           $this->getRouteName(),
-           [...$this->keepParams, $this->pageParam => $page]
-       );
+       return [...$this->otherParams, $this->pageParam => $page];
    }
    ```
 
-   `PAGES` passa a usar `$paginator->linkTo(N)` nas três linhas.
+   `PAGES` monta cada link com `route($paginator->getRouteName(),
+   $paginator->routeParams(N))` dentro de `htmlspecialchars`: com dois
+   parâmetros na query string, o `&` sai cru.
 4. `EC::index`: lê `page` e `past_page` (validados como N10), monta os
    dois paginadores, cada um com o número de página do outro em
-   `keepParams`.
+   `otherParams`.
 5. `IDX`: duas tabelas, cada uma com o seu `renderPagesNavigation()`.
 
 Armadilhas:
@@ -2937,6 +2944,9 @@ Armadilhas:
 - Página fora do intervalo em uma das listas (N10).
 - `PAGES` serve a qualquer paginador: com `pageParam = 'page'` como
   padrão, a listagem atual e os testes de paginação ficam iguais.
+- Com `WHERE starts_on ...`, o MySQL lê pelo índice de `starts_on`
+  (`SCH:37`) e a ordem por `id` deixa de valer: ponha
+  `ORDER BY starts_on, id` em cada lista.
 
 Prova: `ECT`; no navegador, avançar uma tabela não mexe na outra.
 
@@ -5703,6 +5713,8 @@ token é recusado.
 
 Chance: média-baixa. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/q6-escape-xss`.
+
 Pedido típico: "ponha `<script>alert(1)</script>` no título e mostre
 que nada executa" ou "revise o escape de todas as telas". Hoje os
 campos do Evento já saem escapados (`IDX:22,25`, `SHOW:8,11,20,26`,
@@ -6540,6 +6552,8 @@ Prova: testes; no navegador, a página 1 não mostra Remover nos Eventos
 
 Chance: média-baixa. Tempo: 5-10 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r13-concordancia-vagas`.
+
 Pedido típico: "'1 disponíveis' está errado" ou "a coluna Vagas mostra
 '1/10': são vagas ou inscritos?". Hoje `SHOW:30-31` imprime
 `1/4 (3 disponíveis)`; com 1 vaga sai `(1 disponíveis)` e com 0,
@@ -6603,6 +6617,8 @@ detalhe; o Evento 3 com capacidade 2 mostra "1 vaga disponível".
 ### R14. Título da aba com o nome do Evento
 
 Chance: baixa-média. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/r14-titulo-da-pagina`.
 
 Pedido típico: "a aba do navegador deveria mostrar o nome do Evento".
 Hoje toda página tem `<title>Eventos do Câmpus</title>` fixo
@@ -6862,6 +6878,8 @@ Prova: `./run test tests/Unit` e `tests/Integration`.
 ### S5. Testes que faltam: `PaginatorTest` e Cests do `show`
 
 Chance: média-baixa. Tempo: 15-25 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/s5-paginator-test-cests`.
 
 Pedido típico: "o `Paginator` é item da rubrica e não tem teste próprio;
 escreva" ou "não há Cest do detalhe nem do 'não encontrado'".
