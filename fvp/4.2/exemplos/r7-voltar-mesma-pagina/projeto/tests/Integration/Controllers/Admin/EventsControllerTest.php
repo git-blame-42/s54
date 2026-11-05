@@ -310,14 +310,18 @@ class EventsControllerTest extends ControllerTestCase
     {
         $events = $this->createEvents(12);
 
-        foreach (['1', '0', 'abc', '-2', '2.5', ['2']] as $index => $page) {
-            $response = $this->delete(
-                action: 'destroy',
-                controllerName: self::CONTROLLER,
-                params: ['id' => $events[$index + 1]->id, 'page' => $page]
-            );
+        // null = sem o parâmetro page. Vem primeiro porque o Request do teste acumula os parâmetros
+        // entre chamadas (addParams): depois de enviar page uma vez, ele não fica mais ausente.
+        foreach ([null, '1', '0', 'abc', '-2', '2.5', ['2']] as $index => $page) {
+            $params = ['id' => $events[$index + 1]->id];
+            if ($page !== null) {
+                $params['page'] = $page;
+            }
+
+            $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: $params);
 
             $this->assertSame('Location: /admin/events', $response, var_export($page, true));
+            $this->assertNull(Event::findById($events[$index + 1]->id));
         }
     }
 

@@ -13,7 +13,7 @@ Branch no clone: `fvp/r7-voltar-mesma-pagina`, a partir de `main`
 
 Commit:
 
-- `d80b3c8` `feat: Return to the same listing page after removing an
+- `fbfe330` `feat: Return to the same listing page after removing an
   event`
 
 ## O que mudou
@@ -35,8 +35,10 @@ Commit:
   (também ao reabrir o form depois de um `update` inválido).
 - Testes:
   - `EventsControllerTest` (8 novos): o form manda a página atual;
-    `destroy` com `page=2` volta para a página 2; `page` ausente,
-    inválido ou `1` volta para `/admin/events`; último Evento da
+    `destroy` com `page=2` volta para a página 2; `page` ausente
+    (sem o parâmetro), inválido (`0`, `abc`, `-2`, `2.5`, array)
+    ou `1` volta para `/admin/events` (um teste só, com os 7
+    casos); último Evento da
     página 3 → página 2; `page=99` → última; remoção barrada também
     volta para a página; Cancelar aponta para o `show` na edição (e
     depois de `update` inválido) e para a listagem no cadastro.
@@ -59,8 +61,9 @@ Commit:
   (`Event::paginate(1, PER_PAGE)->totalOfPages()`), sem SQL novo. Sem
   isso, quem removesse o último Evento da última página cairia numa
   página vazia, sem navegação.
-- Depois de editar com sucesso, o `update` já volta para o `show`
-  (#24); o que faltava era o Cancelar, que ia para a listagem.
+- Depois de editar com sucesso, o `update` da base já redireciona
+  para o `show` do Evento (`/admin/events/{id}`), não para a
+  listagem; o que faltava era o Cancelar, que ia para a listagem.
 
 ## Como verificar
 
@@ -111,7 +114,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-r7 \
     s50/fvp/4.2/exemplos/r7-voltar-mesma-pagina/projeto
 git fetch fvp-r7 fvp/r7-voltar-mesma-pagina
-git cherry-pick d80b3c8
+git cherry-pick fbfe330
 git remote remove fvp-r7
 ```
 
@@ -122,7 +125,7 @@ git fetch \
     s50/fvp/4.2/exemplos/r7-voltar-mesma-pagina/solucao.bundle \
     fvp/r7-voltar-mesma-pagina:fvp-r7
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick d80b3c8
+git cherry-pick fbfe330
 # opcional, limpa a ref
 git branch -D fvp-r7
 ```

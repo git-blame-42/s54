@@ -1,4 +1,4 @@
-From d80b3c8c44053e9f1cff171c61cef0f8b7ad39cf Mon Sep 17 00:00:00 2001
+From fbfe330cffc1dbc0a0b1a18350578a7efa7345e3 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:10:07 -0300
 Subject: [PATCH] feat: Return to the same listing page after removing an event
@@ -12,8 +12,8 @@ The remove form sends the current page and destroy redirects back to it (or to t
  app/views/admin/events/new.phtml              |   1 +
  .../admin/events/DeleteEventCest.php          |  20 +++
  .../admin/events/UpdateSuccessfullyCest.php   |  14 ++
- .../Admin/EventsControllerTest.php            | 122 ++++++++++++++++++
- 8 files changed, 179 insertions(+), 2 deletions(-)
+ .../Admin/EventsControllerTest.php            | 126 ++++++++++++++++++
+ 8 files changed, 183 insertions(+), 2 deletions(-)
 
 diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
 index ca4ada1..8eddf19 100644
@@ -151,10 +151,10 @@ index 0f64d87..ba48d06 100644
 +    }
  }
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..2c2839a 100644
+index bc62d1d..88ea3d4 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-@@ -265,6 +265,128 @@ class EventsControllerTest extends ControllerTestCase
+@@ -265,6 +265,132 @@ class EventsControllerTest extends ControllerTestCase
          );
      }
  
@@ -203,14 +203,18 @@ index bc62d1d..2c2839a 100644
 +    {
 +        $events = $this->createEvents(12);
 +
-+        foreach (['1', '0', 'abc', '-2', '2.5', ['2']] as $index => $page) {
-+            $response = $this->delete(
-+                action: 'destroy',
-+                controllerName: self::CONTROLLER,
-+                params: ['id' => $events[$index + 1]->id, 'page' => $page]
-+            );
++        // null = sem o parâmetro page. Vem primeiro porque o Request do teste acumula os parâmetros
++        // entre chamadas (addParams): depois de enviar page uma vez, ele não fica mais ausente.
++        foreach ([null, '1', '0', 'abc', '-2', '2.5', ['2']] as $index => $page) {
++            $params = ['id' => $events[$index + 1]->id];
++            if ($page !== null) {
++                $params['page'] = $page;
++            }
++
++            $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: $params);
 +
 +            $this->assertSame('Location: /admin/events', $response, var_export($page, true));
++            $this->assertNull(Event::findById($events[$index + 1]->id));
 +        }
 +    }
 +
