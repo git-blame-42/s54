@@ -19,10 +19,10 @@ sozinha quando o P3 for aplicado (ver "Relação com outros cenários").
 
 Commits (os dois primeiros são a base):
 
-- `9d7c82f` `feat: Add events listing and details for participants`
+- `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
-- `95e5e82` `feat: Allow participants to enroll in events` (base, P2)
-- `1921f74` `feat: Add waiting list for full events`
+- `458a05b` `feat: Allow participants to enroll in events` (base, P2)
+- `fbc831e` `feat: Add waiting list for full events`
 
 ## O que mudou
 
@@ -131,7 +131,7 @@ docker compose exec web curl -s -b /tmp/f http://localhost/events/1 \
   espera ("Sair da lista de espera"), se quiser.
 - P7 (`p7-meus-eventos`, irmão): acrescente uma coluna com
   `Enrollment::STATUSES[$enrollment->status]`.
-- P1/P4 (código de check-in e confirmação de presença, agente B):
+- P1 e P4 (código de check-in e confirmação de presença):
   confirmar presença deve exigir `status === 'confirmed'` (quem está
   na espera não tem vaga). Não estão implementados aqui.
 
@@ -154,9 +154,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p9 s50/fvp/4.2/exemplos/p9-lista-de-espera/projeto
 git fetch fvp-p9 fvp/p9-lista-de-espera
 # O2 + P2 + P9 (range)
-git cherry-pick 9d7c82f^..1921f74
+git cherry-pick 0669a19^..fbc831e
 # ou só o topo (P9), se já tem O2 e P2
-git cherry-pick 1921f74
+git cherry-pick fbc831e
 git remote remove fvp-p9
 ```
 
@@ -168,7 +168,7 @@ git fetch s50/fvp/4.2/exemplos/p9-lista-de-espera/solucao.bundle \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p9
 # ou só o topo
-git cherry-pick 1921f74
+git cherry-pick fbc831e
 # opcional, limpa a ref
 git branch -D fvp-p9
 ```
