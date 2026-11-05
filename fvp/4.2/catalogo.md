@@ -3875,6 +3875,8 @@ Prova: `ECT`; no navegador, avançar uma tabela não mexe na outra.
 
 Chance: média-alta. Tempo: 35-45 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/n16-busca-filtro-ordenacao`.
+
 Pedido típico: "na listagem, busca pelo título, filtro por tipo e
 ordenação escolhida (coluna e direção), tudo junto e preservado ao
 trocar de página". Variante: "a listagem aceita `?q=`, `?kind=`,
@@ -3956,9 +3958,10 @@ Passos:
    ```
 
    - Cest `ACT/SearchEventsCest.php` (estende `BaseEventsCest`): busca
-     "Evento 1", Título, Decrescente, "Filtrar" -> "Mostrando 1 - 5 de
-     8" e "Evento 16" na primeira linha (o termo casa 01 e 10 a 16).
-     Clicar em "2" -> `seeInCurrentUrl('?q=Evento+1&sort=title&dir=desc')`,
+     "1", Título, Decrescente, "Filtrar" -> "Mostrando 1 - 5 de 8" e
+     "Evento 16" na primeira linha (o termo casa 01 e 10 a 16; "Evento
+     1" não casaria o 01). Clicar em "2" ->
+     `seeInCurrentUrl('?q=1&sort=title&dir=desc')`,
      "Mostrando 6 - 8 de 8", "Evento 01" na última linha. Escolher
      Palestra -> "Mostrando 1 - 2 de 2" (Eventos 01 e 13).
 2. `PAG` (N1 forma 2 traz `queryParams`, N3 traz `orderBy`; aqui entram
@@ -4161,7 +4164,7 @@ Passos:
 
 4. `EC::index`: o controller só repassa. `q`, `kind`, `sort` e `dir`
    vão crus ao model, sem `(int)` nem `?? ''`; `page` segue como em
-   `EC:19`.
+   `EC:19` (ou `filter_var` com `min_range` 1: `(int) '2abc'` vira 2).
 
    ```php
    public function index(Request $request): void
@@ -4948,6 +4951,8 @@ mostra a página 404 com status 404 (aba Rede do navegador).
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o12-busca-ordenacao-json`.
+
 Pedido típico: "a listagem em JSON aceita `?q=` e `?sort=`, com total e
 página no corpo". Variante: "parâmetro inválido responde 422 com os
 erros em JSON". Hoje a `index` só renderiza HTML (`EC:16-27`) e não lê
@@ -5086,8 +5091,11 @@ Armadilhas:
 - Tipos: `id` sai `int` (INT do PDO) e `total` também, porque a
   propriedade `int` (`PAG:12`) converte o texto de `fetchColumn()`
   (`PAG:113`). `json_decode` + `assertSame(2, ...)` confere isso.
-- `errors` vazio vira `[]` e com chaves vira objeto
-  (`{"sort": "Ordenação inválida."}`): no 422 sempre há chaves.
+- `errors` vazio vira `[]` e com chaves vira objeto: no 422 sempre há
+  chaves. Acentos saem escapados (`json_encode` sem
+  `JSON_UNESCAPED_UNICODE`, `CTRL:53`): o corpo real é
+  `{"errors":{"sort":"Ordena\u00e7\u00e3o inv\u00e1lida."}}`;
+  `json_decode` devolve o texto acentuado.
 - O Guzzle do `ACC` lança exceção em 4xx: `'http_errors' => false` na
   requisição (`ACC:58-65` não define).
 - `?page=` funciona em `/admin/events` (`EC:19`; `Request.php:20`
@@ -6891,6 +6899,8 @@ Prova: `EVT`, `ECT`, `ACC`; no navegador, "Adiar uma semana" no Evento
 
 Chance: alta. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p23-codigo-do-registro-para-remover`.
+
 Pedido típico: "ao cadastrar, o backend gera um código de 4 dígitos
 (1000 a 9999) que fica gravado no Evento; o admin vê o código no
 detalhe e só remove o Evento se digitar esse código". Variante: "para
@@ -6905,7 +6915,8 @@ Arquivos: `SCH:21-38` (`:31` é `capacity`), `EV:10-21` (`@property`),
 `EV:48-58` (`$columns`), `US:28-35` (molde de padrão no construtor),
 `MODEL:32-42` (construtor zera as colunas e copia `$params`),
 `MODEL:139-184` (`save()` grava todas as colunas), `MODEL:255`,
-`MODEL:327` e `PAG:143` (`new static($row)`: o construtor roda também
+`MODEL:278`, `MODEL:327` e `PAG:143` (`new static($row)`: o construtor
+roda também
 ao ler do banco), `EC:14` (`FIELDS`: o código não entra), `EC:77-94`
 (`update`, variante), `EC:96-111` (`destroy`),
 `core/Http/Request.php:57-60` (`getParam` devolve `mixed`), `SHOW:1-5`,
@@ -7008,8 +7019,9 @@ Passos:
    }
    ```
 
-5. `SHOW:1-5`: `$code = (int) $event->confirmation_code;` no bloco
-   PHP. Depois de "Vagas" (`SHOW:28-32`), o código; depois de
+5. `SHOW:1-5`: `$code = htmlspecialchars((string)
+   $event->confirmation_code);` no bloco PHP (sem `(int)` cego).
+   Depois de "Vagas" (`SHOW:28-32`), o código; depois de
    `SHOW:35-36`, o form:
 
    ```php
@@ -7058,7 +7070,7 @@ Armadilhas:
   do `isValid()` e validar a faixa em `validates()`: o populate lança
   `RuntimeException` (`POP:145-146`). O construtor cobre todos.
 - "Só se vazio" é obrigatório: o construtor roda em toda leitura
-  (`MODEL:255`, `:327`, `PAG:143`). Gerar sempre troca o código a cada
+  (`MODEL:255`, `:278`, `:327`, `PAG:143`). Gerar sempre troca o código a cada
   carga: o `show` mostra um, o `destroy` confere outro e nada é
   removido. O teste "não muda ao salvar" pega isso.
 - Nunca em `FIELDS` (`EC:14`): o `fill` (`EC:123-126`) poria `NULL`
@@ -7100,6 +7112,8 @@ ver o código no `show`, errar (flash, mesma tela) e acertar.
 
 Chance: média. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p24-codigo-validade-tentativas`.
+
 Pedido típico: "o código vale 5 minutos e aceita só 3 tentativas;
 depois disso é invalidado e outro precisa ser gerado; mostre mensagens
 diferentes para código errado, expirado e tentativas esgotadas".
@@ -7116,7 +7130,8 @@ limpam só `flash`), `VAL:116-121` (`notPastDate` recebe
 (fixa instante e fuso, sem `sleep`), `Dockerfile:9-10` (PHP em
 `America/Sao_Paulo`), `docker-compose.yml:30-42` (MySQL sem fuso: UTC),
 `SCH:32-33` (`CURRENT_TIMESTAMP` é o relógio do MySQL), `FLASH:7-15`,
-`MODEL:189-213`.
+`MODEL:189-213`. Sobre P23: `EV` e `EC::show` no lugar de `lib/` e
+`EC::delete`.
 
 Passos:
 
@@ -7287,6 +7302,13 @@ Armadilhas:
   (`save()` grava `NULL` e ignora o `DEFAULT`), e `update()` não valida
   e devolve `false` se nada mudou (`MODEL:189-213`): não use o retorno
   como "deu certo".
+- Ainda sobre P23: não há tela `delete`. `issue`, `current` e a
+  conferência viram métodos do `Event` (sem `lib/ConfirmationCode.php`),
+  e `current()` vai para `EC::show`, que passa a gravar no banco num
+  GET. É idempotente (só troca código morto), mas muda `updated_at` e
+  o estado é do Evento, comum a todos os admins e abas; a alternativa
+  é um POST "gerar novo código". O uso único se faz zerando o instante
+  de emissão.
 - Mensagens distintas cabem num flash só (`FLASH:7-15`, um texto por
   tipo): use `danger` com o texto de `message()`.
 
