@@ -1,0 +1,384 @@
+From 02f7509ac18423d7f1f5b669ee8185206765f2d7 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:53:50 -0300
+Subject: [PATCH] feat: List all validation errors on top of the event form
+
+Model::allErrors returns every validation error (attribute => message). Event::LABELS and Event::label keep the pt-BR field labels in one place, used by the form labels and by the new _errors partial, which lists "Label: message" escaped above the form while the per-field feedback stays.
+---
+ app/Models/Event.php                          | 21 +++++++
+ app/views/admin/events/_errors.phtml          | 19 ++++++
+ app/views/admin/events/_form.phtml            | 18 +++---
+ core/Database/ActiveRecord/Model.php          | 10 +++
+ .../events/CreateWithInvalidDataCest.php      | 11 ++++
+ .../Admin/EventsControllerTest.php            | 63 +++++++++++++++++++
+ tests/Unit/Core/Database/ModelErrorsTest.php  | 61 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 18 ++++++
+ 8 files changed, 213 insertions(+), 8 deletions(-)
+ create mode 100644 app/views/admin/events/_errors.phtml
+ create mode 100644 tests/Unit/Core/Database/ModelErrorsTest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..a7ff48b 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -44,6 +44,19 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Rótulos pt-BR dos campos: usados nos labels do formulário e na lista de erros. */
++    public const LABELS = [
++        'title' => 'Título',
++        'description' => 'Descrição',
++        'kind' => 'Tipo',
++        'modality' => 'Modalidade',
++        'audience' => 'Público-alvo',
++        'starts_on' => 'Data',
++        'location' => 'Local',
++        'capacity' => 'Vagas',
++        'user_id' => 'Responsável',
++    ];
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -114,6 +127,14 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Rótulo do campo para mensagens (atributo sem rótulo, como 'base', volta como está).
++     */
++    public static function label(string $attribute): string
++    {
++        return self::LABELS[$attribute] ?? $attribute;
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/_errors.phtml b/app/views/admin/events/_errors.phtml
+new file mode 100644
+index 0000000..115fddc
+--- /dev/null
++++ b/app/views/admin/events/_errors.phtml
+@@ -0,0 +1,19 @@
++<?php
++/**
++ * Lista, no topo do formulário, todos os erros de validação do Evento ("Rótulo: mensagem").
++ * O feedback de cada campo continua embaixo dele.
++ *
++ * @var \App\Models\Event $event
++ */
++use App\Models\Event;
++?>
++<?php if ($event->hasErrors()) : ?>
++    <div class="alert alert-danger" id="form_errors" role="alert">
++        <p class="mb-1">Corrija os campos abaixo:</p>
++        <ul class="mb-0">
++            <?php foreach ($event->allErrors() as $attribute => $message) : ?>
++                <li><?= htmlspecialchars(Event::label($attribute)) ?>: <?= htmlspecialchars($message) ?></li>
++            <?php endforeach; ?>
++        </ul>
++    </div>
++<?php endif; ?>
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..ea5ea27 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -13,27 +13,29 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     ? '<div class="invalid-feedback' . $extra . '">' . htmlspecialchars($event->errors($field)) . '</div>'
+     : '';
+ ?>
++<?php require __DIR__ . '/_errors.phtml'; ?>
++
+ <form action="<?= $action ?>" method="post" novalidate>
+     <?php if ($isUpdate) : ?>
+         <input type="hidden" name="_method" value="PUT">
+     <?php endif; ?>
+ 
+     <div class="mb-3">
+-        <label for="event_title" class="form-label">Título</label>
++        <label for="event_title" class="form-label"><?= Event::label('title') ?></label>
+         <input type="text" class="form-control<?= $invalid('title') ?>" id="event_title" name="event[title]"
+             value="<?= htmlspecialchars((string) $event->title) ?>">
+         <?= $feedback('title') ?>
+     </div>
+ 
+     <div class="mb-3">
+-        <label for="event_description" class="form-label">Descrição</label>
++        <label for="event_description" class="form-label"><?= Event::label('description') ?></label>
+         <textarea class="form-control<?= $invalid('description') ?>" id="event_description" name="event[description]"
+             rows="4"><?= htmlspecialchars((string) $event->description) ?></textarea>
+         <?= $feedback('description') ?>
+     </div>
+ 
+     <div class="mb-3">
+-        <label for="event_kind" class="form-label">Tipo</label>
++        <label for="event_kind" class="form-label"><?= Event::label('kind') ?></label>
+         <select class="form-select<?= $invalid('kind') ?>" id="event_kind" name="event[kind]">
+             <option value="">Selecione</option>
+             <?php foreach (Event::KINDS as $value => $label) : ?>
+@@ -44,7 +46,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </div>
+ 
+     <fieldset class="mb-3">
+-        <legend class="form-label fs-6">Modalidade</legend>
++        <legend class="form-label fs-6"><?= Event::label('modality') ?></legend>
+         <?php foreach (Event::MODALITIES as $value => $label) : ?>
+             <div class="form-check form-check-inline">
+                 <input type="radio" class="form-check-input<?= $invalid('modality') ?>" id="event_modality_<?= $value ?>"
+@@ -56,7 +58,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </fieldset>
+ 
+     <fieldset class="mb-3">
+-        <legend class="form-label fs-6">Público-alvo</legend>
++        <legend class="form-label fs-6"><?= Event::label('audience') ?></legend>
+         <?php foreach (Event::AUDIENCES as $value => $label) : ?>
+             <div class="form-check form-check-inline">
+                 <input type="checkbox" class="form-check-input<?= $invalid('audience') ?>" id="event_audience_<?= $value ?>"
+@@ -68,21 +70,21 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     </fieldset>
+ 
+     <div class="mb-3">
+-        <label for="event_starts_on" class="form-label">Data</label>
++        <label for="event_starts_on" class="form-label"><?= Event::label('starts_on') ?></label>
+         <input type="date" class="form-control<?= $invalid('starts_on') ?>" id="event_starts_on" name="event[starts_on]"
+             value="<?= htmlspecialchars((string) $event->starts_on) ?>">
+         <?= $feedback('starts_on') ?>
+     </div>
+ 
+     <div class="mb-3">
+-        <label for="event_location" class="form-label">Local</label>
++        <label for="event_location" class="form-label"><?= Event::label('location') ?></label>
+         <input type="text" class="form-control<?= $invalid('location') ?>" id="event_location" name="event[location]"
+             value="<?= htmlspecialchars((string) $event->location) ?>">
+         <?= $feedback('location') ?>
+     </div>
+ 
+     <div class="mb-3">
+-        <label for="event_capacity" class="form-label">Vagas</label>
++        <label for="event_capacity" class="form-label"><?= Event::label('capacity') ?></label>
+         <input type="number" class="form-control<?= $invalid('capacity') ?>" id="event_capacity" name="event[capacity]"
+             min="1" value="<?= htmlspecialchars((string) $event->capacity) ?>">
+         <?= $feedback('capacity') ?>
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..f25a46e 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -128,6 +128,16 @@ abstract class Model
+         return null;
+     }
+ 
++    /**
++     * Todos os erros da última validação, na ordem em que foram adicionados (atributo => mensagem).
++     *
++     * @return array<string, string>
++     */
++    public function allErrors(): array
++    {
++        return $this->errors;
++    }
++
+     public function addError(string $index, string $value): void
+     {
+         $this->errors[$index] = $value;
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..fbe4641 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -27,6 +27,14 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->seeElement('input[name="event[modality]"].is-invalid');
+         $page->seeElement('input[name="event[audience][]"].is-invalid');
+ 
++        // Lista de todos os erros no topo do formulário, com o rótulo de cada campo.
++        $page->see('Corrija os campos abaixo:', '#form_errors');
++        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity'] as $field) {
++            $page->see(Event::label($field) . ': não pode ser vazio!', '#form_errors');
++        }
++        $page->see('Modalidade: não pode ser vazio!', '#form_errors');
++        $page->see('Público-alvo: não pode ser vazio!', '#form_errors');
++
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
+@@ -54,6 +62,9 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         $page->see('não pode estar no passado!', '#event_starts_on ~ .invalid-feedback');
+         $page->seeElement('#event_capacity.is-invalid');
+         $page->see('deve ser maior ou igual a 1!', '#event_capacity ~ .invalid-feedback');
++        $page->see('Data: não pode estar no passado!', '#form_errors');
++        $page->see('Vagas: deve ser maior ou igual a 1!', '#form_errors');
++        $page->dontSee('Título:', '#form_errors');
+         foreach (['title', 'description', 'kind', 'location'] as $field) {
+             $page->dontSeeElement("#event_{$field}.is-invalid");
+         }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..29ae797 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,69 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    public function test_create_with_invalid_data_lists_every_error_on_top(): void
++    {
++        $params = $this->validParams(['title' => '', 'capacity' => '0']);
++        unset($params['audience']);
++
++        $response = $this->post(action: 'create', controllerName: self::CONTROLLER, params: ['event' => $params]);
++
++        $this->assertStringContainsString('id="form_errors"', $response);
++        $this->assertStringContainsString('<li>Título: não pode ser vazio!</li>', $response);
++        $this->assertStringContainsString('<li>Público-alvo: não pode ser vazio!</li>', $response);
++        $this->assertStringContainsString('<li>Vagas: deve ser maior ou igual a 1!</li>', $response);
++        $start = (int) strpos($response, 'id="form_errors"');
++        $list = substr($response, $start, (int) strpos($response, '</ul>', $start) - $start);
++        $this->assertSame(3, substr_count($list, '<li>'));
++        // A lista vem antes do formulário e o feedback por campo continua.
++        $this->assertLessThan(strpos($response, '<form'), strpos($response, 'id="form_errors"'));
++        $this->assertStringContainsString('<div class="invalid-feedback">não pode ser vazio!</div>', $response);
++    }
++
++    public function test_update_with_invalid_data_lists_errors_on_top(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event);
++        $this->enroll($event, 'outra@example.com');
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['capacity' => '1'])]
++        );
++
++        $this->assertStringContainsString(
++            '<li>Vagas: não pode ser menor que o total de inscrições (2)!</li>',
++            $response
++        );
++    }
++
++    public function test_valid_forms_do_not_show_the_error_list(): void
++    {
++        $event = $this->createEvent();
++
++        $new = $this->get(action: 'new', controllerName: self::CONTROLLER);
++        $edit = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringNotContainsString('id="form_errors"', $new);
++        $this->assertStringNotContainsString('id="form_errors"', $edit);
++    }
++
++    public function test_error_list_escapes_labels_and_messages(): void
++    {
++        $event = new Event();
++        $event->addError('title', '<b>negrito</b> & "aspas"');
++        $event->addError('<i>campo</i>', 'mensagem');
++
++        ob_start();
++        require __DIR__ . '/../../../../app/views/admin/events/_errors.phtml';
++        $html = (string) ob_get_clean();
++
++        $this->assertStringContainsString('<li>Título: &lt;b&gt;negrito&lt;/b&gt; &amp; &quot;aspas&quot;</li>', $html);
++        $this->assertStringContainsString('<li>&lt;i&gt;campo&lt;/i&gt;: mensagem</li>', $html);
++        $this->assertStringNotContainsString('<b>', $html);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Core/Database/ModelErrorsTest.php b/tests/Unit/Core/Database/ModelErrorsTest.php
+new file mode 100644
+index 0000000..119b389
+--- /dev/null
++++ b/tests/Unit/Core/Database/ModelErrorsTest.php
+@@ -0,0 +1,61 @@
++<?php
++
++namespace Tests\Unit\Core\Database;
++
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++use PHPUnit\Framework\TestCase;
++
++class ModelErrorsTest extends TestCase
++{
++    private function newModel(): Model
++    {
++        return new class () extends Model {
++            protected static array $columns = ['name', 'email'];
++
++            public function validates(): void
++            {
++                Validations::notEmpty('name', $this);
++                Validations::notEmpty('email', $this);
++            }
++        };
++    }
++
++    public function test_all_errors_should_be_empty_without_errors(): void
++    {
++        $model = $this->newModel();
++
++        $this->assertSame([], $model->allErrors());
++    }
++
++    public function test_all_errors_should_return_every_error_in_order(): void
++    {
++        $model = $this->newModel();
++
++        $this->assertFalse($model->isValid());
++        $this->assertSame(
++            ['name' => 'não pode ser vazio!', 'email' => 'não pode ser vazio!'],
++            $model->allErrors()
++        );
++    }
++
++    public function test_all_errors_should_be_cleared_by_a_new_validation(): void
++    {
++        $model = $this->newModel();
++        $model->isValid();
++
++        $model->name = 'Fulano'; // @phpstan-ignore-line
++        $model->email = 'fulano@example.com'; // @phpstan-ignore-line
++
++        $this->assertTrue($model->isValid());
++        $this->assertSame([], $model->allErrors());
++    }
++
++    public function test_all_errors_should_include_errors_added_by_hand(): void
++    {
++        $model = $this->newModel();
++        $model->addError('base', 'erro geral');
++
++        $this->assertSame(['base' => 'erro geral'], $model->allErrors());
++    }
++}
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..00f0285 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -681,4 +681,22 @@ class EventTest extends TestCase
+ 
+         $event->destroy();
+     }
++
++    public function test_label_should_return_the_pt_br_label_of_each_field(): void
++    {
++        $this->assertSame('Título', Event::label('title'));
++        $this->assertSame('Vagas', Event::label('capacity'));
++        $this->assertSame('Público-alvo', Event::label('audience'));
++        $this->assertSame('base', Event::label('base'));
++    }
++
++    public function test_every_validated_field_should_have_a_label(): void
++    {
++        $event = new Event();
++        $event->isValid();
++
++        foreach (array_keys($event->allErrors()) as $attribute) {
++            $this->assertArrayHasKey($attribute, Event::LABELS, $attribute);
++        }
++    }
+ }
+-- 
+2.54.0 (Apple Git-157)
+

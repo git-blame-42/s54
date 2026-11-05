@@ -186,6 +186,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - R5. Mostrar `created_at`/`updated_at` no show e na listagem
   `r5-created-updated-at/`
   - feat: Show event created_at and updated_at
+- R8. Lista de todos os erros no topo do form
+  `r8-erros-no-topo-do-form/`
+  - feat: List all validation errors on top of the event form
 - S1. Teste de aceitação da modificação
   `s1-teste-aceitacao-filtro/`
   - feat: Filter events by kind keeping the filter in

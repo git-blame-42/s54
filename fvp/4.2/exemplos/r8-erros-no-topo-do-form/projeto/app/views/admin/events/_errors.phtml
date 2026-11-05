@@ -1,0 +1,19 @@
+<?php
+/**
+ * Lista, no topo do formulário, todos os erros de validação do Evento ("Rótulo: mensagem").
+ * O feedback de cada campo continua embaixo dele.
+ *
+ * @var \App\Models\Event $event
+ */
+use App\Models\Event;
+?>
+<?php if ($event->hasErrors()) : ?>
+    <div class="alert alert-danger" id="form_errors" role="alert">
+        <p class="mb-1">Corrija os campos abaixo:</p>
+        <ul class="mb-0">
+            <?php foreach ($event->allErrors() as $attribute => $message) : ?>
+                <li><?= htmlspecialchars(Event::label($attribute)) ?>: <?= htmlspecialchars($message) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
