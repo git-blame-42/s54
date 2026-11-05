@@ -1,0 +1,413 @@
+From 5b8bd8c1164df5df86611ac82d87457797959625 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:11:36 -0300
+Subject: [PATCH] feat: Export an Event as an iCalendar file
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+GET /admin/events/{id}/ics answers text/calendar with Event::toICalendar(), built by Lib\ICalendar (text escaping, 75-octet folding, CRLF). The show page gets an 'Adicionar ao calendário' button.
+---
+ app/Controllers/Admin/EventsController.php    | 17 +++++
+ app/Models/Event.php                          | 28 +++++++++
+ app/views/admin/events/show.phtml             |  3 +
+ config/routes.php                             |  1 +
+ lib/ICalendar.php                             | 50 +++++++++++++++
+ .../admin/events/ExportICalendarCest.php      | 23 +++++++
+ tests/Integration/Access/EventsAccessTest.php | 18 +++++-
+ .../Admin/EventsControllerTest.php            | 31 ++++++++++
+ tests/Unit/Lib/ICalendarTest.php              | 62 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 38 ++++++++++++
+ 10 files changed, 270 insertions(+), 1 deletion(-)
+ create mode 100644 lib/ICalendar.php
+ create mode 100644 tests/Acceptance/admin/events/ExportICalendarCest.php
+ create mode 100644 tests/Unit/Lib/ICalendarTest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..104da8e 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -38,6 +38,23 @@ class EventsController extends Controller
+         $this->render('admin/events/show', compact('event', 'title'));
+     }
+ 
++    /**
++     * P20: baixa o Evento em iCalendar. Responde com header + echo, sem render() (que poria o
++     * layout HTML em volta) e sem exit (o teste de controller precisa que a ação retorne).
++     */
++    public function ics(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        header('Content-Type: text/calendar; charset=utf-8');
++        header("Content-Disposition: attachment; filename=\"evento-{$event->id}.ics\"");
++        echo $event->toICalendar();
++    }
++
+     public function new(): void
+     {
+         $event = new Event();
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..31ac403 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\ICalendar;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -114,6 +115,33 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * P20: o Evento como arquivo iCalendar (.ics) de um dia inteiro (starts_on). DTEND é o dia
++     * seguinte, pois no formato o fim de um evento de dia inteiro é exclusivo.
++     */
++    public function toICalendar(): string
++    {
++        $start = strtotime($this->starts_on);
++
++        return ICalendar::build([
++            'BEGIN:VCALENDAR',
++            'VERSION:2.0',
++            'PRODID:-//UTFPR TSI34D//Eventos//PT-BR',
++            'CALSCALE:GREGORIAN',
++            'METHOD:PUBLISH',
++            'BEGIN:VEVENT',
++            "UID:event-{$this->id}@eventos.utfpr",
++            'DTSTAMP:' . gmdate('Ymd\THis\Z'),
++            'DTSTART;VALUE=DATE:' . date('Ymd', $start),
++            'DTEND;VALUE=DATE:' . date('Ymd', strtotime('+1 day', $start)),
++            'SUMMARY:' . ICalendar::escape($this->title),
++            'DESCRIPTION:' . ICalendar::escape($this->description),
++            'LOCATION:' . ICalendar::escape($this->location),
++            'END:VEVENT',
++            'END:VCALENDAR',
++        ]);
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..c3a8524 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -33,4 +33,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<a class="btn btn-outline-secondary" href="<?= route('admin.events.ics', ['id' => $event->id]) ?>">
++    <i class="bi bi-calendar-plus"></i> Adicionar ao calendário
++</a>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..0830001 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
+         Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+         Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+         Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
++        Route::get('/admin/events/{id}/ics', [AdminEventsController::class, 'ics'])->name('admin.events.ics');
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
+diff --git a/lib/ICalendar.php b/lib/ICalendar.php
+new file mode 100644
+index 0000000..26aabd0
+--- /dev/null
++++ b/lib/ICalendar.php
+@@ -0,0 +1,50 @@
++<?php
++
++namespace Lib;
++
++/**
++ * Montagem de arquivos iCalendar (.ics, RFC 5545) a partir de linhas "NOME:valor".
++ *
++ * - escape(): texto de SUMMARY/DESCRIPTION/LOCATION (\ ; , e quebras de linha).
++ * - fold(): linhas com mais de 75 octetos continuam na linha seguinte, que começa com espaço,
++ *   sem partir caracteres UTF-8 ao meio.
++ * - build(): junta as linhas com CRLF (obrigatório no formato), inclusive no fim.
++ */
++class ICalendar
++{
++    public const EOL = "\r\n";
++    private const MAX_OCTETS = 75;
++
++    public static function escape(string $text): string
++    {
++        $text = str_replace(['\\', ';', ','], ['\\\\', '\;', '\\,'], $text);
++
++        return str_replace(["\r\n", "\r", "\n"], '\\n', $text);
++    }
++
++    public static function fold(string $line): string
++    {
++        $parts = [];
++        $limit = self::MAX_OCTETS;
++
++        while (strlen($line) > $limit) {
++            // mb_strcut corta em octetos sem quebrar um caractere multibyte.
++            $part = mb_strcut($line, 0, $limit, 'UTF-8');
++            $parts[] = $part;
++            $line = substr($line, strlen($part));
++            // As linhas de continuação começam com um espaço, que conta nos 75.
++            $limit = self::MAX_OCTETS - 1;
++        }
++        $parts[] = $line;
++
++        return implode(self::EOL . ' ', $parts);
++    }
++
++    /**
++     * @param array<int, string> $lines
++     */
++    public static function build(array $lines): string
++    {
++        return implode(self::EOL, array_map([self::class, 'fold'], $lines)) . self::EOL;
++    }
++}
+diff --git a/tests/Acceptance/admin/events/ExportICalendarCest.php b/tests/Acceptance/admin/events/ExportICalendarCest.php
+new file mode 100644
+index 0000000..ad42b6a
+--- /dev/null
++++ b/tests/Acceptance/admin/events/ExportICalendarCest.php
+@@ -0,0 +1,23 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * P20: botão "Adicionar ao calendário" no show do Evento. O download em si (headers e corpo .ics)
++ * é conferido no teste de acesso, porque o Selenium não lê o arquivo baixado.
++ */
++class ExportICalendarCest extends BaseEventsCest
++{
++    public function showHasAddToCalendarLink(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Botão Adicionar ao calendário no detalhe do Evento');
++        $page->amOnPage("/admin/events/{$event->id}");
++
++        $page->see('Adicionar ao calendário');
++        $page->seeLink('Adicionar ao calendário', "/admin/events/{$event->id}/ics");
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..a116915 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 9 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy, ics).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -93,6 +93,7 @@ class EventsAccessTest extends TestCase
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.ics' => ['GET', '/admin/events/1/ics'],
+         ];
+     }
+ 
+@@ -172,6 +173,21 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_admin_should_download_the_event_as_icalendar(): void
++    {
++        $response = $this->loggedClient($this->admin)->get("/admin/events/{$this->event->id}/ics");
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringStartsWith('text/calendar', $response->getHeaderLine('Content-Type'));
++        $this->assertEquals(
++            "attachment; filename=\"evento-{$this->event->id}.ics\"",
++            $response->getHeaderLine('Content-Disposition')
++        );
++        $body = (string) $response->getBody();
++        $this->assertStringStartsWith("BEGIN:VCALENDAR\r\n", $body);
++        $this->assertStringContainsString("\r\nSUMMARY:Palestra de Acesso\r\n", $body);
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..f8c95b3 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,37 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_has_add_to_calendar_link(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString("href=\"/admin/events/{$event->id}/ics\"", $response);
++        $this->assertStringContainsString('Adicionar ao calendário', $response);
++    }
++
++    public function test_ics_returns_the_event_as_icalendar_without_layout(): void
++    {
++        $event = $this->createEvent(['title' => 'Palestra, iCal', 'location' => 'Bloco A']);
++
++        $response = $this->get(action: 'ics', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringStartsWith("BEGIN:VCALENDAR\r\n", $response);
++        $this->assertStringContainsString("\r\nSUMMARY:Palestra\\, iCal\r\n", $response);
++        $this->assertStringContainsString("\r\nLOCATION:Bloco A\r\n", $response);
++        $this->assertStringEndsWith("END:VCALENDAR\r\n", $response);
++        $this->assertStringNotContainsString('<html', $response);
++    }
++
++    public function test_ics_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->get(action: 'ics', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Lib/ICalendarTest.php b/tests/Unit/Lib/ICalendarTest.php
+new file mode 100644
+index 0000000..695d8c6
+--- /dev/null
++++ b/tests/Unit/Lib/ICalendarTest.php
+@@ -0,0 +1,62 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use Lib\ICalendar;
++use PHPUnit\Framework\TestCase;
++
++class ICalendarTest extends TestCase
++{
++    public function test_escape_should_escape_backslash_semicolon_and_comma(): void
++    {
++        $this->assertSame('Bloco D\\, Sala 1\; térreo \\\\ fundos', ICalendar::escape('Bloco D, Sala 1; térreo \\ fundos'));
++    }
++
++    public function test_escape_should_turn_line_breaks_into_backslash_n(): void
++    {
++        $this->assertSame('linha 1\\nlinha 2\\nlinha 3\\nlinha 4', ICalendar::escape("linha 1\r\nlinha 2\nlinha 3\rlinha 4"));
++    }
++
++    public function test_escape_should_keep_plain_text(): void
++    {
++        $this->assertSame('Oficina de Git: ramos e PRs', ICalendar::escape('Oficina de Git: ramos e PRs'));
++    }
++
++    public function test_fold_should_keep_short_lines(): void
++    {
++        $line = 'SUMMARY:' . str_repeat('a', 67);
++
++        $this->assertSame($line, ICalendar::fold($line));
++    }
++
++    public function test_fold_should_split_long_lines_at_75_octets(): void
++    {
++        $line = 'DESCRIPTION:' . str_repeat('a', 200);
++
++        $parts = explode("\r\n", ICalendar::fold($line));
++
++        $this->assertSame(75, strlen($parts[0]));
++        foreach (array_slice($parts, 1) as $part) {
++            $this->assertStringStartsWith(' ', $part);
++            $this->assertLessThanOrEqual(75, strlen($part));
++        }
++        $this->assertSame($line, $parts[0] . implode('', array_map(fn(string $p) => substr($p, 1), array_slice($parts, 1))));
++    }
++
++    public function test_fold_should_not_split_a_multibyte_character(): void
++    {
++        $line = 'SUMMARY:' . str_repeat('ç', 60);
++
++        foreach (explode("\r\n", ICalendar::fold($line)) as $part) {
++            $this->assertTrue(mb_check_encoding($part, 'UTF-8'), $part);
++            $this->assertLessThanOrEqual(75, strlen($part));
++        }
++    }
++
++    public function test_build_should_join_lines_with_crlf_including_the_last_one(): void
++    {
++        $ics = ICalendar::build(['BEGIN:VCALENDAR', 'END:VCALENDAR']);
++
++        $this->assertSame("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", $ics);
++    }
++}
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..35aceb9 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -297,6 +297,44 @@ class EventTest extends TestCase
+         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
+     }
+ 
++    /* ------------------- P20: iCalendar ------------------- */
++
++    public function test_to_icalendar_should_describe_an_all_day_event(): void
++    {
++        $startsOn = date('Y-m-d', strtotime('+30 days'));
++        $event = $this->createEvent([
++            'title' => 'Oficina de Git, ramos; PRs',
++            'description' => "Linha 1\nLinha 2",
++            'location' => 'Bloco B, Laboratório B203',
++            'starts_on' => $startsOn,
++        ]);
++
++        $ics = $event->toICalendar();
++        $lines = explode("\r\n", $ics);
++
++        $this->assertSame('BEGIN:VCALENDAR', $lines[0]);
++        $this->assertContains('VERSION:2.0', $lines);
++        $this->assertContains('BEGIN:VEVENT', $lines);
++        $this->assertContains("UID:event-{$event->id}@eventos.utfpr", $lines);
++        $this->assertContains('DTSTART;VALUE=DATE:' . date('Ymd', strtotime($startsOn)), $lines);
++        $this->assertContains('DTEND;VALUE=DATE:' . date('Ymd', strtotime($startsOn . ' +1 day')), $lines);
++        $this->assertContains('SUMMARY:Oficina de Git\\, ramos\\; PRs', $lines);
++        $this->assertContains('DESCRIPTION:Linha 1\\nLinha 2', $lines);
++        $this->assertContains('LOCATION:Bloco B\\, Laboratório B203', $lines);
++        $this->assertMatchesRegularExpression('/\r\nDTSTAMP:\d{8}T\d{6}Z\r\n/', $ics);
++        $this->assertStringEndsWith("END:VEVENT\r\nEND:VCALENDAR\r\n", $ics);
++    }
++
++    public function test_to_icalendar_should_use_only_crlf_line_endings(): void
++    {
++        $ics = $this->createEvent(['description' => str_repeat('Descrição longa. ', 20)])->toICalendar();
++
++        $this->assertSame(0, preg_match('/(?<!\r)\n/', $ics));
++        foreach (explode("\r\n", rtrim($ics, "\r\n")) as $line) {
++            $this->assertLessThanOrEqual(75, strlen($line), $line);
++        }
++    }
++
+     /* ------------------- save / update / destroy / busca ------------------- */
+ 
+     public function test_save_should_create_the_event(): void
+-- 
+2.54.0 (Apple Git-157)
+
