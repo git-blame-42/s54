@@ -59,13 +59,18 @@ class Event extends Model
 
     public function validates(): void
     {
+        // Registro gravado (null no create), carregado uma vez para as regras que comparam antes e depois.
+        $original = $this->newRecord() ? null : self::findById($this->id);
+        // Só trava campos se o Evento já tem Inscrições.
+        $locked = ($original !== null && $this->hasEnrollments()) ? $original : null;
+
         Validations::notEmpty('title', $this);
         Validations::notEmpty('description', $this);
         Validations::notEmpty('location', $this);
 
         Validations::notEmpty('kind', $this) &&
             Validations::inclusion('kind', $this, array_keys(self::KINDS)) &&
-            $this->validatesUnchangedWithEnrollments('kind');
+            $this->validatesUnchangedWithEnrollments('kind', $locked);
 
         Validations::notEmpty('modality', $this) &&
             Validations::inclusion('modality', $this, array_keys(self::MODALITIES));
@@ -75,8 +80,8 @@ class Event extends Model
 
         Validations::notEmpty('starts_on', $this) &&
             Validations::validDate('starts_on', $this) &&
-            $this->validatesUnchangedWithEnrollments('starts_on') &&
-            $this->validatesStartsOnNotPast();
+            $this->validatesUnchangedWithEnrollments('starts_on', $locked) &&
+            $this->validatesStartsOnNotPast($original);
 
         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
             $this->validatesCapacityAgainstEnrollments();
@@ -85,17 +90,11 @@ class Event extends Model
 
     /**
      * Com Inscrições, o campo (ex.: `starts_on`, `kind`) não pode mudar: quem se inscreveu contava com ele.
-     * Compara com o valor gravado no banco; Evento novo ou sem Inscrições passa.
+     * Compara com o registro gravado ($locked); null (Evento novo ou sem Inscrições) passa.
      */
-    private function validatesUnchangedWithEnrollments(string $field): bool
+    private function validatesUnchangedWithEnrollments(string $field, ?Event $locked): bool
     {
-        if ($this->newRecord() || !$this->hasEnrollments()) {
-            return true;
-        }
-
-        $original = self::findById($this->id);
-
-        if ($original !== null && $original->$field !== $this->$field) {
+        if ($locked !== null && $locked->$field !== $this->$field) {
             $this->addError($field, 'não pode mudar: já há inscritos!');
             return false;
         }
@@ -107,14 +106,10 @@ class Event extends Model
      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
      */
-    private function validatesStartsOnNotPast(): void
+    private function validatesStartsOnNotPast(?Event $original): void
     {
-        if (!$this->newRecord()) {
-            $original = self::findById($this->id);
-
-            if ($original !== null && $original->starts_on === $this->starts_on) {
-                return;
-            }
+        if ($original !== null && $original->starts_on === $this->starts_on) {
+            return;
         }
 
         Validations::notPastDate('starts_on', $this);

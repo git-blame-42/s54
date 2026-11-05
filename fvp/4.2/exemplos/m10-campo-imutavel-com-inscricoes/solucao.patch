@@ -1,56 +1,61 @@
-From 2041afd97f44949969634829cf3035e68afd2caa Mon Sep 17 00:00:00 2001
+From e83ee0ec7f2fe2dae3cd29ee079ee86729ee9915 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:41:54 -0300
 Subject: [PATCH] feat: Lock event start date and kind once it has enrollments
 
 ---
- app/Models/Event.php                          | 24 ++++-
+ app/Models/Event.php                          | 35 +++++--
  app/views/admin/events/_form.phtml            | 21 +++-
  .../events/UpdateEventWithEnrollmentsCest.php | 50 ++++++++++
  .../Admin/EventsControllerTest.php            | 64 ++++++++++++
  tests/Unit/Models/Events/EventTest.php        | 98 +++++++++++++++++++
- 5 files changed, 253 insertions(+), 4 deletions(-)
+ 5 files changed, 256 insertions(+), 12 deletions(-)
  create mode 100644 tests/Acceptance/admin/events/UpdateEventWithEnrollmentsCest.php
 
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..f2a2d67 100644
+index ba66870..5f909bb 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
-@@ -64,7 +64,8 @@ class Event extends Model
+@@ -59,12 +59,18 @@ class Event extends Model
+ 
+     public function validates(): void
+     {
++        // Registro gravado (null no create), carregado uma vez para as regras que comparam antes e depois.
++        $original = $this->newRecord() ? null : self::findById($this->id);
++        // Só trava campos se o Evento já tem Inscrições.
++        $locked = ($original !== null && $this->hasEnrollments()) ? $original : null;
++
+         Validations::notEmpty('title', $this);
+         Validations::notEmpty('description', $this);
          Validations::notEmpty('location', $this);
  
          Validations::notEmpty('kind', $this) &&
 -            Validations::inclusion('kind', $this, array_keys(self::KINDS));
 +            Validations::inclusion('kind', $this, array_keys(self::KINDS)) &&
-+            $this->validatesUnchangedWithEnrollments('kind');
++            $this->validatesUnchangedWithEnrollments('kind', $locked);
  
          Validations::notEmpty('modality', $this) &&
              Validations::inclusion('modality', $this, array_keys(self::MODALITIES));
-@@ -74,6 +75,7 @@ class Event extends Model
+@@ -74,25 +80,36 @@ class Event extends Model
  
          Validations::notEmpty('starts_on', $this) &&
              Validations::validDate('starts_on', $this) &&
-+            $this->validatesUnchangedWithEnrollments('starts_on') &&
-             $this->validatesStartsOnNotPast();
+-            $this->validatesStartsOnNotPast();
++            $this->validatesUnchangedWithEnrollments('starts_on', $locked) &&
++            $this->validatesStartsOnNotPast($original);
  
          if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
-@@ -81,6 +83,26 @@ class Event extends Model
+             $this->validatesCapacityAgainstEnrollments();
          }
      }
  
 +    /**
 +     * Com Inscrições, o campo (ex.: `starts_on`, `kind`) não pode mudar: quem se inscreveu contava com ele.
-+     * Compara com o valor gravado no banco; Evento novo ou sem Inscrições passa.
++     * Compara com o registro gravado ($locked); null (Evento novo ou sem Inscrições) passa.
 +     */
-+    private function validatesUnchangedWithEnrollments(string $field): bool
++    private function validatesUnchangedWithEnrollments(string $field, ?Event $locked): bool
 +    {
-+        if ($this->newRecord() || !$this->hasEnrollments()) {
-+            return true;
-+        }
-+
-+        $original = self::findById($this->id);
-+
-+        if ($original !== null && $original->$field !== $this->$field) {
++        if ($locked !== null && $locked->$field !== $this->$field) {
 +            $this->addError($field, 'não pode mudar: já há inscritos!');
 +            return false;
 +        }
@@ -61,6 +66,21 @@ index ba66870..f2a2d67 100644
      /**
       * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
       * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+      */
+-    private function validatesStartsOnNotPast(): void
++    private function validatesStartsOnNotPast(?Event $original): void
+     {
+-        if (!$this->newRecord()) {
+-            $original = self::findById($this->id);
+-
+-            if ($original !== null && $original->starts_on === $this->starts_on) {
+-                return;
+-            }
++        if ($original !== null && $original->starts_on === $this->starts_on) {
++            return;
+         }
+ 
+         Validations::notPastDate('starts_on', $this);
 diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
 index 2e98c21..e16a9d4 100644
 --- a/app/views/admin/events/_form.phtml
@@ -251,14 +271,14 @@ index bc62d1d..aef8e25 100644
      {
          $event = $this->createEvent();
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..1a19fe7 100644
+index f961b4c..697da99 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -629,6 +629,104 @@ class EventTest extends TestCase
          $this->assertTrue($event->save());
      }
  
-+    /* ------------------- M10: starts_on e kind imutáveis com Inscrições ------------------- */
++    /* ------------------- starts_on e kind imutáveis com Inscrições ------------------- */
 +
 +    public function test_kind_cannot_change_when_the_event_has_enrollments(): void
 +    {

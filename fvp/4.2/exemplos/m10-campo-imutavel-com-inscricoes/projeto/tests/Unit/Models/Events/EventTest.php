@@ -629,7 +629,7 @@ class EventTest extends TestCase
         $this->assertTrue($event->save());
     }
 
-    /* ------------------- M10: starts_on e kind imutáveis com Inscrições ------------------- */
+    /* ------------------- starts_on e kind imutáveis com Inscrições ------------------- */
 
     public function test_kind_cannot_change_when_the_event_has_enrollments(): void
     {

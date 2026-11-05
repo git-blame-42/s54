@@ -13,33 +13,42 @@ Branch no clone: `fvp/m10-campo-imutavel-com-inscricoes`, a partir de
 
 | Commit    | Mensagem                                                  |
 |-----------|-----------------------------------------------------------|
-| `2041afd` | `feat: Lock event start date and kind once it has...`     |
+| `e83ee0e` | `feat: Lock event start date and kind once it has...`     |
 
 Mensagem completa: `feat: Lock event start date and kind once it has
 enrollments`.
 
 ## O que mudou
 
-- `app/Models/Event.php`: método privado novo
-  `validatesUnchangedWithEnrollments(string $field): bool`, no molde
-  de `validatesStartsOnNotPast`. Evento novo ou sem Inscrições passa;
-  senão busca o original com `self::findById($this->id)` e, se
-  `$original->$field !== $this->$field`, registra "não pode mudar: já
-  há inscritos!" no campo e devolve `false`. Em `validates()` ele
-  entra no fim das cadeias de `kind` e de `starts_on`:
+- `app/Models/Event.php`:
+  - no topo de `validates()`, o registro gravado é carregado **uma
+    vez** (`$original = self::findById($this->id)`, `null` no
+    create) e `$locked` é o mesmo `$original` só se o Evento tem
+    Inscrições (senão `null`);
+  - método privado novo
+    `validatesUnchangedWithEnrollments(string $field, ?Event $locked):
+    bool`, no molde de `validatesStartsOnNotPast`: com `$locked` e
+    `$locked->$field !== $this->$field`, registra "não pode mudar: já
+    há inscritos!" no campo e devolve `false`;
+  - `validatesStartsOnNotPast` passa a receber o `$original` em vez
+    de buscar de novo no banco.
 
 ```php
+$original = $this->newRecord() ? null : self::findById($this->id);
+$locked = ($original !== null && $this->hasEnrollments())
+    ? $original : null;
+// ...
 Validations::notEmpty('kind', $this) &&
     Validations::inclusion('kind', $this, array_keys(self::KINDS)) &&
-    $this->validatesUnchangedWithEnrollments('kind');
+    $this->validatesUnchangedWithEnrollments('kind', $locked);
 // ...
 Validations::notEmpty('starts_on', $this) &&
     Validations::validDate('starts_on', $this) &&
-    $this->validatesUnchangedWithEnrollments('starts_on') &&
-    $this->validatesStartsOnNotPast();
+    $this->validatesUnchangedWithEnrollments('starts_on', $locked) &&
+    $this->validatesStartsOnNotPast($original);
 ```
 
-- Capacidade: a regra já existe na base (P02 do código-base,
+- Capacidade: a regra já existe na base (regra P02 do projeto,
   `validatesCapacityAgainstEnrollments`, "não pode ser menor que o
   total de inscrições (N)!"). Nada novo no model; os testes daqui
   conferem as duas regras juntas.
@@ -87,10 +96,13 @@ Validations::notEmpty('starts_on', $this) &&
   uma mensagem só e a última vence: por isso o método devolve `bool`
   e corta a cadeia.
 - Compara com o banco (`findById`), não com um valor guardado no
-  objeto: o model do framework não guarda o "antes".
-- Capacidade: não dupliquei a regra P02 nem troquei a mensagem dela
-  ("total de inscrições (3)!" é mais informativa e já é conferida por
-  testes e Cests da base). Se o professor exigir o texto "não pode
+  objeto: o model do framework não guarda o "antes". A busca é feita
+  uma vez por validação e reaproveitada pelas três regras (`kind`,
+  `starts_on` imutável e "não passada"); buscar em cada método daria
+  três consultas iguais por `save()`.
+- Capacidade: não dupliquei a regra P02 do projeto nem troquei a
+  mensagem dela ("total de inscrições (3)!" é mais informativa e já é
+  conferida por testes e Cests da base). Se o professor exigir o texto "não pode
   ser menor que o número de inscritos!", troque só a string em
   `validatesCapacityAgainstEnrollments` e os testes que a citam
   (`grep -rn "total de inscrições" tests/`).
@@ -158,7 +170,8 @@ docker compose exec web curl -s -b /tmp/c \
   Eventos que ainda podem ser editados.
 - M4 (`m4-segunda-data-ends-on`): com `ends_on`, decida com o
   professor se a data de término também fica imutável com inscritos.
-  Se sim, encadeie `validatesUnchangedWithEnrollments('ends_on')`
+  Se sim, encadeie
+  `validatesUnchangedWithEnrollments('ends_on', $locked)`
   antes de `validatesEndsOnNotBeforeStartsOn()`.
 - M5, M6 e M2 mexem em linhas vizinhas de `validates()`; junte as
   chamadas.
@@ -179,7 +192,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-m10 \
     s50/fvp/4.2/exemplos/m10-campo-imutavel-com-inscricoes/projeto
 git fetch fvp-m10 fvp/m10-campo-imutavel-com-inscricoes
-git cherry-pick 2041afd
+git cherry-pick e83ee0e
 git remote remove fvp-m10
 ```
 
@@ -189,7 +202,7 @@ git remote remove fvp-m10
 D=s50/fvp/4.2/exemplos/m10-campo-imutavel-com-inscricoes
 git fetch $D/solucao.bundle \
     fvp/m10-campo-imutavel-com-inscricoes:fvp-m10
-git cherry-pick 2041afd
+git cherry-pick e83ee0e
 # opcional, limpa a ref
 git branch -D fvp-m10
 ```
@@ -238,11 +251,15 @@ Arquivos que costumam conflitar e por quê:
   Evento com inscritos, não mande `kind`.
 - Confiar só no `readonly`: qualquer um muda o valor pelo DevTools ou
   por `curl`. A regra tem de estar no model (o Cest testa isso).
-- Esquecer o `newRecord()`: no create não há `id`, e
-  `findById(null)` dá `TypeError` (o parâmetro é `int`).
+- Esquecer o `newRecord()` antes do `findById`: no create não há
+  `id`, e `findById(null)` dá `TypeError` (o parâmetro é `int`).
+- Chamar `self::findById($this->id)` dentro de cada regra: funciona,
+  mas repete a mesma consulta; carregue uma vez em `validates()` e
+  passe por parâmetro.
 - Usar `Model::update([...])` para testar: ele não valida. Nos testes,
   mude o atributo e chame `save()`.
-- O `hasEnrollments()` consulta o banco; o form também chama
+- O `hasEnrollments()` consulta o banco (uma vez por validação); o
+  form também chama
   `enrollmentsCount()`. São consultas a mais por tela de edição,
   aceitáveis aqui.
 - Evento já passado e com inscritos: a data fica travada por esta
