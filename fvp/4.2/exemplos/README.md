@@ -228,6 +228,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P21. Imagem de capa (banner) do Evento por upload
   `p21-banner-upload/`
   - feat: Add event cover image upload
+- P22. Adiar o Evento uma semana com um botão
+  `p22-adiar-uma-semana/`
+  - feat: Add button to postpone an event by one week
 - P3. Cancelar inscrição (`DELETE /events/{id}/enrollments`)
   `p3-cancelar-inscricao/`
   - feat: Add events listing and details for participants
