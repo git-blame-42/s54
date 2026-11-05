@@ -215,6 +215,15 @@ class EnrollmentTest extends TestCase
         }
     }
 
+    public function test_invalid_event_id_does_not_generate_a_receipt_code(): void
+    {
+        $enrollment = new Enrollment(['event_id' => "{$this->event->id}abc", 'user_id' => $this->participant->id]);
+
+        $this->assertFalse($enrollment->save());
+        $this->assertNull($enrollment->receipt_code);
+        $this->assertCount(0, Enrollment::all());
+    }
+
     public function test_new_receipt_code_skips_codes_already_used_in_the_event(): void
     {
         $first = new Enrollment(['event_id' => $this->event->id, 'user_id' => $this->participant->id]);

@@ -10,7 +10,7 @@ use Lib\Validations;
  * Inscrição de um Participante em um Evento (tabela pivô event_user).
  *
  * @property int $id
- * @property int $event_id
+ * @property int|string $event_id int vindo do banco; pode chegar como string de quem monta a Inscrição
  * @property int $user_id
  * @property int|string|null $receipt_code número do comprovante (1000-9999), gerado no save(), único no Evento
  */
@@ -29,8 +29,11 @@ class Enrollment extends Model
     {
         $code = $this->receipt_code;
 
-        if ($this->newRecord() && ($code === null || $code === '')) {
-            $this->receipt_code = self::newReceiptCode((int) $this->event_id);
+        // Sem (int) silencioso: event_id inválido não gera número, e a validação recusa a Inscrição.
+        $eventId = filter_var($this->event_id, FILTER_VALIDATE_INT);
+
+        if ($this->newRecord() && ($code === null || $code === '') && $eventId !== false) {
+            $this->receipt_code = self::newReceiptCode($eventId);
         }
 
         return parent::save();

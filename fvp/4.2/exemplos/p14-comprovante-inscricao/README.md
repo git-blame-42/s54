@@ -17,9 +17,9 @@ Branch no clone: `fvp/p14-comprovante-inscricao`, empilhada sobre
 |-----------|-----------------------------------------------------------|
 | `0669a19` | `feat: Add events listing and details for participants` * |
 | `458a05b` | `feat: Allow participants to enroll in events` *          |
-| `3faf1d8` | `feat: Add enrollment receipt code`                       |
+| `81df6e6` | `feat: Add enrollment receipt code`                       |
 
-`*` commits da base (O2 e P2); o deste cenário é só o `3faf1d8`.
+`*` commits da base (O2 e P2); o deste cenário é só o `81df6e6`.
 
 ## O que mudou
 
@@ -31,8 +31,10 @@ Branch no clone: `fvp/p14-comprovante-inscricao`, empilhada sobre
   - `'receipt_code'` em `$columns`, `@property`, constantes
     `RECEIPT_CODE_MIN = 1000` e `RECEIPT_CODE_MAX = 9999`.
   - `save()` sobrescrito: em registro novo sem número, chama
-    `newReceiptCode($eventId)` e depois `parent::save()`. Salvar de
-    novo não troca o número.
+    `newReceiptCode($eventId)` e depois `parent::save()`. O
+    `$eventId` sai de `filter_var(..., FILTER_VALIDATE_INT)`, sem
+    `(int)` silencioso (`1abc` não gera número). Salvar de novo não
+    troca o número.
   - `newReceiptCode(int $eventId): int`: `random_int(1000, 9999)`
     em laço até não existir
     `['event_id' => $eventId, 'receipt_code' => $code]`.
@@ -58,8 +60,9 @@ Branch no clone: `fvp/p14-comprovante-inscricao`, empilhada sobre
     Inscrições no mesmo Evento com números distintos; número
     repetido no mesmo Evento recusado; mesmo número em outro Evento
     aceito; fora da faixa (999, 10000, `abc`) recusado;
-    `newReceiptCode` pula o número já usado; `enrollmentIn` e
-    `enrollments()`.
+    `newReceiptCode` pula o número já usado; `event_id` inválido
+    (`1abc`) não gera número e a Inscrição é recusada;
+    `enrollmentIn` e `enrollments()`.
   - `EnrollmentsControllerTest`: `receipt_code=1` enviado no POST é
     ignorado (o número gerado fica na faixa).
   - `EventsControllerTest` (Participante): inscrito vê
@@ -106,7 +109,7 @@ docker compose up -d selenium && sleep 5
 docker compose stop selenium
 ```
 
-Resultado obtido: Unit 172, Integration 73, Acceptance 31 (base P2:
+Resultado obtido: Unit 173, Integration 73, Acceptance 31 (base P2:
 164 / 68 / 29; `main`: 159 / 45 / 23). PHPCS e PHPStan sem erros.
 `db:populate` sem erro: 14 Inscrições com 14 pares
 (Evento, número) distintos, todos entre 1000 e 9999.
@@ -140,8 +143,8 @@ Pré-requisito: o repositório alvo descende de `f31006b` do público
 `s50/fvp/4.2/exemplos/p14-comprovante-inscricao`.
 
 Este cenário é empilhado: sem O2 e P2 no alvo, aplique o range
-inteiro (`0669a19`, `458a05b` e `3faf1d8`); com O2 e P2 já
-aplicados, aplique só o topo (`3faf1d8`).
+inteiro (`0669a19`, `458a05b` e `81df6e6`); com O2 e P2 já
+aplicados, aplique só o topo (`81df6e6`).
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -151,9 +154,9 @@ git remote add fvp-p14 \
     s50/fvp/4.2/exemplos/p14-comprovante-inscricao/projeto
 git fetch fvp-p14 fvp/p14-comprovante-inscricao
 # sem O2 e P2: o range inteiro (base + topo)
-git cherry-pick 0669a19^..3faf1d8
+git cherry-pick 0669a19^..81df6e6
 # com O2 e P2 já aplicados: só o topo
-# git cherry-pick 3faf1d8
+# git cherry-pick 81df6e6
 git remote remove fvp-p14
 ```
 
@@ -164,8 +167,8 @@ git fetch \
     s50/fvp/4.2/exemplos/p14-comprovante-inscricao/solucao.bundle \
     fvp/p14-comprovante-inscricao:fvp-p14
 # o bundle traz os objetos; o cherry-pick cria commits novos
-git cherry-pick 0669a19^..3faf1d8
-# ou, com O2 e P2 já aplicados: git cherry-pick 3faf1d8
+git cherry-pick 0669a19^..81df6e6
+# ou, com O2 e P2 já aplicados: git cherry-pick 81df6e6
 # opcional, limpa a ref
 git branch -D fvp-p14
 ```
@@ -232,5 +235,11 @@ o `./run phpcs`.
 - Esquecer o `db:populate` depois de mudar o schema: o banco de
   desenvolvimento não tem a coluna e a inscrição dá 500 (os testes
   passam porque recriam o schema).
-- `(int) $enrollment->receipt_code` na view: o número já é inteiro,
-  o cast só garante que nada além de dígitos vai para o HTML.
+- Mostrar o comprovante a quem não é o dono: o número só aparece
+  para o próprio Participante (`enrollmentIn()` do usuário logado,
+  no `show` dele) e para o admin (lista de inscritos). Não ponha o
+  número na listagem pública nem no `show` de outro Participante:
+  com ele, alguém poderia se passar pelo inscrito na conferência.
+- Na view, saída com `htmlspecialchars((string) ...)`, como os
+  demais campos; não troque por `(int)` nem use `?? ''` à toa (o
+  `get()` do `BelongsTo` sempre devolve o usuário, a FK garante).

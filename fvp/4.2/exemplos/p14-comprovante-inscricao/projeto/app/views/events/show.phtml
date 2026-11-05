@@ -38,7 +38,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
 <?php $enrollment = $this->currentUser()?->enrollmentIn($event); ?>
 <?php if ($enrollment !== null) : ?>
     <p class="text-success">Você está inscrito neste evento.</p>
-    <p class="receipt">Comprovante de inscrição: <strong>Nº <?= (int) $enrollment->receipt_code ?></strong></p>
+    <p class="receipt">Comprovante de inscrição: <strong>Nº <?= htmlspecialchars((string) $enrollment->receipt_code) ?></strong></p>
 <?php else : ?>
     <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
         <button type="submit" class="btn btn-primary">Inscrever-se</button>

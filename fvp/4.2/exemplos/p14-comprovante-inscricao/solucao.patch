@@ -1185,7 +1185,7 @@ index 5780e2e..2d7f66a 100644
 2.54.0 (Apple Git-157)
 
 
-From 3faf1d8ff40eb7151e55d38fe9ac6bbddd6de618 Mon Sep 17 00:00:00 2001
+From 81df6e6cbae258b12a0f8fc2e84cece2f983e6a8 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:54:42 -0300
 Subject: [PATCH 3/3] feat: Add enrollment receipt code
@@ -1194,27 +1194,30 @@ Each enrollment gets a random receipt code (1000-9999), unique within the
 event, generated in Enrollment::save(). The participant sees it on the
 event page after enrolling and the admin sees it in the enrollments list.
 ---
- app/Models/Enrollment.php                     |  53 ++++++-
+ app/Models/Enrollment.php                     |  58 +++++++-
  app/Models/Event.php                          |  14 ++
  app/Models/User.php                           |  14 ++
  app/views/admin/events/show.phtml             |  26 ++++
  app/views/events/show.phtml                   |   4 +-
  database/schema.sql                           |   3 +
- .../events/EnrollmentReceiptCest.php          |  46 +++++++
+ .../events/EnrollmentReceiptCest.php          |  46 ++++++
  .../Admin/EventsControllerTest.php            |  22 +++
- .../Controllers/EnrollmentsControllerTest.php |  16 +++
+ .../Controllers/EnrollmentsControllerTest.php |  16 ++
  .../Controllers/EventsControllerTest.php      |  22 +++
- tests/Unit/Models/Events/EnrollmentTest.php   | 130 ++++++++++++++++++
- 11 files changed, 348 insertions(+), 2 deletions(-)
+ tests/Unit/Models/Events/EnrollmentTest.php   | 139 ++++++++++++++++++
+ 11 files changed, 361 insertions(+), 3 deletions(-)
  create mode 100644 tests/Acceptance/events/EnrollmentReceiptCest.php
 
 diff --git a/app/Models/Enrollment.php b/app/Models/Enrollment.php
-index 640846a..69aa881 100644
+index 640846a..bc8d27e 100644
 --- a/app/Models/Enrollment.php
 +++ b/app/Models/Enrollment.php
-@@ -12,11 +12,41 @@ use Lib\Validations;
+@@ -10,13 +10,46 @@ use Lib\Validations;
+  * Inscrição de um Participante em um Evento (tabela pivô event_user).
+  *
   * @property int $id
-  * @property int $event_id
+- * @property int $event_id
++ * @property int|string $event_id int vindo do banco; pode chegar como string de quem monta a Inscrição
   * @property int $user_id
 + * @property int|string|null $receipt_code número do comprovante (1000-9999), gerado no save(), único no Evento
   */
@@ -1234,8 +1237,11 @@ index 640846a..69aa881 100644
 +    {
 +        $code = $this->receipt_code;
 +
-+        if ($this->newRecord() && ($code === null || $code === '')) {
-+            $this->receipt_code = self::newReceiptCode((int) $this->event_id);
++        // Sem (int) silencioso: event_id inválido não gera número, e a validação recusa a Inscrição.
++        $eventId = filter_var($this->event_id, FILTER_VALIDATE_INT);
++
++        if ($this->newRecord() && ($code === null || $code === '') && $eventId !== false) {
++            $this->receipt_code = self::newReceiptCode($eventId);
 +        }
 +
 +        return parent::save();
@@ -1255,7 +1261,7 @@ index 640846a..69aa881 100644
  
      public function validates(): void
      {
-@@ -30,6 +60,27 @@ class Enrollment extends Model
+@@ -30,6 +63,27 @@ class Enrollment extends Model
          }
  
          $this->validatesAvailableSpots();
@@ -1334,7 +1340,7 @@ index ba7a0df..38a3103 100644
      {
          if ($this->newRecord() || $event->newRecord()) {
 diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
-index 6cab74e..833ec17 100644
+index 6cab74e..9d336b4 100644
 --- a/app/views/admin/events/show.phtml
 +++ b/app/views/admin/events/show.phtml
 @@ -32,5 +32,31 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
@@ -1358,9 +1364,9 @@ index 6cab74e..833ec17 100644
 +            <?php foreach ($enrollments as $enrollment) : ?>
 +                <?php $participant = $enrollment->user()->get(); ?>
 +                <tr>
-+                    <td>Nº <?= (int) $enrollment->receipt_code ?></td>
-+                    <td><?= htmlspecialchars($participant->name ?? '') ?></td>
-+                    <td><?= htmlspecialchars($participant->email ?? '') ?></td>
++                    <td>Nº <?= htmlspecialchars((string) $enrollment->receipt_code) ?></td>
++                    <td><?= htmlspecialchars($participant->name) ?></td>
++                    <td><?= htmlspecialchars($participant->email) ?></td>
 +                </tr>
 +            <?php endforeach; ?>
 +        </tbody>
@@ -1370,7 +1376,7 @@ index 6cab74e..833ec17 100644
  <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
  <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
 diff --git a/app/views/events/show.phtml b/app/views/events/show.phtml
-index da39cb1..e6d973c 100644
+index da39cb1..4e155d0 100644
 --- a/app/views/events/show.phtml
 +++ b/app/views/events/show.phtml
 @@ -35,8 +35,10 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
@@ -1381,7 +1387,7 @@ index da39cb1..e6d973c 100644
 +<?php $enrollment = $this->currentUser()?->enrollmentIn($event); ?>
 +<?php if ($enrollment !== null) : ?>
      <p class="text-success">Você está inscrito neste evento.</p>
-+    <p class="receipt">Comprovante de inscrição: <strong>Nº <?= (int) $enrollment->receipt_code ?></strong></p>
++    <p class="receipt">Comprovante de inscrição: <strong>Nº <?= htmlspecialchars((string) $enrollment->receipt_code) ?></strong></p>
  <?php else : ?>
      <form class="d-inline" action="<?= route('events.enrollments.create', ['id' => $event->id]) ?>" method="post">
          <button type="submit" class="btn btn-primary">Inscrever-se</button>
@@ -1547,10 +1553,10 @@ index 0bcb3f4..bfd2cf9 100644
      {
          $full = $this->createEvent(['capacity' => 1]);
 diff --git a/tests/Unit/Models/Events/EnrollmentTest.php b/tests/Unit/Models/Events/EnrollmentTest.php
-index 8fe4a60..d454935 100644
+index 8fe4a60..de0cc10 100644
 --- a/tests/Unit/Models/Events/EnrollmentTest.php
 +++ b/tests/Unit/Models/Events/EnrollmentTest.php
-@@ -129,6 +129,136 @@ class EnrollmentTest extends TestCase
+@@ -129,6 +129,145 @@ class EnrollmentTest extends TestCase
          $this->assertCount(0, Enrollment::all());
      }
  
@@ -1638,6 +1644,15 @@ index 8fe4a60..d454935 100644
 +            $this->assertFalse($enrollment->save(), (string) $code);
 +            $this->assertEquals('deve estar entre 1000 e 9999!', $enrollment->errors('receipt_code'));
 +        }
++    }
++
++    public function test_invalid_event_id_does_not_generate_a_receipt_code(): void
++    {
++        $enrollment = new Enrollment(['event_id' => "{$this->event->id}abc", 'user_id' => $this->participant->id]);
++
++        $this->assertFalse($enrollment->save());
++        $this->assertNull($enrollment->receipt_code);
++        $this->assertCount(0, Enrollment::all());
 +    }
 +
 +    public function test_new_receipt_code_skips_codes_already_used_in_the_event(): void

@@ -49,9 +49,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
             <?php foreach ($enrollments as $enrollment) : ?>
                 <?php $participant = $enrollment->user()->get(); ?>
                 <tr>
-                    <td>Nº <?= (int) $enrollment->receipt_code ?></td>
-                    <td><?= htmlspecialchars($participant->name ?? '') ?></td>
-                    <td><?= htmlspecialchars($participant->email ?? '') ?></td>
+                    <td>Nº <?= htmlspecialchars((string) $enrollment->receipt_code) ?></td>
+                    <td><?= htmlspecialchars($participant->name) ?></td>
+                    <td><?= htmlspecialchars($participant->email) ?></td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
