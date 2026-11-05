@@ -347,6 +347,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - S4. Testes de borda pedidos pelo professor
   `s4-testes-de-borda/`
   - test: Add edge case tests for events
+- S5. Testes que faltam: `PaginatorTest` e Cests do `show`
+  `s5-paginator-test-cests/`
+  - test: Add Paginator unit tests and event show acceptance
 - T1. Populate: campo novo, mais Eventos, segundo admin
   `t1-populate-campo-eventos-admin/`
   - chore: Add second admin and more events to the populate
