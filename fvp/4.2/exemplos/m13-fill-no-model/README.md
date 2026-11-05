@@ -55,6 +55,17 @@ Branch no clone: `fvp/m13-fill-no-model`, a partir de `main`
   ausente vira `null` também no `update`, como o `fill` fazia. A
   única ampliação é `audience` como string, que o formulário não
   envia, mas que facilita testes e populate.
+- `$params[$field] ?? null` em `fillFromForm` não é o `?? ''`
+  criticado nas issues da 4.1. A presença de cada campo é opcional no
+  array (um POST pode vir sem a chave), e o `??` só evita o warning de
+  chave ausente, que o `ErrorsHandler` transformaria em erro 500. O
+  `null` não inventa dado: significa "não veio", e o `notEmpty` do
+  `validates()` cobra depois com "não pode ser vazio!" embaixo do
+  campo. O `?? ''` era ruim porque fingia que o usuário mandou texto
+  vazio e seguia com esse valor para a consulta (no login, para o
+  `findByEmail`). Aqui nada é consultado nem gravado antes da
+  validação. O mesmo vale para `$params['audience'] ?? []`: lista
+  vazia, e o `notEmpty('audience')` acusa.
 - Commit `refactor:` porque nada muda para o usuário.
 - Alternativa: um service `App\Services\EventForm` com
   `fill(Event $event, array $params)`, se o professor preferir o model
