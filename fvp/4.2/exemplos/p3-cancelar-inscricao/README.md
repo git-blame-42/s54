@@ -15,10 +15,10 @@ Branch no clone: `fvp/p3-cancelar-inscricao`, empilhada sobre
 
 Commits (os dois primeiros são a base):
 
-- `9d7c82f` `feat: Add events listing and details for participants`
+- `0669a19` `feat: Add events listing and details for participants`
   (base, O2)
-- `95e5e82` `feat: Allow participants to enroll in events` (base, P2)
-- `484022c` `feat: Allow participants to cancel their enrollment`
+- `458a05b` `feat: Allow participants to enroll in events` (base, P2)
+- `9e02f31` `feat: Allow participants to cancel their enrollment`
 
 ## O que mudou
 
@@ -97,7 +97,7 @@ docker compose exec web curl -s -i -b /tmp/c \
   `enrollments/index.phtml`.
 - P9 (lista de espera): com ele, cancelar uma inscrição confirmada
   precisa promover o primeiro da espera; este cenário só remove.
-- P1/P4 (código de check-in e confirmação de presença, agente B): se
+- P1 e P4 (código de check-in e confirmação de presença): se
   aplicados, decida se quem já confirmou presença ainda pode cancelar
   (o P3 não impede). Não estão implementados aqui.
 
@@ -121,9 +121,9 @@ git remote add fvp-p3 \
     s50/fvp/4.2/exemplos/p3-cancelar-inscricao/projeto
 git fetch fvp-p3 fvp/p3-cancelar-inscricao
 # O2 + P2 + P3 (range)
-git cherry-pick 9d7c82f^..484022c
+git cherry-pick 0669a19^..9e02f31
 # ou só o topo (P3), se já tem O2 e P2
-git cherry-pick 484022c
+git cherry-pick 9e02f31
 git remote remove fvp-p3
 ```
 
@@ -136,7 +136,7 @@ git fetch \
 # range com a base (só se o seu main for o f31006b)
 git cherry-pick main..fvp-p3
 # ou só o topo
-git cherry-pick 484022c
+git cherry-pick 9e02f31
 # opcional, limpa a ref
 git branch -D fvp-p3
 ```
