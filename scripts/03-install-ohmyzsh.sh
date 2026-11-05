@@ -5,7 +5,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 OMZ_DIR="$HOME/.oh-my-zsh"
 ZSHRC="$HOME/.zshrc"
-OMZ_INSTALLER='https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh'
+OMZ_INSTALLER='https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master'
+OMZ_INSTALLER+='/tools/install.sh'
 
 usage() {
   cat <<EOF
