@@ -241,7 +241,7 @@ Depois de uma modificação, os quatro comandos limpos:
 
 Conferido no clone: com os erros provocados, `phpcs` saiu com 4
 ERRORS e 1 WARNING, `phpstan` com `[ERROR] Found 3 errors` (itens 3 e
-5; o `return.type` do item 4 entrou numa segunda rodada) e o composer
+5; o `return.type` do item 4 entrou numa segunda execução) e o composer
 com o aviso de PSR-4 e código de saída 1. Depois das
 correções: `phpcs` limpo, `[OK] No errors` e nenhum aviso de PSR-4.
 Unit 159 testes na base, sem mudança.
