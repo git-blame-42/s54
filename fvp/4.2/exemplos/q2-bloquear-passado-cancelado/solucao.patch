@@ -1,0 +1,1026 @@
+From ba6b6f104a3bc3e18b9b756af0933ce01a9662fb Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:12:19 -0300
+Subject: [PATCH 1/2] feat: Add Event status with cancel and finish actions
+
+Adds events.status (scheduled, canceled, finished; scheduled by default in the constructor). PUT /admin/events/{id}/cancel and /finish call Event::cancel() and Event::finish(). Status badge in the listing and in the show page; a canceled Event cannot be edited.
+---
+ app/Controllers/Admin/EventsController.php    |  49 +++++++
+ app/Models/Event.php                          |  73 +++++++++++
+ app/views/admin/events/index.phtml            |  11 +-
+ app/views/admin/events/show.phtml             |  15 +++
+ config/routes.php                             |   4 +
+ database/schema.sql                           |   2 +
+ .../admin/events/CancelEventCest.php          |  78 +++++++++++
+ tests/Integration/Access/EventsAccessTest.php |  26 +++-
+ .../Admin/EventsControllerTest.php            | 124 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        |  85 ++++++++++++
+ 10 files changed, 465 insertions(+), 2 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/CancelEventCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..eeb888f 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -70,6 +70,11 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        if ($event->isCanceled()) {
++            $this->canceledEventNotEditable($event);
++            return;
++        }
++
+         $title = 'Editar Evento';
+         $this->render('admin/events/edit', compact('event', 'title'));
+     }
+@@ -81,6 +86,10 @@ class EventsController extends Controller
+             $this->eventNotFound();
+             return;
+         }
++        if ($event->isCanceled()) {
++            $this->canceledEventNotEditable($event);
++            return;
++        }
+         $this->fill($event, $request);
+ 
+         if ($event->save()) {
+@@ -110,6 +119,40 @@ class EventsController extends Controller
+         $this->redirectTo(route('admin.events.index'));
+     }
+ 
++    public function cancel(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        if ($event->cancel()) {
++            FlashMessage::success('Evento cancelado!');
++        } else {
++            FlashMessage::danger($event->errors('base') ?? 'Não foi possível cancelar o evento!');
++        }
++
++        $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++    }
++
++    public function finish(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        if ($event->finish()) {
++            FlashMessage::success('Evento encerrado!');
++        } else {
++            FlashMessage::danger($event->errors('base') ?? 'Não foi possível encerrar o evento!');
++        }
++
++        $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++    }
++
+     /**
+      * Copia para o Evento só os campos do formulário (nunca user_id nem id).
+      */
+@@ -134,6 +177,12 @@ class EventsController extends Controller
+         return Event::findById((int) $request->getParam('id'));
+     }
+ 
++    private function canceledEventNotEditable(Event $event): void
++    {
++        FlashMessage::danger('Evento cancelado não pode ser editado!');
++        $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++    }
++
+     private function eventNotFound(): void
+     {
+         FlashMessage::danger('Evento não encontrado!');
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..c940be7 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -18,6 +18,7 @@ use PDOException;
+  * @property string $starts_on
+  * @property string $location
+  * @property int|string $capacity
++ * @property string $status um dos valores de STATUSES; muda só por cancel() e finish()
+  */
+ class Event extends Model
+ {
+@@ -44,6 +45,13 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Valores do ENUM `status`, com o rótulo exibido na listagem e no show. */
++    public const STATUSES = [
++        'scheduled' => 'Agendado',
++        'canceled' => 'Cancelado',
++        'finished' => 'Encerrado',
++    ];
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -55,8 +63,24 @@ class Event extends Model
+         'starts_on',
+         'location',
+         'capacity',
++        'status',
+     ];
+ 
++    /**
++     * Model::save() grava todas as colunas, então o DEFAULT 'scheduled' do schema não vale:
++     * um Evento novo já nasce com status 'scheduled' no objeto.
++     *
++     * @param array<string, mixed> $params
++     */
++    public function __construct($params = [])
++    {
++        parent::__construct($params);
++
++        if ($this->status === null) {
++            $this->status = 'scheduled';
++        }
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+@@ -79,6 +103,55 @@ class Event extends Model
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
++
++        Validations::notEmpty('status', $this) &&
++            Validations::inclusion('status', $this, array_keys(self::STATUSES));
++    }
++
++    public function isCanceled(): bool
++    {
++        return $this->status === 'canceled';
++    }
++
++    public function isFinished(): bool
++    {
++        return $this->status === 'finished';
++    }
++
++    public function statusLabel(): string
++    {
++        return self::STATUSES[$this->status] ?? $this->status;
++    }
++
++    /**
++     * Cancela o Evento. Só um Evento agendado pode ser cancelado; senão retorna false
++     * e registra o motivo em errors('base'). Usa save(), então passa por validates().
++     */
++    public function cancel(): bool
++    {
++        if ($this->status !== 'scheduled') {
++            $this->addError('base', 'só um evento agendado pode ser cancelado!');
++            return false;
++        }
++
++        $this->status = 'canceled';
++
++        return $this->save();
++    }
++
++    /**
++     * Encerra o Evento manualmente (variante "encerrar"). Mesma regra de cancel().
++     */
++    public function finish(): bool
++    {
++        if ($this->status !== 'scheduled') {
++            $this->addError('base', 'só um evento agendado pode ser encerrado!');
++            return false;
++        }
++
++        $this->status = 'finished';
++
++        return $this->save();
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..1d85552 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -19,7 +19,10 @@
+         <tbody>
+             <?php foreach ($events as $event) : ?>
+                 <tr>
+-                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td>
++                        <?= htmlspecialchars($event->title) ?>
++                        <span class="badge text-bg-secondary"><?= htmlspecialchars($event->statusLabel()) ?></span>
++                    </td>
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+@@ -31,6 +34,12 @@
+                             <input type="hidden" name="_method" value="DELETE">
+                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                         </form>
++                        <?php if ($event->status === 'scheduled') : ?>
++                            <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
++                                <input type="hidden" name="_method" value="PUT">
++                                <button type="submit" class="btn btn-sm btn-outline-warning">Cancelar Evento</button>
++                            </form>
++                        <?php endif; ?>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..26025e2 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -30,7 +30,22 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+         (<?= $event->availableSpots() ?> disponíveis)
+     </dd>
++
++    <dt class="col-sm-3">Situação</dt>
++    <dd class="col-sm-9">
++        <span id="event_status" class="badge text-bg-secondary"><?= htmlspecialchars($event->statusLabel()) ?></span>
++    </dd>
+ </dl>
+ 
+ <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<?php if ($event->status === 'scheduled') : ?>
++    <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
++        <input type="hidden" name="_method" value="PUT">
++        <button type="submit" class="btn btn-outline-warning">Cancelar Evento</button>
++    </form>
++    <form class="d-inline" action="<?= route('admin.events.finish', ['id' => $event->id]) ?>" method="post">
++        <input type="hidden" name="_method" value="PUT">
++        <button type="submit" class="btn btn-outline-secondary">Encerrar Evento</button>
++    </form>
++<?php endif; ?>
+ <a class="btn btn-secondary" href="<?= route('admin.events.index') ?>">Voltar</a>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..24b5e30 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -33,5 +33,9 @@ Route::middleware('auth')->group(function () {
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
++        Route::put('/admin/events/{id}/cancel', [AdminEventsController::class, 'cancel'])
++            ->name('admin.events.cancel');
++        Route::put('/admin/events/{id}/finish', [AdminEventsController::class, 'finish'])
++            ->name('admin.events.finish');
+     });
+ });
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..85050f7 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -29,6 +29,8 @@ CREATE TABLE events (
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+     capacity    INT NOT NULL,
++    -- Situação do Evento: agendado (padrão), cancelado ou encerrado.
++    status      ENUM('scheduled', 'canceled', 'finished') NOT NULL DEFAULT 'scheduled',
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/CancelEventCest.php b/tests/Acceptance/admin/events/CancelEventCest.php
+new file mode 100644
+index 0000000..a5bb8c7
+--- /dev/null
++++ b/tests/Acceptance/admin/events/CancelEventCest.php
+@@ -0,0 +1,78 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * P5: situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.
++ */
++class CancelEventCest extends BaseEventsCest
++{
++    public function cancelScheduledEvent(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++
++        $page->wantTo('Cancelar um Evento agendado');
++        $page->amOnPage('/admin/events');
++        $page->see('Agendado', $this->rowOf('Evento 02'));
++        $page->click('Ver', $this->rowOf('Evento 02'));
++        $page->see('Agendado', '#event_status');
++
++        $page->click('Cancelar Evento');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cancelado!');
++        $page->see('Cancelado', '#event_status');
++        $page->dontSee('Cancelar Evento');
++        $page->dontSee('Encerrar Evento');
++        Assert::assertSame('canceled', Event::findById((int) $event->id)?->status);
++
++        $page->amOnPage('/admin/events');
++        $page->see('Cancelado', $this->rowOf('Evento 02'));
++        $page->see('Agendado', $this->rowOf('Evento 03'));
++    }
++
++    public function cancelEventFromTheListing(AcceptanceTester $page): void
++    {
++        $event = $this->events[4];
++
++        $page->wantTo('Cancelar um Evento pela listagem');
++        $page->amOnPage('/admin/events');
++        $page->click('Cancelar Evento', $this->rowOf('Evento 04'));
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cancelado!');
++        $page->see('Cancelado', '#event_status');
++    }
++
++    public function canceledEventCannotBeEdited(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $event->cancel();
++
++        $page->wantTo('Evento cancelado não aceita edição');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cancelado não pode ser editado!');
++        $page->dontSee('Editar Evento', 'h1');
++    }
++
++    public function finishScheduledEvent(AcceptanceTester $page): void
++    {
++        $event = $this->events[3];
++
++        $page->wantTo('Encerrar um Evento agendado');
++        $page->amOnPage("/admin/events/{$event->id}");
++
++        $page->click('Encerrar Evento');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento encerrado!');
++        $page->see('Encerrado', '#event_status');
++        Assert::assertSame('finished', Event::findById((int) $event->id)?->status);
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..39264fe 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 10 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy, cancel, finish).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -93,6 +93,8 @@ class EventsAccessTest extends TestCase
+             'admin.events.edit' => ['GET', '/admin/events/1/edit'],
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.cancel' => ['PUT', '/admin/events/1/cancel'],
++            'admin.events.finish' => ['PUT', '/admin/events/1/finish'],
+         ];
+     }
+ 
+@@ -106,6 +108,8 @@ class EventsAccessTest extends TestCase
+         return [
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.cancel' => ['PUT', '/admin/events/1/cancel'],
++            'admin.events.finish' => ['PUT', '/admin/events/1/finish'],
+         ];
+     }
+ 
+@@ -159,6 +163,26 @@ class EventsAccessTest extends TestCase
+         $this->assertEquals('Palestra de Acesso', $events[0]->title);
+     }
+ 
++    public function test_participant_should_not_cancel_or_finish_events(): void
++    {
++        $client = $this->loggedClient($this->participant);
++
++        $client->post("/admin/events/{$this->event->id}/cancel", ['form_params' => ['_method' => 'PUT']]);
++        $client->post("/admin/events/{$this->event->id}/finish", ['form_params' => ['_method' => 'PUT']]);
++
++        $this->assertEquals('scheduled', Event::findById($this->event->id)->status);
++    }
++
++    public function test_admin_should_cancel_an_event(): void
++    {
++        $response = $this->loggedClient($this->admin)
++            ->post("/admin/events/{$this->event->id}/cancel", ['form_params' => ['_method' => 'PUT']]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/admin/events/{$this->event->id}", $response->getHeaderLine('Location'));
++        $this->assertEquals('canceled', Event::findById($this->event->id)->status);
++    }
++
+     public function test_admin_should_access_events_index_and_new(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..d1cedf9 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,130 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- P5: status ------------------- */
++
++    public function test_index_and_show_display_the_status_badge(): void
++    {
++        $event = $this->createEvent(['title' => 'Evento Cancelado', 'status' => 'canceled']);
++        $this->createEvent(['title' => 'Evento Agendado']);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/Evento Cancelado\s*<span class="badge text-bg-secondary">Cancelado/', $index);
++        $this->assertMatchesRegularExpression('/Evento Agendado\s*<span class="badge text-bg-secondary">Agendado/', $index);
++        $this->assertStringNotContainsString("/admin/events/{$event->id}/cancel", $index);
++        $this->assertStringContainsString('Situação', $show);
++        $this->assertMatchesRegularExpression('/id="event_status"[^>]*>Cancelado</', $show);
++        $this->assertStringNotContainsString('Cancelar Evento', $show);
++    }
++
++    public function test_scheduled_event_has_cancel_and_finish_buttons(): void
++    {
++        $event = $this->createEvent();
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}/cancel\" method=\"post\"", $index);
++        $this->assertStringContainsString('Cancelar Evento', $index);
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}/cancel\" method=\"post\"", $show);
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}/finish\" method=\"post\"", $show);
++        $this->assertStringContainsString('name="_method" value="PUT"', $show);
++        $this->assertStringContainsString('Encerrar Evento', $show);
++    }
++
++    public function test_cancel_twice_is_rejected(): void
++    {
++        $event = $this->createEvent();
++        $this->put(action: 'cancel', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $response = $this->put(action: 'cancel', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertEquals('canceled', Event::findById($event->id)->status);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('só um evento agendado pode ser cancelado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_cancel_cancels_the_event(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(action: 'cancel', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertEquals('canceled', Event::findById($event->id)->status);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento cancelado!', $_SESSION['flash']['success']);
++    }
++
++    public function test_cancel_of_a_finished_event_is_rejected(): void
++    {
++        $event = $this->createEvent(['status' => 'finished']);
++
++        $response = $this->put(action: 'cancel', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertEquals('finished', Event::findById($event->id)->status);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('só um evento agendado pode ser cancelado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_cancel_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->put(action: 'cancel', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_finish_finishes_the_event(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->put(action: 'finish', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertEquals('finished', Event::findById($event->id)->status);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento encerrado!', $_SESSION['flash']['success']);
++    }
++
++    public function test_edit_of_a_canceled_event_redirects_to_show(): void
++    {
++        $event = $this->createEvent(['status' => 'canceled']);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento cancelado não pode ser editado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_update_of_a_canceled_event_keeps_the_record(): void
++    {
++        $event = $this->createEvent(['title' => 'Original', 'status' => 'canceled']);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Mudou'])]
++        );
++
++        $this->assertEquals('Original', Event::findById($event->id)->title);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento cancelado não pode ser editado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_update_ignores_status_sent_by_the_form(): void
++    {
++        $event = $this->createEvent();
++
++        $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['status' => 'canceled'])]
++        );
++
++        $this->assertEquals('scheduled', Event::findById($event->id)->status);
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..c4ff9fc 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -297,6 +297,91 @@ class EventTest extends TestCase
+         $this->assertEquals(['students', 'professors', 'community'], $found->audienceList());
+     }
+ 
++    /* ------------------- P5: status (cancelar / encerrar) ------------------- */
++
++    public function test_new_event_should_be_scheduled(): void
++    {
++        $event = new Event($this->params());
++
++        $this->assertEquals('scheduled', $event->status);
++        $this->assertEquals('Agendado', $event->statusLabel());
++
++        $this->assertTrue($event->save());
++        $this->assertEquals('scheduled', Event::findById($event->id)->status);
++    }
++
++    public function test_status_should_accept_every_enum_value(): void
++    {
++        foreach (array_keys(Event::STATUSES) as $status) {
++            $this->assertTrue((new Event($this->params(['status' => $status])))->isValid(), $status);
++        }
++    }
++
++    public function test_status_outside_enum_should_be_invalid(): void
++    {
++        $event = new Event($this->params(['status' => 'postponed']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não é uma opção válida!', $event->errors('status'));
++    }
++
++    public function test_cancel_should_cancel_a_scheduled_event(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertTrue($event->cancel());
++
++        $this->assertTrue($event->isCanceled());
++        $this->assertEquals('Cancelado', $event->statusLabel());
++        $this->assertEquals('canceled', Event::findById($event->id)->status);
++    }
++
++    public function test_cancel_should_fail_for_an_already_canceled_event(): void
++    {
++        $event = $this->createEvent(['status' => 'canceled']);
++
++        $this->assertFalse($event->cancel());
++        $this->assertEquals('só um evento agendado pode ser cancelado!', $event->errors('base'));
++    }
++
++    public function test_cancel_should_fail_for_a_finished_event(): void
++    {
++        $event = $this->createEvent(['status' => 'finished']);
++
++        $this->assertFalse($event->cancel());
++        $this->assertEquals('só um evento agendado pode ser cancelado!', $event->errors('base'));
++        $this->assertEquals('finished', Event::findById($event->id)->status);
++    }
++
++    public function test_finish_should_finish_a_scheduled_event(): void
++    {
++        $event = $this->createEvent();
++
++        $this->assertTrue($event->finish());
++
++        $this->assertTrue($event->isFinished());
++        $this->assertEquals('finished', Event::findById($event->id)->status);
++    }
++
++    public function test_finish_should_fail_for_a_canceled_event(): void
++    {
++        $event = $this->createEvent(['status' => 'canceled']);
++
++        $this->assertFalse($event->finish());
++        $this->assertEquals('só um evento agendado pode ser encerrado!', $event->errors('base'));
++        $this->assertEquals('canceled', Event::findById($event->id)->status);
++    }
++
++    public function test_cancel_should_not_save_an_invalid_event(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 3);
++        $event->capacity = 2;
++
++        $this->assertFalse($event->cancel());
++        $this->assertEquals('scheduled', Event::findById($event->id)->status);
++    }
++
+     /* ------------------- save / update / destroy / busca ------------------- */
+ 
+     public function test_save_should_create_the_event(): void
+-- 
+2.54.0 (Apple Git-157)
+
+
+From c6273d4d2a0db609c1faa7def011de09ab4b04ea Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:15:33 -0300
+Subject: [PATCH 2/2] feat: Block editing and removing past or canceled Events
+
+Event::isEditable() is false for canceled Events and for Events whose starts_on is before today. edit, update and destroy return early with a danger flash, and the Edit/Remove buttons are hidden in the listing and in the show page.
+---
+ app/Controllers/Admin/EventsController.php    | 17 ++--
+ app/Models/Event.php                          | 10 +++
+ app/views/admin/events/index.phtml            | 12 +--
+ app/views/admin/events/show.phtml             |  4 +-
+ .../admin/events/CancelEventCest.php          |  2 +-
+ .../Acceptance/admin/events/PastEventCest.php | 57 +++++++++++++
+ .../Admin/EventsControllerTest.php            | 81 ++++++++++++++++++-
+ tests/Unit/Models/Events/EventTest.php        | 35 ++++++++
+ 8 files changed, 203 insertions(+), 15 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/PastEventCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index eeb888f..08a00c2 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -70,8 +70,8 @@ class EventsController extends Controller
+             return;
+         }
+ 
+-        if ($event->isCanceled()) {
+-            $this->canceledEventNotEditable($event);
++        if (!$event->isEditable()) {
++            $this->eventNotEditable($event);
+             return;
+         }
+ 
+@@ -86,8 +86,8 @@ class EventsController extends Controller
+             $this->eventNotFound();
+             return;
+         }
+-        if ($event->isCanceled()) {
+-            $this->canceledEventNotEditable($event);
++        if (!$event->isEditable()) {
++            $this->eventNotEditable($event);
+             return;
+         }
+         $this->fill($event, $request);
+@@ -110,6 +110,11 @@ class EventsController extends Controller
+             return;
+         }
+ 
++        if (!$event->isEditable()) {
++            $this->eventNotEditable($event);
++            return;
++        }
++
+         if ($event->safeDestroy()) {
+             FlashMessage::success('Evento removido com sucesso!');
+         } else {
+@@ -177,9 +182,9 @@ class EventsController extends Controller
+         return Event::findById((int) $request->getParam('id'));
+     }
+ 
+-    private function canceledEventNotEditable(Event $event): void
++    private function eventNotEditable(Event $event): void
+     {
+-        FlashMessage::danger('Evento cancelado não pode ser editado!');
++        FlashMessage::danger('Evento passado ou cancelado não pode ser alterado!');
+         $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
+     }
+ 
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index c940be7..0c77d49 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -113,6 +113,16 @@ class Event extends Model
+         return $this->status === 'canceled';
+     }
+ 
++    /**
++     * Q2: só um Evento não cancelado e que ainda não aconteceu (starts_on hoje ou depois)
++     * pode ser editado ou removido. starts_on vem do banco como Y-m-d, então a comparação
++     * de strings equivale à de datas.
++     */
++    public function isEditable(): bool
++    {
++        return !$this->isCanceled() && $this->starts_on >= date('Y-m-d');
++    }
++
+     public function isFinished(): bool
+     {
+         return $this->status === 'finished';
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 1d85552..48cb403 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -29,11 +29,13 @@
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+-                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
++                        <?php if ($event->isEditable()) : ?>
++                            <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++                            <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                                <input type="hidden" name="_method" value="DELETE">
++                                <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++                            </form>
++                        <?php endif; ?>
+                         <?php if ($event->status === 'scheduled') : ?>
+                             <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
+                                 <input type="hidden" name="_method" value="PUT">
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 26025e2..5967f13 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -37,7 +37,9 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     </dd>
+ </dl>
+ 
+-<a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<?php if ($event->isEditable()) : ?>
++    <a class="btn btn-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++<?php endif; ?>
+ <?php if ($event->status === 'scheduled') : ?>
+     <form class="d-inline" action="<?= route('admin.events.cancel', ['id' => $event->id]) ?>" method="post">
+         <input type="hidden" name="_method" value="PUT">
+diff --git a/tests/Acceptance/admin/events/CancelEventCest.php b/tests/Acceptance/admin/events/CancelEventCest.php
+index a5bb8c7..d98412b 100644
+--- a/tests/Acceptance/admin/events/CancelEventCest.php
++++ b/tests/Acceptance/admin/events/CancelEventCest.php
+@@ -57,7 +57,7 @@ class CancelEventCest extends BaseEventsCest
+         $page->amOnPage("/admin/events/{$event->id}/edit");
+ 
+         $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
+-        $page->see('Evento cancelado não pode ser editado!');
++        $page->see('Evento passado ou cancelado não pode ser alterado!');
+         $page->dontSee('Editar Evento', 'h1');
+     }
+ 
+diff --git a/tests/Acceptance/admin/events/PastEventCest.php b/tests/Acceptance/admin/events/PastEventCest.php
+new file mode 100644
+index 0000000..69249c7
+--- /dev/null
++++ b/tests/Acceptance/admin/events/PastEventCest.php
+@@ -0,0 +1,57 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Q2: Evento passado ou cancelado não pode ser editado nem removido.
++ */
++class PastEventCest extends BaseEventsCest
++{
++    public function pastEventHasNoEditOrRemoveButtons(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        // update() não valida: simula um Evento que já aconteceu.
++        $event->update(['starts_on' => date('Y-m-d', strtotime('-5 days'))]);
++
++        $page->wantTo('Evento passado sem os botões Editar e Remover');
++        $page->amOnPage('/admin/events');
++
++        $page->see('Evento 02', $this->rowOf('Evento 02'));
++        $page->dontSee('Editar', $this->rowOf('Evento 02'));
++        $page->dontSee('Remover', $this->rowOf('Evento 02'));
++        $page->see('Editar', $this->rowOf('Evento 04'));
++
++        $page->click('Ver', $this->rowOf('Evento 02'));
++        $page->dontSeeLink('Editar');
++    }
++
++    public function pastEventEditUrlRedirectsToShow(AcceptanceTester $page): void
++    {
++        $event = $this->events[2];
++        $event->update(['starts_on' => date('Y-m-d', strtotime('-5 days'))]);
++
++        $page->wantTo('URL direta de edição de Evento passado redireciona');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento passado ou cancelado não pode ser alterado!');
++        $page->dontSee('Editar Evento', 'h1');
++        Assert::assertNotNull(Event::findById((int) $event->id));
++    }
++
++    public function canceledEventHasNoEditOrRemoveButtons(AcceptanceTester $page): void
++    {
++        $this->events[4]->cancel();
++
++        $page->wantTo('Evento cancelado sem os botões Editar e Remover');
++        $page->amOnPage('/admin/events');
++
++        $page->see('Cancelado', $this->rowOf('Evento 04'));
++        $page->dontSee('Editar', $this->rowOf('Evento 04'));
++        $page->dontSee('Remover', $this->rowOf('Evento 04'));
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index d1cedf9..f146030 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -358,7 +358,7 @@ class EventsControllerTest extends ControllerTestCase
+         $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
+ 
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Evento cancelado não pode ser editado!', $_SESSION['flash']['danger']);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
+     }
+ 
+     public function test_update_of_a_canceled_event_keeps_the_record(): void
+@@ -373,7 +373,7 @@ class EventsControllerTest extends ControllerTestCase
+ 
+         $this->assertEquals('Original', Event::findById($event->id)->title);
+         $this->assertSame("Location: /admin/events/{$event->id}", $response);
+-        $this->assertEquals('Evento cancelado não pode ser editado!', $_SESSION['flash']['danger']);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
+     }
+ 
+     public function test_update_ignores_status_sent_by_the_form(): void
+@@ -389,6 +389,83 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertEquals('scheduled', Event::findById($event->id)->status);
+     }
+ 
++    /* ------------------- Q2: passado ou cancelado não altera ------------------- */
++
++    public function test_edit_of_a_past_event_redirects_to_show(): void
++    {
++        $event = $this->createPastEvent();
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_update_of_a_past_event_keeps_the_record(): void
++    {
++        $event = $this->createPastEvent(['title' => 'Original']);
++
++        $response = $this->put(
++            action: 'update',
++            controllerName: self::CONTROLLER,
++            params: ['id' => $event->id, 'event' => $this->validParams(['title' => 'Mudou'])]
++        );
++
++        $this->assertEquals('Original', Event::findById($event->id)->title);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_of_a_past_event_keeps_the_record(): void
++    {
++        $event = $this->createPastEvent();
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_destroy_of_a_canceled_event_keeps_the_record(): void
++    {
++        $event = $this->createEvent(['status' => 'canceled']);
++
++        $response = $this->delete(action: 'destroy', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertNotNull(Event::findById($event->id));
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++        $this->assertEquals('Evento passado ou cancelado não pode ser alterado!', $_SESSION['flash']['danger']);
++    }
++
++    public function test_index_and_show_hide_edit_and_remove_of_a_past_event(): void
++    {
++        $past = $this->createPastEvent(['title' => 'Evento Passado']);
++        $future = $this->createEvent(['title' => 'Evento Futuro']);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $past->id]);
++
++        $this->assertStringNotContainsString("/admin/events/{$past->id}/edit", $index);
++        $this->assertStringNotContainsString("action=\"/admin/events/{$past->id}\"", $index);
++        $this->assertStringContainsString("/admin/events/{$future->id}/edit", $index);
++        $this->assertStringContainsString("action=\"/admin/events/{$future->id}\"", $index);
++        $this->assertStringNotContainsString("/admin/events/{$past->id}/edit", $show);
++    }
++
++    /**
++     * Cria um Evento e move starts_on para o passado direto no banco (update não valida).
++     *
++     * @param array<string, mixed> $overrides
++     */
++    private function createPastEvent(array $overrides = []): Event
++    {
++        $event = $this->createEvent($overrides);
++        $event->update(['starts_on' => date('Y-m-d', strtotime('-10 days'))]);
++
++        return $event;
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index c4ff9fc..6bd2df4 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -660,6 +660,41 @@ class EventTest extends TestCase
+         $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
+     }
+ 
++    /* ------------------- Q2: isEditable (passado ou cancelado) ------------------- */
++
++    public function test_future_scheduled_event_should_be_editable(): void
++    {
++        $this->assertTrue($this->createEvent()->isEditable());
++    }
++
++    public function test_event_happening_today_should_be_editable(): void
++    {
++        $event = $this->createEvent();
++        $event->update(['starts_on' => date('Y-m-d')]);
++
++        $this->assertTrue($event->isEditable());
++    }
++
++    public function test_past_event_should_not_be_editable(): void
++    {
++        $this->assertFalse($this->createPastEvent()->isEditable());
++    }
++
++    public function test_canceled_event_should_not_be_editable(): void
++    {
++        $event = $this->createEvent();
++        $this->assertTrue($event->cancel());
++
++        $this->assertFalse($event->isEditable());
++    }
++
++    public function test_finished_future_event_should_still_be_editable(): void
++    {
++        $event = $this->createEvent(['status' => 'finished']);
++
++        $this->assertTrue($event->isEditable());
++    }
++
+     /* ------------------- P02: capacity >= Inscrições ------------------- */
+ 
+     public function test_capacity_below_enrollments_should_be_invalid_on_edit(): void
+-- 
+2.54.0 (Apple Git-157)
+

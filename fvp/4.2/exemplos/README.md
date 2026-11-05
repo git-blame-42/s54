@@ -100,6 +100,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - Q1. Só o dono edita e remove
   `q1-so-dono-edita-remove/`
   - feat: Restrict event edit and removal to its owner
+- Q2. Bloquear edição e remoção de Evento passado ou cancelado
+  `q2-bloquear-passado-cancelado/`
+  - feat: Add Event status with cancel and finish actions
+  - feat: Block editing and removing past or canceled Events
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type
