@@ -3540,6 +3540,8 @@ Prova: `RouteTest`; suíte inteira verde sem mudar nenhum teste.
 
 Chance: baixa. Tempo: 20-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o11-404-amigavel`.
+
 Pedido típico: "não mostre stack trace ao usuário" ou "URL inexistente
 deve mostrar uma página de não encontrado". Hoje toda exceção imprime
 classe, arquivo, linha e trace (`core/Errors/ErrorsHandler.php:32-45`),
@@ -3562,12 +3564,18 @@ Passos:
    e `null` em `development` (mantém o trace). Testes em
    `tests/Unit/Core/Errors/ErrorsHandlerTest.php`: 404 e 500 em
    `production`, qualquer um em `development` -> `null`.
-2. No `exceptionHandler`, depois do `header(...)`:
+2. No `exceptionHandler`, logo depois do `ob_end_clean()` (`:24`) e
+   **antes** do `header()` da base (`:27`, que põe a URI digitada na
+   linha de status), mande o próprio status e a página:
 
    ```php
    $env = $_ENV['APP_ENV'] ?? 'production';
    $view = self::viewFor($e, $env);
    if ($view !== null) {
+       $code = str_ends_with($view, '404') ? 404 : 500;
+       header("HTTP/1.1 {$code} " . ($code === 404
+           ? 'Not Found'
+           : 'Internal Server Error'));
        require Constants::rootPath()->join("app/views/{$view}.phtml");
        return;
    }
@@ -3591,8 +3599,9 @@ Armadilhas:
   simples.
 - `ob_end_clean()` (`:24`) descarta o que já saiu; não imprima nada
   antes do `header`.
-- A mensagem da exceção traz a URI digitada: se a página a repetir,
-  use `htmlspecialchars`.
+- A mensagem da exceção traz a URI digitada, e o `header()` da base a
+  repete na linha de status: fora de development, não use a mensagem
+  nem no cabeçalho nem na página (ou escape com `htmlspecialchars`).
 - O contêiner de teste roda em `testing`: decida se `testing` mostra o
   trace (ajuda a depurar o `ACC`) e diga.
 - "Evento não encontrado" do `EC` é redirect com flash (`EC:137-141`),
@@ -5192,6 +5201,8 @@ Prova: testes; no navegador, enviar uma imagem e vê-la no `show`.
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p22-adiar-uma-semana`.
+
 Pedido típico: "um botão 'Adiar uma semana' no detalhe do Evento".
 Variante: "adiar N dias". Hoje não há ação para isso: só o `update`
 inteiro (`EC:77-94`) muda `starts_on`, e a regra de data no passado
@@ -5252,6 +5263,7 @@ Passos:
     */
    public function postpone(int $days = self::POSTPONE_DAYS): bool
    {
+       $this->errors = []; // como em safeDestroy (EV:153)
        if ($this->newRecord()) {
            $this->addError('base', 'o evento não existe!');
            return false;
@@ -5328,7 +5340,11 @@ Passos:
 
 6. `ACC`: `'admin.events.postpone' => ['PUT', '/admin/events/1/postpone']`
    em `eventRoutes()` (`:85-97`) e em `methodOverrideRoutes()`
-   (`:104-110`); o comentário "As 8 rotas" (`:81`) passa a 9.
+   (`:104-110`); o comentário "As 8 rotas" (`:81`) passa a 9. No teste
+   do Participante (`ACC:139-160`), tente adiar e confira que a data não
+   mudou.
+7. Cest: o Evento 16 adiado pelo botão; o Evento 01 (lotado, 3/3)
+   continua com a mesma ocupação depois de adiado.
 
 Armadilhas:
 
@@ -6399,6 +6415,8 @@ Prova: testes; no navegador, navegar do Evento 1 ao 16 pelos links.
 
 Chance: média. Tempo: 10-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r12-tela-reflete-regras`.
+
 Pedido típico: "se o Evento tem inscritos, nem mostre o Remover" ou "o
 campo Vagas deveria dizer o mínimo aceito". Hoje a listagem mostra
 Remover em toda linha (`IDX:30-33`) e o clique só falha depois, no
@@ -6980,6 +6998,8 @@ Armadilhas:
 
 Chance: média-baixa. Tempo: 10 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/t3-wiki-readme-feature`.
+
 Pedido típico: "documente a rota nova no README/wiki do projeto" (a
 rubrica cobra wiki com descrição da entrega e link da PR; o professor
 costuma pedir que a mudança apareça na documentação).
@@ -7013,6 +7033,8 @@ atualizada.
 ### T4. Itens por página e capacidade máxima no `.env`
 
 Chance: média-baixa. Tempo: 15-20 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/t4-env-per-page`.
 
 Pedido típico: "o número de itens por página não pode ficar fixo no
 código" ou "a capacidade máxima vem da configuração".
@@ -7061,8 +7083,9 @@ Armadilhas:
 
 - Valor do `.env` é string (`""` para chave vazia); `"0"` faz
   `PAG:114` dividir por zero. Valide e use o padrão.
-- Os testes PHPUnit não rodam o `EnvLoader`: `$_ENV` só tem o que está
-  no `phpunit.xml`, e sem a chave vale o padrão. O teste HTTP passa pelo
+- Os testes PHPUnit não rodam o `EnvLoader`, então não leem o `.env`:
+  `$_ENV` tem o `phpunit.xml` e o ambiente do `php_test`, e sem a chave
+  vale o padrão. O teste HTTP passa pelo
   `bootstrap` no `php_test` e lê o `.env` do projeto (no CI, a cópia do
   `.env.example`).
 - `getenv()` não enxerga o que veio do `.env` (`EnvLoader` não faz
