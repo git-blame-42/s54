@@ -1,0 +1,398 @@
+From 12e6ca7812c68859b9099da216642a6b678a87ec Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:05:20 -0300
+Subject: [PATCH] feat: Filter events by audience and available spots
+
+Event::searchFiltered uses FIND_IN_SET on the audience SET and a COUNT subquery on enrollments; filtered results are not paginated.
+---
+ app/Controllers/Admin/EventsController.php    | 29 ++++++--
+ app/Models/Event.php                          | 40 +++++++++++
+ app/views/admin/events/index.phtml            | 40 ++++++++++-
+ .../admin/events/FilterEventsCest.php         | 52 ++++++++++++++
+ .../Admin/EventsControllerTest.php            | 71 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 70 ++++++++++++++++++
+ 6 files changed, 293 insertions(+), 9 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/FilterEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..e1f77cc 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,15 +15,30 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
+-        $events = $paginator->registers();
++        // Valor fora da lista fechada é ignorado (cai em "todos").
++        $audience = $request->getParam('audience');
++        $audience = is_string($audience) && array_key_exists($audience, Event::AUDIENCES) ? $audience : null;
++        $onlyAvailable = $request->getParam('available') === '1';
++        $filtering = $audience !== null || $onlyAvailable;
++
++        if ($filtering) {
++            // Com filtro, a lista vem inteira, sem paginação (o Paginator só aceita condições de igualdade).
++            $events = Event::searchFiltered($audience, $onlyAvailable);
++            $paginator = null;
++        } else {
++            $paginator = Event::paginate(
++                page: max(1, (int) $request->getParam('page', 1)),
++                per_page: self::PER_PAGE,
++                route: 'admin.events.paginate'
++            );
++            $events = $paginator->registers();
++        }
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render(
++            'admin/events/index',
++            compact('events', 'paginator', 'title', 'audience', 'onlyAvailable', 'filtering')
++        );
+     }
+ 
+     public function show(Request $request): void
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..6134be8 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,8 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
++use PDO;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -114,6 +116,44 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Filtros que o `where` (só igualdade) não expressa:
++     * - $audience: Eventos cujo SET `audience` contém o valor (FIND_IN_SET); null = qualquer público;
++     * - $onlyAvailable: só Eventos com vaga (capacity maior que o total de Inscrições, subconsulta COUNT).
++     * Valores do usuário só entram por bindValue; o SQL é montado com trechos fixos.
++     *
++     * @return array<static>
++     */
++    public static function searchFiltered(?string $audience, bool $onlyAvailable): array
++    {
++        $conditions = [];
++
++        if ($audience !== null) {
++            $conditions[] = 'FIND_IN_SET(:audience, audience) > 0';
++        }
++
++        if ($onlyAvailable) {
++            $conditions[] = 'capacity > (SELECT COUNT(*) FROM event_user WHERE event_user.event_id = events.id)';
++        }
++
++        $where = $conditions === [] ? '' : 'WHERE ' . implode(' AND ', $conditions);
++        $columns = implode(', ', static::$columns);
++
++        $sql = <<<SQL
++            SELECT id, {$columns} FROM events
++            {$where}
++            ORDER BY id
++        SQL;
++
++        $stmt = Database::getDatabaseConn()->prepare($sql);
++        if ($audience !== null) {
++            $stmt->bindValue(':audience', $audience);
++        }
++        $stmt->execute();
++
++        return array_map(fn(array $row) => new static($row), $stmt->fetchAll(PDO::FETCH_ASSOC));
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..909ff16 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -1,9 +1,41 @@
++<?php
++/**
++ * @var array<int, \App\Models\Event> $events
++ * @var \Lib\Paginator|null $paginator null quando há filtro (lista inteira)
++ * @var string|null $audience
++ * @var bool $onlyAvailable
++ * @var bool $filtering
++ */
++?>
+ <div class="mb-3">
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<form class="row g-2 align-items-center mb-3" action="<?= route('admin.events.index') ?>" method="get">
++    <div class="col-auto">
++        <label for="filter_audience" class="visually-hidden">Público-alvo</label>
++        <select class="form-select" id="filter_audience" name="audience">
++            <option value="">Todos os públicos</option>
++            <?php foreach (\App\Models\Event::AUDIENCES as $value => $label) : ?>
++                <option value="<?= $value ?>" <?= $audience === $value ? 'selected' : '' ?>><?= $label ?></option>
++            <?php endforeach; ?>
++        </select>
++    </div>
++    <div class="col-auto form-check ms-2">
++        <input type="checkbox" class="form-check-input" id="filter_available" name="available" value="1"
++            <?= $onlyAvailable ? 'checked' : '' ?>>
++        <label class="form-check-label" for="filter_available">Só com vagas</label>
++    </div>
++    <div class="col-auto">
++        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
++        <?php if ($filtering) : ?>
++            <a class="btn btn-link" href="<?= route('admin.events.index') ?>">Limpar filtros</a>
++        <?php endif; ?>
++    </div>
++</form>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= $filtering ? 'Nenhum evento encontrado com esses filtros.' : 'Nenhum evento cadastrado.' ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+@@ -37,5 +69,9 @@
+         </tbody>
+     </table>
+ 
+-    <?php $paginator->renderPagesNavigation(); ?>
++    <?php if ($paginator !== null) : ?>
++        <?php $paginator->renderPagesNavigation(); ?>
++    <?php else : ?>
++        <p class="text-end"><?= count($events) ?> evento(s) encontrado(s).</p>
++    <?php endif; ?>
+ <?php endif; ?>
+diff --git a/tests/Acceptance/admin/events/FilterEventsCest.php b/tests/Acceptance/admin/events/FilterEventsCest.php
+new file mode 100644
+index 0000000..fd7c815
+--- /dev/null
++++ b/tests/Acceptance/admin/events/FilterEventsCest.php
+@@ -0,0 +1,52 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Filtros por público-alvo (FIND_IN_SET no SET) e "só com vagas" (subconsulta COUNT).
++ * Base: Eventos ímpares têm Estudantes e Professores; pares, só Estudantes. Evento 01 está lotado (3/3).
++ */
++class FilterEventsCest extends BaseEventsCest
++{
++    public function filterByAudience(AcceptanceTester $page): void
++    {
++        $page->wantTo('Filtrar a listagem por público-alvo');
++        $page->amOnPage('/admin/events');
++
++        $page->selectOption('#filter_audience', 'Professores');
++        $page->click('Filtrar');
++
++        $page->seeInCurrentUrl('audience=professors');
++        $page->seeOptionIsSelected('#filter_audience', 'Professores');
++        // 8 Eventos ímpares, todos na mesma página (com filtro não há paginação).
++        $page->seeNumberOfElements('table tbody tr', 8);
++        $page->see($this->title(15), 'table');
++        $page->dontSee($this->title(2), 'table');
++        $page->see('8 evento(s) encontrado(s).');
++        $page->dontSeeElement('.pagination');
++    }
++
++    public function filterOnlyWithAvailableSpotsAndClear(AcceptanceTester $page): void
++    {
++        $page->wantTo('Filtrar só Eventos com vagas e limpar o filtro');
++        $page->amOnPage('/admin/events');
++
++        $page->checkOption('#filter_available');
++        $page->click('Filtrar');
++
++        $page->seeCheckboxIsChecked('#filter_available');
++        $page->seeNumberOfElements('table tbody tr', self::TOTAL_EVENTS - 1);
++        $page->dontSee($this->title(1), 'table');
++
++        $page->selectOption('#filter_audience', 'Professores');
++        $page->click('Filtrar');
++        $page->seeNumberOfElements('table tbody tr', 7);
++
++        $page->click('Limpar filtros');
++        $page->seeCurrentUrlEquals('/admin/events');
++        $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
++        $page->seeElement('.pagination');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..f4c1e5e 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,77 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    /* ------------------- N13: filtros por público e vagas ------------------- */
++
++    public function test_index_shows_the_filter_form(): void
++    {
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('name="audience"', $response);
++        $this->assertStringContainsString('<option value="staff" >Servidores</option>', $response);
++        $this->assertStringContainsString('name="available" value="1"', $response);
++        $this->assertStringNotContainsString('Limpar filtros', $response);
++    }
++
++    public function test_index_filters_by_audience_without_pagination(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => "Estudantes {$i}", 'audience' => ['students']]);
++        }
++        $this->createEvent(['title' => 'Servidores 1', 'audience' => ['staff']]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['audience' => 'students']);
++
++        // Os 6 na mesma página: com filtro não há paginação.
++        $this->assertStringContainsString('Estudantes 6', $response);
++        $this->assertStringNotContainsString('Servidores 1', $response);
++        $this->assertStringContainsString('6 evento(s) encontrado(s).', $response);
++        $this->assertStringNotContainsString('/admin/events/page/2', $response);
++        $this->assertStringContainsString('<option value="students" selected>', $response);
++        $this->assertStringContainsString('Limpar filtros', $response);
++    }
++
++    public function test_index_filters_only_events_with_available_spots(): void
++    {
++        $full = $this->createEvent(['title' => 'Evento Lotado', 'capacity' => '1']);
++        $this->enroll($full);
++        $this->createEvent(['title' => 'Evento Com Vaga', 'capacity' => '1']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['available' => '1']);
++
++        $this->assertStringContainsString('Evento Com Vaga', $response);
++        $this->assertStringNotContainsString('Evento Lotado', $response);
++        $this->assertMatchesRegularExpression('/id="filter_available"[^>]*checked/', $response);
++    }
++
++    public function test_index_with_filters_and_no_results_shows_message(): void
++    {
++        $this->createEvent(['audience' => ['students']]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['audience' => 'community']);
++
++        $this->assertStringContainsString('Nenhum evento encontrado com esses filtros.', $response);
++    }
++
++    public function test_index_ignores_invalid_filter_values(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['audience' => "students') OR 1=1 -- ", 'available' => 'sim']
++        );
++
++        // Cai na listagem padrão, paginada, sem filtro marcado.
++        $this->assertStringContainsString('/admin/events/page/2', $response);
++        $this->assertStringNotContainsString('Evento 6', $response);
++        $this->assertStringNotContainsString('selected', $response);
++        $this->assertStringNotContainsString('Limpar filtros', $response);
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..4298c2b 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -385,6 +385,76 @@ class EventTest extends TestCase
+         $this->assertFalse(Event::exists(['title' => 'Outro']));
+     }
+ 
++    /* ------------------- N13: FIND_IN_SET e "só com vagas" ------------------- */
++
++    /**
++     * @param array<int, Event> $events
++     * @return array<int, string>
++     */
++    private function titlesOf(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_search_filtered_by_audience_should_match_only_events_with_that_audience(): void
++    {
++        $this->createEvent(['title' => 'Só estudantes', 'audience' => 'students']);
++        $this->createEvent(['title' => 'Estudantes e professores', 'audience' => 'students,professors']);
++        $this->createEvent(['title' => 'Só servidores', 'audience' => 'staff']);
++        $this->createEvent(['title' => 'Comunidade', 'audience' => 'community,staff']);
++
++        $this->assertSame(
++            ['Só estudantes', 'Estudantes e professores'],
++            $this->titlesOf(Event::searchFiltered('students', false))
++        );
++        $this->assertSame(
++            ['Só servidores', 'Comunidade'],
++            $this->titlesOf(Event::searchFiltered('staff', false))
++        );
++        $this->assertSame([], Event::searchFiltered('aliens', false));
++    }
++
++    public function test_search_filtered_by_audience_should_not_match_parts_of_a_value(): void
++    {
++        // LIKE '%staff%' casaria "staff" dentro de outro texto; FIND_IN_SET compara o item inteiro.
++        $this->createEvent(['title' => 'Professores', 'audience' => 'professors']);
++
++        $this->assertSame([], Event::searchFiltered('professor', false));
++        $this->assertSame([], Event::searchFiltered('students,professors', false));
++    }
++
++    public function test_search_filtered_only_available_should_exclude_full_events(): void
++    {
++        $full = $this->createEvent(['title' => 'Lotado', 'capacity' => 2]);
++        $this->enroll($full, 2);
++        $almost = $this->createEvent(['title' => 'Quase lotado', 'capacity' => 2]);
++        $this->enroll($almost, 1);
++        $this->createEvent(['title' => 'Vazio', 'capacity' => 2]);
++
++        $this->assertSame(['Quase lotado', 'Vazio'], $this->titlesOf(Event::searchFiltered(null, true)));
++    }
++
++    public function test_search_filtered_should_combine_both_filters(): void
++    {
++        $full = $this->createEvent(['title' => 'Estudantes lotado', 'audience' => 'students', 'capacity' => 1]);
++        $this->enroll($full, 1);
++        $this->createEvent(['title' => 'Estudantes com vaga', 'audience' => 'students']);
++        $this->createEvent(['title' => 'Servidores com vaga', 'audience' => 'staff']);
++
++        $this->assertSame(['Estudantes com vaga'], $this->titlesOf(Event::searchFiltered('students', true)));
++    }
++
++    public function test_search_filtered_without_filters_should_return_all_events_in_id_order(): void
++    {
++        $this->createEvent(['title' => 'Primeiro']);
++        $this->createEvent(['title' => 'Segundo']);
++
++        $events = Event::searchFiltered(null, false);
++
++        $this->assertSame(['Primeiro', 'Segundo'], $this->titlesOf($events));
++        $this->assertContainsOnlyInstancesOf(Event::class, $events);
++    }
++
+     /* ------------------- paginate ------------------- */
+ 
+     public function test_paginate_should_return_five_events_per_page(): void
+-- 
+2.54.0 (Apple Git-157)
+

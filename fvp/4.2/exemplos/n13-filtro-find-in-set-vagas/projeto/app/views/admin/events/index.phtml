@@ -1,0 +1,77 @@
+<?php
+/**
+ * @var array<int, \App\Models\Event> $events
+ * @var \Lib\Paginator|null $paginator null quando há filtro (lista inteira)
+ * @var string|null $audience
+ * @var bool $onlyAvailable
+ * @var bool $filtering
+ */
+?>
+<div class="mb-3">
+    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+</div>
+
+<form class="row g-2 align-items-center mb-3" action="<?= route('admin.events.index') ?>" method="get">
+    <div class="col-auto">
+        <label for="filter_audience" class="visually-hidden">Público-alvo</label>
+        <select class="form-select" id="filter_audience" name="audience">
+            <option value="">Todos os públicos</option>
+            <?php foreach (\App\Models\Event::AUDIENCES as $value => $label) : ?>
+                <option value="<?= $value ?>" <?= $audience === $value ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-auto form-check ms-2">
+        <input type="checkbox" class="form-check-input" id="filter_available" name="available" value="1"
+            <?= $onlyAvailable ? 'checked' : '' ?>>
+        <label class="form-check-label" for="filter_available">Só com vagas</label>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+        <?php if ($filtering) : ?>
+            <a class="btn btn-link" href="<?= route('admin.events.index') ?>">Limpar filtros</a>
+        <?php endif; ?>
+    </div>
+</form>
+
+<?php if (empty($events)) : ?>
+    <p><?= $filtering ? 'Nenhum evento encontrado com esses filtros.' : 'Nenhum evento cadastrado.' ?></p>
+<?php else : ?>
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Vagas</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($events as $event) : ?>
+                <tr>
+                    <td><?= htmlspecialchars($event->title) ?></td>
+                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                    <td><?= htmlspecialchars($event->location) ?></td>
+                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php if ($paginator !== null) : ?>
+        <?php $paginator->renderPagesNavigation(); ?>
+    <?php else : ?>
+        <p class="text-end"><?= count($events) ?> evento(s) encontrado(s).</p>
+    <?php endif; ?>
+<?php endif; ?>
