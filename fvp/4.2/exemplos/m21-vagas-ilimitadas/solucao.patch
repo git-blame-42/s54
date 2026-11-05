@@ -1,0 +1,436 @@
+From 089c1203a92ec7820312f04fbdab0c825ce556d5 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:27:11 -0300
+Subject: [PATCH] feat: Allow events with unlimited capacity
+
+A blank capacity is stored as NULL and means unlimited spots. The
+CHECK constraint already accepts NULL. availableSpots() returns null
+for unlimited events, and the list and show pages print "ilimitadas"
+instead of casting NULL to 0.
+---
+ app/Models/Event.php                          | 24 +++++-
+ app/views/admin/events/_form.phtml            |  1 +
+ app/views/admin/events/index.phtml            |  8 +-
+ app/views/admin/events/show.phtml             |  8 +-
+ database/Populate/populate.php                |  5 +-
+ database/schema.sql                           |  3 +-
+ .../events/CreateWithInvalidDataCest.php      |  4 +-
+ .../admin/events/UnlimitedCapacityCest.php    | 67 ++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 48 +++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 79 ++++++++++++++++++-
+ 10 files changed, 235 insertions(+), 12 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/UnlimitedCapacityCest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..43e6511 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -17,7 +17,7 @@ use PDOException;
+  * @property string|null $audience valores separados por vírgula (tipo SET do MySQL); use audienceList()
+  * @property string $starts_on
+  * @property string $location
+- * @property int|string $capacity
++ * @property int|string|null $capacity null = vagas ilimitadas
+  */
+ class Event extends Model
+ {
+@@ -76,7 +76,12 @@ class Event extends Model
+             Validations::validDate('starts_on', $this) &&
+             $this->validatesStartsOnNotPast();
+ 
+-        if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
++        // Vagas em branco = ilimitadas: grava NULL (a coluna INT não aceita '').
++        if ($this->capacity === '') {
++            $this->capacity = null;
++        }
++
++        if (!$this->hasUnlimitedCapacity() && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+         }
+     }
+@@ -131,11 +136,24 @@ class Event extends Model
+         return count(Enrollment::where(['event_id' => $this->id]));
+     }
+ 
++    /**
++     * Sem limite de vagas (capacity NULL no banco; em branco no formulário).
++     */
++    public function hasUnlimitedCapacity(): bool
++    {
++        return $this->capacity === null || $this->capacity === '';
++    }
++
+     /**
+      * Vagas restantes (capacity - Inscrições), nunca negativo. Calculado, não armazenado.
++     * Retorna null quando as vagas são ilimitadas: o Evento nunca lota.
+      */
+-    public function availableSpots(): int
++    public function availableSpots(): ?int
+     {
++        if ($this->hasUnlimitedCapacity()) {
++            return null;
++        }
++
+         return max(0, (int) $this->capacity - $this->enrollmentsCount());
+     }
+ 
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..16afcba 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -86,6 +86,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <input type="number" class="form-control<?= $invalid('capacity') ?>" id="event_capacity" name="event[capacity]"
+             min="1" value="<?= htmlspecialchars((string) $event->capacity) ?>">
+         <?= $feedback('capacity') ?>
++        <div class="form-text">Deixe em branco para vagas ilimitadas.</div>
+     </div>
+ 
+     <button type="submit" class="btn btn-primary">Salvar</button>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..93e28ba 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -23,7 +23,13 @@
+                     <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+-                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td>
++                        <?php if ($event->hasUnlimitedCapacity()) : ?>
++                            <?= $event->enrollmentsCount() ?> (ilimitadas)
++                        <?php else : ?>
++                            <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
++                        <?php endif; ?>
++                    </td>
+                     <td>
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..944d31c 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -27,8 +27,12 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+ 
+     <dt class="col-sm-3">Vagas</dt>
+     <dd class="col-sm-9">
+-        <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+-        (<?= $event->availableSpots() ?> disponíveis)
++        <?php if ($event->hasUnlimitedCapacity()) : ?>
++            <?= $event->enrollmentsCount() ?> (vagas ilimitadas)
++        <?php else : ?>
++            <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
++            (<?= $event->availableSpots() ?> disponíveis)
++        <?php endif; ?>
+     </dd>
+ </dl>
+ 
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..5c528ae 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -44,6 +44,7 @@ foreach (['Mariana Souza' => 'mariana', 'Carlos Pereira' => 'carlos', 'Fernanda
+ echo count($participants) . " Participantes criados (user@, mariana@, carlos@, fernanda@), senha 123456\n";
+ 
+ // Eventos: colunas title, description, kind, modality, audience, dias a partir de hoje, location, capacity.
++// capacity null = vagas ilimitadas (índices 1 e 11, ambos online; ids 2 e 12 no banco).
+ // As datas são relativas (hoje + N dias, N >= 14) para nunca ficarem no passado, já que a validação
+ // exige starts_on não passado; assim todos os Eventos (inclusive o lotado) continuam editáveis.
+ $events = [
+@@ -55,7 +56,7 @@ $events = [
+     [
+         'Introdução a APIs REST com PHP',
+         'Palestra sobre os princípios do REST, verbos HTTP e boas práticas de projeto de APIs em PHP.',
+-        'lecture', 'online', 'students,professors', 15, 'Microsoft Teams (link enviado aos inscritos)', 80,
++        'lecture', 'online', 'students,professors', 15, 'Microsoft Teams (link enviado aos inscritos)', null,
+     ],
+     [
+         'Oficina de Git e GitHub para Iniciantes',
+@@ -105,7 +106,7 @@ $events = [
+     [
+         'Palestra: Segurança no Desenvolvimento de Aplicações Web',
+         'Injeção de SQL, XSS, CSRF e armazenamento seguro de senhas, com exemplos de ataques reais.',
+-        'lecture', 'online', 'students,professors,community', 50, 'Microsoft Teams (link enviado aos inscritos)', 100,
++        'lecture', 'online', 'students,professors,community', 50, 'Microsoft Teams (link enviado aos inscritos)', null,
+     ],
+     [
+         'Oficina de Prototipação no Figma',
+diff --git a/database/schema.sql b/database/schema.sql
+index fe7f1d6..9200d41 100644
+--- a/database/schema.sql
++++ b/database/schema.sql
+@@ -18,6 +18,7 @@ CREATE TABLE users (
+ 
+ -- Evento (RF04): CRUD completo da Entrega 4.2.
+ -- Vagas restantes = capacity - COUNT(*) em event_user; calculadas, não armazenadas.
++-- capacity NULL = vagas ilimitadas (o CHECK com NULL dá UNKNOWN, e o MySQL aceita).
+ CREATE TABLE events (
+     id          INT AUTO_INCREMENT PRIMARY KEY,
+     user_id     INT NOT NULL,
+@@ -28,7 +29,7 @@ CREATE TABLE events (
+     audience    SET('students', 'professors', 'staff', 'community') NOT NULL,
+     starts_on   DATE NOT NULL,
+     location    VARCHAR(255) NOT NULL,
+-    capacity    INT NOT NULL,
++    capacity    INT NULL,
+     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+     CONSTRAINT check_events_capacity CHECK (capacity >= 1),
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..cfaf7f9 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -20,10 +20,12 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         $page->see(self::FLASH);
+         $page->see('Novo Evento', 'h1');
+-        foreach (['title', 'description', 'kind', 'starts_on', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'kind', 'starts_on', 'location'] as $field) {
+             $page->seeElement("#event_{$field}.is-invalid");
+             $page->see('não pode ser vazio!', "#event_{$field} ~ .invalid-feedback");
+         }
++        // Vagas em branco = ilimitadas: não é erro.
++        $page->dontSeeElement('#event_capacity.is-invalid');
+         $page->seeElement('input[name="event[modality]"].is-invalid');
+         $page->seeElement('input[name="event[audience][]"].is-invalid');
+ 
+diff --git a/tests/Acceptance/admin/events/UnlimitedCapacityCest.php b/tests/Acceptance/admin/events/UnlimitedCapacityCest.php
+new file mode 100644
+index 0000000..e924f4e
+--- /dev/null
++++ b/tests/Acceptance/admin/events/UnlimitedCapacityCest.php
+@@ -0,0 +1,67 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Vagas ilimitadas: o campo Vagas em branco grava capacity NULL, e a tela mostra "ilimitadas"
++ * em vez de "0" ou "0 disponíveis".
++ */
++class UnlimitedCapacityCest extends BaseEventsCest
++{
++    public function createEventWithUnlimitedCapacity(AcceptanceTester $page): void
++    {
++        $data = $this->validEventData(['capacity' => '']);
++
++        $page->wantTo('Cadastrar Evento com vagas ilimitadas (campo Vagas em branco)');
++        $page->amOnPage('/admin/events/new');
++        $page->see('Deixe em branco para vagas ilimitadas.');
++
++        $this->fillEventForm($page, $data);
++        $page->click('Salvar');
++
++        $event = Event::findBy(['title' => $data['title']]);
++        Assert::assertNotNull($event);
++        Assert::assertNull($event->capacity);
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('0 (vagas ilimitadas)');
++        $page->dontSee('disponíveis');
++
++        // O Evento novo vai para o fim da listagem (17º, 4ª página).
++        $page->amOnPage('/admin/events/page/4');
++        $page->see('0 (ilimitadas)', $this->rowOf($data['title']));
++    }
++
++    public function fullEventCanBecomeUnlimited(AcceptanceTester $page): void
++    {
++        $event = $this->events[1];
++
++        $page->wantTo('Tirar o limite de vagas de um Evento lotado');
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->seeInField('#event_capacity', '3');
++
++        $this->fillEventForm($page, ['capacity' => '']);
++        $page->click('Salvar');
++
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento atualizado com sucesso!');
++        $page->see('3 (vagas ilimitadas)');
++        $page->dontSee('disponíveis');
++
++        $stored = Event::findById((int) $event->id);
++        Assert::assertNotNull($stored);
++        Assert::assertNull($stored->capacity);
++
++        $page->amOnPage('/admin/events');
++        $page->see('3 (ilimitadas)', $this->rowOf('Evento 01'));
++
++        // De volta à edição, o campo abre em branco (não "0").
++        $page->amOnPage("/admin/events/{$event->id}/edit");
++        $page->seeInField('#event_capacity', '');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..7140eee 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,54 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    /* ------------------- vagas ilimitadas (capacity NULL) ------------------- */
++
++    public function test_create_with_blank_capacity_saves_unlimited_event(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['capacity' => ''])]
++        );
++
++        $event = Event::findBy(['title' => 'Oficina de Testes']);
++        $this->assertNotNull($event);
++        $this->assertNull($event->capacity);
++        $this->assertSame("Location: /admin/events/{$event->id}", $response);
++    }
++
++    public function test_index_shows_unlimited_instead_of_zero_capacity(): void
++    {
++        $event = $this->createEvent(['capacity' => null]);
++        $this->enroll($event);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('1 (ilimitadas)', $response);
++        $this->assertStringNotContainsString('1/0', $response);
++    }
++
++    public function test_show_unlimited_event_does_not_show_zero_available(): void
++    {
++        $event = $this->createEvent(['capacity' => null]);
++        $this->enroll($event);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('1 (vagas ilimitadas)', $response);
++        $this->assertStringNotContainsString('disponíveis', $response);
++    }
++
++    public function test_edit_unlimited_event_keeps_capacity_blank(): void
++    {
++        $event = $this->createEvent(['capacity' => null]);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertMatchesRegularExpression('/name="event\[capacity\]"\s+min="1" value=""/', $response);
++        $this->assertStringContainsString('Deixe em branco para vagas ilimitadas.', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..13179ca 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -90,9 +90,11 @@ class EventTest extends TestCase
+         $this->assertFalse($event->isValid());
+         $this->assertFalse($event->save());
+ 
+-        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location', 'capacity'] as $field) {
++        foreach (['title', 'description', 'kind', 'modality', 'audience', 'starts_on', 'location'] as $field) {
+             $this->assertEquals('não pode ser vazio!', $event->errors($field), $field);
+         }
++        // Vagas em branco = ilimitadas: não é erro.
++        $this->assertNull($event->errors('capacity'));
+     }
+ 
+     /**
+@@ -108,7 +110,6 @@ class EventTest extends TestCase
+             'modality' => ['modality'],
+             'audience' => ['audience'],
+             'starts_on' => ['starts_on'],
+-            'capacity' => ['capacity'],
+         ];
+     }
+ 
+@@ -490,6 +491,80 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    /* ------------------- vagas ilimitadas (capacity NULL) ------------------- */
++
++    public function test_blank_capacity_should_save_as_unlimited(): void
++    {
++        $event = new Event($this->params(['capacity' => '']));
++
++        $this->assertTrue($event->hasUnlimitedCapacity());
++        $this->assertTrue($event->save());
++        $this->assertNull($event->capacity);
++
++        $found = Event::findById($event->id);
++        $this->assertNull($found->capacity);
++        $this->assertTrue($found->hasUnlimitedCapacity());
++    }
++
++    public function test_null_capacity_should_be_valid(): void
++    {
++        $event = new Event($this->params(['capacity' => null]));
++
++        $this->assertTrue($event->isValid());
++        $this->assertNull($event->errors('capacity'));
++    }
++
++    public function test_event_with_capacity_should_not_be_unlimited(): void
++    {
++        $event = new Event($this->params(['capacity' => 1]));
++
++        $this->assertFalse($event->hasUnlimitedCapacity());
++    }
++
++    public function test_unlimited_event_should_never_be_full(): void
++    {
++        $event = $this->createEvent(['capacity' => null]);
++        $this->assertNull($event->availableSpots());
++
++        $this->enroll($event, 3);
++
++        // Com (int) null seria 0: "0 disponíveis" num Evento sem limite.
++        $this->assertNull($event->availableSpots());
++        $this->assertEquals(3, $event->enrollmentsCount());
++    }
++
++    public function test_limited_event_with_enrollments_can_become_unlimited(): void
++    {
++        $event = $this->createEvent(['capacity' => 3]);
++        $this->enroll($event, 3);
++
++        $event->capacity = '';
++
++        $this->assertTrue($event->save());
++        $this->assertNull(Event::findById($event->id)->capacity);
++    }
++
++    public function test_unlimited_event_cannot_get_capacity_below_enrollments(): void
++    {
++        $event = $this->createEvent(['capacity' => null]);
++        $this->enroll($event, 3);
++
++        $event->capacity = '2';
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser menor que o total de inscrições (3)!', $event->errors('capacity'));
++        $this->assertNull(Event::findById($event->id)->capacity);
++    }
++
++    public function test_database_should_still_reject_capacity_below_one(): void
++    {
++        $event = $this->createEvent();
++
++        // update() grava direto, sem validates(): quem barra é o CHECK do schema.
++        $this->expectException(PDOException::class);
++        $event->update(['capacity' => 0]);
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+
