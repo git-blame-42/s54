@@ -345,6 +345,11 @@ Armadilhas:
   passa no `integerMin` e estoura no `INSERT` com `PDOException` (500).
 - `format`: use `preg_match('/^[\p{L}\p{N} ]+$/u', $value) !== 1`
   (flag `u` para acentos).
+- Caso real na base: título ou local com mais de 255 caracteres passa em
+  `EV:62,64` (só `notEmpty`) e estoura o `VARCHAR(255)` (`SCH:24,30`):
+  o MySQL 8.4 do compose roda em modo estrito e o `INSERT` lança
+  `PDOException` (500). `VARCHAR` conta caracteres (`mb_strlen` bate);
+  `description` é `TEXT` (`SCH:25`), limite de 65535 **bytes** (`strlen`).
 
 Prova: teste novo do `Validations` e do `Event`; no navegador, erro
 sob o campo e o resto do form preenchido.
@@ -625,6 +630,8 @@ hora, editar sem mexer na hora e salvar (é onde o `HH:MM:SS` morde).
 
 Chance: média-baixa. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m8-enum-event-kind`.
+
 Pedido típico: "troque as constantes `KINDS`/`MODALITIES` por um `enum`
 do PHP 8.1 com os rótulos" (OO e reutilização, assunto das issues da
 4.1).
@@ -874,6 +881,12 @@ Armadilhas:
   o 500 antes.
 - Nada de `(int)`: com M15 o `user_id` vem do form, e `(int) '1abc'`
   vira 1. `filter_var(..., FILTER_VALIDATE_INT)` devolve `false`.
+- Caso real: `EC:53` usa `currentUser()?->id`; sem login, `user_id`
+  fica `null`, `validates()` não reclama (`EV:60-82`) e o `INSERT` falha
+  em `SCH:23` (`NOT NULL`), 500. Na rota, os middlewares `auth` e
+  `admin` (`ROUTES:18-22`) barram antes; no teste de controller (sem
+  middleware) basta não chamar `Auth::login` (`ECT:30`) para ver a
+  `PDOException`.
 
 Prova: `EventTest`; populate continua (todos com `$admin->id`).
 
@@ -1061,6 +1074,8 @@ listagem.
 
 Chance: média-baixa. Tempo: 20-30 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/m15-responsavel-admin`.
+
 Pedido típico: "ao cadastrar, escolher qual administrador é o
 responsável pelo Evento". Inverte a regra atual (`user_id` nunca vem do
 form, `ECT:101-112`): agora vem, **validado no model** (M11) e com a
@@ -1086,9 +1101,10 @@ Passos:
    }
    ```
 
-3. `EC`: `'user_id'` em `FIELDS`; em `new()`,
-   `$event->user_id = $this->currentUser()?->id;`; em `create`, se o form
-   não mandar, mantenha o logado.
+3. `EC`: `user_id` **fora** de `FIELDS`, porque o `fill` grava `null` no
+   campo ausente (`EC:123-126`); um bloco próprio troca o responsável só
+   quando o form manda. Em `new()`,
+   `$event->user_id = $this->currentUser()?->id;`.
 4. `EV::validates()`: M11 (`user_id` existe e é admin), mensagem no
    campo.
 5. `FORM`: `<select name="event[user_id]">` com `User::admins()`,
@@ -1334,6 +1350,10 @@ Armadilhas:
   (`['starts_on', 'title']`) e `in_array(..., true)`.
 - `Event::all()` (`MODEL:261-282`) também não ordena; o pedido pode ser
   sobre ele: método `Event::allOrderedByDate()` com SQL no model.
+- Sem `ORDER BY` o MySQL não garante ordem nenhuma: hoje sai por `id`
+  porque o InnoDB lê pela chave primária. Se o professor apontar o
+  defeito sem pedir outra ordem, `ORDER BY id` já é a correção mínima
+  e não quebra `ECT:39-57` nem os Cests.
 
 Prova: teste de controller novo. No navegador, o populate sozinho não
 mostra nada (datas crescem com o `id`): cadastre um Evento para
@@ -1729,6 +1749,10 @@ Armadilhas:
 - `(int) 'abc'` hoje vira `0` e cai em "não encontrado" por sorte;
   `(int) '12abc'` vira `12` e abre outro Evento: é o caso que a
   validação explícita fecha.
+- Na tela, página além da última nem chega ao `entriesInfo` de
+  `PAG:81-86`: `IDX:5-6` mostra "Nenhum evento cadastrado." (falso, há
+  16) e a navegação (`IDX:40`) fica no `else`, sem link de volta. É o
+  que o professor vê em `/admin/events/page/99`.
 
 Prova: `EventsControllerTest`, `PaginateEventsCest`; no navegador,
 `/admin/events/page/abc` e `/admin/events/page/99`.
@@ -1795,6 +1819,10 @@ Armadilhas:
   no `Paginator`. Saiba dizer.
 - Não troque `enrollmentsCount()` por `participants()->count()`
   (`BelongsToMany:59-82`) sem motivo: os testes já cobrem o atual.
+- Cada consulta abre um PDO novo (`core/Database/Database.php:18`): a
+  listagem de 5 linhas abre 5 conexões só para contar (`IDX:26`). O
+  `show` conta duas vezes: `SHOW:30` e `SHOW:31` via `availableSpots()`
+  (`EV:139`). Guarde o total numa variável antes de imprimir.
 
 Prova: testes; a listagem continua igual no navegador.
 
@@ -2335,6 +2363,8 @@ e ver só os Eventos dele.
 
 Chance: média-baixa. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o6-inscritos-pagina-propria`.
+
 Pedido típico: "a lista de inscritos sai do `show` e vai para uma página
 própria, paginada" (`GET /admin/events/{id}/enrollments`).
 
@@ -2452,34 +2482,38 @@ Prova: `RouteTest`; a ação funciona no navegador com o `_method`.
 
 Chance: baixa. Tempo: 15-20 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/o8-status-http`.
+
 Pedido típico: "Evento inexistente deve responder 404 (não 302) e form
 inválido 422" (A8 da 4.1 aplicado ao CRUD).
 
 Arquivos: `EC:137-141` (`eventNotFound`: flash + redirect), `EC:58-62`
 e `:89-93` (render do form inválido), `core/Errors/ErrorsHandler.php:21-47`
 (exceção HTTP -> `header('HTTP/1.1 404 ...')` com stack trace),
-`core/Exceptions/HTTPException.php`, `ECT:163-168` e `:175-183 (ACC)`
-(esperam 302), `CTC:92-108` (o teste de controller não vê status).
+`core/Exceptions/HTTPException.php`, `ECT:163-168` e `ACC:175-183`
+(esperam 302), `CTC:92-108`.
 
 Passos:
 
-1. Testes **por HTTP** (`ACC`): `GET /admin/events/999999` com admin ->
-   200? não: 404 e corpo com "Evento não encontrado"; `POST
-   /admin/events` inválido -> 422. O `CTC` roda em CLI: `http_response_code()`
-   não funciona ali, então o `ECT` não consegue testar status.
+1. Testes por HTTP (`ACC`): `GET /admin/events/999999` com admin -> 404
+   e corpo com "Evento não encontrado"; `POST /admin/events` inválido ->
+   422. No `ECT`, `http_response_code()` também funciona em CLI (devolve
+   o código definido): zere com `http_response_code(200)` no `setUp`.
 2. `eventNotFound()`: `http_response_code(404);` +
-   `render('errors/404', ['title' => 'Evento não encontrado'])` (view
-   nova) em vez de flash + redirect.
+   `render('admin/events/not_found', ['title' => 'Evento não
+   encontrado'])` (view nova) em vez de flash + redirect. Não use
+   `errors/404.phtml`: é a página sem layout do O11.
 3. `create`/`update` inválidos: `http_response_code(422);` antes do
    `render`.
 4. Ajuste `ECT:163-168` (não há mais `Location`) e `ACC:175-183`.
 
 Armadilhas:
 
-- `http_response_code()` precisa vir antes de qualquer saída: o
-  `render` imprime; chame antes.
-- Em CLI (`ECT`) `http_response_code()` devolve `false` e não falha:
-  o teste passa sem testar; por isso o HTTP.
+- Chame `http_response_code()` antes do `render` (boa prática). Aqui
+  funcionaria depois, porque o `ErrorsHandler` segura a saída com
+  `ob_start()` (`core/Errors/ErrorsHandler.php:16`).
+- O status fica no processo do PHPUnit: zere no `setUp`, senão um teste
+  herda o 404 do anterior. O teste por HTTP continua o mais fiel.
 - Lançar `HTTPException` (`Router.php:122` faz isso para rota
   inexistente) dá 404 com **stack trace** na tela (`ErrorsHandler:32-45`):
   não use para "Evento não encontrado"; é feio e expõe caminhos (O11).
@@ -4032,6 +4066,8 @@ Prova: testes; no navegador, Evento 1 (3 inscritos) com confirmação.
 
 Chance: baixa. Tempo: 30-40 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p18-evento-privado-convite`.
+
 Pedido típico: "um Evento pode ser privado: só se inscreve quem informar
 o código de convite, gerado pelo sistema e visível ao admin". Combina P1
 (código gerado) e P2 (inscrição).
@@ -4048,13 +4084,14 @@ Passos:
    com `errors('base')`; com o código certo grava; público ignora o campo.
 2. `SCH`: `is_private TINYINT(1) NOT NULL DEFAULT 0` e
    `invite_code SMALLINT UNSIGNED NULL`.
-3. `EV`: `'private'`, `'invite_code'` em `$columns` (padrão `0` no
-   construtor, `US:28-35`); `save()` gera `invite_code` quando
-   `private` e vazio (P1); `isPrivate()`, `matchesInviteCode(?string)`
-   com `ctype_digit` + `(int)`.
+3. `EV`: `'is_private'`, `'invite_code'` em `$columns` (padrão `0` no
+   construtor, `US:28-35`); `save()` normaliza `is_private` para 1/0 e
+   gera `invite_code` quando privado e vazio (P1); `isPrivate()` e
+   `matchesInviteCode(?string)` com `ctype_digit` + `(int)`.
 4. `EN`: propriedade **não persistida** `private ?string $inviteCode`
-   com `withInviteCode(?string $code): static`; em `validates()`:
-
+   com `withInviteCode(?string $code): static`; a checagem vai no método
+   que só roda na criação (`validatesAvailableSpots()`, junto da vaga),
+   senão salvar de novo uma Inscrição existente pede o código:
 
    ```php
    if ($event->isPrivate() && !$event->matchesInviteCode($this->inviteCode)) {
@@ -4063,16 +4100,15 @@ Passos:
    ```
 5. `EnrollmentsController::create` (P2): lê `invite_code` com
    `is_string` e passa por `withInviteCode()`.
-6. `FORM`: checkbox `event[private]` (em `FIELDS`); `SHOW` do admin
+6. `FORM`: checkbox `event[is_private]` (em `FIELDS`); `SHOW` do admin
    mostra o código; tela do Participante mostra o campo quando privado.
 
 Armadilhas:
 
 - Checkbox desmarcado **não é enviado**: `fill()` recebe `null`;
-  normalize para `'0'` no model (`$this->private = $value ? 1 : 0`).
-- `private` é palavra reservada só como modificador; como nome de
-  coluna/propriedade funciona (`$event->private`), mas evite confusão:
-  `is_private` é mais claro (coluna em inglês, ok).
+  normalize para `'0'` no model (`$this->is_private = $value ? 1 : 0`).
+- A coluna é `is_private`, não `private`: funcionaria (`private` só é
+  reservada como modificador), mas confunde na leitura.
 - O código do convite não vai em `FIELDS`: gerado no model.
 - Propriedade extra no model (`$inviteCode`) precisa existir como
   propriedade declarada: `Model::__set` (`MODEL:74-87`) lança exceção para
@@ -4086,10 +4122,12 @@ admin e inscrever-se como Participante com e sem o código.
 
 Chance: baixa. Tempo: 25-35 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p19-remocao-em-lote`.
+
 Pedido típico: "checkbox em cada linha e um botão Remover selecionados".
 
 Arquivos: `ROUTES:26-35` (rota de coleção `DELETE /admin/events`),
-`IDX:11-34` (tabela; `IDX:30-33` já tem um `<form>` por linha),
+`IDX:8-38` (tabela; `IDX:30-33` já tem um `<form>` por linha),
 `EV:151-173` (`safeDestroy` por Evento), `FLASH:25-28` (um texto por
 tipo), `EC:96-111`, `ECT:242-265`, `ACC`.
 
@@ -4104,11 +4142,13 @@ Passos:
    'destroyMany'])->name('admin.events.destroy_many');`. Não colide com
    `DELETE /admin/events/{id}`: o número de partes é outro.
 3. `EV`: `public static function destroyMany(array $ids): array` com
-   `@param list<string> $ids` e
-   `@return array{removed: int, kept: list<string>}`: para cada id,
-   `findById` e `safeDestroy()`; junta os títulos não removidos.
+   `@param list<int> $ids` e `@return array{removed: list<string>,
+   blocked: list<string>, missing: list<int>}`: para cada id, `findById`
+   (inexistente vai para `missing`) e `safeDestroy()`, que separa
+   removidos de bloqueados (com inscrições), pelos títulos.
 4. `EC::destroyMany`: valida `ids` (`is_array`, cada item `is_string` e
-   `ctype_digit`; vazio -> `danger('Selecione ao menos um evento!')`,
+   `ctype_digit`, e só então `(int)`; vazio ->
+   `danger('Selecione ao menos um evento!')`,
    redirect e `return`), chama o model e monta **um** texto por tipo.
 5. `IDX`: um `<form id="bulk-delete">` fora da tabela (POST com
    `_method=DELETE`) e checkboxes `name="ids[]" form="bulk-delete"`.
@@ -4119,7 +4159,8 @@ Armadilhas:
   (`IDX:30-33`): use o atributo `form="bulk-delete"` nos checkboxes.
 - `FlashMessage` guarda um texto por tipo (`FLASH:27`): no laço, a
   segunda mensagem apaga a primeira. Junte antes.
-- Nada de `(int)` em cada id (N10): `'3abc'` não pode virar 3.
+- `(int)` só depois de `is_string` + `ctype_digit` (N10): `'3abc'` não
+  pode virar 3.
 - "Tudo ou nada" é outro pedido: transação na **mesma** conexão (P17;
   `getDatabaseConn` abre uma conexão nova a cada chamada). O padrão
   aqui é remover o que pode e avisar o resto; diga qual escolheu.
@@ -4131,17 +4172,22 @@ Prova: testes; no navegador, marcar dois e remover.
 
 Chance: baixa. Tempo: 20-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/p20-exportar-ical`.
+
 Pedido típico: "botão Adicionar ao calendário no detalhe do Evento".
 
 Arquivos: `ROUTES:31-32` (rota `GET /admin/events/{id}/ics` junto do
 `show`), `EC:29-39` (`show` como molde), `CTRL:32-55` (`render` e
 `renderJson`; o `.ics` não usa layout), `SHOW:35-36` (botões),
-`CTC:70-84` (o teste captura a saída com `ob_start`), `EV`, `EVT`.
+`CTC:70-84` (o teste captura a saída com `ob_start`), `EV`, `EVT`,
+`ACC` (rota em `eventRoutes()`; teste HTTP de `Content-Type` e
+`Content-Disposition`), `POP:52` (descrição com mais de 75 bytes).
 
 Passos:
 
 1. Testes: `EVT` para `Event::toIcs(): string` (começa com
-   `BEGIN:VCALENDAR`, tem `DTSTART;VALUE=DATE:20261120`, `DTEND` do dia
+   `BEGIN:VCALENDAR`, tem `DTSTART;VALUE=DATE:` com a data do Evento
+   (data relativa, `+30 days`; data fixa envelhece), `DTEND` do dia
    seguinte, `SUMMARY` escapado, termina com `END:VCALENDAR`, linhas
    separadas por `\r\n`); `ECT`: `ics` devolve o texto; id inexistente
    redireciona como o `show`.
@@ -4153,12 +4199,33 @@ Passos:
    private static function icsText(string $value): string
    {
        return str_replace(
-           ['\\', ';', ',', "\r\n", "\n"],
-           ['\\\\', '\;', '\,', '\n', '\n'],
+           ['\\', ';', ',', "\r\n", "\n", "\r"],
+           ['\\\\', '\;', '\,', '\n', '\n', '\n'],
            $value
        );
    }
    ```
+
+   E cada linha dobrada em 75 bytes (RFC 5545; a descrição do Evento 1
+   do populate já passa disso):
+
+   ```php
+   private static function fold(string $line): string
+   {
+       $parts = [];
+       while (strlen($line) > 75) {
+           $chunk = mb_strcut($line, 0, 75, 'UTF-8');
+           $parts[] = $chunk;
+           $line = ' ' . substr($line, strlen($chunk));
+       }
+       $parts[] = $line;
+
+       return implode("\r\n", $parts);
+   }
+   ```
+
+   Alternativa: uma classe em `lib/` (`escape`, `fold`, `build`) e
+   `Event::toICalendar()` só monta os campos.
 
 3. `EC::ics(Request $request)`: `findEvent` com early return;
    `header('Content-Type: text/calendar; charset=utf-8')`,
@@ -4173,8 +4240,8 @@ Armadilhas:
 - Sem `render`: o layout HTML entraria no arquivo.
 - `header()` não é capturado no teste de controller (CLI): teste o
   corpo; o tipo de conteúdo fica para o teste HTTP ou o navegador.
-- Linha com mais de 75 bytes deve ser dobrada (RFC 5545): descrição
-  longa vai em pedaços com `"\r\n "`, ou fique com título, data e local.
+- Dobra por bytes com `mb_strcut`: `substr` partiria um caractere UTF-8
+  ao meio; a continuação começa com um espaço.
 - Para o Participante (O2), a rota vai no grupo dele, não no `admin`.
 
 Prova: testes; no navegador o arquivo baixa e abre no calendário.
@@ -4284,7 +4351,8 @@ Armadilhas:
 - O populate tem um admin só (`POP:12-19`): para ver no navegador
   crie outro (cenário G1 da 4.1) ou promova `user@example.com` no
   banco (`UPDATE users SET role = 'admin' WHERE email = 'user@example.com'`).
-- Comparar `user_id` sem `(int)`: o PDO devolve string.
+- Comparar `user_id`: do banco vem `int` (mysqlnd, PHP 8.1+), do form
+  vem string; normalize um lado com `(string)` antes do `===`.
 - Esconder o botão não protege: teste a URL direta.
 - Não confiar em `user_id` do form (`ECT:101-112` já cobre).
 
@@ -4590,8 +4658,22 @@ Armadilhas:
   (`EC:107` -> `EV:162`); mudar o texto é no model.
 - Create e update redirecionam para o `show` (`EC:57,88`): o flash de
   sucesso aparece lá.
-- `_flash_message.phtml:6` usa `<? endforeach; ?>` (short tag); não
-  mexa, funciona porque `short_open_tag` está ligado na imagem.
+- O flash da remoção bloqueada começa com minúscula ("não é possível
+  remover...", `EV:162` -> `EC:107`): é texto de `errors('base')`, no
+  formato das mensagens de campo (`EV:156` e `EV:170` idem). Corrija no
+  model; o texto exato está em `EVT:650`, `ECT:263` e
+  `ACT/DeleteEventCest.php:41`.
+- Três textos não terminam com `!`: `VAL:199` (unicidade, usada só em
+  `US:42`), `app/Middleware/Admin.php:18` e
+  `app/Middleware/Authenticate.php:15`. Padronizar não quebra teste: os
+  Cests usam `see()` por trecho
+  (`tests/Acceptance/admin/AdminDashboardCest.php:37,46` e
+  `tests/Acceptance/dashboard/DashboardCest.php:28`).
+- `short_open_tag` só vem ligado porque a imagem não tem `php.ini`; o
+  `php.ini-production` (base do PHP instalado por pacote) o desliga. Aí
+  `_flash_message.phtml:6` sai como texto, o `foreach` da linha 1 fica
+  aberto e toda página com layout dá parse error. Trocar por
+  `<?php endforeach; ?>` é uma linha e não muda nenhum teste.
 
 Prova: `EventsControllerTest`, `FlashMessageTest`; no navegador, criar
 um Evento com título `A & "B" <b>x</b>` e removê-lo: o título aparece
@@ -4718,6 +4800,13 @@ Armadilhas:
   (`:2-6`, retorna cedo): coloque o novo código **antes** do `return`
   ou em arquivo separado.
 - Cache do navegador: `Ctrl+F5` ao testar.
+- Confirmar não resolve o caso mais comum: `IDX:30-33` mostra Remover
+  também nos Eventos com Inscrições (1, 2, 3, 4, 6 e 9 do populate); o
+  usuário confirma e recebe o flash `danger` de `EV:162`. Esconder o
+  botão com `hasEnrollments()` (`EV:142-145`) é R12 e quebra
+  `ACT/DeleteEventCest.php:30-48`, que clica nesse botão.
+- O `show` não tem Remover (`SHOW:35-36`). Se pedirem lá (R6), o form
+  leva o mesmo `data-confirm`; o JS por seletor cobre as duas telas.
 
 Prova: Cest ajustado; navegador.
 
@@ -4804,6 +4893,8 @@ Prova: testes; no navegador o `show` mostra as duas datas.
 
 Chance: média-baixa. Tempo: 15-25 min.
 
+Exemplo pronto: `fvp/4.2/exemplos/r6-partials-remover-show`.
+
 Pedido típico: "a tabela de Eventos aparece em três telas (listagem,
 lotados, Participante): extraia um partial; e ponha Remover também no
 detalhe". Reutilização de view, como `_form.phtml` já faz para new/edit.
@@ -4813,7 +4904,8 @@ Arquivos: `FORM:1-15` (partial com docblock `@var`, o modelo),
 . '/_form.phtml'`), `IDX:8-38` (tabela), O1 `full.phtml`, O2
 `events/index.phtml`, `IDX:28-33` (ações), `SHOW:35-36`,
 `CTRL:32-39` (`render` faz `extract`: o partial vê as mesmas variáveis),
-`ACT/ListEventsCest.php`, `ACT/DeleteEventCest.php:50-54` (`rowOf`).
+`ACT/ListEventsCest.php`, `ACT/DeleteEventCest.php:50-54`
+(`clickRemove`), `ACT/BaseEventsCest.php:178` (`rowOf`).
 
 Passos:
 
@@ -4840,12 +4932,17 @@ Armadilhas:
   Remover no `show` não atrapalha; um Cest do `show` precisa de
   `acceptPopup()` se R4 estiver aplicado.
 - Caminho do `require`: relativo ao arquivo (`__DIR__`), não à raiz.
+- Na base só a listagem tem a tabela (`IDX:8-38`): as outras duas
+  telas dependem de O1 (`full.phtml`) e O2 (`events/index.phtml`). Sem
+  eles, o pedido fica em listagem + `show`.
 
 Prova: testes; três telas iguais no navegador.
 
 ### R7. Voltar à mesma página da listagem depois de remover ou editar
 
 Chance: média-baixa. Tempo: 10-15 min.
+
+Exemplo pronto: `fvp/4.2/exemplos/r7-voltar-mesma-pagina`.
 
 Pedido típico: "removi um Evento da página 3 e o sistema me jogou na
 página 1" ou "o Cancelar da edição devia voltar ao detalhe".
@@ -5303,6 +5400,18 @@ Armadilhas:
 - Mensagens exatas com `!`.
 - Teste de borda que depende da ordem dos erros: `errors()` guarda uma
   mensagem por campo (`MODEL:131-134`), a última vence.
+- O `createEvent` do `ECT` (`ECT:289-300`) ignora o retorno de `save()`
+  (`ECT:297`). Se a modificação deixar `validParams()` (`ECT:272-284`)
+  inválido, o Evento não é gravado, o `id` fica `null` e o teste falha
+  longe da causa. Ponha `$this->assertTrue($event->save())`, como o
+  helper do `EVT` (`EVT:59-62`).
+- Id inexistente só tem teste no `show` (`ECT:163-169`; por HTTP,
+  `ACC:175-183`). `edit`, `update` e `destroy` (`EC:67-71`, `EC:79-83`,
+  `EC:98-102`) não têm; remover o mesmo Evento duas vezes (a segunda dá
+  "Evento não encontrado!") também não.
+- `test_update_with_valid_data_changes_event` (`ECT:191-207`) só confere
+  `title`, `capacity` e `user_id`: campo esquecido no `fill`
+  (`EC:116-130`) passa despercebido. Confira os demais campos.
 
 Prova: `./run test tests/Unit` e `tests/Integration`.
 
@@ -5434,6 +5543,11 @@ Armadilhas:
 - Data: `+14` em diante (`:47-48`); nunca passado.
 - Não cite a senha em commit público além do que já está (`123456` é
   dado de demonstração).
+- O populate não tem caso de borda para mostrar: nenhum Evento passado
+  (`:47-48`) e nenhum com 1 vaga restante (o único cheio é o Evento 1,
+  `:53` e `:157`). Para Q2 ou N5, salve com data futura e depois
+  `update(['starts_on' => ...])`, que não valida (`MODEL:189-213`);
+  para R13, um Evento com `capacity` igual a inscritos + 1.
 
 Prova: `./run db:populate` sem erro; listagem com o número esperado.
 
