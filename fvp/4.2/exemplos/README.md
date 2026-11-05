@@ -44,6 +44,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100
+- M3. Valor novo em ENUM (tipo Seminário)
+  `m3-enum-novo-seminar/`
+  - feat: Add seminar to event kinds
 - M5. Validação condicional por modalidade
   `m5-validacao-condicional-modalidade/`
   - feat: Require location only for in-person events and link for
