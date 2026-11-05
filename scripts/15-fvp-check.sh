@@ -26,6 +26,9 @@ o $BASE atual do clone do projeto ($(project_dir)) e diz:
   só README    cenário sem commits (receita no README)
 Usa fvp/aplicar.sh --dry-run; não muda branch, árvore nem índice.
 
+As soluções da 4.1 partem do 86c81ca (Entrega 4.1): com FVP_ESCOPO=4.1,
+conflito contra o main atual é esperado; FVP_BASE=86c81ca testa na base.
+
 Outro escopo, ref ou clone:
   FVP_ESCOPO=4.1 FVP_BASE=minha-branch EVENTOS_DIR=/caminho \\
     $(basename "$0")
@@ -59,6 +62,11 @@ run() {
   cd "$dir" || die "não consegui entrar em $dir"
   short="$(git rev-parse --short "$BASE")"
   step "Soluções da FVP $SCOPE contra $BASE ($short) em $dir"
+  if [[ "$SCOPE" == 4.1 && -z "${FVP_BASE:-}" ]]; then
+    warn "as soluções da 4.1 foram feitas sobre o 86c81ca (Entrega 4.1);" \
+      "contra o main de hoje, conflito é esperado. Na base delas:" \
+      "FVP_ESCOPO=4.1 FVP_BASE=86c81ca $(basename "$0")"
+  fi
   # fvp.sh -c: escopo TAB chance TAB tempo TAB "### ID. título". O tempo
   # pode vir vazio, por isso o awk (read com IFS de tab juntaria campos).
   while IFS='|' read -r chance line; do
