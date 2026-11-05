@@ -162,16 +162,23 @@ Comandos: `./run test <caminho>`, `./run test:browser <caminho>`
 | P18 | Evento privado com código de convite | baixa | 30-40 min |
 | Q1 | Só o dono edita e remove | média-alta | 20-30 min |
 | Q2 | Bloquear alterar Evento passado ou cancelado | média | 15-25 min |
+| Q3 | Ação só para Participante | média-baixa | 20-30 min |
+| Q4 | Perfil Organizador com CRUD dos próprios Eventos | média | 35-40 min |
 | R1 | Flash: texto, título do Evento, `warning` | média | 10-15 min |
 | R2 | Nome do criador no `show` e na listagem | média-alta | 10-15 min |
 | R3 | Formatação na view com helper num só lugar | média | 10-15 min |
 | R4 | Confirmar antes de remover (JS em arquivo) | média | 10-15 min |
+| R5 | Mostrar `created_at` e `updated_at` | média | 15-25 min |
+| R6 | Partials reutilizados e Remover no `show` | média-baixa | 15-25 min |
+| R7 | Voltar à mesma página após remover/editar | média-baixa | 10-15 min |
 | S1 | Teste de aceitação da modificação | alta | 20-30 min |
 | S2 | Teste de acesso por HTTP da rota nova | alta | 15-20 min |
 | S3 | Teste unitário do método novo do model | alta | 10-15 min |
 | S4 | Testes de borda pedidos pelo professor | média-alta | 15-25 min |
+| S5 | `PaginatorTest` e Cests do `show` | média-baixa | 15-25 min |
 | T1 | Populate: campo novo, mais Eventos, segundo admin | alta | 5-10 min |
 | T2 | `phpcs`, `phpstan` e CI verdes | alta | 5 min |
+| T3 | README e wiki da feature nova | média-baixa | 10 min |
 
 Chance é estimativa a partir da rubrica, das issues de avaliação de
 2026-2 (4.1 e 4.2), do pedido real da FVP 4.1 e do que falta no
@@ -3487,6 +3494,122 @@ Armadilhas:
 Prova: testes; no navegador, o Evento 16 "passado" perde os botões e a
 URL direta `/admin/events/16/edit` redireciona.
 
+### Q3. Ação só para Participante
+
+Chance: média-baixa. Tempo: 20-30 min.
+
+Pedido típico: "Administrador não pode se inscrever em Evento; só
+Participante" (sobre P2). Duas formas: middleware `participant` nas
+rotas de inscrição, ou regra no model (`EN::validates()` recusa admin,
+como P13 faz ao contrário).
+
+Arquivos: `app/Middleware/Admin.php:10-28` (modelo; inverter a
+condição), `config/App.php:7-10` (aliases), `ROUTES:18-20` (grupo
+`auth`), `core/Router/RouteWrapperMiddleware.php:15-25` (ordem: o
+middleware do grupo é anexado **depois** do callback, então o grupo de
+dentro roda antes do de fora; A17 da 4.1), P2 (`EnrollmentsController`),
+`ACC:58-78` (`loggedClient`),
+`tests/Unit/Core/Router/RouteWrapperMiddlewareTest.php`.
+
+Passos:
+
+1. Testes: `ACC`: admin logado faz `POST /events/1/enrollments` ->
+   302 para `/admin` (ou `/events/1` com flash) e nada gravado;
+   Participante -> 302 para o `show` e inscrição gravada. Unitário do
+   middleware (F2 da 4.1): `Auth::login($admin)` + `handle()` redireciona.
+2. `app/Middleware/Participant.php`:
+
+   ```php
+   class Participant implements Middleware
+   {
+       public function handle(Request $request): void
+       {
+           $user = Auth::user();
+
+           if ($user !== null && $user->isAdmin()) {
+               FlashMessage::danger('Ação só para participantes');
+               $this->redirectTo(route('admin.dashboard.index'));
+           }
+       }
+   }
+   ```
+
+3. `config/App.php`: `'participant' => \App\Middleware\Participant::class`.
+4. `ROUTES`, dentro de `auth`:
+   `Route::middleware('participant')->group(function () { /* P2, P3, P4 */ });`.
+5. Forma model: em `EN::validates()`, `User::findById($this->user_id)`
+   admin -> `addError('base', 'administradores não se inscrevem!')`.
+   Vale também para P13 (que então precisa de exceção ou do caminho
+   admin).
+
+Armadilhas:
+
+- Com usuário nulo o middleware **não** redireciona (quem faz isso é
+  `Authenticate`): o grupo interno roda primeiro
+  (`RouteWrapperMiddleware:15-25`), então `Participant` vê sessão vazia
+  antes do `auth`; copie o padrão
+  `$user !== null && ...` de `Admin.php:17`.
+- `redirectTo` duplicado em três middlewares: é a crítica A1 da 4.1
+  ("centralizar"); se já houver uma base comum, use-a.
+- Esconder o botão para admin na view não basta: teste a URL direta.
+- Forma middleware e forma model não são excludentes; a do model
+  protege qualquer caminho futuro (P13, P15).
+
+Prova: testes; no navegador, admin abre `/events/2` e tenta inscrever-se.
+
+### Q4. Perfil Organizador com CRUD só dos próprios Eventos
+
+Chance: média. Tempo: 35-40 min.
+
+Pedido típico: "crie o perfil `organizer`: ele cadastra e gerencia só os
+Eventos dele; o admin continua vendo tudo" (A7 da 4.1 aplicado ao CRUD;
+junta Q1/O5 com um papel novo).
+
+Arquivos: `SCH:12` (ENUM `role`), `US:28-35` (padrão `participant`),
+`US:71-74` (`isAdmin`), `app/Middleware/Admin.php`, `config/App.php:7-10`,
+`ROUTES:22-36` (grupo `admin` cobre dashboard **e** Eventos), `EC:132-135`
+(Q1), `EC:16-27` (O5), `NAV:13-20`, `POP:12-19`, `ACC:23-56,85-97`
+(usuários e provider), `tests/Support/Helper/LoginHelper.php`,
+B10 da 4.1 (`User::ROLES` com `inclusion`, se já aplicado).
+
+Passos:
+
+1. Testes: `ACC`: organizer acessa `/admin/events` (200) e `/admin`
+   (302 para `/dashboard`); Participante segue barrado; `ECT`: organizer
+   logado vê só os seus (O5) e não edita Evento do admin (Q1); admin vê
+   tudo. `UserTest`: `isOrganizer()`.
+2. `SCH:12`: `ENUM('admin', 'organizer', 'participant')`; `US`:
+   `isOrganizer()` e `manageEvents(): bool` (`isAdmin() || isOrganizer()`);
+   `ROLES` se houver `inclusion`.
+3. Middleware `Staff` (ou alias `events_manager`) copiando `Admin.php` com
+   `!$user->manageEvents()`; alias em `config/App.php`.
+4. `ROUTES`: tire as rotas de Eventos do grupo `admin` e ponha num grupo
+   `Route::middleware('staff')->group(...)` dentro de `auth`; `/admin`
+   (dashboard) continua só `admin`.
+5. `EC::index`/`create`: admin -> `Event::paginate`/`new Event`;
+   organizer -> `events()->paginate`/`events()->new` (O5). `findEvent`:
+   admin acha qualquer; organizer só os dele (Q1).
+6. `NAV:13-20`: link "Eventos" para `manageEvents()`; "Administração"
+   só admin. `POP`: um organizer (`organizer@example.com`) com 2 Eventos.
+7. `ACC`: terceiro usuário e provider com os três perfis.
+
+Armadilhas:
+
+- ENUM novo exige `./run db:populate`; `inclusion` (B10) precisa do valor
+  na lista, senão o populate falha ao salvar o organizer.
+- Deixar as rotas de Eventos no grupo `admin` e "liberar" o organizer
+  dentro de `Admin.php` mistura responsabilidades; crie o middleware.
+- `A9`/`A18` da 4.1 (redirect pós-login por perfil): o organizer cai em
+  `/dashboard`; se o pedido incluir "cair na listagem", ajuste
+  `AuthenticationsController::authenticate`.
+- Os Cests logam `admin@` (`BaseEventsCest:46`) e continuam válidos; um
+  Cest de organizer precisa de login próprio (`LoginHelper::login`).
+- `isAdmin()` espalhado em views (`NAV:13`) é o custo de não ter
+  centralizado o perfil (H2 da 4.1).
+
+Prova: testes; no navegador, logar como organizer e ver só os seus
+Eventos, sem link "Administração".
+
 ### R1. Flash: texto, título do Evento, tipo `warning`
 
 Chance: média (micro-ajuste de texto; costuma vir dentro de outro
@@ -3658,6 +3781,163 @@ Armadilhas:
 - Cache do navegador: `Ctrl+F5` ao testar.
 
 Prova: Cest ajustado; navegador.
+
+### R5. Mostrar `created_at` e `updated_at`
+
+Chance: média. Tempo: 15-25 min.
+
+Pedido típico: "mostre quando o Evento foi cadastrado e alterado pela
+última vez". As colunas existem (`SCH:32-33`) mas não estão em
+`$columns`, então o ActiveRecord nem as lê.
+
+Arquivos: `SCH:32-33`, `EV:48-58`, `MODEL:233-256` (`findById` só
+seleciona `$columns`), `MODEL:139-187` (`save()` grava **todas** as
+colunas de `$columns`: pôr `created_at` lá faz o `INSERT` mandar `NULL`),
+`SHOW:6-33`, `IDX:11-26`, `US:76-79` (`registerLogin` grava hora do PHP),
+`Dockerfile:10` (PHP em `America/Sao_Paulo`; o MySQL do compose fica em
+UTC), `ECT:151-161`, `EVT:302-308`.
+
+Passos:
+
+1. Testes: `EVT`: após `save()`, `timestamps()` devolve `created_at` e
+   `updated_at` não nulos e iguais; após `update(...)`, `updated_at`
+   muda (ou, sem esperar 1 s, só confira que não é nulo). `ECT`: `show`
+   contém "Cadastrado em".
+2. Forma 1 (SQL no model, sem mexer em `$columns`):
+
+   ```php
+   /** @return array{created_at: ?string, updated_at: ?string} */
+   public function timestamps(): array
+   {
+       if ($this->newRecord()) {
+           return ['created_at' => null, 'updated_at' => null];
+       }
+
+       $stmt = Database::getDatabaseConn()->prepare(
+           'SELECT created_at, updated_at FROM events WHERE id = :id'
+       );
+       $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+       $stmt->execute();
+
+       $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+       return $row ?: ['created_at' => null, 'updated_at' => null];
+   }
+   ```
+
+3. Forma 2 (bônus de framework): `protected static array $readOnly = []`
+   em `Model`, incluído no `SELECT` de `findById`/`all`/`where`/`Paginator`
+   mas excluído do `INSERT`/`UPDATE`; `Event::$readOnly = ['created_at',
+   'updated_at']`. Mais trabalho, elimina a consulta extra.
+4. `SHOW`: "Cadastrado em dd/mm/aaaa hh:mm" e "Alterado em ...";
+   formate com `DateTimeImmutable` (R3).
+
+Armadilhas:
+
+- Pôr `created_at` em `$columns` sem preencher: `save()` envia `NULL`
+  e o MySQL 8 (`explicit_defaults_for_timestamp` ligado) recusa
+  `NOT NULL`; preencher no construtor com `date()` funciona, mas então
+  `updated_at` para de atualizar sozinho (o `UPDATE` reenvia o valor
+  antigo e o `ON UPDATE` só age quando a coluna não é escrita).
+- Fuso: `TIMESTAMP` é convertido pelo fuso da sessão do MySQL (UTC no
+  contêiner) e o PHP está em São Paulo: a hora exibida pode vir 3 h
+  "adiantada" em relação a `last_login_at` (gravado por `date()` do PHP,
+  `US:78`). Converta na exibição
+  (`new DateTimeImmutable($value, new DateTimeZone('UTC'))->setTimezone(...)`)
+  ou fixe `SET time_zone` na conexão. Diga qual escolheu.
+- `fetch()` devolve `false` sem linha: por isso o `?:`.
+- Teste de "updated_at muda" depende de 1 s de diferença: evite
+  `sleep(1)`; confira só não nulo ou use `update()` com data fixa.
+
+Prova: testes; no navegador o `show` mostra as duas datas.
+
+### R6. Partials reutilizados e botão Remover no `show`
+
+Chance: média-baixa. Tempo: 15-25 min.
+
+Pedido típico: "a tabela de Eventos aparece em três telas (listagem,
+lotados, Participante): extraia um partial; e ponha Remover também no
+detalhe". Reutilização de view, como `_form.phtml` já faz para new/edit.
+
+Arquivos: `FORM:1-15` (partial com docblock `@var`, o modelo),
+`app/views/admin/events/new.phtml:1-4` (como incluir: `require __DIR__
+. '/_form.phtml'`), `IDX:8-38` (tabela), O1 `full.phtml`, O2
+`events/index.phtml`, `IDX:28-33` (ações), `SHOW:35-36`,
+`CTRL:32-39` (`render` faz `extract`: o partial vê as mesmas variáveis),
+`ACT/ListEventsCest.php`, `ACT/DeleteEventCest.php:50-54` (`rowOf`).
+
+Passos:
+
+1. Testes existentes continuam (mesma saída HTML); novo em `ECT`: `show`
+   contém o form `DELETE` do Evento.
+2. `app/views/admin/events/_table.phtml`: a `<table>` de `IDX:8-38`
+   com `$events` e um flag `$showActions` (docblock `@var bool`);
+   `_actions.phtml` com Ver/Editar/Remover de `IDX:28-33`.
+3. `IDX`: `$showActions = true; require __DIR__ . '/_table.phtml';`;
+   `full.phtml` idem sem Remover; `events/index.phtml` (O2) com
+   `$showActions = false`.
+4. `SHOW:35-36`: `require __DIR__ . '/_actions.phtml'` (ou só o form
+   `DELETE`), e Voltar.
+
+Armadilhas:
+
+- Variável não definida antes do `require` -> warning -> 500: defina
+  todos os flags em cada tela que inclui o partial.
+- `$this` dentro do partial é o controller (mesmo escopo do `render`):
+  `$this->currentUser()` funciona, como em `NAV:5`.
+- O partial de paginação (`PAGES`) **não** vê essas variáveis
+  (`PAG:93-97`); não misture os dois.
+- `DeleteEventCest` clica "Remover" dentro de `rowOf()`: um segundo
+  Remover no `show` não atrapalha; um Cest do `show` precisa de
+  `acceptPopup()` se R4 estiver aplicado.
+- Caminho do `require`: relativo ao arquivo (`__DIR__`), não à raiz.
+
+Prova: testes; três telas iguais no navegador.
+
+### R7. Voltar à mesma página da listagem depois de remover ou editar
+
+Chance: média-baixa. Tempo: 10-15 min.
+
+Pedido típico: "removi um Evento da página 3 e o sistema me jogou na
+página 1" ou "o Cancelar da edição devia voltar ao detalhe".
+
+Arquivos: `EC:110` (`destroy` -> `admin.events.index`), `IDX:30-33`
+(form de remoção), `CTRL:63-67` (`redirectBack()`, usa `HTTP_REFERER`),
+`FORM:92` (Cancelar -> index), `app/views/admin/events/edit.phtml`,
+`ECT:242-251` e `:261` (`Location` exato), `ACT/DeleteEventCest.php`,
+N10 (página fora do intervalo).
+
+Passos:
+
+1. Testes em `ECT`: `destroy` com `params: ['page' => '2']` ->
+   `Location: /admin/events/page/2`; sem `page` -> `/admin/events`;
+   `page` inválido -> `/admin/events`.
+2. `IDX:30-33`: no form de remoção,
+   `<input type="hidden" name="page" value="<?= $paginator->getPage() ?>">`.
+3. `EC::destroy`: `$page = $request->getParam('page')`; se `is_string` +
+   `ctype_digit` + `> 1` ->
+   `route('admin.events.paginate', ['page' => (int) $page])`, senão
+   `route('admin.events.index')`.
+4. Cancelar da edição: em `edit.phtml` passe
+   `$cancelUrl = route('admin.events.show', ['id' => $event->id])` e em
+   `new.phtml` `$cancelUrl = route('admin.events.index')`; `FORM:92` usa
+   `$cancelUrl`.
+5. Alternativa: `redirectBack()` (`CTRL:63-67`), que cai em `/` quando
+   não há `Referer` (testes, `curl`): menos previsível; prefira o
+   `page` explícito.
+
+Armadilhas:
+
+- Removeu o último item da página 3: a página 3 deixa de existir;
+  com N10 isso vira flash "Página inválida"; sem N10, "Nenhum evento"
+  sem paginação. Trate (volte à anterior) ou documente.
+- `ECT:249,261` comparam `Location` exato: atualize os testes que
+  passarem `page`.
+- `$cancelUrl` indefinido em quem inclui `_form.phtml`: 500.
+- `HTTP_REFERER` pode ser omitido pelo navegador (política de
+  `Referrer-Policy`); não dependa dele para fluxo principal.
+
+Prova: testes; no navegador, remover um Evento da página 2 e ficar nela.
 
 ### S1. Teste de aceitação da modificação
 
@@ -3840,6 +4120,98 @@ Armadilhas:
   mensagem por campo (`MODEL:131-134`), a última vence.
 
 Prova: `./run test tests/Unit` e `tests/Integration`.
+
+### S5. Testes que faltam: `PaginatorTest` e Cests do `show`
+
+Chance: média-baixa. Tempo: 15-25 min.
+
+Pedido típico: "o `Paginator` é item da rubrica e não tem teste próprio;
+escreva" ou "não há Cest do detalhe nem do 'não encontrado'".
+
+Arquivos: `PAG:18-29` (construtor exige `class`, `page`, `per_page`,
+`table`, `attributes`), `PAG:56-86` (`previousPage`, `hasNextPage`,
+`entriesInfo`), `PAG:93-102` (`renderPagesNavigation` chama `route()`
+com `getRouteName()`), `EVT:390-441` (testes de `paginate` via model, o
+que já existe), `tests/TestCase.php` (recria o schema),
+`ACT/ListEventsCest.php:46-61` (já abre o `show` por link),
+`ACT/BaseEventsCest.php`, `core/Router/Router.php:59-72` (`route()`
+lança exceção se o nome não existir).
+
+Passos:
+
+1. `tests/Unit/Lib/PaginatorTest.php` (`extends Tests\TestCase`, precisa
+   de banco): crie 7 Eventos (helper como `EVT:59-65`) e
+
+   ```php
+   $paginator = new Paginator(
+       Event::class, 2, 5, 'events', Event::columns(),
+       [], 'admin.events.paginate'
+   );
+   ```
+
+   `totalOfRegisters() === 7`, `totalOfPages() === 2`, `registers()`
+   com 2, `entriesInfo() === 'Mostrando 6 - 7 de 7'`, `hasPreviousPage()`
+   verdadeiro, `hasNextPage()` falso; página 3: `registers()` vazio e
+   `entriesInfo()` incoerente ("Mostrando 11 - 10 de 7", defeito que N10
+   trata); `conditions: ['kind' => 'lecture']` filtra; banco vazio:
+   `totalOfPages() === 0`.
+2. `tests/Acceptance/admin/events/ShowEventCest.php` (`extends
+   BaseEventsCest`): `amOnPage("/admin/events/{$this->events[1]->id}")`,
+   `see(título, 'h1')`, `see(descrição)`, `seeLink('Editar')`,
+   `seeLink('Voltar')`; e `amOnPage('/admin/events/999999')` ->
+   `seeCurrentUrlEquals('/admin/events')` + `see('Evento não encontrado!')`.
+3. `./run test tests/Unit/Lib/PaginatorTest.php` e `./run test:browser ...`.
+
+Armadilhas:
+
+- `renderPagesNavigation()` chama `route($this->getRouteName(), ...)`:
+  sem rota com esse nome (`events.paginate` por padrão, `PAG:101`) o
+  `Router` lança exceção (`Router.php:71`). Passe `route:` ou não renderize
+  no teste unitário.
+- O `Paginator` fala com o banco no construtor (`PAG:27-28`): o teste
+  precisa de `Tests\TestCase` (migra o schema), não de PHPUnit puro.
+- `lib/` está fora do `phpstan`, mas `tests/` não: anote arrays.
+- Cest do `show`: a base loga o admin (`BaseEventsCest:46`); o Evento 1
+  tem 3 inscritos (`3/3`), bom para conferir vagas.
+- Não duplique `EVT:390-441`: o `PaginatorTest` testa a classe
+  diretamente (construtor, páginas vazias, condições), não o `paginate`
+  do model.
+
+Prova: os testes passam; quebre `entriesInfo()` e veja falhar.
+
+### T3. README e wiki da feature nova
+
+Chance: média-baixa. Tempo: 10 min.
+
+Pedido típico: "documente a rota nova no README/wiki do projeto" (a
+rubrica cobra wiki com descrição da entrega e link da PR; o professor
+costuma pedir que a mudança apareça na documentação).
+
+Arquivos: `README.md` do projeto (seções de funcionalidades/rotas e de
+como testar), `wiki/` do repositório (cópia das páginas: `Home.md`,
+`Descrição-do-Projeto.md`, `_Sidebar.md`), a página da entrega 4.2 na
+wiki oficial (`<repo>.wiki`), `.github/pull_request_template.md`.
+
+Passos:
+
+1. README: linha na lista de rotas (`GET /admin/events/full`,
+   `admin.events.full`, quem acessa) e comando de teste
+   (`./run test tests/Integration/...`).
+2. Wiki da entrega: seção "Alterações da FVP" com o pedido, a solução
+   em 3 linhas e o link do commit/PR.
+3. Commit `docs: Document the full events page` separado do `feat:`.
+
+Armadilhas:
+
+- Documentação em pt-BR; identificadores e rotas como estão no código.
+- Não invente endpoints que não existem; copie os nomes de
+  `config/routes.php`.
+- Wiki é outro repositório (`.wiki.git`): o commit no projeto não a
+  atualiza; a cópia em `wiki/` dentro do repo é só espelho.
+- Não cite credenciais além das do populate (`123456`, já públicas).
+
+Prova: `README.md` renderizado no GitHub com a rota; página da wiki
+atualizada.
 
 ### T1. Populate: campo novo, mais Eventos, segundo admin
 
