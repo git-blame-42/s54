@@ -47,6 +47,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M3. Valor novo em ENUM (tipo Seminário)
   `m3-enum-novo-seminar/`
   - feat: Add seminar to event kinds
+- M4. Segunda data (`ends_on`) não anterior a `starts_on`
+  `m4-segunda-data-ends-on/`
+  - feat: Add end date to events
 - M5. Validação condicional por modalidade
   `m5-validacao-condicional-modalidade/`
   - feat: Require location only for in-person events and link for
