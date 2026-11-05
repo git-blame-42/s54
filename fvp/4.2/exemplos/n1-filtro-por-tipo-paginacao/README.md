@@ -12,7 +12,7 @@ Branch no clone: `fvp/n1-filtro-por-tipo-paginacao`, a partir de
 
 | Commit    | Mensagem                                                       |
 |-----------|----------------------------------------------------------------|
-| `0fe3c48` | `feat: Filter events by kind keeping the filter in pagination` |
+| `8c3a316` | `feat: Filter events by kind keeping the filter in pagination` |
 
 ## O que mudou
 
@@ -33,9 +33,12 @@ Implementada a forma 2 do catálogo (com paginação).
   `private array $queryParams = []`, e o getter `queryParams()` com
   `@return array<string, mixed>`. O `conditions` já existia (o
   `buildConditions` faz `WHERE kind = :kind`).
-- `app/views/paginator/_pages.phtml`: os três links usam
-  `array_merge(['page' => X], $paginator->queryParams())`, o que gera
-  `/admin/events/page/2?kind=lecture`.
+- `app/views/paginator/_pages.phtml`: no topo, a closure
+  `$pageUrl = fn (int $p) => route($paginator->getRouteName(),
+  array_merge(['page' => $p], $paginator->queryParams()));`, e os
+  três links usam `$pageUrl(X)`, o que gera
+  `/admin/events/page/2?kind=lecture` (cada linha fica abaixo de 130
+  colunas; o phpcs não varre `.phtml`).
 - `app/views/admin/events/index.phtml`: `<form method="get">` para
   `route('admin.events.index')` com `<select name="kind"
   id="filter_kind">` ("Todos" + `Event::KINDS`, `selected` no atual)
@@ -150,7 +153,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-n1 \
     s50/fvp/4.2/exemplos/n1-filtro-por-tipo-paginacao/projeto
 git fetch fvp-n1 fvp/n1-filtro-por-tipo-paginacao
-git cherry-pick 0fe3c48
+git cherry-pick 8c3a316
 git remote remove fvp-n1
 ```
 
@@ -161,7 +164,7 @@ git fetch \
     s50/fvp/4.2/exemplos/n1-filtro-por-tipo-paginacao/solucao.bundle \
     fvp/n1-filtro-por-tipo-paginacao:fvp-n1
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 0fe3c48
+git cherry-pick 8c3a316
 # opcional, limpa a ref
 git branch -D fvp-n1
 ```
