@@ -1,0 +1,615 @@
+From f914a6383f0d3ded8f3654528f326d2659b6f669 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:08:47 -0300
+Subject: [PATCH] refactor: Replace Event::KINDS with EventKind enum
+
+Add the string-backed EventKind enum with label() and options(),
+validate kind with EventKind::tryFrom, add Event::kindLabel() and use
+the enum in views, populate and acceptance tests.
+---
+ app/Models/Event.php                          | 33 ++++++---
+ app/Models/EventKind.php                      | 40 +++++++++++
+ app/views/admin/events/_form.phtml            |  3 +-
+ app/views/admin/events/index.phtml            |  2 +-
+ app/views/admin/events/show.phtml             |  2 +-
+ database/Populate/populate.php                | 33 ++++-----
+ .../admin/events/BaseEventsCest.php           |  5 +-
+ .../events/CreateWithInvalidDataCest.php      |  5 +-
+ .../admin/events/ListEventsCest.php           |  3 +-
+ .../admin/events/UpdateSuccessfullyCest.php   |  5 +-
+ .../events/UpdateWithInvalidDataCest.php      |  5 +-
+ .../Admin/EventsControllerTest.php            | 34 +++++++++
+ tests/Unit/Models/Events/EventKindTest.php    | 71 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 21 +++++-
+ 14 files changed, 221 insertions(+), 41 deletions(-)
+ create mode 100644 app/Models/EventKind.php
+ create mode 100644 tests/Unit/Models/Events/EventKindTest.php
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..8d7057b 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -21,14 +21,6 @@ use PDOException;
+  */
+ class Event extends Model
+ {
+-    /** Valores do ENUM `kind`, com o rótulo exibido nos formulários. */
+-    public const KINDS = [
+-        'lecture' => 'Palestra',
+-        'workshop' => 'Oficina',
+-        'short_course' => 'Minicurso',
+-        'academic_week' => 'Semana acadêmica',
+-    ];
+-
+     /** Valores do ENUM `modality`, com o rótulo exibido nos formulários. */
+     public const MODALITIES = [
+         'in_person' => 'Presencial',
+@@ -63,8 +55,7 @@ class Event extends Model
+         Validations::notEmpty('description', $this);
+         Validations::notEmpty('location', $this);
+ 
+-        Validations::notEmpty('kind', $this) &&
+-            Validations::inclusion('kind', $this, array_keys(self::KINDS));
++        Validations::notEmpty('kind', $this) && $this->validatesKind();
+ 
+         Validations::notEmpty('modality', $this) &&
+             Validations::inclusion('modality', $this, array_keys(self::MODALITIES));
+@@ -81,6 +72,19 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * O tipo precisa ser um dos cases de EventKind (tryFrom devolve null para valor desconhecido).
++     */
++    private function validatesKind(): bool
++    {
++        if (EventKind::tryFrom((string) $this->kind) !== null) {
++            return true;
++        }
++
++        $this->addError('kind', 'não é uma opção válida!');
++        return false;
++    }
++
+     /**
+      * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+      * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
+@@ -114,6 +118,15 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * Rótulo do tipo (ex.: "Palestra"). Use em Evento já salvo: from() lança ValueError
++     * se `kind` não for um case de EventKind.
++     */
++    public function kindLabel(): string
++    {
++        return EventKind::from($this->kind)->label();
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/Models/EventKind.php b/app/Models/EventKind.php
+new file mode 100644
+index 0000000..82c6378
+--- /dev/null
++++ b/app/Models/EventKind.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace App\Models;
++
++/**
++ * Tipos de Evento (coluna ENUM `kind` de `events`). O valor do case é o gravado no banco;
++ * label() é o texto exibido nas telas.
++ */
++enum EventKind: string
++{
++    case Lecture = 'lecture';
++    case Workshop = 'workshop';
++    case ShortCourse = 'short_course';
++    case AcademicWeek = 'academic_week';
++
++    public function label(): string
++    {
++        return match ($this) {
++            self::Lecture => 'Palestra',
++            self::Workshop => 'Oficina',
++            self::ShortCourse => 'Minicurso',
++            self::AcademicWeek => 'Semana acadêmica',
++        };
++    }
++
++    /**
++     * Opções do select: valor do banco => rótulo, na ordem dos cases.
++     *
++     * @return array<string, string>
++     */
++    public static function options(): array
++    {
++        $options = [];
++        foreach (self::cases() as $kind) {
++            $options[$kind->value] = $kind->label();
++        }
++
++        return $options;
++    }
++}
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..8042950 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -7,6 +7,7 @@
+  * @var bool $isUpdate quando true, envia _method=PUT
+  */
+ use App\Models\Event;
++use App\Models\EventKind;
+ 
+ $invalid = fn(string $field): string => $event->errors($field) !== null ? ' is-invalid' : '';
+ $feedback = fn(string $field, string $extra = ''): string => $event->errors($field) !== null
+@@ -36,7 +37,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+         <label for="event_kind" class="form-label">Tipo</label>
+         <select class="form-select<?= $invalid('kind') ?>" id="event_kind" name="event[kind]">
+             <option value="">Selecione</option>
+-            <?php foreach (Event::KINDS as $value => $label) : ?>
++            <?php foreach (EventKind::options() as $value => $label) : ?>
+                 <option value="<?= $value ?>" <?= $event->kind === $value ? 'selected' : '' ?>><?= $label ?></option>
+             <?php endforeach; ?>
+         </select>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..024bf2c 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -20,7 +20,7 @@
+             <?php foreach ($events as $event) : ?>
+                 <tr>
+                     <td><?= htmlspecialchars($event->title) ?></td>
+-                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                    <td><?= htmlspecialchars($event->kindLabel()) ?></td>
+                     <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+                     <td><?= htmlspecialchars($event->location) ?></td>
+                     <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..e4170bb 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -11,7 +11,7 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dd class="col-sm-9"><?= nl2br(htmlspecialchars($event->description)) ?></dd>
+ 
+     <dt class="col-sm-3">Tipo</dt>
+-    <dd class="col-sm-9"><?= Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></dd>
++    <dd class="col-sm-9"><?= htmlspecialchars($event->kindLabel()) ?></dd>
+ 
+     <dt class="col-sm-3">Modalidade</dt>
+     <dd class="col-sm-9"><?= Event::MODALITIES[$event->modality] ?? htmlspecialchars($event->modality) ?></dd>
+diff --git a/database/Populate/populate.php b/database/Populate/populate.php
+index e383040..c929f33 100644
+--- a/database/Populate/populate.php
++++ b/database/Populate/populate.php
+@@ -4,6 +4,7 @@ require __DIR__ . '/../../config/bootstrap.php';
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventKind;
+ use App\Models\User;
+ use Core\Database\Database;
+ 
+@@ -50,82 +51,82 @@ $events = [
+     [
+         'Semana Acadêmica de Informática 2026',
+         'Semana com palestras, minicursos e maratona de programação promovida pelo curso de Sistemas para Internet.',
+-        'academic_week', 'in_person', 'students,professors,community', 14, 'Bloco D, Auditório Central', 3,
++        EventKind::AcademicWeek->value, 'in_person', 'students,professors,community', 14, 'Bloco D, Auditório Central', 3,
+     ],
+     [
+         'Introdução a APIs REST com PHP',
+         'Palestra sobre os princípios do REST, verbos HTTP e boas práticas de projeto de APIs em PHP.',
+-        'lecture', 'online', 'students,professors', 15, 'Microsoft Teams (link enviado aos inscritos)', 80,
++        EventKind::Lecture->value, 'online', 'students,professors', 15, 'Microsoft Teams (link enviado aos inscritos)', 80,
+     ],
+     [
+         'Oficina de Git e GitHub para Iniciantes',
+         'Oficina prática de versionamento: commits, branches, pull requests e resolução de conflitos.',
+-        'workshop', 'in_person', 'students', 21, 'Bloco B, Laboratório de Informática B203', 25,
++        EventKind::Workshop->value, 'in_person', 'students', 21, 'Bloco B, Laboratório de Informática B203', 25,
+     ],
+     [
+         'Minicurso de Docker para Desenvolvimento Web',
+         'Minicurso de quatro horas sobre contêineres, imagens e docker compose aplicados a projetos web.',
+-        'short_course', 'hybrid', 'students,professors,staff', 22, 'Bloco B, Laboratório B205 e transmissão online', 30,
++        EventKind::ShortCourse->value, 'hybrid', 'students,professors,staff', 22, 'Bloco B, Laboratório B205 e transmissão online', 30,
+     ],
+     [
+         'Palestra: Carreira em Tecnologia na Região Centro-Sul',
+         'Profissionais de empresas da região contam como foi a entrada no mercado e quais competências são mais procuradas.',
+-        'lecture', 'in_person', 'students,community', 27, 'Bloco A, Auditório do Bloco A', 120,
++        EventKind::Lecture->value, 'in_person', 'students,community', 27, 'Bloco A, Auditório do Bloco A', 120,
+     ],
+     [
+         'Oficina de Modelagem de Banco de Dados',
+         'Do diagrama entidade-relacionamento ao esquema MySQL, com exercícios de normalização e chaves estrangeiras.',
+-        'workshop', 'in_person', 'students,professors', 29, 'Bloco B, Laboratório de Informática B201', 20,
++        EventKind::Workshop->value, 'in_person', 'students,professors', 29, 'Bloco B, Laboratório de Informática B201', 20,
+     ],
+     [
+         'Semana de Ciência e Tecnologia do Campus',
+         'Mostra de projetos de ensino, pesquisa e extensão do campus Guarapuava, aberta à comunidade externa.',
+-        'academic_week', 'in_person', 'students,professors,staff,community', 34, 'Bloco C, Pátio Central', 300,
++        EventKind::AcademicWeek->value, 'in_person', 'students,professors,staff,community', 34, 'Bloco C, Pátio Central', 300,
+     ],
+     [
+         'Minicurso de Testes Automatizados com PHPUnit e Codeception',
+         'Testes de unidade, integração e aceitação em uma aplicação PHP, com execução no GitHub Actions.',
+-        'short_course', 'online', 'students,professors', 36, 'Google Meet (link enviado aos inscritos)', 40,
++        EventKind::ShortCourse->value, 'online', 'students,professors', 36, 'Google Meet (link enviado aos inscritos)', 40,
+     ],
+     [
+         'Palestra: Inteligência Artificial no Ensino de Programação',
+         'Debate sobre usos responsáveis de assistentes de IA em sala de aula e na avaliação de trabalhos.',
+-        'lecture', 'hybrid', 'professors,staff', 41, 'Bloco A, Sala de Reuniões A110 e transmissão online', 50,
++        EventKind::Lecture->value, 'hybrid', 'professors,staff', 41, 'Bloco A, Sala de Reuniões A110 e transmissão online', 50,
+     ],
+     [
+         'Oficina de Acessibilidade em Interfaces Web',
+         'Boas práticas de HTML semântico, contraste, navegação por teclado e leitores de tela.',
+-        'workshop', 'in_person', 'students,professors,staff', 43, 'Bloco B, Laboratório de Informática B204', 24,
++        EventKind::Workshop->value, 'in_person', 'students,professors,staff', 43, 'Bloco B, Laboratório de Informática B204', 24,
+     ],
+     [
+         'Minicurso de Estruturas de Dados em PHP',
+         'Pilhas, filas, listas e árvores implementadas em PHP, com análise de complexidade.',
+-        'short_course', 'in_person', 'students', 48, 'Bloco A, Sala A205', 35,
++        EventKind::ShortCourse->value, 'in_person', 'students', 48, 'Bloco A, Sala A205', 35,
+     ],
+     [
+         'Palestra: Segurança no Desenvolvimento de Aplicações Web',
+         'Injeção de SQL, XSS, CSRF e armazenamento seguro de senhas, com exemplos de ataques reais.',
+-        'lecture', 'online', 'students,professors,community', 50, 'Microsoft Teams (link enviado aos inscritos)', 100,
++        EventKind::Lecture->value, 'online', 'students,professors,community', 50, 'Microsoft Teams (link enviado aos inscritos)', 100,
+     ],
+     [
+         'Oficina de Prototipação no Figma',
+         'Wireframes, componentes e protótipos navegáveis para validar telas antes de programar.',
+-        'workshop', 'hybrid', 'students,community', 55, 'Bloco C, Laboratório C102 e transmissão online', 30,
++        EventKind::Workshop->value, 'hybrid', 'students,community', 55, 'Bloco C, Laboratório C102 e transmissão online', 30,
+     ],
+     [
+         'Semana de Boas-Vindas aos Calouros 2027',
+         'Recepção dos ingressantes com apresentação dos cursos, da biblioteca, dos laboratórios e dos projetos de extensão.',
+-        'academic_week', 'in_person', 'students,staff', 69, 'Bloco D, Auditório Central', 150,
++        EventKind::AcademicWeek->value, 'in_person', 'students,staff', 69, 'Bloco D, Auditório Central', 150,
+     ],
+     [
+         'Minicurso de Introdução a SQL e MySQL',
+         'Consultas, junções, agregações e subconsultas sobre uma base de dados de eventos acadêmicos.',
+-        'short_course', 'in_person', 'students,community', 75, 'Bloco B, Laboratório de Informática B203', 28,
++        EventKind::ShortCourse->value, 'in_person', 'students,community', 75, 'Bloco B, Laboratório de Informática B203', 28,
+     ],
+     [
+         'Palestra: Ciência de Dados Aplicada à Agricultura',
+         'Uso de dados e modelos preditivos em propriedades rurais da região, com casos de cooperativas locais.',
+-        'lecture', 'hybrid', 'students,professors,staff,community', 82, 'Bloco A, Auditório do Bloco A e transmissão online', 90,
++        EventKind::Lecture->value, 'hybrid', 'students,professors,staff,community', 82, 'Bloco A, Auditório do Bloco A e transmissão online', 90,
+     ],
+ ];
+ 
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..481e0cd 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -4,6 +4,7 @@ namespace Tests\Acceptance\admin\events;
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventKind;
+ use App\Models\User;
+ use Tests\Acceptance\BaseAcceptanceCest;
+ use Tests\Support\AcceptanceTester;
+@@ -76,7 +77,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+      */
+     private function seedEvents(): void
+     {
+-        $kinds = array_keys(Event::KINDS);
++        $kinds = array_map(fn(EventKind $kind) => $kind->value, EventKind::cases());
+         $modalities = array_keys(Event::MODALITIES);
+ 
+         for ($number = 1; $number <= self::TOTAL_EVENTS; $number++) {
+@@ -165,7 +166,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+         return array_merge([
+             'title' => 'Oficina de Testes Automatizados',
+             'description' => 'Oficina prática de testes de aceitação com Codeception.',
+-            'kind' => Event::KINDS['workshop'],
++            'kind' => EventKind::Workshop->label(),
+             'modality' => 'online',
+             'audience' => ['students', 'staff'],
+             'starts_on' => date('Y-m-d', strtotime('+1 day')),
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..48ddf28 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Acceptance\admin\events;
+ 
+ use App\Models\Event;
++use App\Models\EventKind;
+ use PHPUnit\Framework\Assert;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -37,7 +38,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         $page->fillField('#event_title', 'Oficina de Testes Automatizados');
+         $page->fillField('#event_description', 'Oficina prática de testes de aceitação.');
+-        $page->selectOption('#event_kind', Event::KINDS['workshop']);
++        $page->selectOption('#event_kind', EventKind::Workshop->label());
+         $page->checkOption('#event_modality_online');
+         $page->checkOption('#event_audience_students');
+         $page->checkOption('#event_audience_staff');
+@@ -63,7 +64,7 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         // ...e os valores enviados continuam no formulário.
+         $page->seeInField('#event_title', 'Oficina de Testes Automatizados');
+         $page->seeInField('#event_description', 'Oficina prática de testes de aceitação.');
+-        $page->seeOptionIsSelected('#event_kind', Event::KINDS['workshop']);
++        $page->seeOptionIsSelected('#event_kind', EventKind::Workshop->label());
+         $page->seeCheckboxIsChecked('#event_modality_online');
+         $page->dontSeeCheckboxIsChecked('#event_modality_in_person');
+         $page->seeCheckboxIsChecked('#event_audience_students');
+diff --git a/tests/Acceptance/admin/events/ListEventsCest.php b/tests/Acceptance/admin/events/ListEventsCest.php
+index 4ede4a9..4d92bcb 100644
+--- a/tests/Acceptance/admin/events/ListEventsCest.php
++++ b/tests/Acceptance/admin/events/ListEventsCest.php
+@@ -2,7 +2,6 @@
+ 
+ namespace Tests\Acceptance\admin\events;
+ 
+-use App\Models\Event;
+ use Tests\Support\AcceptanceTester;
+ 
+ class ListEventsCest extends BaseEventsCest
+@@ -21,7 +20,7 @@ class ListEventsCest extends BaseEventsCest
+         foreach ($rows as $index => $row) {
+             $number = $index + 1;
+             $event = $this->events[$number];
+-            $kind = Event::KINDS[$event->kind];
++            $kind = $event->kindLabel();
+ 
+             $this->assertContains($this->title($number), $row);
+             $this->assertContains($kind, $row);
+diff --git a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+index 0f64d87..36ceaec 100644
+--- a/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/UpdateSuccessfullyCest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Acceptance\admin\events;
+ 
+ use App\Models\Event;
++use App\Models\EventKind;
+ use PHPUnit\Framework\Assert;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -13,7 +14,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         $event = $this->events[2];
+         $data = $this->validEventData([
+             'title' => 'Evento 02 Atualizado',
+-            'kind' => Event::KINDS['short_course'],
++            'kind' => EventKind::ShortCourse->label(),
+             'modality' => 'hybrid',
+             'audience' => ['professors', 'community'],
+             'starts_on' => date('Y-m-d', strtotime('+90 days')),
+@@ -30,7 +31,7 @@ class UpdateSuccessfullyCest extends BaseEventsCest
+         // O formulário abre com os valores atuais do Evento.
+         $page->seeInField('#event_title', 'Evento 02');
+         $page->seeInField('#event_description', $event->description);
+-        $page->seeOptionIsSelected('#event_kind', Event::KINDS[$event->kind]);
++        $page->seeOptionIsSelected('#event_kind', $event->kindLabel());
+         $page->seeCheckboxIsChecked("#event_modality_{$event->modality}");
+         $page->seeCheckboxIsChecked('#event_audience_students');
+         $page->dontSeeCheckboxIsChecked('#event_audience_professors');
+diff --git a/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php b/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
+index c35d12e..92a6d9e 100644
+--- a/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php
+@@ -3,6 +3,7 @@
+ namespace Tests\Acceptance\admin\events;
+ 
+ use App\Models\Event;
++use App\Models\EventKind;
+ use PHPUnit\Framework\Assert;
+ use Tests\Support\AcceptanceTester;
+ 
+@@ -21,7 +22,7 @@ class UpdateWithInvalidDataCest extends BaseEventsCest
+         $this->fillEventForm($page, [
+             'title' => '',
+             'location' => 'Auditório Novo',
+-            'kind' => Event::KINDS['lecture'],
++            'kind' => EventKind::Lecture->label(),
+             'modality' => 'hybrid',
+             'audience' => ['community'],
+             'starts_on' => date('Y-m-d', strtotime('-2 days')),
+@@ -46,7 +47,7 @@ class UpdateWithInvalidDataCest extends BaseEventsCest
+         // Valores válidos enviados continuam no formulário.
+         $page->seeInField('#event_location', 'Auditório Novo');
+         $page->seeInField('#event_description', $event->description);
+-        $page->seeOptionIsSelected('#event_kind', Event::KINDS['lecture']);
++        $page->seeOptionIsSelected('#event_kind', EventKind::Lecture->label());
+         $page->seeCheckboxIsChecked('#event_modality_hybrid');
+         $page->seeCheckboxIsChecked('#event_audience_community');
+         $page->dontSeeCheckboxIsChecked('#event_audience_students');
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..90ddf3b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Integration\Controllers\Admin;
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventKind;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
+ use Tests\Integration\Controllers\ControllerTestCase;
+@@ -148,6 +149,39 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('invalid-feedback d-block', $response);
+     }
+ 
++    public function test_new_form_lists_kind_options_with_labels(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        foreach (EventKind::cases() as $kind) {
++            $this->assertMatchesRegularExpression(
++                '/<option value="' . $kind->value . '"\s*>' . preg_quote($kind->label(), '/') . '<\/option>/u',
++                $response
++            );
++        }
++    }
++
++    public function test_edit_form_selects_the_events_kind(): void
++    {
++        $event = $this->createEvent(['kind' => 'short_course']);
++
++        $response = $this->get(action: 'edit', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('<option value="short_course" selected>Minicurso</option>', $response);
++    }
++
++    public function test_index_and_show_display_the_kind_label(): void
++    {
++        $event = $this->createEvent(['kind' => 'academic_week']);
++
++        $index = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $show = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('<td>Semana acadêmica</td>', $index);
++        $this->assertStringContainsString('Semana acadêmica</dd>', $show);
++        $this->assertStringNotContainsString('academic_week', $index);
++    }
++
+     public function test_show_renders_event(): void
+     {
+         $event = $this->createEvent(['title' => 'Palestra Final', 'capacity' => 4]);
+diff --git a/tests/Unit/Models/Events/EventKindTest.php b/tests/Unit/Models/Events/EventKindTest.php
+new file mode 100644
+index 0000000..e6dd63e
+--- /dev/null
++++ b/tests/Unit/Models/Events/EventKindTest.php
+@@ -0,0 +1,71 @@
++<?php
++
++namespace Tests\Unit\Models\Events;
++
++use App\Models\EventKind;
++use Core\Constants\Constants;
++use PHPUnit\Framework\Attributes\DataProvider;
++use PHPUnit\Framework\TestCase;
++use ValueError;
++
++class EventKindTest extends TestCase
++{
++    public function test_label_should_return_the_portuguese_text(): void
++    {
++        $this->assertSame('Palestra', EventKind::Lecture->label());
++        $this->assertSame('Oficina', EventKind::Workshop->label());
++        $this->assertSame('Minicurso', EventKind::ShortCourse->label());
++        $this->assertSame('Semana acadêmica', EventKind::AcademicWeek->label());
++    }
++
++    public function test_options_should_map_value_to_label_in_case_order(): void
++    {
++        $this->assertSame([
++            'lecture' => 'Palestra',
++            'workshop' => 'Oficina',
++            'short_course' => 'Minicurso',
++            'academic_week' => 'Semana acadêmica',
++        ], EventKind::options());
++    }
++
++    public function test_try_from_should_return_the_case_for_a_known_value(): void
++    {
++        $this->assertSame(EventKind::Workshop, EventKind::tryFrom('workshop'));
++    }
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function unknownValues(): array
++    {
++        return [
++            'fora do enum' => ['concert'],
++            'vazio' => [''],
++            'nome do case' => ['Workshop'],
++            'rótulo' => ['Oficina'],
++        ];
++    }
++
++    #[DataProvider('unknownValues')]
++    public function test_try_from_should_return_null_for_unknown_value(string $value): void
++    {
++        $this->assertNull(EventKind::tryFrom($value));
++    }
++
++    public function test_from_should_throw_for_unknown_value(): void
++    {
++        $this->expectException(ValueError::class);
++
++        EventKind::from('concert');
++    }
++
++    public function test_cases_should_match_the_schema_enum(): void
++    {
++        $schema = (string) file_get_contents(Constants::rootPath()->join('database/schema.sql'));
++        $this->assertSame(1, preg_match("/\\bkind\\s+ENUM\\(([^)]*)\\)/", $schema, $matches));
++
++        $values = array_map(fn(string $value) => trim($value, " '"), explode(',', $matches[1]));
++
++        $this->assertSame($values, array_keys(EventKind::options()));
++    }
++}
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..df5766c 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -4,6 +4,7 @@ namespace Tests\Unit\Models\Events;
+ 
+ use App\Models\Enrollment;
+ use App\Models\Event;
++use App\Models\EventKind;
+ use App\Models\User;
+ use PDOException;
+ use PHPUnit\Framework\Attributes\DataProvider;
+@@ -139,8 +140,8 @@ class EventTest extends TestCase
+ 
+     public function test_kind_should_accept_every_enum_value(): void
+     {
+-        foreach (array_keys(Event::KINDS) as $kind) {
+-            $this->assertTrue((new Event($this->params(['kind' => $kind])))->isValid(), $kind);
++        foreach (EventKind::cases() as $kind) {
++            $this->assertTrue((new Event($this->params(['kind' => $kind->value])))->isValid(), $kind->value);
+         }
+     }
+ 
+@@ -152,6 +153,22 @@ class EventTest extends TestCase
+         $this->assertEquals('não é uma opção válida!', $event->errors('kind'));
+     }
+ 
++    public function test_kind_is_case_sensitive_and_rejects_labels(): void
++    {
++        foreach (['Lecture', 'Palestra', 'ShortCourse'] as $kind) {
++            $event = new Event($this->params(['kind' => $kind]));
++
++            $this->assertFalse($event->isValid(), $kind);
++            $this->assertEquals('não é uma opção válida!', $event->errors('kind'));
++        }
++    }
++
++    public function test_kind_label_should_use_the_enum_label(): void
++    {
++        $this->assertSame('Minicurso', (new Event($this->params(['kind' => 'short_course'])))->kindLabel());
++        $this->assertSame('Palestra', (new Event($this->params(['kind' => 'lecture'])))->kindLabel());
++    }
++
+     public function test_modality_should_accept_every_enum_value(): void
+     {
+         foreach (array_keys(Event::MODALITIES) as $modality) {
+-- 
+2.54.0 (Apple Git-157)
+
