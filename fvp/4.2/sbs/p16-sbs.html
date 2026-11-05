@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p16-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="p16-passo-a-passo-remover-só-com-código-de-confirmação-gerado-no-backend">P16
+passo a passo: Remover só com código de confirmação gerado no
+backend</h1>
+<p>Pedido típico: "para remover um Evento o sistema mostra um código de
+4 dígitos gerado na hora (finja que foi por e-mail); o admin digita o
+código e só então a remoção acontece. Errado ou em branco: avise e não
+remova". É a FVP real da 4.1 (P12) aplicada à remoção. Chance:
+média-alta. Tempo: 30-40 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/p16-remover-com-codigo-confirmacao/</code>
+(patch, bundle e árvore <code>projeto/</code>). Um commit, sobre
+<code>main</code>. Sem pré-requisito de outro cenário.</p>
+<p>Ordem = fluxo da requisição: classe de apoio (<code>lib/</code>)
+-&gt; rota -&gt; controller -&gt; views -&gt; testes. Schema não muda.
+Na prova, prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<p>Obs: o catálogo esboça <code>issue()</code>, ação <code>delete</code>
+e chave <code>event-{id}</code>; o patch usa <code>generate()</code>,
+ação <code>confirmDestroy</code> e chave <code>event.{id}</code>. Abaixo
+vale o patch.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/ConfirmationCode.php</code> (novo)</li>
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/delete.phtml</code> (novo)</li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>tests/Unit/Lib/ConfirmationCodeTest.php</code> (novo)</li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/DeleteEventCest.php</code></li>
+</ol>
+<p>Depois: <code>./run composer dump-autoload -o --strict-psr</code>,
+suíte, <code>./run phpcs</code>, <code>./run phpstan</code>.</p>
+<h2 id="1-libconfirmationcodephp-novo">1.
+<code>lib/ConfirmationCode.php</code> (novo)</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Lib<span class="ot">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * Código de confirmação de 4 dígitos para ações destrutivas (ex.: remover um Evento).</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"> *</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * O código é gerado no servidor e guardado em $_SESSION, um por chave (ex.: &quot;event.7&quot;), para que</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"> * só quem viu a página de confirmação consiga concluir a ação. Estática como FlashMessage; nos</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * testes basta usar o array $_SESSION, sem sessão real.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ConfirmationCode</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="fu">MIN</span> <span class="op">=</span> <span class="dv">1000</span><span class="ot">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="fu">MAX</span> <span class="op">=</span> <span class="dv">9999</span><span class="ot">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">SESSION_KEY</span> <span class="op">=</span> <span class="st">&#39;confirmation_codes&#39;</span><span class="ot">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">     * Gera um código novo para a chave (substitui o anterior) e o devolve.</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> generate(<span class="dt">string</span> <span class="va">$key</span>)<span class="ot">:</span> <span class="dt">int</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> <span class="fu">random_int</span>(<span class="kw">self</span>::<span class="fu">MIN</span><span class="ot">,</span> <span class="kw">self</span>::<span class="fu">MAX</span>)<span class="ot">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">SESSION_KEY</span>][<span class="va">$key</span>] <span class="op">=</span> <span class="va">$code</span><span class="ot">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$code</span><span class="ot">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> <span class="fu">current</span>(<span class="dt">string</span> <span class="va">$key</span>)<span class="ot">:</span> <span class="ot">?</span><span class="dt">int</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> <span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">SESSION_KEY</span>][<span class="va">$key</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">is_int</span>(<span class="va">$code</span>) <span class="ot">?</span> <span class="va">$code</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co">     * true só se existe código para a chave e o valor enviado é igual a ele.</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co">     * Aceita string (vinda do formulário) ou int; qualquer outro tipo é recusado.</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> check(<span class="dt">string</span> <span class="va">$key</span><span class="ot">,</span> <span class="dt">mixed</span> <span class="va">$code</span>)<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$expected</span> <span class="op">=</span> <span class="kw">self</span>::<span class="fu">current</span>(<span class="va">$key</span>)<span class="ot">;</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$expected</span> <span class="op">===</span> <span class="kw">null</span> <span class="op">||</span> <span class="op">!</span>(<span class="fu">is_string</span>(<span class="va">$code</span>) <span class="op">||</span> <span class="fu">is_int</span>(<span class="va">$code</span>))) {</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">trim</span>(<span class="dt">(string)</span> <span class="va">$code</span>) <span class="op">===</span> <span class="dt">(string)</span> <span class="va">$expected</span><span class="ot">;</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> clear(<span class="dt">string</span> <span class="va">$key</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="kw">self</span>::<span class="cn">SESSION_KEY</span>][<span class="va">$key</span>])<span class="ot">;</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Classe pequena em <code>lib/</code>, estática como
+<code>FlashMessage</code>: lógica fora do controller, testável só com o
+array <code>$_SESSION</code> (sem <code>session_start</code>).</li>
+<li><code>random_int</code> no <strong>servidor</strong>, guardado na
+sessão. O form nunca leva o valor certo (nem em <code>hidden</code>):
+<code>DELETE</code> forjado sem passar pela tela é recusado.</li>
+<li>Uma chave por Evento: duas abas não misturam códigos; código do
+Evento A não remove o B.</li>
+<li><code>check</code> aceita só string/int:
+<code>confirmation_code[]=x</code> vira <code>false</code>, sem
+<code>TypeError</code>. Compara <code>===</code> entre strings (nada de
+<code>==</code>).</li>
+<li>Namespace <code>Lib</code> em <code>lib/</code>: PSR-4. Classe nova
+-&gt; <code>composer dump-autoload</code>.</li>
+<li><code>lib/</code> fora do <code>phpstan</code>: tipe tudo; o teste
+unitário cobre.</li>
+</ul>
+<h2 id="2-configroutesphp">2. <code>config/routes.php</code></h2>
+<p>No grupo <code>admin</code>, depois de
+<code>admin.events.create</code> e <strong>antes</strong> de
+<code>GET /admin/events/{id}</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        Route::post(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;create&#39;</span>])-&gt;name(<span class="st">&#39;admin.events.create&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Confirmação de remoção: antes de &#39;{id}&#39;, como &#39;new&#39;.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/admin/events/{id}/delete&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;confirmDestroy&#39;</span>])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.delete&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/admin/events/{id}&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;show&#39;</span>])-&gt;name(<span class="st">&#39;admin.events.show&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>GET .../delete</code> só mostra a tela (não muda nada); a ação
+continua no <code>DELETE /admin/events/{id}</code> (RESTful).</li>
+<li>Grupo <code>admin</code>: middleware já protege.</li>
+<li>Rotas fixas antes do <code>{id}</code>: padrão do projeto (mesmo
+cuidado de <code>new</code>). Hoje <code>1/delete</code> não casaria com
+<code>{id}</code>, mas mantenha a ordem.</li>
+<li>Nome <code>admin.events.delete</code> segue o padrão
+<code>admin.events.*</code>.</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>a) <code>use</code>, depois de
+<code>use Core\Http\Request;</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\ConfirmationCode<span class="ot">;</span></span></code></pre></div>
+<p>b) Método novo, logo antes de <code>destroy</code> (depois do fim de
+<code>update</code>):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Página de confirmação da remoção: gera um código novo, guardado na sessão, e o mostra</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * na tela (simula o envio por e-mail).</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> confirmDestroy(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;findEvent(<span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;eventNotFound()<span class="ot">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="va">$this</span>-&gt;confirmationKey(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="st">&#39;Remover Evento&#39;</span><span class="ot">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;render(<span class="st">&#39;admin/events/delete&#39;</span><span class="ot">,</span> <span class="fu">compact</span>(<span class="st">&#39;event&#39;</span><span class="ot">,</span> <span class="st">&#39;code&#39;</span><span class="ot">,</span> <span class="st">&#39;title&#39;</span>))<span class="ot">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>c) Em <code>destroy</code>, depois do
+<code>if ($event === null) { ... }</code> e antes de
+<code>if ($event-&gt;safeDestroy())</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O código vale para uma única tentativa, certa ou errada: sem isso, DELETEs repetidos</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>        <span class="co">// poderiam testar os 9000 valores. Depois de um erro, a página de confirmação gera outro.</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$key</span> <span class="op">=</span> <span class="va">$this</span>-&gt;confirmationKey(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$valid</span> <span class="op">=</span> ConfirmationCode::check(<span class="va">$key</span><span class="ot">,</span> <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;confirmation_code&#39;</span>))<span class="ot">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::clear(<span class="va">$key</span>)<span class="ot">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$valid</span>) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Código de confirmação inválido! O evento não foi removido.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.delete&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span>-&gt;safeDestroy()) {</span></code></pre></div>
+<p>d) Helper privado, depois de <code>findEvent</code> e antes de
+<code>eventNotFound</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> confirmationKey(Event <span class="va">$event</span>)<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>confirmDestroy</code> reusa
+<code>findEvent</code>/<code>eventNotFound</code> (id inexistente -&gt;
+flash + listagem). Cada visita gera código novo.</li>
+<li><code>$title</code> no <code>compact</code>: o layout imprime o
+<code>&lt;h1&gt;</code>; faltando, 500.</li>
+<li><code>clear</code> <strong>sempre</strong> depois do
+<code>check</code>: uso único. Se o errado não invalidasse, um script
+testaria os 9000 valores com o mesmo código.</li>
+<li>Errado -&gt; PRG de volta para <code>admin.events.delete</code>
+(gera outro).</li>
+<li><code>return</code> depois do <code>redirectTo</code>: em produção
+ele dá <code>exit</code>, mas no teste de controller só imprime e
+seguiria para o <code>safeDestroy</code>.</li>
+<li>Certo -&gt; fluxo antigo: <code>safeDestroy</code> mantém a regra
+P03 (Evento com Inscrições não sai).</li>
+<li><code>confirmationKey</code> num lugar só: gerar e conferir usam a
+mesma chave.</li>
+</ul>
+<h2 id="4-appviewsadmineventsdeletephtml-novo">4.
+<code>app/views/admin/events/delete.phtml</code> (novo)</h2>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"> * Confirmação da remoção do Evento.</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"> *</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@var</span><span class="co"> </span><span class="do">\App\Models\Event</span><span class="co"> </span><span class="do">$event</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@var</span><span class="co"> </span><span class="do">int</span><span class="co"> </span><span class="do">$code</span><span class="co"> </span><span class="do">código</span><span class="co"> </span><span class="do">gerado</span><span class="co"> </span><span class="do">no</span><span class="co"> </span><span class="do">servidor</span><span class="co"> </span><span class="do">e</span><span class="co"> </span><span class="do">guardado</span><span class="co"> </span><span class="do">na</span><span class="co"> </span><span class="do">sessão</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="kw">?&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>p<span class="op">&gt;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    Você está removendo o evento <span class="op">&lt;</span>strong<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;title) <span class="kw">?&gt;</span><span class="op">&lt;/</span>strong<span class="op">&gt;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    (<span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_on)) <span class="kw">?&gt;</span>)<span class="op">.</span> Esta ação não pode ser desfeita<span class="op">.</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>p<span class="op">&gt;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;alert alert-warning&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    Código de confirmação<span class="ot">:</span> <span class="op">&lt;</span>strong id<span class="op">=</span><span class="st">&quot;confirmation_code_value&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$code</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>strong<span class="op">&gt;</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;small&quot;</span><span class="op">&gt;</span>Em produção este código seria enviado por e<span class="op">-</span><span class="fu">mail</span><span class="ot">;</span> aqui ele aparece na tela<span class="op">.&lt;/</span>div<span class="op">&gt;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>div<span class="op">&gt;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>form action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.destroy&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span> novalidate<span class="op">&gt;</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;DELETE&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;mb-3&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>label <span class="cf">for</span><span class="op">=</span><span class="st">&quot;confirmation_code&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-label&quot;</span><span class="op">&gt;</span>Digite o código para confirmar<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;text&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-control&quot;</span> id<span class="op">=</span><span class="st">&quot;confirmation_code&quot;</span> name<span class="op">=</span><span class="st">&quot;confirmation_code&quot;</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>            inputmode<span class="op">=</span><span class="st">&quot;numeric&quot;</span> maxlength<span class="op">=</span><span class="st">&quot;4&quot;</span> autocomplete<span class="op">=</span><span class="st">&quot;off&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>div<span class="op">&gt;</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-danger&quot;</span><span class="op">&gt;</span>Remover<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.show&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Cancelar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>form<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Nome do arquivo = <code>render('admin/events/delete')</code>.</li>
+<li>View burra: só mostra <code>$event</code> e <code>$code</code>
+recebidos.</li>
+<li>Código num <code>&lt;strong id="confirmation_code_value"&gt;</code>:
+o Cest lê com <code>grabTextFrom</code>. Campo digitável vazio; valor
+certo <strong>não</strong> vai em <code>hidden</code>.</li>
+<li><code>_method=DELETE</code>: form HTML só faz POST; o framework
+troca o verbo.</li>
+<li><code>htmlspecialchars</code> no título; <code>(int)</code> no
+código.</li>
+<li>Mostrar o código na tela não protege contra o próprio usuário: é
+prova de leitura antes de ação irreversível (pedido da 4.1).</li>
+</ul>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>Célula de ações, depois do link "Editar": o form <code>DELETE</code>
+vira link.</p>
+<p>Sai:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.destroy&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;DELETE&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-danger&quot;</span><span class="op">&gt;</span>Remover<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;/</span>form<span class="op">&gt;</span></span></code></pre></div>
+<p>Entra:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-danger&quot;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                           href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.delete&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Remover<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: o <code>DELETE</code> direto da listagem passa a ser
+recusado (sem código). "Remover" só abre a tela de confirmação
+(GET).</p>
+<h2 id="6-testsunitlibconfirmationcodetestphp-novo">6.
+<code>tests/Unit/Lib/ConfirmationCodeTest.php</code> (novo)</h2>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Unit\Lib<span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\ConfirmationCode<span class="ot">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\TestCase<span class="ot">;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ConfirmationCodeTest <span class="kw">extends</span> TestCase</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;confirmation_codes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> tearDown()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;confirmation_codes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_generate_should_return_a_four_digit_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">0</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;</span> <span class="dv">200</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>            <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertGreaterThanOrEqual(<span class="dv">1000</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertLessThanOrEqual(<span class="dv">9999</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_generate_should_store_the_code_in_the_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$code</span><span class="ot">,</span> ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.1&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$code</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;confirmation_codes&#39;</span>][<span class="st">&#39;event.1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_current_should_be_null_without_a_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.1&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_each_key_should_have_its_own_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$first</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::generate(<span class="st">&#39;event.2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$first</span><span class="ot">,</span> ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.1&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$first</span>))<span class="ot">;</span></span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.2&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_should_accept_the_right_code_as_string_or_int()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$code</span>))<span class="ot">;</span></span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="st">&quot; </span>{<span class="va">$code</span>}<span class="st"> &quot;</span>))<span class="ot">;</span></span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="va">$code</span>))<span class="ot">;</span></span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_should_reject_a_wrong_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$wrong</span> <span class="op">=</span> <span class="va">$code</span> <span class="op">===</span> <span class="dv">9999</span> <span class="ot">?</span> <span class="dv">1000</span> <span class="ot">:</span> <span class="va">$code</span> <span class="op">+</span> <span class="dv">1</span><span class="ot">;</span></span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$wrong</span>))<span class="ot">;</span></span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="st">&#39;&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="kw">null</span>))<span class="ot">;</span></span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> [<span class="dt">(string)</span> <span class="va">$code</span>]))<span class="ot">;</span></span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_should_reject_the_code_of_another_key()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.2&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$code</span>))<span class="ot">;</span></span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_check_without_a_generated_code_should_be_false()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="st">&#39;1234&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_generate_again_should_replace_the_previous_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$second</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-89"><a href="#cb10-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-90"><a href="#cb10-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$second</span><span class="ot">,</span> ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.1&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-91"><a href="#cb10-91" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-92"><a href="#cb10-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-93"><a href="#cb10-93" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_clear_should_remove_only_the_given_key()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-94"><a href="#cb10-94" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-95"><a href="#cb10-95" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&#39;event.1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-96"><a href="#cb10-96" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::generate(<span class="st">&#39;event.2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-97"><a href="#cb10-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-98"><a href="#cb10-98" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::clear(<span class="st">&#39;event.2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-99"><a href="#cb10-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-100"><a href="#cb10-100" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&#39;event.2&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-101"><a href="#cb10-101" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(ConfirmationCode::check(<span class="st">&#39;event.2&#39;</span><span class="ot">,</span> <span class="st">&#39;1234&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-102"><a href="#cb10-102" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(ConfirmationCode::check(<span class="st">&#39;event.1&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$code</span>))<span class="ot">;</span></span>
+<span id="cb10-103"><a href="#cb10-103" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-104"><a href="#cb10-104" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Estende <code>PHPUnit\Framework\TestCase</code> puro: não precisa de
+banco.</li>
+<li><code>$_SESSION</code> sobrevive entre testes: limpe no
+<code>setUp</code>/<code>tearDown</code>.</li>
+<li>Cobre faixa, sessão, chave por Evento, string/int/espaços, errado,
+vazio, <code>null</code>, array, outra chave, sem código, substituição,
+<code>clear</code>.</li>
+<li><code>$code === 9999 ? 1000 : $code + 1</code>: errado garantido,
+sem sair da faixa.</li>
+</ul>
+<h2 id="7-testsintegrationcontrollersadmineventscontrollertestphp">7.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) <code>use</code>, depois de
+<code>use Lib\Authentication\Auth;</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\ConfirmationCode<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>tearDown</code>, depois de
+<code>unset($_SESSION['flash']);</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;confirmation_codes&#39;</span>])<span class="ot">;</span></span></code></pre></div>
+<p>c) Os dois testes de <code>destroy</code> que já existiam
+(<code>test_destroy_removes_event_without_enrollments</code> e o
+seguinte, com <code>$this-&gt;enroll($event)</code>) geram o código e
+mandam no <code>params</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$code</span>]</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span></code></pre></div>
+<p>d) Testes novos, depois desses e antes do helper com
+<code>@param array&lt;string, mixed&gt; $overrides</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- remover com código de confirmação ------------------- */</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_remove_button_links_to_the_confirmation_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;href=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/delete</span><span class="sc">\&quot;</span><span class="st">&gt;Remover&lt;/a&gt;&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;value=&quot;DELETE&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_confirm_destroy_shows_a_code_stored_in_the_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento a Remover&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;confirmDestroy&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::<span class="fu">current</span>(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Remover Evento\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento a Remover&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;&lt;strong id=</span><span class="sc">\&quot;</span><span class="st">confirmation_code_value</span><span class="sc">\&quot;</span><span class="st">&gt;</span>{<span class="va">$code</span>}<span class="st">&lt;/strong&gt;&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="sc">\&quot;</span><span class="st"> method=</span><span class="sc">\&quot;</span><span class="st">post</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;_method&quot; value=&quot;DELETE&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;confirmation_code&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_confirm_destroy_with_unknown_id_redirects_to_index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;confirmDestroy&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="dv">9999</span>])<span class="ot">;</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_without_code_keeps_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a>        ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/delete&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Código de confirmação inválido! O evento não foi removido.&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_with_wrong_code_keeps_the_event_and_invalidates_the_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$wrong</span> <span class="op">=</span> <span class="va">$code</span> <span class="op">===</span> <span class="dv">9999</span> <span class="ot">?</span> <span class="dv">1000</span> <span class="ot">:</span> <span class="va">$code</span> <span class="op">+</span> <span class="dv">1</span><span class="ot">;</span></span>
+<span id="cb14-54"><a href="#cb14-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-55"><a href="#cb14-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-56"><a href="#cb14-56" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-57"><a href="#cb14-57" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-58"><a href="#cb14-58" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$wrong</span>]</span>
+<span id="cb14-59"><a href="#cb14-59" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-60"><a href="#cb14-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-61"><a href="#cb14-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-62"><a href="#cb14-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/delete&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-63"><a href="#cb14-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Código de confirmação inválido! O evento não foi removido.&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-64"><a href="#cb14-64" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O código errado gasta a tentativa: nem o código certo vale mais.</span></span>
+<span id="cb14-65"><a href="#cb14-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>))<span class="ot">;</span></span>
+<span id="cb14-66"><a href="#cb14-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-67"><a href="#cb14-67" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-68"><a href="#cb14-68" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-69"><a href="#cb14-69" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$code</span>]</span>
+<span id="cb14-70"><a href="#cb14-70" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-71"><a href="#cb14-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-72"><a href="#cb14-72" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-73"><a href="#cb14-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-74"><a href="#cb14-74" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_without_visiting_the_confirmation_page_keeps_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-75"><a href="#cb14-75" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-76"><a href="#cb14-76" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-77"><a href="#cb14-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-78"><a href="#cb14-78" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-79"><a href="#cb14-79" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-80"><a href="#cb14-80" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-81"><a href="#cb14-81" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="st">&#39;1234&#39;</span>]</span>
+<span id="cb14-82"><a href="#cb14-82" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-83"><a href="#cb14-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-84"><a href="#cb14-84" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-85"><a href="#cb14-85" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-86"><a href="#cb14-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-87"><a href="#cb14-87" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_with_the_code_of_another_event_keeps_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-88"><a href="#cb14-88" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-89"><a href="#cb14-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Alvo&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-90"><a href="#cb14-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Outro&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-91"><a href="#cb14-91" aria-hidden="true" tabindex="-1"></a>        <span class="va">$otherCode</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$other</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-92"><a href="#cb14-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-93"><a href="#cb14-93" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-94"><a href="#cb14-94" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-95"><a href="#cb14-95" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-96"><a href="#cb14-96" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$otherCode</span>]</span>
+<span id="cb14-97"><a href="#cb14-97" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-98"><a href="#cb14-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-99"><a href="#cb14-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-100"><a href="#cb14-100" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-101"><a href="#cb14-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-102"><a href="#cb14-102" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_with_right_code_removes_and_clears_the_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-103"><a href="#cb14-103" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-104"><a href="#cb14-104" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-105"><a href="#cb14-105" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-106"><a href="#cb14-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-107"><a href="#cb14-107" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-108"><a href="#cb14-108" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-109"><a href="#cb14-109" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-110"><a href="#cb14-110" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$code</span>]</span>
+<span id="cb14-111"><a href="#cb14-111" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-112"><a href="#cb14-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-113"><a href="#cb14-113" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-114"><a href="#cb14-114" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>))<span class="ot">;</span></span>
+<span id="cb14-115"><a href="#cb14-115" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento removido com sucesso!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-116"><a href="#cb14-116" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-117"><a href="#cb14-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-118"><a href="#cb14-118" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_with_right_code_still_keeps_event_with_enrollments()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-119"><a href="#cb14-119" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-120"><a href="#cb14-120" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb14-121"><a href="#cb14-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb14-122"><a href="#cb14-122" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> ConfirmationCode::generate(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb14-123"><a href="#cb14-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-124"><a href="#cb14-124" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb14-125"><a href="#cb14-125" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb14-126"><a href="#cb14-126" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-127"><a href="#cb14-127" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$code</span>]</span>
+<span id="cb14-128"><a href="#cb14-128" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-129"><a href="#cb14-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-130"><a href="#cb14-130" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb14-131"><a href="#cb14-131" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(ConfirmationCode::<span class="fu">current</span>(<span class="st">&quot;event.</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>))<span class="ot">;</span></span>
+<span id="cb14-132"><a href="#cb14-132" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é possível remover um evento com inscrições (1)!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-133"><a href="#cb14-133" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Testes antigos de <code>destroy</code> (<code>ECT:242-270</code>)
+quebram sem código: gere com
+<code>ConfirmationCode::generate(...)</code> antes do
+<code>delete</code>.</li>
+<li><code>tearDown</code> limpa <code>confirmation_codes</code>:
+<code>$_SESSION</code> sobrevive entre testes.</li>
+<li>Novos cobrem: link na listagem, tela com código da sessão, id
+inexistente, sem código, errado (e invalida o certo), sem visitar a
+tela, código de outro Evento, certo (remove e limpa), certo mas com
+Inscrições (P03 continua).</li>
+</ul>
+<h2 id="8-testsintegrationaccesseventsaccesstestphp">8.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) Docblock e array de <code>eventRoutes()</code>, depois de
+<code>admin.events.destroy</code>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> <span class="kw">As</span> <span class="dv">9</span> rotas admin<span class="op">.</span>events<span class="op">.*</span> (index<span class="ot">,</span> paginate<span class="ot">,</span> <span class="kw">new</span><span class="ot">,</span> create<span class="ot">,</span> show<span class="ot">,</span> edit<span class="ot">,</span> update<span class="ot">,</span> destroy<span class="ot">,</span> delete)<span class="op">.</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.destroy&#39;</span> =&gt; [<span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/1&#39;</span>]<span class="ot">,</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.delete&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/1/delete&#39;</span>]<span class="ot">,</span></span></code></pre></div>
+<p>b) Testes novos, antes de
+<code>test_admin_should_be_redirected_to_index_when_event_does_not_exist</code>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_access_the_delete_confirmation_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)-&gt;get(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/delete&quot;</span>)<span class="ot">;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">200</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Remover Evento&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$response</span>-&gt;getBody())<span class="ot">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/id=&quot;confirmation_code_value&quot;&gt;\d{4}&lt;/&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$response</span>-&gt;getBody())<span class="ot">;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_remove_only_with_the_code_shown_on_the_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$uri</span> <span class="op">=</span> <span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">;</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$wrong</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="va">$uri</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="st">&#39;0&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;</span>{<span class="va">$uri</span>}<span class="st">/delete&quot;</span><span class="ot">,</span> <span class="va">$wrong</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$this</span>-&gt;event-&gt;id))<span class="ot">;</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> <span class="dt">(string)</span> <span class="va">$client</span>-&gt;get(<span class="st">&quot;</span>{<span class="va">$uri</span>}<span class="st">/delete&quot;</span>)-&gt;getBody()<span class="ot">;</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="fu">preg_match</span>(<span class="st">&#39;/id=&quot;confirmation_code_value&quot;&gt;(\d{4})&lt;/&#39;</span><span class="ot">,</span> <span class="va">$page</span><span class="ot">,</span> <span class="va">$matches</span>))<span class="ot">;</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$right</span> <span class="op">=</span> <span class="va">$client</span>-&gt;post(<span class="va">$uri</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;DELETE&#39;</span><span class="ot">,</span> <span class="st">&#39;confirmation_code&#39;</span> =&gt; <span class="va">$matches</span>[<span class="dv">1</span>]]])<span class="ot">;</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> <span class="va">$right</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(Event::findById(<span class="va">$this</span>-&gt;event-&gt;id))<span class="ot">;</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>eventRoutes()</code> alimenta "sem sessão -&gt;
+<code>/login</code>" e "Participante -&gt; <code>/dashboard</code>":
+incluir a rota já testa o middleware.</li>
+<li>Teste HTTP com sessão real: errado volta à tela; lê o código do HTML
+e remove. Prova o fluxo de ponta a ponta.</li>
+</ul>
+<h2 id="9-testsacceptanceadmineventsdeleteeventcestphp">9.
+<code>tests/Acceptance/admin/events/DeleteEventCest.php</code></h2>
+<p>a) Cenário novo, antes do helper <code>clickRemove</code>:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> deleteWithWrongCodeKeepsTheEvent(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">2</span>]<span class="ot">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Remoção do registro com código de confirmação errado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Remover&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/delete&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> (<span class="dt">int</span>) <span class="va">$page</span>-&gt;grabTextFrom(<span class="st">&#39;#confirmation_code_value&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#confirmation_code&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> (<span class="va">$code</span> <span class="op">===</span> <span class="dv">9999</span> <span class="ot">?</span> <span class="dv">1000</span> <span class="ot">:</span> <span class="va">$code</span> <span class="op">+</span> <span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Remover&#39;</span><span class="ot">,</span> <span class="st">&#39;form&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/delete&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Código de confirmação inválido! O evento não foi removido.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Remover Evento&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertNotNull(Event::findById((<span class="dt">int</span>) <span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertCount(<span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) <code>clickRemove</code> (substitui o corpo e o comentário
+antigo):</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * &quot;Remover&quot; da listagem leva à página de confirmação; o código gerado no servidor</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * aparece na tela e é digitado no campo antes de enviar o DELETE.</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> clickRemove(AcceptanceTester <span class="va">$page</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$title</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Remover&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="va">$title</span>))<span class="ot">;</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Remover Evento&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$title</span>)<span class="ot">;</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> <span class="va">$page</span>-&gt;grabTextFrom(<span class="st">&#39;#confirmation_code_value&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertMatchesRegularExpression(<span class="st">&#39;/^\d{4}$/&#39;</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#confirmation_code&#39;</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Remover&#39;</span><span class="ot">,</span> <span class="st">&#39;form&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Os Cests de remoção que já existiam usam <code>clickRemove</code>:
+mudar só o helper adapta todos ao fluxo novo.</li>
+<li><code>click('Remover', 'form')</code>: o contexto <code>form</code>
+garante o clique no botão de envio da confirmação.</li>
+<li>Cenário novo: código errado mantém o Evento e volta à tela.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span>   <span class="co"># classe nova em lib/</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Lib/ConfirmationCodeTest.php</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/EventsAccessTest.php</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Schema não mudou: <code>./run db:populate</code> não é
+obrigatório.</p>
+<p>No navegador: admin, listagem, "Remover" -&gt; tela com código -&gt;
+digitar errado -&gt; flash "Código de confirmação inválido!" e código
+novo -&gt; digitar certo -&gt; listagem sem o Evento.</p>
+<p>Commit (inglês):
+<code>feat: Require a confirmation code to remove an Event</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Código na sessão <strong>por Evento</strong>
+(<code>event.{id}</code>): sem a chave, confirmar o Evento 2 removeria o
+3.</li>
+<li>Apague o código depois de conferir, certo <strong>ou</strong> errado
+(uso único): evita força bruta trivial. Próxima visita gera outro.</li>
+<li>Código certo em <code>&lt;input type="hidden"&gt;</code> ou na URL:
+form "confirma sozinho". O valor certo só existe na sessão.</li>
+<li><code>destroy</code> antigo (form direto da listagem) deixa de
+funcionar: testes de <code>ECT:242-270</code> precisam gerar o código
+antes.</li>
+<li>Mostrar o código na tela é o pedido da 4.1 ("o backend devolve"):
+não é segurança contra o usuário, é prova de que ele leu. Diga
+isso.</li>
+<li><code>return</code> depois do <code>redirectTo</code> no código
+errado.</li>
+<li><code>==</code> em vez de <code>===</code>: comparação frouxa.</li>
+<li><code>getParam('confirmation_code')</code> pode vir
+<code>null</code> ou array: <code>check</code> trata.</li>
+<li><code>$_SESSION</code> sobrevive entre testes: limpe
+<code>confirmation_codes</code> no <code>tearDown</code>.</li>
+<li><code>lib/</code> fora do <code>phpstan</code>: tipe tudo; teste
+unitário cobre.</li>
+<li>Com P12 na base, reaproveite a mesma classe para o login (chave
+<code>login.{user_id}</code>).</li>
+</ul>
+</body>
+</html>

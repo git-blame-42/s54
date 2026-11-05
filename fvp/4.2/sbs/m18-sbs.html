@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>m18-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="m18-passo-a-passo-janela-de-datas-antecedência-mínima-e-limite-máximo">M18
+passo a passo: Janela de datas: antecedência mínima e limite máximo</h1>
+<p>Pedido típico: "Evento tem que ser cadastrado com pelo menos 3 dias
+de antecedência e no máximo 365 dias à frente. Hoje aceita 31/12/9999.
+Mude a validação do framework e escreva os testes." Chance: média-alta.
+Tempo: 15-25 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/m18-janela-de-datas/</code>
+(patch, bundle e árvore <code>projeto/</code>). Pré-requisitos: nenhum
+(base <code>main</code>). Schema não muda.</p>
+<p>Forma do exemplo: estende <code>notPastDate</code> com
+<code>int $minDays = 0, ?int $maxDays = null</code> no fim (em vez de
+função nova), constantes <code>STARTS_ON_MIN_DAYS = 3</code> e
+<code>STARTS_ON_MAX_DAYS = 365</code> no <code>Event</code>.</p>
+<p>Ordem = fluxo da requisição: lib de validação -&gt; model -&gt; view
+-&gt; testes. Na prova, prioridade: funcionar no navegador, depois
+testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Validations.php</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/BaseEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>. Sem <code>db:populate</code>
+(schema igual).</p>
+<h2 id="1-libvalidationsphp">1. <code>lib/Validations.php</code></h2>
+<p>Três pontos em <code>notPastDate</code> (linhas ~109-138).</p>
+<p>a) Docblock, depois da primeira linha ("A data não pode ser anterior
+a hoje..."):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> Janela opcional<span class="ot">:</span> <span class="va">$minDays</span> exige antecedência mínima (a data deve ser <span class="op">&gt;=</span> hoje <span class="op">+</span> <span class="va">$minDays</span> dias) e</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> <span class="va">$maxDays</span> limita o quanto ela pode estar à frente (<span class="op">&lt;=</span> hoje <span class="op">+</span> <span class="va">$maxDays</span> dias)<span class="op">.</span> Com os padrões</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> (<span class="dv">0</span> e <span class="kw">null</span>) a regra é só <span class="st">&quot;não passada&quot;</span><span class="ot">,</span> sem limite máximo<span class="op">.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span></span></code></pre></div>
+<p>b) Assinatura: dois parâmetros novos <strong>no fim</strong>, depois
+de <code>$now</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> notPastDate(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$attribute</span><span class="ot">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$obj</span><span class="ot">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$format</span> <span class="op">=</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="ot">?</span>\<span class="bu">DateTimeImmutable</span> <span class="va">$now</span> <span class="op">=</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> <span class="va">$minDays</span> <span class="op">=</span> <span class="dv">0</span><span class="ot">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="ot">?</span><span class="dt">int</span> <span class="va">$maxDays</span> <span class="op">=</span> <span class="kw">null</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    ) {</span></code></pre></div>
+<p>c) Depois do <code>if ($date &lt; $today)</code> ("não pode estar no
+passado!"), antes do <code>return true;</code>, e o helper
+<code>days()</code> logo abaixo do método:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$minDays</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> <span class="va">$date</span> <span class="op">&lt;</span> <span class="va">$today</span>-&gt;modify(<span class="st">&quot;+</span>{<span class="va">$minDays</span>}<span class="st"> days&quot;</span>)) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$obj</span>-&gt;addError(<span class="va">$attribute</span><span class="ot">,</span> <span class="st">&#39;deve ter pelo menos &#39;</span> <span class="op">.</span> <span class="kw">self</span>::days(<span class="va">$minDays</span>) <span class="op">.</span> <span class="st">&#39; de antecedência!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$maxDays</span> <span class="op">!==</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="va">$date</span> <span class="op">&gt;</span> <span class="va">$today</span>-&gt;modify(<span class="st">&quot;+</span>{<span class="va">$maxDays</span>}<span class="st"> days&quot;</span>)) {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="va">$obj</span>-&gt;addError(<span class="va">$attribute</span><span class="ot">,</span> <span class="st">&#39;não pode passar de &#39;</span> <span class="op">.</span> <span class="kw">self</span>::days(<span class="va">$maxDays</span>) <span class="op">.</span> <span class="st">&#39; a partir de hoje!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="ot">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** &quot;1 dia&quot;, &quot;3 dias&quot;. */</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">function</span> days(<span class="dt">int</span> <span class="va">$days</span>)<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$days</span> <span class="op">===</span> <span class="dv">1</span> <span class="ot">?</span> <span class="st">&#39;1 dia&#39;</span> <span class="ot">:</span> <span class="st">&quot;</span>{<span class="va">$days</span>}<span class="st"> dias&quot;</span><span class="ot">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Regra reutilizável mora no <code>Validations</code>; o número mora
+no model.</li>
+<li>Parâmetros no fim com padrão neutro (<code>0</code>,
+<code>null</code>): toda chamada antiga de <code>notPastDate</code>
+continua igual (9999-12-31 ainda passa sem janela).</li>
+<li>Ordem dos checks: inválida -&gt; passado -&gt; antecedência -&gt;
+limite. Data passada mantém "não pode estar no passado!" (testes da base
+contam com ela).</li>
+<li><code>$today</code> já vem do método (fuso padrão,
+<code>setTime(0, 0)</code>); <code>modify</code> soma dias de
+calendário. Limite inclusivo: +3 e +365 valem.</li>
+<li><code>$now</code> injetável (já existia) deixa o teste de limite
+determinístico.</li>
+<li><code>days()</code> só faz o singular ("1 dia").</li>
+</ul>
+<p>Armadilha: compare com <code>$today-&gt;modify("+N days")</code>, não
+com <code>strtotime</code></p>
+<ul>
+<li>86400 s.</li>
+</ul>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>a) Constantes, depois do array <code>AUDIENCES</code> e antes de
+<code>protected static string $table</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Antecedência mínima, em dias, para a data do Evento (hoje + 3 em diante). */</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">STARTS_ON_MIN_DAYS</span> <span class="op">=</span> <span class="dv">3</span><span class="ot">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Limite máximo, em dias, para a data do Evento (até hoje + 365). */</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">STARTS_ON_MAX_DAYS</span> <span class="op">=</span> <span class="dv">365</span><span class="ot">;</span></span></code></pre></div>
+<p>b) <code>validates()</code>, bloco de <code>starts_on</code>:
+renomeie a chamada:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>            Validations::validDate(<span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesStartsOnWindow()<span class="ot">;</span></span></code></pre></div>
+<p>c) Método privado <code>validatesStartsOnNotPast</code> vira
+<code>validatesStartsOnWindow</code>. Mantém o
+<code>if (!$this-&gt;newRecord())</code> do topo; troca só a última
+linha:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * A data deve ficar na janela de hoje + STARTS_ON_MIN_DAYS até hoje + STARTS_ON_MAX_DAYS dias ao</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * criar. Na edição, só é cobrada quando `starts_on` muda: assim um Evento que já aconteceu (ou que</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * está a menos de 3 dias) ainda pode ter a descrição, o local etc. corrigidos.</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validatesStartsOnWindow()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// ... if (!$this-&gt;newRecord()) { ... return; } igual à base</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        Validations::notPastDate(</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span><span class="ot">,</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>            minDays<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">STARTS_ON_MIN_DAYS</span><span class="ot">,</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>            maxDays<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">STARTS_ON_MAX_DAYS</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Validação no model, nunca no controller. Controller não muda.</li>
+<li>Constante: professor pede "5 dias" amanhã, só ela muda. A view
+também lê dali.</li>
+<li>Argumentos nomeados pulam <code>$format</code> e <code>$now</code>
+sem repetir padrões.</li>
+<li>Fica dentro do método que só valida no create ou quando a data muda:
+Evento a 2 dias ainda pode ter a descrição corrigida.</li>
+</ul>
+<h2 id="3-appviewsadminevents_formphtml">3.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Bloco de <code>starts_on</code> (linhas ~70-76).
+<code>min</code>/<code>max</code> entre o <code>name</code> e o
+<code>value</code>; <code>form-text</code> depois do
+<code>$feedback</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;date&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-control&lt;?= </span><span class="va">$invalid</span><span class="st">(&#39;starts_on&#39;) ?&gt;&quot;</span> id<span class="op">=</span><span class="st">&quot;event_starts_on&quot;</span> name<span class="op">=</span><span class="st">&quot;event[starts_on]&quot;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>            <span class="fu">min</span><span class="op">=</span><span class="st">&quot;&lt;?= date(&#39;Y-m-d&#39;, strtotime(&#39;+&#39; . Event::STARTS_ON_MIN_DAYS . &#39; days&#39;)) ?&gt;&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>            <span class="fu">max</span><span class="op">=</span><span class="st">&quot;&lt;?= date(&#39;Y-m-d&#39;, strtotime(&#39;+&#39; . Event::STARTS_ON_MAX_DAYS . &#39; days&#39;)) ?&gt;&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>            value<span class="op">=</span><span class="st">&quot;&lt;?= htmlspecialchars((string) </span><span class="va">$event</span>-&gt;starts_on<span class="st">) ?&gt;&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$feedback</span>(<span class="st">&#39;starts_on&#39;</span>) <span class="kw">?&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-text&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>            De <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> Event::<span class="cn">STARTS_ON_MIN_DAYS</span> <span class="kw">?&gt;</span> a <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> Event::<span class="cn">STARTS_ON_MAX_DAYS</span> <span class="kw">?&gt;</span> dias a partir de hoje<span class="op">.</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;/</span>div<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>use App\Models\Event;</code> já está no topo do arquivo.</li>
+<li><code>min</code>/<code>max</code> = só UX do seletor. O form tem
+<code>novalidate</code> (<code>_form.phtml:16</code>): quem barra é o
+<code>validates()</code>.</li>
+<li>Números lidos da constante: view burra, sem número mágico.</li>
+<li>Opcional na prova; o teste de integração do exemplo confere.</li>
+</ul>
+<p>Armadilha: sem <code>novalidate</code>,
+<code>min</code>/<code>max</code> travariam o envio (e os Cests de data
+inválida) e a edição de Evento já próximo.</p>
+<h2 id="4-testsunitlibvalidationsnumberanddatevalidationstestphp">4.
+<code>tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</code></h2>
+<p>Depois de
+<code>test_not_past_date_should_accept_a_custom_format</code> (linha
+~118) e antes do bloco <code>fuso America/Sao_Paulo</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- janela: $minDays e $maxDays ------------------- */</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_not_past_date_without_window_should_accept_any_future_date()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;9999-12-31&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model))<span class="ot">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_not_past_date_should_require_the_minimum_advance()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$now</span> <span class="op">=</span> <span class="kw">new</span> \<span class="bu">DateTimeImmutable</span>(<span class="st">&#39;2026-11-05 10:00:00&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;2026-11-05&#39;</span><span class="ot">,</span> <span class="st">&#39;2026-11-07&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="va">$value</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">3</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter pelo menos 3 dias de antecedência!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;day&#39;</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2026-11-08&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">3</span>))<span class="ot">;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_not_past_date_with_minimum_advance_should_keep_the_past_message()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$now</span> <span class="op">=</span> <span class="kw">new</span> \<span class="bu">DateTimeImmutable</span>(<span class="st">&#39;2026-11-05 10:00:00&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2026-11-04&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">3</span>))<span class="ot">;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode estar no passado!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;day&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_not_past_date_should_reject_dates_after_the_maximum()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$now</span> <span class="op">=</span> <span class="kw">new</span> \<span class="bu">DateTimeImmutable</span>(<span class="st">&#39;2026-11-05 10:00:00&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2027-11-05&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> maxDays<span class="ot">:</span> <span class="dv">365</span>))<span class="ot">;</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;2027-11-06&#39;</span><span class="ot">,</span> <span class="st">&#39;9999-12-31&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="va">$value</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> maxDays<span class="ot">:</span> <span class="dv">365</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode passar de 365 dias a partir de hoje!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;day&#39;</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_not_past_date_window_messages_should_use_singular_for_one_day()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$now</span> <span class="op">=</span> <span class="kw">new</span> \<span class="bu">DateTimeImmutable</span>(<span class="st">&#39;2026-11-05 10:00:00&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2026-11-05&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">1</span><span class="ot">,</span> maxDays<span class="ot">:</span> <span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter pelo menos 1 dia de antecedência!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;day&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2026-11-07&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">1</span><span class="ot">,</span> maxDays<span class="ot">:</span> <span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode passar de 1 dia a partir de hoje!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;day&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;day <span class="op">=</span> <span class="st">&#39;2026-11-06&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Validations::notPastDate(<span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$now</span><span class="ot">,</span> minDays<span class="ot">:</span> <span class="dv">1</span><span class="ot">,</span> maxDays<span class="ot">:</span> <span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>$now</code> fixo (2026-11-05): limites exatos sem depender do
+relógio. +2 recusa, +3 aceita; +365 aceita, +366 recusa.</li>
+<li>Primeiro teste prova compatibilidade: sem janela, nada muda.</li>
+<li><code>$this-&gt;model</code> é o model fake do arquivo;
+<code>// @phpstan-ignore-line</code> porque <code>day</code> é atributo
+dinâmico.</li>
+</ul>
+<h2 id="5-testsunitmodelseventseventtestphp">5.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>a) <code>test_starts_on_today_should_be_valid</code> (linhas
+~228-233) <strong>sai</strong> (hoje deixou de ser válido). No lugar,
+quatro testes:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_on_should_have_the_minimum_advance()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;today&#39;</span><span class="ot">,</span> <span class="st">&#39;+1 day&#39;</span><span class="ot">,</span> <span class="st">&#39;+2 days&#39;</span>] <span class="kw">as</span> <span class="va">$offset</span>) {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$offset</span>))]))<span class="ot">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$offset</span>)<span class="ot">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter pelo menos 3 dias de antecedência!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>)<span class="ot">,</span> <span class="va">$offset</span>)<span class="ot">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_on_inside_the_window_should_be_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;+3 days&#39;</span><span class="ot">,</span> <span class="st">&#39;+30 days&#39;</span><span class="ot">,</span> <span class="st">&#39;+365 days&#39;</span>] <span class="kw">as</span> <span class="va">$offset</span>) {</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$offset</span>))]))<span class="ot">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$offset</span>)<span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_on_after_the_maximum_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+366 days&#39;</span>))<span class="ot">,</span> <span class="st">&#39;9999-12-31&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$value</span>]))<span class="ot">;</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode passar de 365 dias a partir de hoje!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_populate_offsets_should_fit_the_window()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>        <span class="co">// database/Populate/populate.php usa hoje + 14 até hoje + 82 dias.</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;+14 days&#39;</span><span class="ot">,</span> <span class="st">&#39;+82 days&#39;</span>] <span class="kw">as</span> <span class="va">$offset</span>) {</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$offset</span>))]))<span class="ot">;</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$offset</span>)<span class="ot">;</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) Bloco "não passada só no create", depois de
+<code>test_future_event_should_reject_a_past_starts_on_on_edit</code>
+(antes de
+<code>test_past_starts_on_should_still_be_rejected_on_create</code>):</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_starts_on_outside_the_window_should_be_rejected_on_edit()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createPastEvent()<span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;starts_on <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+1 day&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter pelo menos 3 dias de antecedência!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;starts_on <span class="op">=</span> <span class="st">&#39;9999-12-31&#39;</span><span class="ot">;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode passar de 365 dias a partir de hoje!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_event_less_than_three_days_ahead_can_be_edited_when_starts_on_does_not_change()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$soon</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+1 day&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;update([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$soon</span>]))<span class="ot">;</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span>-&gt;location <span class="op">=</span> <span class="st">&#39;Laboratório B203&#39;</span><span class="ot">;</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$found</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$soon</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>No model, datas relativas (<code>strtotime</code>), como a base; o
+<code>$now</code> fixo fica no teste da lib.</li>
+<li><code>test_populate_offsets...</code> protege o
+<code>db:populate</code> (+14 a +82).</li>
+<li><code>update()</code> não valida: serve pra pôr o Evento a 1 dia e
+provar que editar outro campo continua funcionando.</li>
+<li><code>createPastEvent()</code> já existe no arquivo (move a data pro
+passado).</li>
+</ul>
+<p>Armadilha: não "conserte" a validação pra fazer o teste "hoje é
+válido" passar; o teste é que inverte.</p>
+<h2 id="6-testsintegrationcontrollersadmineventscontrollertestphp">6.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Depois de
+<code>test_create_with_invalid_data_renders_form_with_errors_and_values</code>
+(termina na linha ~137), antes de
+<code>test_create_without_audience_marks_audience_field</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_date_outside_the_window_renders_form_with_error()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="st">&#39;9999-12-31&#39;</span>])]</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Novo Evento\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;&lt;div class=&quot;invalid-feedback&quot;&gt;não pode passar de 365 dias a partir de hoje!&lt;/div&gt;&#39;</span><span class="ot">,</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;value=&quot;9999-12-31&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_form_limits_the_date_input_to_the_window()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;new&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;min=&quot;&#39;</span> <span class="op">.</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+3 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39;&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;max=&quot;&#39;</span> <span class="op">.</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+365 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39;&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;De 3 a 365 dias a partir de hoje.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Prova o caminho POST -&gt; model -&gt; re-render do form (sem
+redirect) com o erro embaixo do campo e o valor digitado mantido.</li>
+<li>Segundo teste cobre o <code>min</code>/<code>max</code> e o texto de
+ajuda da view.</li>
+<li><code>validParams()</code> usa <code>+10 days</code>: cabe na
+janela, não muda.</li>
+</ul>
+<h2 id="7-testsacceptanceadmineventsbaseeventscestphp">7.
+<code>tests/Acceptance/admin/events/BaseEventsCest.php</code></h2>
+<p><code>validEventData</code> (linha ~171), <code>+1 day</code> vira
+<code>+7 days</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+7 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: é a fábrica de dados válidos dos Cests. <code>+1 day</code>
+fica fora da janela e <code>CreateSuccessfullyCest</code> quebra.</p>
+<h2 id="8-testsacceptanceadmineventscreatewithinvaliddatacestphp">8.
+<code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></h2>
+<p>Método novo no fim da classe:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> createWithDateOutsideTheWindow(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Tentativa de cadastro com data fora da janela (antecedência mínima e limite máximo)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$cases</span> <span class="op">=</span> [</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>            <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+1 day&#39;</span>)) =&gt; <span class="st">&#39;deve ter pelo menos 3 dias de antecedência!&#39;</span><span class="ot">,</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>            <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+400 days&#39;</span>)) =&gt; <span class="st">&#39;não pode passar de 365 dias a partir de hoje!&#39;</span><span class="ot">,</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$cases</span> <span class="kw">as</span> <span class="va">$startsOn</span> =&gt; <span class="va">$message</span>) {</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;see(<span class="st">&#39;De 3 a 365 dias a partir de hoje.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> <span class="va">$this</span>-&gt;validEventData([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$startsOn</span>]))<span class="ot">;</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;see(<span class="kw">self</span>::<span class="cn">FLASH</span>)<span class="ot">;</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;seeElement(<span class="st">&#39;#event_starts_on.is-invalid&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;see(<span class="va">$message</span><span class="ot">,</span> <span class="st">&#39;#event_starts_on ~ .invalid-feedback&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_starts_on&#39;</span><span class="ot">,</span> <span class="va">$startsOn</span>)<span class="ot">;</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertCount(<span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: mesma prova do teste de integração, no navegador real. O
+<code>fillEventForm</code> põe a data por <code>executeJS</code>, então
+o <code>min</code>/<code>max</code> não atrapalha (e o form tem
+<code>novalidate</code>).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Sem <code>db:populate</code> obrigatório (schema igual); rodar
+confirma que os 16 Eventos cabem na janela.</p>
+<p>No navegador (<code>/admin/events/new</code>): data de amanhã -&gt;
+"deve ter pelo menos 3 dias de antecedência!"; 31/12/9999 -&gt; "não
+pode passar de 365 dias a partir de hoje!"; ontem -&gt; "não pode estar
+no passado!".</p>
+<p>Commit (inglês):
+<code>feat: Event date window with minimum advance and maximum limit</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>test_starts_on_today_should_be_valid</code> passa a falhar:
+troque pelo teste de antecedência.</li>
+<li><code>BaseEventsCest::validEventData</code> com <code>+1 day</code>
+quebra <code>CreateSuccessfullyCest</code>: use
+<code>+7 days</code>.</li>
+<li>Outros testes usam <code>+5</code>, <code>+10</code>,
+<code>+30</code>, <code>+90</code> dias: cabem em 3..365. Outro
+intervalo: <code>grep -rn strtotime tests database</code> antes.</li>
+<li>Populate vai de +14 a +82 dias: mínimo &gt; 14 ou máximo &lt; 82 faz
+o <code>db:populate</code> lançar <code>RuntimeException</code>.</li>
+<li>Chame o check de passado antes: data passada mantém "não pode estar
+no passado!" (testes e Cests da base conferem).</li>
+<li>Janela só no create ou quando a data muda; senão Evento próximo não
+pode mais ter a descrição corrigida.</li>
+<li>"1 ano" não é 365 dias (bissexto): se pedirem "1 ano", use
+<code>modify('+1 year')</code> e teste o dia exato.</li>
+<li><code>min</code>/<code>max</code> no HTML não barram nada
+(<code>novalidate</code>); a regra vale no model.</li>
+<li><code>$now</code> fixo só no teste da <code>Validations</code>; no
+<code>Event</code>, datas relativas.</li>
+</ul>
+</body>
+</html>

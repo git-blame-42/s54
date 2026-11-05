@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>m4-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="m4-passo-a-passo-segunda-data-ends_on-não-anterior-a-starts_on">M4
+passo a passo: segunda data (<code>ends_on</code>) não anterior a
+<code>starts_on</code></h1>
+<p>Pedido típico: "o Evento passa a ter data de término
+(<code>ends_on</code>), obrigatória, que não pode ser antes do início;
+mostre no form, na listagem e no detalhe". Variante: prazo de inscrição
+(<code>registration_deadline</code>) até a data do Evento. Chance:
+média-alta. Tempo: 25-35 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/m4-segunda-data-ends-on/</code> (patch, bundle e
+árvore <code>projeto/</code>). Sem pré-requisito: parte da
+<code>main</code>. É o roteiro de M1 (campo novo) + validação entre dois
+campos.</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; controller -&gt;
+views -&gt; dados -&gt; testes. Na prova, prioridade: funcionar no
+navegador, depois testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>database/Populate/populate.php</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Unit/Models/Events/EnrollmentTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/BaseEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></li>
+</ol>
+<p>Depois: <code>./run db:populate</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE events</code>, logo após
+<code>starts_on</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    starts_on   <span class="dt">DATE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    ends_on     <span class="dt">DATE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>ActiveRecord não cria coluna. <code>save()</code> insere todas as
+chaves de <code>$columns</code>; coluna ausente -&gt;
+<code>Unknown column 'ends_on'</code>.</li>
+<li><code>NOT NULL</code> sem <code>DEFAULT</code>: obrigatoriedade fica
+no model. Se fosse opcional: <code>DATE NULL</code>.</li>
+</ul>
+<p>Armadilha: testes recriam o schema; o banco de dev não. No fim,
+<code>./run db:populate</code>, senão o erro só aparece no
+navegador.</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Cinco pontos.</p>
+<p>a) <code>use</code> no topo, entre <code>Model</code> e
+<code>Validations</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Database\ActiveRecord\Model<span class="ot">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> <span class="bu">DateTimeImmutable</span><span class="ot">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Validations<span class="ot">;</span></span></code></pre></div>
+<p>b) Docblock da classe, depois de
+<code>@property string $starts_on</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">string</span> <span class="va">$ends_on</span> data de término<span class="ot">,</span> nunca antes de starts_on</span></code></pre></div>
+<p>Por quê: atributo dinâmico (<code>__get</code>/<code>__set</code>);
+sem <code>@property</code> o <code>phpstan</code> reclama.</p>
+<p>c) <code>$columns</code>, depois de <code>'starts_on',</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;ends_on&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>Por quê: lista que monta <code>INSERT</code>/<code>UPDATE</code> e
+libera atribuição. Esquecer -&gt;
+<code>Property ends_on not found</code>.</p>
+<p>d) <code>validates()</code>, logo depois do bloco de
+<code>starts_on</code> (linha ~75-77), antes do <code>if</code> de
+<code>capacity</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>            Validations::validDate(<span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesStartsOnNotPast()<span class="ot">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            Validations::validDate(<span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesEndsOnNotBeforeStartsOn()<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Regra entre campos é do model, em <code>validates()</code>.</li>
+<li><code>&amp;&amp;</code> em cadeia: só compara se não vazio
+<strong>e</strong> data válida. Um erro por campo, nunca dois
+contraditórios.</li>
+</ul>
+<p>e) Métodos privados novos, depois de
+<code>validatesStartsOnNotPast()</code> (termina em
+<code>Validations::notPastDate('starts_on', $this);</code>, linha ~98),
+antes do docblock "P02: na edição, a capacidade...":</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * A data de término não pode ser anterior à de início (no mesmo dia é permitido).</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * Só compara quando as duas datas são válidas; data inválida já tem o próprio erro.</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validatesEndsOnNotBeforeStartsOn()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$start</span> <span class="op">=</span> <span class="kw">self</span>::parseDate(<span class="va">$this</span>-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$end</span> <span class="op">=</span> <span class="kw">self</span>::parseDate(<span class="va">$this</span>-&gt;ends_on)<span class="ot">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$start</span> <span class="op">!==</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="va">$end</span> <span class="op">!==</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="va">$end</span> <span class="op">&lt;</span> <span class="va">$start</span>) {</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="st">&#39;não pode ser anterior à data de início!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">function</span> parseDate(<span class="dt">mixed</span> <span class="va">$value</span>)<span class="ot">:</span> <span class="ot">?</span><span class="bu">DateTimeImmutable</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="fu">is_string</span>(<span class="va">$value</span>)) {</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$date</span> <span class="op">=</span> <span class="bu">DateTimeImmutable</span>::createFromFormat(<span class="st">&#39;!Y-m-d&#39;</span><span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$date</span> <span class="op">!==</span> <span class="kw">false</span> <span class="op">&amp;&amp;</span> <span class="va">$date</span>-&gt;format(<span class="st">&#39;Y-m-d&#39;</span>) <span class="op">===</span> <span class="va">$value</span> <span class="ot">?</span> <span class="va">$date</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Mesmo molde do <code>validatesStartsOnNotPast()</code>: método
+privado chamado no fim da cadeia, grava erro com
+<code>addError</code>.</li>
+<li><code>parseDate</code> de <code>lib/Validations.php</code> é
+privado: não dá pra chamar de fora. Copie o
+<code>createFromFormat('!Y-m-d', ...)</code>.</li>
+<li><code>!</code> zera a hora (compara só o dia).
+<code>format() === $value</code> rejeita <code>2030-02-31</code> (que
+viraria 03/03).</li>
+<li><code>null</code> em qualquer das duas -&gt; não compara. Com
+<code>starts_on</code> inválida, o usuário vê só o erro de
+<code>starts_on</code>.</li>
+<li><code>$end &lt; $start</code>: mesmo dia é válido.</li>
+<li>Não copie a regra "não no passado" para <code>ends_on</code> (não
+foi pedida).</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Constante <code>FIELDS</code> (linha ~14), depois de
+<code>'starts_on'</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">FIELDS</span> <span class="op">=</span> [<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;modality&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: allowlist. Só o que está em <code>FIELDS</code> sai do POST
+e chega ao model (protege contra mass assignment). Esquecer -&gt; model
+recebe <code>null</code> e <code>notEmpty</code> reclama "sem
+motivo".</p>
+<h2 id="4-appviewsadminevents_formphtml">4.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Depois do <code>&lt;/div&gt;</code> do bloco de
+<code>starts_on</code>
+(<code>&lt;?= $feedback('starts_on') ?&gt;</code>, linha ~74), antes do
+bloco de <code>location</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;mb-3&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>label <span class="cf">for</span><span class="op">=</span><span class="st">&quot;event_ends_on&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-label&quot;</span><span class="op">&gt;</span>Data de término<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;date&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-control&lt;?= </span><span class="va">$invalid</span><span class="st">(&#39;ends_on&#39;) ?&gt;&quot;</span> id<span class="op">=</span><span class="st">&quot;event_ends_on&quot;</span> name<span class="op">=</span><span class="st">&quot;event[ends_on]&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>            value<span class="op">=</span><span class="st">&quot;&lt;?= htmlspecialchars((string) </span><span class="va">$event</span>-&gt;ends_on<span class="st">) ?&gt;&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$feedback</span>(<span class="st">&#39;ends_on&#39;</span>) <span class="kw">?&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>div<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Cópia do campo <code>starts_on</code> trocando <code>id</code>,
+<code>name</code>, <code>label</code>, <code>value</code>.</li>
+<li><code>name="event[ends_on]"</code>: chega dentro do array
+<code>event</code>, que o controller filtra por
+<code>FIELDS</code>.</li>
+<li><code>$invalid()</code> põe <code>is-invalid</code> (borda
+vermelha); <code>$feedback()</code> mostra a mensagem embaixo. View
+burra: só lê <code>$event-&gt;errors(...)</code>.</li>
+<li><code>type="date"</code> envia <code>Y-m-d</code>, o formato que
+<code>validDate</code> espera.</li>
+<li><code>htmlspecialchars</code>: escape (XSS), cobrado na
+rubrica.</li>
+</ul>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) <code>&lt;thead&gt;</code>, depois de
+<code>&lt;th&gt;Data&lt;/th&gt;</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Término<span class="op">&lt;/</span>th<span class="op">&gt;</span></span></code></pre></div>
+<p>b) <code>&lt;tbody&gt;</code>, depois do <code>&lt;td&gt;</code> de
+<code>starts_on</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_on)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;ends_on)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: view só exibe o que o controller passou. Ordem dos
+<code>&lt;td&gt;</code> bate com a dos <code>&lt;th&gt;</code>.
+<code>date(...)</code> formata pt-BR; saída numérica, dispensa
+<code>htmlspecialchars</code>.</p>
+<h2 id="6-appviewsadmineventsshowphtml">6.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Dentro do <code>&lt;dl&gt;</code>, depois do par
+<code>Data</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Término<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;ends_on)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: mesmo padrão <code>dt</code>/<code>dd</code> dos outros
+campos; <code>show</code> recebe o <code>$event</code> do controller e
+só exibe.</p>
+<h2 id="7-databasepopulatepopulatephp">7.
+<code>database/Populate/populate.php</code></h2>
+<p>No <code>new Event([...])</code> do <code>foreach</code> (linha
+~138), depois de <code>'starts_on' =&gt; ...</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&quot;+</span>{<span class="va">$daysAhead</span>}<span class="st"> days&quot;</span>))<span class="ot">,</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Semana acadêmica dura 5 dias; os demais Eventos terminam no mesmo dia.</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+&#39;</span> <span class="op">.</span> (<span class="va">$daysAhead</span> <span class="op">+</span> (<span class="va">$kind</span> <span class="op">===</span> <span class="st">&#39;academic_week&#39;</span> <span class="ot">?</span> <span class="dv">4</span> <span class="ot">:</span> <span class="dv">0</span>)) <span class="op">.</span> <span class="st">&#39; days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Sem a chave, <code>save()</code> falha no <code>notEmpty</code> e o
+banco de dev fica sem Eventos.</li>
+<li>Usa as variáveis já destruturadas do <code>foreach</code>
+(<code>$daysAhead</code>, <code>$kind</code>); não mexa no array
+posicional de dados.</li>
+<li>Na prova basta término = início; aqui a Semana acadêmica termina 4
+dias depois para a coluna ter variação.</li>
+</ul>
+<p>Depois de salvar: <code>./run db:populate</code>.</p>
+<h2 id="8-testsunitmodelseventseventtestphp">8.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>a) <code>params()</code> (linhas ~41-54), depois de
+<code>'starts_on' =&gt; ...</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+31 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b) <code>test_empty_event_should_have_error_in_every_field</code> e
+<code>errorsOf()</code>: lista ganha <code>'ends_on'</code>; quebre em
+<code>$fields</code> (linha &gt; 130 colunas, limite do
+<code>phpcs.xml</code>):</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$fields</span> <span class="op">=</span> [<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;modality&#39;</span><span class="ot">,</span> <span class="st">&#39;audience&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>]<span class="ot">;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$fields</span> <span class="kw">as</span> <span class="va">$field</span>) {</span></code></pre></div>
+<p>c) <code>requiredFieldsProvider()</code>, depois de
+<code>'starts_on' =&gt; ['starts_on'],</code>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; [<span class="st">&#39;ends_on&#39;</span>]<span class="ot">,</span></span></code></pre></div>
+<p>d) Testes novos depois de
+<code>test_starts_on_today_should_be_valid</code> (antes de
+<code>test_invalid_event_should_not_be_saved</code>):</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_ends_on_equal_to_starts_on_should_be_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$date</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+20 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$date</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="va">$date</span>]))<span class="ot">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$date</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">?</span>-&gt;ends_on)<span class="ot">;</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_ends_on_before_starts_on_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+20 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+19 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>        ]))<span class="ot">;</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode ser anterior à data de início!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;ends_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(<span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_ends_on_should_be_a_valid_date()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;amanhã&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-02-31&#39;</span><span class="ot">,</span> <span class="st">&#39;30/12/2030&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;ends_on&#39;</span> =&gt; <span class="va">$value</span>]))<span class="ot">;</span></span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é uma data válida!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;ends_on&#39;</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_ends_on_should_not_be_compared_with_an_invalid_starts_on()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="st">&#39;2030-02-31&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="st">&#39;2030-01-01&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é uma data válida!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(<span class="va">$event</span>-&gt;errors(<span class="st">&#39;ends_on&#39;</span>))<span class="ot">;</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>params()</code> é a fábrica de Evento válido: sem a chave,
+todo teste que salva quebra por "vazio".</li>
+<li>Provider + form vazio: <code>ends_on</code> passa a ser
+obrigatório.</li>
+<li>Quatro casos: mesmo dia válido (e persiste), um dia antes inválido,
+data inexistente, <code>starts_on</code> inválida não gera erro falso em
+<code>ends_on</code>.</li>
+</ul>
+<h2 id="9-testsunitmodelseventsenrollmenttestphp">9.
+<code>tests/Unit/Models/Events/EnrollmentTest.php</code></h2>
+<p><code>setUp</code> (linhas ~37-49), no <code>new Event([...])</code>,
+depois de <code>starts_on</code>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: o <code>setUp</code> salva um Evento; sem a chave
+<code>save()</code> retorna <code>false</code> e todos os testes de
+Inscrição caem.</p>
+<h2 id="10-testsintegrationcontrollersadmineventscontrollertestphp">10.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) <code>validParams()</code> (linha ~278), depois de
+<code>starts_on</code> (+10 dias):</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+12 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b) Testes novos depois de
+<code>test_create_with_invalid_data_renders_form_with_errors_and_values</code>:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_ends_on_before_starts_on_shows_error_below_the_field()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$startsOn</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$endsOn</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+9 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$startsOn</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="va">$endsOn</span>])]</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/class=&quot;form-control is-invalid&quot; id=&quot;event_ends_on&quot;[^&gt;]*value=&quot;&#39;</span> <span class="op">.</span> <span class="va">$endsOn</span> <span class="op">.</span> <span class="st">&#39;&quot;&gt;\s*&#39;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span> <span class="st">&#39;&lt;div class=&quot;invalid-feedback&quot;&gt;não pode ser anterior à data de início!&lt;\/div&gt;/&#39;</span><span class="ot">,</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/class=&quot;form-control&quot; id=&quot;event_starts_on&quot;[^&gt;]*value=&quot;&#39;</span> <span class="op">.</span> <span class="va">$startsOn</span> <span class="op">.</span> <span class="st">&#39;&quot;/&#39;</span><span class="ot">,</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;value=&quot;Oficina de Testes&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Existem dados incorretos! Por favor, verifique!&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_saves_ends_on_and_show_displays_it()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$endsOn</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+12 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams()])<span class="ot">;</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertInstanceOf(Event::<span class="kw">class</span><span class="ot">,</span> <span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$endsOn</span><span class="ot">,</span> <span class="va">$event</span>-&gt;ends_on)<span class="ot">;</span></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Término&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+12 days&#39;</span>))<span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$index</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+12 days&#39;</span>))<span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Prova o caminho form -&gt; <code>FIELDS</code> -&gt; model -&gt;
+view.</li>
+<li>Primeiro: erro só em <code>ends_on</code>, <code>starts_on</code>
+sem <code>is-invalid</code>, valores mantidos, flash de erro.</li>
+<li>Segundo: salva e aparece em <code>show</code> e <code>index</code>
+(formato <code>d/m/Y</code>).</li>
+</ul>
+<h2 id="11-testsintegrationaccesseventsaccesstestphp">11.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) <code>setUp</code> (linhas ~28-40), no
+<code>new Event([...])</code>, depois de <code>starts_on</code> (+30
+dias):</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+30 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b)
+<code>test_participant_should_not_create_update_or_destroy_events</code>
+(linha ~148), no array <code>event</code> do POST, depois de
+<code>starts_on</code>:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: teste de acesso bate nas rotas por HTTP. <code>setUp</code>
+precisa de Evento salvo; o POST precisa de dados válidos para o teste
+medir só o bloqueio de acesso.</p>
+<h2 id="12-testsacceptanceadmineventsbaseeventscestphp">12.
+<code>tests/Acceptance/admin/events/BaseEventsCest.php</code></h2>
+<p>a) <code>seedEvents</code> (linhas ~84-94), depois de
+<code>'starts_on' =&gt; ...,</code>:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="va">$this</span>-&gt;startsOn(<span class="va">$number</span>)<span class="ot">,</span></span></code></pre></div>
+<p>b) <code>fillEventForm</code>: docblock passa a citar
+<code>starts_on e ends_on (Y-m-d)</code>; o <code>if</code> de
+<code>starts_on</code> vira laço:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// input[type=date] depende do idioma do navegador ao digitar; definir o valor ISO é determinístico.</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span>] <span class="kw">as</span> <span class="va">$field</span>) {</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="fu">array_key_exists</span>(<span class="va">$field</span><span class="ot">,</span> <span class="va">$data</span>)) {</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                <span class="va">$page</span>-&gt;executeJS(</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>                    <span class="st">&quot;document.getElementById(&#39;event_</span>{<span class="va">$field</span>}<span class="st">&#39;).value = arguments[0];&quot;</span><span class="ot">,</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>                    [<span class="dt">(string)</span> <span class="va">$data</span>[<span class="va">$field</span>]]</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>                )<span class="ot">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        }</span></code></pre></div>
+<p>c) <code>validEventData</code>: <code>return array_merge(...)</code>
+vira <code>$data = ...</code> e, depois do
+<code>], $overrides);</code>:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$data</span> <span class="op">=</span> <span class="fu">array_merge</span>([</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>            <span class="co">// ... chaves de sempre</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">,</span> <span class="va">$overrides</span>)<span class="ot">;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sem término informado, o Evento termina no dia em que começa (nunca antes do início).</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$data</span>[<span class="st">&#39;ends_on&#39;</span>] <span class="op">??=</span> <span class="va">$data</span>[<span class="st">&#39;starts_on&#39;</span>]<span class="ot">;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$data</span><span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>seedEvents</code> não confere o <code>save()</code>: sem a
+chave, nenhum Evento é gravado e os Cests falham com listagem vazia, sem
+mensagem.</li>
+<li>Selenium: <code>type="date"</code> não aceita <code>fillField</code>
+em pt-BR. Por isso <code>executeJS</code> define o valor ISO
+direto.</li>
+<li><code>??=</code> em <code>validEventData</code>: Cest que muda só o
+início (ex. <code>UpdateSuccessfullyCest</code>, <code>+90 days</code>)
+ganha término válido sozinho.</li>
+</ul>
+<h2 id="13-testsacceptanceadmineventscreatesuccessfullycestphp">13.
+<code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></h2>
+<p>Depois de
+<code>Assert::assertSame($data['starts_on'], $event-&gt;starts_on);</code>:</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="va">$data</span>[<span class="st">&#39;ends_on&#39;</span>]<span class="ot">,</span> <span class="va">$event</span>-&gt;ends_on)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: confere no banco que o valor do navegador chegou.</p>
+<h2 id="14-testsacceptanceadmineventscreatewithinvaliddatacestphp">14.
+<code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></h2>
+<p>a) <code>createWithEmptyForm</code>, lista de obrigatórios:</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>] <span class="kw">as</span> <span class="va">$field</span>) {</span></code></pre></div>
+<p>b) <code>createWithInvalidDataKeepsValidValues</code>: preencher
+<code>ends_on</code> válido, conferir que não fica inválido e que se
+mantém:</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> [<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;-1 day&#39;</span>))<span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span>)])<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span>] <span class="kw">as</span> <span class="va">$field</span>) {</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;dontSeeElement(<span class="st">&quot;#event_</span>{<span class="va">$field</span>}<span class="st">.is-invalid&quot;</span>)<span class="ot">;</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>        }</span></code></pre></div>
+<p>e, depois de
+<code>$page-&gt;seeInField('#event_location', 'Laboratório B203');</code>:</p>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_ends_on&#39;</span><span class="ot">,</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span>))<span class="ot">;</span></span></code></pre></div>
+<p>c) Cest novo no fim da classe:</p>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> createWithEndsOnBeforeStartsOn(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$startsOn</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$endsOn</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+9 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Tentativa de cadastro com término antes do início&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> <span class="va">$this</span>-&gt;validEventData([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="va">$startsOn</span><span class="ot">,</span> <span class="st">&#39;ends_on&#39;</span> =&gt; <span class="va">$endsOn</span>]))<span class="ot">;</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="kw">self</span>::<span class="cn">FLASH</span>)<span class="ot">;</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Novo Evento&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeElement(<span class="st">&#39;#event_ends_on.is-invalid&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;não pode ser anterior à data de início!&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_ends_on ~ .invalid-feedback&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSeeElement(<span class="st">&#39;#event_starts_on.is-invalid&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_starts_on&#39;</span><span class="ot">,</span> <span class="va">$startsOn</span>)<span class="ot">;</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_ends_on&#39;</span><span class="ot">,</span> <span class="va">$endsOn</span>)<span class="ot">;</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_title&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina de Testes Automatizados&#39;</span>)<span class="ot">;</span></span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertCount(<span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: espelha o teste de integração no navegador real. Erro sob o
+campo, borda vermelha, valores mantidos, nada gravado.</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb31"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># Unit + Integration (o PHPUnit não roda os Cests)</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># Acceptance</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>No navegador (<code>admin@example.com</code> / <code>123456</code>):
+listagem com coluna "Término" (Semana acadêmica termina 4 dias depois).
+"Novo Evento" com término um dia antes do início -&gt; erro embaixo do
+campo, demais valores mantidos.</p>
+<p>Commit (inglês): <code>feat: Add end date to events</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Comparar sem validar antes: com <code>starts_on</code> inválida
+aparece erro falso em <code>ends_on</code>. Valide cada uma
+(<code>validDate</code>) e só compare as duas válidas.</li>
+<li><code>parseDate</code> de <code>lib/Validations.php</code> é
+privado: copie o <code>createFromFormat('!Y-m-d', ...)</code> no
+model.</li>
+<li>Sem <code>!</code>, <code>createFromFormat</code> herda a hora
+atual; sem conferir <code>format()</code>, <code>2030-02-31</code> vira
+março.</li>
+<li>Não copie a regra "não no passado" de <code>starts_on</code> sem
+pedido.</li>
+<li>Selenium: <code>type="date"</code> não aceita <code>fillField</code>
+em pt-BR; use <code>executeJS</code>.</li>
+<li>Esquecer <code>ends_on</code> no <code>seedEvents</code>: listagem
+vazia sem mensagem.</li>
+<li>Esquecer <code>./run db:populate</code>:
+<code>Unknown column 'ends_on'</code> só no navegador.</li>
+</ul>
+</body>
+</html>

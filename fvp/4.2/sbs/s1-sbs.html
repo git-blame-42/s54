@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>s1-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="s1-passo-a-passo-teste-de-aceitação-da-modificação">S1 passo a
+passo: teste de aceitação da modificação</h1>
+<p>Pedido típico (logo depois do N1): "escreva o teste de aceitação do
+filtro: filtrar por tipo, ver só os Eventos daquele tipo e ir para a
+página 2 sem perder o filtro". Chance: alta. Tempo: 20-30 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/s1-teste-aceitacao-filtro/</code> (patch, bundle
+e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo em
+formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisito: N1 (<code>n1-filtro-por-tipo-paginacao</code>)
+aplicado. O patch traz dois commits: o 1º é a base N1
+(<code>feat: Filter events by kind keeping the filter in pagination</code>);
+este guia cobre só o 2º. Sem o N1 o <code>#filter_kind</code> não existe
+e tudo falha.</p>
+<p>Ordem: só teste, nenhum código de aplicação muda. Fluxo do Cest = o
+do usuário: abrir página -&gt; agir -&gt; conferir URL, tabela, rodapé.
+Na prova, prioridade: funcionar (teste passa), depois provar que falha
+com a funcionalidade quebrada, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>tests/Acceptance/admin/events/FilterEventsCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: Selenium de pé, <code>./run test:browser</code> no Cest,
+<code>./run phpcs</code>.</p>
+<h2 id="1-testsacceptanceadmineventsfiltereventscestphp">1.
+<code>tests/Acceptance/admin/events/FilterEventsCest.php</code></h2>
+<p>Arquivo novo, ao lado de <code>ListEventsCest.php</code>,
+<code>DeleteEventCest.php</code> etc.</p>
+<p>a) Esqueleto da classe:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * Filtro da listagem por tipo (`?kind=`), mantido na paginação.</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"> *</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * A base cria 16 Eventos com os tipos em rodízio: Palestra (01, 05, 09, 13), Oficina (02, 06, 10, 14),</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"> * Minicurso (03, 07, 11, 15) e Semana acadêmica (04, 08, 12, 16). Cada tipo cabe numa página de 5.</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> FilterEventsCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">WORKSHOPS</span> <span class="op">=</span> [<span class="dv">2</span><span class="ot">,</span> <span class="dv">6</span><span class="ot">,</span> <span class="dv">10</span><span class="ot">,</span> <span class="dv">14</span>]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>extends BaseEventsCest</code>: a base já cria admin, 3
+Participantes e 16 Eventos (<code>Evento 01</code> a
+<code>Evento 16</code>), redimensiona a janela e loga o admin no
+<code>_before</code>. O Cest novo só descreve o cenário.</li>
+<li>Sem <code>_before</code> próprio. Se precisar, chame
+<code>parent::_before($page)</code> primeiro, senão perde dados e
+login.</li>
+<li>Namespace igual à pasta
+(<code>Tests\Acceptance\admin\events</code>); senão o Codeception não
+acha a classe.</li>
+<li><code>WORKSHOPS</code>: números das Oficinas no rodízio da base.
+Mantém o teste legível.</li>
+<li>Herdado da base: <code>TOTAL_EVENTS = 16</code>,
+<code>PER_PAGE = 5</code>, <code>title($n)</code>
+(<code>Evento %02d</code>), <code>fillEventForm</code>,
+<code>validEventData</code>, <code>rowOf</code>.</li>
+</ul>
+<p>b) Cenário 1, <code>filterByKind</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> filterByKind(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Filtrar a listagem por tipo&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Filtrar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeOptionIsSelected(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="fu">count</span>(<span class="kw">self</span>::<span class="cn">WORKSHOPS</span>))<span class="ot">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="fu">in_array</span>(<span class="va">$i</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">WORKSHOPS</span><span class="ot">,</span> <span class="kw">true</span>)) {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="va">$i</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            } <span class="cf">else</span> {</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="va">$i</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 4 de 4&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Um método público por cenário; <code>wantTo</code> em pt-BR vira a
+descrição no relatório.</li>
+<li><code>selectOption</code> aceita rótulo (<code>Oficina</code>) ou
+valor (<code>workshop</code>).</li>
+<li><code>seeCurrentUrlEquals</code>: prova que o filtro vai na query
+string (GET), não em sessão.</li>
+<li><code>seeOptionIsSelected</code>: a view devolve o filtro marcado no
+<code>&lt;select&gt;</code>.</li>
+<li><code>see</code>/<code>dontSee</code> com contexto
+<code>'table'</code>: o <code>&lt;select&gt;</code> também tem
+"Oficina", "Palestra"; sem contexto o teste passa sempre.</li>
+<li>Laço sobre os 16: prova "só Oficinas" e "nenhum outro".</li>
+<li>"Mostrando 1 - 4 de 4": o total do paginador também é filtrado.</li>
+</ul>
+<p>c) Cenário 2, <code>keepFilterOnPageTwo</code> (o principal):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> keepFilterOnPageTwo(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Filtrar a listagem por tipo e ir à página 2 com o filtro mantido&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Mais duas Oficinas pelo formulário: 6 Oficinas, 2 páginas no filtro.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createWorkshop(<span class="va">$page</span><span class="ot">,</span> <span class="st">&#39;Oficina Extra 1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createWorkshop(<span class="va">$page</span><span class="ot">,</span> <span class="st">&#39;Oficina Extra 2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 5 de 6&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Oficina Extra 1&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Oficina Extra 2&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeLink(<span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/page/2?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/2?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeOptionIsSelected(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="dv">1</span>)<span class="ot">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Oficina Extra 2&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="dv">2</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="dv">5</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 6 - 6 de 6&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Anterior&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/1?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="dv">2</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="dv">1</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Cada tipo tem só 4 Eventos na base (cabe em 1 página de 5). Sem
+criar mais, não existe página 2 no filtro e o pedido fica sem
+prova.</li>
+<li>Criar pelo formulário exercita o fluxo real.
+<code>new Event([...])-&gt;save()</code> direto também vale e é mais
+rápido.</li>
+<li><code>seeLink('2', '/admin/events/page/2?kind=workshop')</code>:
+confere que o link do paginador carrega o <code>?kind=</code> (é o que o
+N1 mudou no <code>_pages.phtml</code> via
+<code>queryParams()</code>).</li>
+<li><code>click(..., '.pagination')</code>: contexto evita clicar num
+"2" da tabela.</li>
+<li>Ida e volta ("Anterior"): prova o filtro nos dois sentidos.</li>
+<li>Paginador sem <code>ORDER BY</code> (ordem de inserção): Oficinas
+02, 06, 10, 14 e Extra 1 na página 1; Extra 2 sozinha na página 2.</li>
+</ul>
+<p>d) Cenário 3, <code>clearFilter</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> clearFilter(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Voltar a listar todos os tipos&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events?kind=workshop&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="dv">1</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Todos&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Filtrar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events?kind=&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="dv">1</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="dv">5</span>)<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 5 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>amOnPage</code> com o parâmetro pula o clique: atalho para
+cenário que não é sobre o formulário do filtro.</li>
+<li><code>?kind=</code> vazio = sem filtro: volta aos 16 ("1 - 5 de
+16").</li>
+</ul>
+<p>e) Helper privado, no fim da classe:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Cadastra uma Oficina pelo formulário (validEventData já usa o tipo Oficina). */</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createWorkshop(AcceptanceTester <span class="va">$page</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$title</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> <span class="va">$this</span>-&gt;validEventData([<span class="st">&#39;title&#39;</span> =&gt; <span class="va">$title</span>]))<span class="ot">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cadastrado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>validEventData</code> devolve dados válidos (tipo Oficina,
+data de amanhã) e aceita sobrescritas
+(<code>['title' =&gt; ...]</code>).</li>
+<li><code>fillEventForm</code> preenche só as chaves informadas e põe a
+data por <code>executeJS</code>: não use <code>fillField</code> no
+<code>#event_starts_on</code>.</li>
+<li><code>see('Evento cadastrado com sucesso!')</code>: texto exato do
+flash do <code>create</code>; falha cedo se o cadastro não salvou.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>dontSee('Evento 1')</code> casaria com <code>Evento 10</code>;
+use <code>title(1)</code> (<code>Evento 01</code>).</li>
+<li><code>LoginHelper::logout()</code> clica em
+<code>fulano@example.com</code> fixo: não use com o admin da base.</li>
+<li>Cenário de Participante: crie base própria copiando o
+<code>_before</code> com
+<code>$page-&gt;login('participante1@example.com', self::PASSWORD)</code>.</li>
+<li>Se o seu filtro usa outro <code>id</code> ou outro texto no botão,
+troque <code>#filter_kind</code> e <code>'Filtrar'</code>.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser tests/Acceptance/admin/events/FilterEventsCest.php</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser          <span class="co"># suíte de aceitação toda (demora)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem mudança de schema: não precisa
+<code>./run db:populate</code>.</p>
+<p>Prova de que o teste testa algo: no
+<code>app/views/paginator/_pages.phtml</code>, troque
+<code>$paginator-&gt;queryParams()</code> por <code>[]</code> e rode o
+Cest: <code>keepFilterOnPageTwo</code> deve falhar ("No links containing
+text '2' and URL '/admin/events/page/2?kind=workshop'"). Desfaça.</p>
+<p>No navegador: <code>/admin/events</code>, filtrar Oficina, ir à
+página 2 (com Oficinas extras) e ver <code>?kind=workshop</code> mantido
+na URL.</p>
+<p>Commit (inglês):
+<code>test: Add acceptance test for the events kind filter</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>see('Oficina')</code> sem contexto passa sempre (rótulo do
+<code>&lt;select&gt;</code>): use título do Evento + contexto
+<code>'table'</code>.</li>
+<li>Títulos com zero à esquerda: <code>Evento 01</code>, não
+<code>Evento 1</code>.</li>
+<li>Base tem 4 Eventos por tipo: crie mais para haver página 2.</li>
+<li>Base define dados (<code>title</code>, rodízio de tipos,
+<code>PER_PAGE = 5</code>, <code>TOTAL_EVENTS = 16</code>): se o pedido
+muda paginação ou ordem (N3, N4), base e Cests acompanham. Com N4
+(<code>PER_PAGE</code> 10), crie 11+ Oficinas ou use
+<code>?per_page=5</code>.</li>
+<li>Janela 1280x2400 no <code>_before</code>: Selenium não clica fora da
+tela; fora da base, copie o <code>resizeWindow</code>.</li>
+<li>Radio: <code>checkOption('#event_modality_online')</code>; select:
+<code>selectOption('#event_kind', 'Oficina')</code>.</li>
+<li>Data no form só via <code>fillEventForm</code>
+(<code>executeJS</code>).</li>
+<li><code>LoginHelper::logout()</code> com e-mail fixo: não use com o
+admin.</li>
+<li>Selenium de pé; suíte demora.</li>
+<li>Flash conferido com o texto exato.</li>
+<li>Teste que passa com a funcionalidade quebrada não prova nada: quebre
+de propósito uma vez.</li>
+</ul>
+</body>
+</html>

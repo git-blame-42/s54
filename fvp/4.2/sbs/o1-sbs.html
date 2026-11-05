@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>o1-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="o1-passo-a-passo-rota-restful-nova-com-página-lotados">O1 passo
+a passo: Rota RESTful nova com página (lotados)</h1>
+<p>Pedido típico: "uma página na área administrativa que liste só os
+Eventos lotados, em <code>GET /admin/events/full</code>
+(<code>admin.events.full</code>), com link na listagem". Chance:
+média-alta. Tempo: 20-30 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/o1-rota-eventos-lotados/</code> (patch, bundle e
+árvore <code>projeto/</code>). Sem pré-requisito: sai de
+<code>main</code>. Schema não muda. O teste de acesso por HTTP da rota
+nova é o cenário S2 (<code>s2-teste-acesso-rota-nova</code>), empilhado
+sobre este.</p>
+<p>Ordem = fluxo da requisição: rota -&gt; model -&gt; controller -&gt;
+views -&gt; testes. Na prova, prioridade: funcionar no navegador, depois
+testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>config/routes.php</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/full.phtml</code> (novo)</li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/ListFullEventsCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>, <code>./run phpstan</code>,
+<code>./run test:browser</code>.</p>
+<h2 id="1-configroutesphp">1. <code>config/routes.php</code></h2>
+<p>No grupo <code>admin</code> (linhas ~25-35), logo depois da rota
+<code>new</code> e <strong>antes</strong> de
+<code>/admin/events/{id}</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/admin/events/new&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;new&#39;</span>])-&gt;name(<span class="st">&#39;admin.events.new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>        Route::get(<span class="st">&#39;/admin/events/full&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;full&#39;</span>])-&gt;name(<span class="st">&#39;admin.events.full&#39;</span>)<span class="ot">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        Route::post(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;create&#39;</span>])-&gt;name(<span class="st">&#39;admin.events.create&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>E o comentário do bloco passa a citar as duas rotas fixas:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Eventos (CRUD RESTful). &#39;new&#39; e &#39;full&#39; vêm antes de &#39;{id}&#39;, senão seriam capturados como id.</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Router casa na ordem de declaração. Depois de <code>{id}</code>,
+<code>full</code> vira id e cai em "Evento não encontrado!".</li>
+<li>Dentro de <code>middleware('auth')</code> +
+<code>middleware('admin')</code>: herda os dois middlewares, nada a
+fazer no controller.</li>
+<li>Nome no padrão <code>admin.events.*</code>: é o que a view usa em
+<code>route()</code>.</li>
+<li>Só existem <code>get</code>, <code>post</code>, <code>put</code>,
+<code>delete</code> em <code>core/Router/Route.php</code> (não há
+<code>patch</code>).</li>
+</ul>
+<p>Armadilha: o teste de controller chama a ação direto, sem Router, e
+<strong>não pega</strong> rota depois de <code>{id}</code>. Só teste por
+HTTP pega (S2).</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Método estático novo depois de <code>availableSpots()</code> e antes
+de <code>hasEnrollments()</code> (linha ~142):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">max</span>(<span class="dv">0</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="va">$this</span>-&gt;capacity <span class="op">-</span> <span class="va">$this</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * Eventos lotados (sem vagas disponíveis), na ordem do banco.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;static&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> full()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">array_values</span>(<span class="fu">array_filter</span>(</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            <span class="kw">static</span>::all()<span class="ot">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="kw">fn</span>(Event <span class="va">$event</span>) =&gt; <span class="va">$event</span>-&gt;availableSpots() <span class="op">===</span> <span class="dv">0</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        ))<span class="ot">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>"Lotado" é regra de negócio do Evento: mora no model; controller
+fica com uma linha.</li>
+<li>Reaproveita <code>availableSpots()</code>: mesma conta da tela de
+detalhes e da validação de capacidade. Sem SQL novo, sem duplicar a
+regra.</li>
+<li><code>array_values</code>: <code>array_filter</code> mantém as
+chaves; sem ele <code>$events[0]</code> pode não existir.</li>
+<li><code>@return array&lt;static&gt;</code>: <code>phpstan</code> sabe
+o tipo dos itens.</li>
+</ul>
+<p>Obs: o catálogo põe o mesmo <code>array_filter</code> direto na ação
+<code>full()</code>. Funciona igual; model é a resposta segura pra
+"regra no model".</p>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Ação nova depois de <code>index()</code> e antes de
+<code>show()</code> (linha ~28):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> full()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> Event::full()<span class="ot">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="st">&#39;Eventos lotados&#39;</span><span class="ot">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;render(<span class="st">&#39;admin/events/full&#39;</span><span class="ot">,</span> <span class="fu">compact</span>(<span class="st">&#39;events&#39;</span><span class="ot">,</span> <span class="st">&#39;title&#39;</span>))<span class="ot">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Controller só busca e entrega à view. Sem <code>Request</code>: a
+ação não lê parâmetro nenhum.</li>
+<li><code>render('admin/events/full', ...)</code> acha
+<code>app/views/admin/events/full.phtml</code>; <code>compact</code>
+vira variáveis na view (<code>extract</code>).</li>
+<li><code>$title</code> no <code>compact</code>: o layout usa no
+<code>&lt;h1&gt;</code> (o <code>&lt;title&gt;</code> da aba é fixo,
+"Eventos do Câmpus").</li>
+</ul>
+<p>Armadilha: esquecer <code>$title</code> no <code>compact</code>
+quebra o layout.</p>
+<h2 id="4-appviewsadmineventsfullphtml-novo">4.
+<code>app/views/admin/events/full.phtml</code> (novo)</h2>
+<p>Cópia da tabela de <code>index.phtml</code> sem paginador e sem
+editar/remover. Arquivo inteiro:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="cf">if</span> (<span class="kw">empty</span>(<span class="va">$events</span>)) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>p<span class="op">&gt;</span>Nenhum evento lotado<span class="op">.&lt;/</span>p<span class="op">&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">else</span> <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>table <span class="kw">class</span><span class="op">=</span><span class="st">&quot;table table-striped align-middle&quot;</span><span class="op">&gt;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>thead<span class="op">&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>tr<span class="op">&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Título<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Tipo<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Data<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Local<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Vagas<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Ações<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;/</span>tr<span class="op">&gt;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;/</span>thead<span class="op">&gt;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>tbody<span class="op">&gt;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (<span class="va">$events</span> <span class="kw">as</span> <span class="va">$event</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>tr<span class="op">&gt;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;title) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> \App\Models\Event::<span class="cn">KINDS</span>[<span class="va">$event</span>-&gt;kind] <span class="op">??</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;kind) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_on)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;location) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;enrollmentsCount() <span class="kw">?&gt;</span><span class="op">/&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;capacity <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-secondary&quot;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>                           href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.show&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Ver<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;/</span>tr<span class="op">&gt;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;/</span>tbody<span class="op">&gt;</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>table<span class="op">&gt;</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Voltar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>View burra: só itera <code>$events</code> que o controller passou;
+nenhuma regra, nenhum SQL.</li>
+<li><code>htmlspecialchars</code> em texto (XSS, cobrado na rubrica);
+<code>(int)</code> em número.</li>
+<li>Tipo pelo rótulo de <code>Event::KINDS</code> (nome completo da
+classe, como em <code>index.phtml</code>).</li>
+<li>Lista vazia com mensagem própria; "Voltar" volta à listagem.</li>
+</ul>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>No <code>&lt;div class="mb-3"&gt;</code> do topo, depois do botão
+"Novo Evento":</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.new&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Novo Evento<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-outline-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.full&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Eventos lotados<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: <code>route('admin.events.full')</code> monta a URL pelo
+nome; mudar o caminho em <code>routes.php</code> não quebra o link.</p>
+<h2 id="6-testsunitmodelseventseventtestphp">6.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Testes novos depois de
+<code>test_available_spots_should_be_capacity_minus_enrollments</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_full_should_return_only_events_without_available_spots()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$full</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Lotado&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">2</span>])<span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$partial</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Com vagas&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">3</span>])<span class="ot">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Vazio&#39;</span>])<span class="ot">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$full</span><span class="ot">,</span> <span class="dv">2</span>)<span class="ot">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$partial</span><span class="ot">,</span> <span class="dv">2</span>)<span class="ot">;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> Event::full()<span class="ot">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> <span class="va">$events</span>)<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$full</span>-&gt;id<span class="ot">,</span> <span class="va">$events</span>[<span class="dv">0</span>]-&gt;id)<span class="ot">;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_full_should_be_empty_without_full_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> Event::full())<span class="ot">;</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Testa a regra no model, sem HTTP: lotado, com vagas e vazio.</li>
+<li><code>createEvent</code> e <code>enroll($event, $total)</code> já
+existem no arquivo.</li>
+<li><code>$events[0]</code> prova o <code>array_values</code>.</li>
+</ul>
+<h2 id="7-testsintegrationcontrollersadmineventscontrollertestphp">7.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Testes novos depois de
+<code>test_index_shows_date_and_enrollments_over_capacity</code>
+(termina em
+<code>assertStringContainsString('1/10', $response);</code>):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_full_lists_only_full_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$full</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento Lotado&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento Com Vagas&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">5</span>])<span class="ot">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$full</span>)<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;full&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Eventos lotados\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento Lotado&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;1/1&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento Com Vagas&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_full_without_full_events_shows_empty_message()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento Com Vagas&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;full&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Nenhum evento lotado.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento Com Vagas&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_links_to_full_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/full&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Chama a ação <code>full</code> direto e lê o HTML: prova controller
++ view + <code>$title</code> no <code>&lt;h1&gt;</code>.</li>
+<li><code>enroll($full)</code> (helper do arquivo, um participante) lota
+o Evento de capacidade 1.</li>
+<li>Terceiro teste prova o link na listagem.</li>
+<li>Não prova a rota: <code>ControllerTestCase</code> não passa pelo
+Router.</li>
+</ul>
+<h2 id="8-testsacceptanceadmineventslistfulleventscestphp-novo">8.
+<code>tests/Acceptance/admin/events/ListFullEventsCest.php</code>
+(novo)</h2>
+<p>Arquivo inteiro:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ListFullEventsCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> listOnlyFullEvents(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Listagem dos Eventos lotados (sem vagas)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Eventos lotados&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/full&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Eventos lotados&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Na base só o Evento 01 está lotado (3/3); o Evento 03 tem Inscrição, mas ainda tem vagas.</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="dv">1</span>)<span class="ot">;</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;3/3&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 01&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Evento 02&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Evento 03&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Voltar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Navegador real, passando pelo Router: pega rota declarada depois de
+<code>{id}</code> (o clique cairia em "Evento não encontrado!").</li>
+<li>Estende <code>BaseEventsCest</code>: login de admin e 16 Eventos
+semeados; <code>rowOf()</code> dá o XPath da linha pelo título.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># ListFullEventsCest</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem <code>db:populate</code> (schema não mudou). No navegador
+(populate, logado como <code>admin@example.com</code> /
+<code>123456</code>): <code>/admin/events</code> -&gt; "Eventos lotados"
+-&gt; só "Semana Acadêmica de Informática 2026" (3/3); "Voltar" volta à
+listagem.</p>
+<p>Commit (inglês):
+<code>feat: List full events in admin area</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Rota depois de <code>/admin/events/{id}</code>: <code>full</code>
+vira id, 302 com "Evento não encontrado!". Teste de controller não pega
+(chama a ação direto); só HTTP com admin logado (S2) ou Cest.</li>
+<li>Sem sessão a resposta é 302 nos dois casos: teste HTTP tem de logar
+o admin (<code>loggedClient</code>).</li>
+<li><code>$title</code> fora do <code>compact</code>: layout
+quebra.</li>
+<li>Nome fora do padrão <code>admin.events.*</code>.</li>
+<li><code>array_filter</code> sem <code>array_values</code>:
+<code>$events[0]</code> pode não existir.</li>
+<li><code>availableSpots()</code> usa <code>max(0, ...)</code>: Evento
+com mais Inscrições que vagas também conta como lotado (desejado).</li>
+<li>Tabela de ligação é <code>event_user</code> (model
+<code>Enrollment</code>), não <code>enrollments</code>.</li>
+<li>Variante <code>POST .../duplicate</code> (P6): form com
+<code>method="post"</code>; PUT/DELETE exigem <code>_method</code>
+(<code>core/Http/Request.php</code>).</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p6-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="p6-passo-a-passo-duplicar-evento">P6 passo a passo: Duplicar
+Evento</h1>
+<p>Pedido típico: "um botão 'Duplicar' na listagem cria uma cópia do
+Evento (título com '(cópia)', data daqui a 7 dias, sem inscrições) e
+abre a edição da cópia". Chance: média-alta. Tempo: 20-30 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/p6-duplicar-evento/</code>
+(patch, bundle e árvore <code>projeto/</code>). Este arquivo é o mesmo
+conteúdo em formato "um arquivo por vez, com o motivo". Sem
+pré-requisito: sai de <code>main</code>. Os testes unitários de
+<code>duplicate()</code> ficam no S3
+(<code>exemplos/s3-teste-unitario-model</code>, guia
+<code>sbs/s3-sbs.md</code>, empilhado sobre este); aqui só controller,
+acesso e aceitação.</p>
+<p>Ordem = fluxo da requisição: model -&gt; rota -&gt; controller -&gt;
+view -&gt; testes. Schema e populate não mudam. Na prova, prioridade:
+funcionar no navegador, depois testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>app/Models/Event.php</code></li>
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/DuplicateEventCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>.</p>
+<h2 id="1-appmodelseventphp">1. <code>app/Models/Event.php</code></h2>
+<p>Depois de <code>validatesCapacityAgainstEnrollments()</code> e antes
+de <code>public function user(): BelongsTo</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * acrescenta &quot; (cópia)&quot; ao título e marca a data para daqui a 7 dias. Inscrições não são</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * copiadas: ficam em event_user, e a cópia nasce sem nenhuma.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> duplicate()<span class="ot">:</span> Event</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="kw">new</span> Event()<span class="ot">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="kw">static</span>::<span class="va">$columns</span> <span class="kw">as</span> <span class="va">$column</span>) {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$copy</span>-&gt;<span class="va">$column</span> <span class="op">=</span> <span class="va">$this</span>-&gt;<span class="va">$column</span><span class="ot">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// title é VARCHAR(255) e &quot; (cópia)&quot; tem 8 caracteres.</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span>-&gt;title <span class="op">=</span> <span class="fu">mb_substr</span>(<span class="va">$this</span>-&gt;title<span class="ot">,</span> <span class="dv">0</span><span class="ot">,</span> <span class="dv">247</span>) <span class="op">.</span> <span class="st">&#39; (cópia)&#39;</span><span class="ot">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span>-&gt;starts_on <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+7 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$copy</span><span class="ot">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Cópia é regra do model; controller só salva e escolhe a flash.</li>
+<li>Devolve <strong>sem salvar</strong>: controller decide o que fazer
+se <code>save()</code> falhar.</li>
+<li><code>new Event()</code>, não <code>clone $this</code>: o clone leva
+o <code>id</code>, continua "existente" (<code>newRecord()</code> falso)
+e <code>save()</code> faria <code>UPDATE</code> no original.</li>
+<li><code>$attributes</code> é privado em <code>Model</code>: copia via
+<code>__get</code>/<code>__set</code> (<code>$this-&gt;$column</code>),
+coluna a coluna de <code>$columns</code>. <code>id</code> não está em
+<code>$columns</code>, então não vai.</li>
+<li>Inscrições moram em <code>event_user</code>: a cópia nasce sem
+nenhuma, sem código extra.</li>
+<li><code>user_id</code> do original (vem no <code>foreach</code>). Com
+Q1, use o admin logado.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li>Título de 255 + " (cópia)" estoura <code>VARCHAR(255)</code>:
+<code>mb_substr(..., 0, 247)</code> (multibyte por causa do "ó").</li>
+<li>Copiar <code>starts_on</code> de Evento passado: a validação "não
+pode estar no passado" recusa a cópia. Por isso
+<code>+7 days</code>.</li>
+<li>Com P1: <code>$copy-&gt;checkin_code = null;</code> (senão
+<code>uniqueness</code> barra). Com P5:
+<code>$copy-&gt;status = 'scheduled';</code>.</li>
+</ul>
+<h2 id="2-configroutesphp">2. <code>config/routes.php</code></h2>
+<p>Grupo <code>admin</code>, depois de
+<code>admin.events.destroy</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        Route::delete(<span class="st">&#39;/admin/events/{id}&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.destroy&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        Route::post(<span class="st">&#39;/admin/events/{id}/duplicate&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;duplicate&#39;</span>])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.duplicate&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Grupo <code>admin</code>: middleware barra Participante e sem sessão
+antes do controller.</li>
+<li><code>POST</code> porque cria recurso; sem <code>_method</code>.
+Sufixo <code>/duplicate</code> após <code>{id}</code>: mesma receita de
+rota com sufixo (O1).</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Ação nova depois de <code>destroy</code> (antes do docblock de
+<code>fill</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> duplicate(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;findEvent(<span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;eventNotFound()<span class="ot">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$event</span>-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$copy</span>-&gt;save()) {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            FlashMessage::success(<span class="st">&#39;Evento duplicado! Revise os dados.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.edit&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$copy</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Não foi possível duplicar o evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Molde: <code>create</code> (salva e redireciona) +
+<code>findEvent</code>/<code>eventNotFound</code> com early return.</li>
+<li>Depois do <code>save()</code>, <code>$copy-&gt;id</code> existe:
+redirect pra edição da cópia.</li>
+<li>PRG: redirect nos dois ramos, nunca <code>render</code> depois de
+POST.</li>
+<li>Não passa por <code>FIELDS</code>/<code>fill</code>: nada vem do
+form, só o <code>{id}</code>.</li>
+</ul>
+<p>Armadilha: redirecionar para <code>edit</code> sem flash deixa o
+admin sem saber que já está na cópia, não no original.</p>
+<h2 id="4-appviewsadmineventsindexphtml">4.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>Na coluna de ações, depois do <code>&lt;/form&gt;</code> de
+"Remover":</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-danger&quot;</span><span class="op">&gt;</span>Remover<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                              action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.duplicate&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-dark&quot;</span><span class="op">&gt;</span>Duplicar<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;/</span>form<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Ação que cria dado = form <code>post</code>, não link.</li>
+<li>URL pelo nome da rota (<code>route(...)</code>).</li>
+</ul>
+<p>Armadilha: esquecer <code>method="post"</code>: link/<code>GET</code>
+não casa a rota.</p>
+<h2 id="5-testsintegrationcontrollersadmineventscontrollertestphp">5.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Depois do último teste de <code>destroy</code> (antes do docblock de
+<code>validParams()</code>). Usa <code>createEvent()</code> e
+<code>enroll()</code> que já existem:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- duplicar ------------------- */</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_has_a_duplicate_button()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/duplicate</span><span class="sc">\&quot;</span><span class="st"> method=</span><span class="sc">\&quot;</span><span class="st">post</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Duplicar&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_creates_a_copy_and_redirects_to_its_edit_form()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina Original&#39;</span><span class="ot">,</span> <span class="st">&#39;audience&#39;</span> =&gt; [<span class="st">&#39;students&#39;</span><span class="ot">,</span> <span class="st">&#39;staff&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;duplicate&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">2</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina Original (cópia)&#39;</span>])<span class="ot">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$copy</span>)<span class="ot">;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotEquals(<span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="va">$copy</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals([<span class="st">&#39;students&#39;</span><span class="ot">,</span> <span class="st">&#39;staff&#39;</span>]<span class="ot">,</span> <span class="va">$copy</span>-&gt;audienceList())<span class="ot">;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+7 days&#39;</span>))<span class="ot">,</span> <span class="va">$copy</span>-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$copy</span>-&gt;id}<span class="st">/edit&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento duplicado! Revise os dados.&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_keeps_the_original_unchanged()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina Original&#39;</span>])<span class="ot">;</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;duplicate&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$original</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Oficina Original&#39;</span><span class="ot">,</span> <span class="va">$original</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$event</span>-&gt;starts_on<span class="ot">,</span> <span class="va">$original</span>-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$original</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_with_unknown_id_redirects_to_index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;duplicate&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="dv">9999</span>])<span class="ot">;</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>post(...)</code> chama a ação direto; <code>redirectTo</code>
+vira <code>Location: ...</code>.</li>
+<li><code>test_duplicate_keeps_the_original_unchanged</code> pega o erro
+do <code>clone</code> (que faria <code>UPDATE</code> no original).</li>
+<li><code>audienceList()</code> prova que o <code>foreach</code> copiou
+o <code>SET</code>; Inscrição no original prova que a cópia nasce com
+0.</li>
+</ul>
+<h2 id="6-testsintegrationaccesseventsaccesstestphp">6.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) Docblock de <code>eventRoutes()</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> <span class="kw">As</span> <span class="dv">9</span> rotas admin<span class="op">.</span>events<span class="op">.*</span> (index<span class="ot">,</span> paginate<span class="ot">,</span> <span class="kw">new</span><span class="ot">,</span> create<span class="ot">,</span> show<span class="ot">,</span> edit<span class="ot">,</span> update<span class="ot">,</span> destroy<span class="ot">,</span> duplicate)<span class="op">.</span></span></code></pre></div>
+<p>b) Em <code>eventRoutes()</code> (só nele; <strong>não</strong> em
+<code>methodOverrideRoutes()</code>, que é para
+<code>PUT</code>/<code>DELETE</code> via <code>_method</code>), depois
+de <code>'admin.events.destroy' =&gt; [...]</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.duplicate&#39;</span> =&gt; [<span class="st">&#39;POST&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/1/duplicate&#39;</span>]<span class="ot">,</span></span></code></pre></div>
+<p>c) Testes novos, depois do teste que tenta criar/alterar/remover como
+Participante (termina com <code>'Palestra de Acesso'</code>):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_participant_should_not_duplicate_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;participant)-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/duplicate&quot;</span>)<span class="ot">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_duplicate_an_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/duplicate&quot;</span>)<span class="ot">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra de Acesso (cópia)&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$copy</span>)<span class="ot">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$copy</span>-&gt;id}<span class="st">/edit&quot;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: <code>eventRoutes()</code> alimenta os testes existentes
+(sem sessão -&gt; <code>/login</code>, Participante -&gt;
+<code>/dashboard</code>). Os dois novos batem por HTTP real e provam o
+middleware <code>admin</code>.</p>
+<h2 id="7-testsacceptanceadmineventsduplicateeventcestphp-novo">7.
+<code>tests/Acceptance/admin/events/DuplicateEventCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\<span class="fu">Assert</span><span class="ot">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * Duplicar um Evento pela listagem abre a edição da cópia.</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> DuplicateEventCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> duplicateEventOpensTheCopyForEditing(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$original</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">1</span>]<span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Duplicar um Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Duplicar&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 01&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento 01 (cópia)&#39;</span>])<span class="ot">;</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertNotNull(<span class="va">$copy</span>)<span class="ot">;</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$copy</span>-&gt;id}<span class="st">/edit&quot;</span>)<span class="ot">;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento duplicado! Revise os dados.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Editar Evento&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_title&#39;</span><span class="ot">,</span> <span class="st">&#39;Evento 01 (cópia)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_starts_on&#39;</span><span class="ot">,</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+7 days&#39;</span>)))<span class="ot">;</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_location&#39;</span><span class="ot">,</span> <span class="va">$original</span>-&gt;location)<span class="ot">;</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>        <span class="co">// A cópia nasce sem Inscrições; o original (lotado) continua com as 3.</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="dv">3</span><span class="ot">,</span> <span class="va">$original</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertCount(<span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span> <span class="op">+</span> <span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/page/4&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento 01 (cópia)&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;0/3&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 01 (cópia)&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê: navegador real (Selenium). Duplica o Evento 01 (lotado 3/3),
+cai na edição com campos preenchidos, cópia com 0/3 e listagem com 17
+(<code>TOTAL_EVENTS + 1</code>, vem do <code>BaseEventsCest</code>).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/EventsAccessTest.php</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Schema e populate não mudam. No navegador (admin): "Duplicar" numa
+linha -&gt; edição aberta com "(cópia)" no título, data daqui a 7 dias e
+flash "Evento duplicado! Revise os dados."; listagem com 17 Eventos; a
+cópia com 0 inscritos.</p>
+<p>Commit (inglês):
+<code>feat: Duplicate an Event from the listing</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>clone $this</code>: copia <code>id</code>,
+<code>newRecord()</code> falso, <code>save()</code> vira
+<code>UPDATE</code> do original. Use <code>new Event()</code>.</li>
+<li><code>$attributes</code> é privado em <code>Model</code>: copie via
+<code>$this-&gt;$column</code>.</li>
+<li>Título 255 + " (cópia)" estoura <code>VARCHAR(255)</code>:
+<code>mb_substr(..., 0, 247)</code>.</li>
+<li>Copiar <code>starts_on</code> de Evento passado: validação recusa.
+<code>+7 days</code>.</li>
+<li><code>user_id</code>: mantenha o original, salvo pedido contrário
+(com Q1, o logado).</li>
+<li>Redirect para <code>edit</code> sem flash: usuário não sabe que foi
+criado.</li>
+<li>Form sem <code>method="post"</code>: não casa a rota.</li>
+<li>Rota POST entra em <code>eventRoutes()</code>, não em
+<code>methodOverrideRoutes()</code>.</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>m7-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="m7-passo-a-passo-horário-do-evento">M7 passo a passo: Horário do
+Evento</h1>
+<p>Pedido típico: "o Evento precisa ter horário de início, não só a
+data. Não deixe cadastrar para um horário que já passou, nem hoje mais
+cedo. Mostre data e hora no form, na listagem e no detalhe." Chance:
+média-alta. Tempo: 30-40 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/m7-horario-do-evento/</code>
+(patch, bundle e árvore <code>projeto/</code>). Pré-requisitos: nenhum
+(base <code>main</code>).</p>
+<p>Forma do exemplo: (B) do catálogo, <code>starts_on DATE</code> vira
+<code>starts_at DATETIME</code> (formato <code>Y-m-d H:i</code>).
+Renomeia a coluna em todos os pontos de M1 e a regra "não no passado"
+passa a considerar a hora. A forma (A), menor
+(<code>starts_time TIME</code> ao lado de <code>starts_on</code>), está
+no fim.</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; controller -&gt;
+views -&gt; dados -&gt; testes. Na prova, prioridade: funcionar no
+navegador, depois testar, depois <code>phpcs</code>.</p>
+<p>Dica: no fim, <code>grep -rn starts_on app database tests</code> tem
+que voltar vazio.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>database/Populate/populate.php</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Unit/Models/Events/EnrollmentTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/BaseEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/ListEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/UpdateSuccessfullyCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php</code></li>
+</ol>
+<p>Depois: <code>./run db:populate</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE events</code>, troque a coluna e o índice:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    audience    <span class="kw">SET</span>(<span class="st">&#39;students&#39;</span>, <span class="st">&#39;professors&#39;</span>, <span class="st">&#39;staff&#39;</span>, <span class="st">&#39;community&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    starts_at   DATETIME <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    location    <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> index_events_on_starts_at (starts_at)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Uma coluna guarda "quando": "não no passado" compara um valor só;
+ordenar/filtrar (N3, N5, N9) segue sendo uma coluna.</li>
+<li><code>DATETIME</code>, não <code>TIMESTAMP</code>: sem fuso.
+<code>TIMESTAMP</code> converte pelo fuso da sessão do MySQL.</li>
+<li>Índice renomeado acompanha a coluna (convenção
+<code>index_&lt;tabela&gt;_on_&lt;coluna&gt;</code>).</li>
+</ul>
+<p>Armadilha: testes recriam o schema; o banco de dev não. No fim,
+<code>./run db:populate</code>, senão <code>Unknown column</code> só no
+navegador.</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Cinco pontos.</p>
+<p>a) Docblock da classe, no lugar de
+<code>@property string $starts_on</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">string</span> <span class="va">$starts_at</span> data e hora no formato <span class="cn">Y</span><span class="op">-</span>m<span class="op">-</span>d <span class="cn">H</span><span class="ot">:</span>i (o <span class="bu">__set</span> normaliza)</span></code></pre></div>
+<p>b) <code>$columns</code>: <code>'starts_on',</code> vira:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;starts_at&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>c) <code>validates()</code>, bloco da data:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>            Validations::validDate(<span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="st">&#39;Y-m-d H:i&#39;</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesStartsAtNotPast()<span class="ot">;</span></span></code></pre></div>
+<p>d) Logo depois de <code>validates()</code>, <code>__set</code> novo
+(antes do método "não no passado"):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Normaliza `starts_at` para Y-m-d H:i. O `</span><span class="kw">&lt;input</span><span class="ot"> type=</span><span class="dt">&quot;datetime-local&quot;</span><span class="kw">&gt;</span><span class="co">` envia &quot;2030-05-10T14:30&quot;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * e o MySQL devolve a coluna DATETIME como &quot;2030-05-10 14:30:00&quot;; os dois viram &quot;2030-05-10 14:30&quot;.</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * Valor fora desses formatos fica como veio, para a validação rejeitar.</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> <span class="bu">__set</span>(<span class="dt">string</span> <span class="va">$property</span><span class="ot">,</span> <span class="dt">mixed</span> <span class="va">$value</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$property</span> <span class="op">===</span> <span class="st">&#39;starts_at&#39;</span> <span class="op">&amp;&amp;</span> <span class="fu">is_string</span>(<span class="va">$value</span>)) {</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$value</span> <span class="op">=</span> <span class="fu">preg_replace</span>(<span class="st">&#39;/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(:\d{2})?$/&#39;</span><span class="ot">,</span> <span class="st">&#39;$1 $2&#39;</span><span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::<span class="bu">__set</span>(<span class="va">$property</span><span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>e) <code>validatesStartsOnNotPast()</code> vira
+<code>validatesStartsAtNotPast()</code>, com comparação por minuto; e
+<code>startsAtInputValue()</code> novo logo abaixo:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Data e hora não podem estar no passado ao criar (comparação por minuto: um horário de hoje que já</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * passou é rejeitado). Na edição, só é cobrada quando `starts_at` muda: assim um Evento que já</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * aconteceu ainda pode ter a descrição, o local etc. corrigidos.</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validatesStartsAtNotPast()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$this</span>-&gt;newRecord()) {</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$original</span> <span class="op">=</span> <span class="kw">self</span>::findById(<span class="va">$this</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="va">$original</span> <span class="op">!==</span> <span class="kw">null</span> <span class="op">&amp;&amp;</span> <span class="va">$original</span>-&gt;starts_at <span class="op">===</span> <span class="va">$this</span>-&gt;starts_at) {</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Os dois lados estão em Y-m-d H:i (já passou pelo validDate), então a comparação de strings é cronológica.</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;starts_at <span class="op">&lt;</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span>)) {</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="st">&#39;não pode estar no passado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">     * Valor para o `</span><span class="kw">&lt;input</span><span class="ot"> type=</span><span class="dt">&quot;datetime-local&quot;</span><span class="kw">&gt;</span><span class="co">` (Y-m-d</span><span class="an">\TH:i).</span><span class="co"> Mantém o texto digitado se for inválido.</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> startsAtInputValue()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dt">(string)</span> <span class="fu">preg_replace</span>(<span class="st">&#39;/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/&#39;</span><span class="ot">,</span> <span class="st">&#39;$1T$2&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$this</span>-&gt;starts_at)<span class="ot">;</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>@property</code> + <code>$columns</code>: mesmo roteiro de M1
+(atributo dinâmico, lista do
+<code>INSERT</code>/<code>UPDATE</code>).</li>
+<li><code>validDate</code> já aceita <code>$format</code>
+(<code>lib/Validations.php:99-107</code>); <code>'Y-m-d H:i'</code>
+recusa <code>2030-02-31 10:00</code>, <code>24:00</code>,
+<code>9:00</code>, data sem hora.</li>
+<li><code>notPastDate</code> não serve: zera a hora de hoje
+(<code>setTime(0, 0)</code>) e aceitaria 08:00 às 15:00. Em vez de
+<code>notPastDateTime</code> no lib, a regra fica no método privado que
+já existia (uma linha).</li>
+<li>Comparar strings funciona porque os dois lados estão em
+<code>Y-m-d H:i</code> (ordem lexicográfica = cronológica). Minuto atual
+é aceito.</li>
+<li>Edição só cobra quando <code>starts_at</code> muda (regra da base
+mantida).</li>
+<li><code>__set</code> no model, não no controller: o construtor do
+<code>Model</code> chama <code>__set</code> para cada param, então vale
+pro form, pro que vem do banco (<code>findById</code>/<code>all</code>
+usam <code>new static($row)</code>; <code>lib/Paginator.php:143</code>
+usa <code>new $this-&gt;class($row)</code>) e pros testes. Controller
+segue só copiando <code>FIELDS</code>.</li>
+<li>Texto fora do formato fica como veio: a validação recusa e o form
+devolve o que foi digitado (<code>startsAtInputValue()</code>).</li>
+<li><code>startsAtInputValue()</code>: o <code>datetime-local</code> só
+aceita <code>value</code> com <code>T</code>. Formatação de input
+pertence ao model, view só chama.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li>MySQL devolve <code>DATETIME</code> como <code>Y-m-d H:i:s</code>.
+Sem o <code>__set</code>, editar sem mexer na hora dá "não é uma data
+válida!".</li>
+<li><code>datetime-local</code> envia <code>2030-05-10T14:30</code> (com
+<code>T</code>), que <code>'Y-m-d H:i'</code> recusa. Por isso a troca
+do <code>T</code> no <code>__set</code>.</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Constante <code>FIELDS</code> (linha ~14): <code>'starts_on'</code>
+vira <code>'starts_at'</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">FIELDS</span> <span class="op">=</span> [<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;modality&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: allowlist; só o que está aqui sai do form e chega ao model.
+Esquecer -&gt; "não pode ser vazio!" sem motivo aparente. Nada de
+converter data no controller.</p>
+<h2 id="4-appviewsadminevents_formphtml">4.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Bloco da data (linhas ~70-75), inteiro:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;mb-3&quot;</span><span class="op">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>label <span class="cf">for</span><span class="op">=</span><span class="st">&quot;event_starts_at&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-label&quot;</span><span class="op">&gt;</span>Data e hora<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;datetime-local&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-control&lt;?= </span><span class="va">$invalid</span><span class="st">(&#39;starts_at&#39;) ?&gt;&quot;</span> id<span class="op">=</span><span class="st">&quot;event_starts_at&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>            name<span class="op">=</span><span class="st">&quot;event[starts_at]&quot;</span> value<span class="op">=</span><span class="st">&quot;&lt;?= htmlspecialchars(</span><span class="va">$event</span>-&gt;startsAtInputValue<span class="st">()) ?&gt;&quot;</span><span class="op">&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$feedback</span>(<span class="st">&#39;starts_at&#39;</span>) <span class="kw">?&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>div<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>type="datetime-local"</code>: seletor de data + hora; envia
+<code>Y-m-d\TH:i</code>.</li>
+<li><code>value</code> via <code>startsAtInputValue()</code> (com
+<code>T</code>); em erro, volta o texto digitado.
+<code>htmlspecialchars</code>: escape (XSS), rubrica cobra.</li>
+<li><code>id</code>/<code>name</code> novos:
+<code>$invalid</code>/<code>$feedback</code> e os testes procuram
+<code>event_starts_at</code>.</li>
+</ul>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) <code>&lt;thead&gt;</code>: <code>&lt;th&gt;Data&lt;/th&gt;</code>
+vira:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Data e hora<span class="op">&lt;/</span>th<span class="op">&gt;</span></span></code></pre></div>
+<p>b) <code>&lt;tbody&gt;</code> (linha ~24):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_at)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: só formatação. View exibe o que veio do banco (já validado),
+então <code>strtotime</code> não cai em 1970 aqui.
+<code>paginate()</code> já traz a coluna.</p>
+<h2 id="6-appviewsadmineventsshowphtml">6.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Par <code>dt</code>/<code>dd</code> da data (linhas ~22-23):</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Data e hora<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_at)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: mesmo formato da listagem; <code>show</code> só exibe o
+<code>$event</code>.</p>
+<h2 id="7-databasepopulatepopulatephp">7.
+<code>database/Populate/populate.php</code></h2>
+<p>a) Comentário acima de <code>$events = [</code> (linha ~48):
+<code>starts_on</code> vira <code>starts_at</code> e, logo antes de
+<code>$events = [</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// O horário de início alterna entre os de $startTimes (manhã, tarde e noite).</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="va">$startTimes</span> <span class="op">=</span> [<span class="st">&#39;08:00&#39;</span><span class="ot">,</span> <span class="st">&#39;10:30&#39;</span><span class="ot">,</span> <span class="st">&#39;14:00&#39;</span><span class="ot">,</span> <span class="st">&#39;19:00&#39;</span>]<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>foreach</code> (linha ~133) ganha <code>$index =&gt;</code>
+e a chave da data muda:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="cf">foreach</span> (<span class="va">$events</span> <span class="kw">as</span> <span class="va">$index</span> =&gt; [<span class="va">$title</span><span class="ot">,</span> <span class="va">$description</span><span class="ot">,</span> <span class="va">$kind</span><span class="ot">,</span> <span class="va">$modality</span><span class="ot">,</span> <span class="va">$audience</span><span class="ot">,</span> <span class="va">$daysAhead</span><span class="ot">,</span> <span class="va">$location</span><span class="ot">,</span> <span class="va">$capacity</span>]) {</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&quot;+</span>{<span class="va">$daysAhead</span>}<span class="st"> days&quot;</span>)) <span class="op">.</span> <span class="st">&#39; &#39;</span> <span class="op">.</span> <span class="va">$startTimes</span>[<span class="va">$index</span> <span class="op">%</span> <span class="fu">count</span>(<span class="va">$startTimes</span>)]<span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>save()</code> valida; chave antiga <code>starts_on</code>
+-&gt; "não pode ser vazio!" -&gt; <code>RuntimeException</code>, banco
+de dev vazio.</li>
+<li>Datas relativas (+14 a +82 dias) continuam: nunca ficam no
+passado.</li>
+<li><code>$index % count(...)</code> varia a hora sem mexer nas linhas
+posicionais.</li>
+</ul>
+<h2 id="8-testsunitmodelseventseventtestphp">8.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>a) Troca mecânica em todo o arquivo: chave/campo
+<code>starts_on</code> -&gt; <code>starts_at</code> e
+<code>date('Y-m-d', strtotime(X))</code> -&gt;
+<code>date('Y-m-d H:i', strtotime(X))</code>. Pontos:
+<code>params()</code>, as duas listas de campos
+(<code>test_empty_event_should_have_error_in_every_field</code> e
+<code>errorsOf()</code>), o data provider
+(<code>'starts_at' =&gt; ['starts_at'],</code>),
+<code>createPastEvent()</code> e o bloco "não passada só no create e
+quando data/hora muda". Os testes desse bloco trocam
+<code>starts_on</code> por <code>starts_at</code> no nome também
+(<code>test_past_event_can_be_edited_when_starts_at_does_not_change</code>
+etc.). Em
+<code>test_invalid_starts_at_should_still_be_rejected_on_edit_of_a_past_event</code>:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;starts_at <span class="op">=</span> <span class="st">&#39;2030-02-30 10:00&#39;</span><span class="ot">;</span></span></code></pre></div>
+<p>b) <code>test_starts_on_should_be_a_valid_date</code> vira:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_at_should_be_a_valid_date()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$values</span> <span class="op">=</span> [</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;amanhã&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-02-31 10:00&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-13-01 10:00&#39;</span><span class="ot">,</span> <span class="st">&#39;30/12/2030 10:00&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-1-5 10:00&#39;</span><span class="ot">,</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;2030-05-10&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-05-10 24:00&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-05-10 10:60&#39;</span><span class="ot">,</span> <span class="st">&#39;2030-05-10 9:00&#39;</span><span class="ot">,</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$values</span> <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="va">$value</span>]))<span class="ot">;</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é uma data válida!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_at&#39;</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>c) <code>test_starts_on_should_not_be_in_the_past</code> vira
+<code>test_starts_at_should_not_be_in_the_past</code> (troca mecânica).
+<code>test_starts_on_today_should_be_valid</code> <strong>sai</strong>
+(com hora, "hoje" não é sempre válido). No lugar:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_at_one_hour_ago_should_be_in_the_past()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;-1 hour&#39;</span>))]))<span class="ot">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode estar no passado!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;starts_at&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_at_in_one_hour_should_be_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+1 hour&#39;</span>))]))<span class="ot">;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_at_should_accept_the_datetime_local_format()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="st">&#39;2030-05-10T14:30&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;2030-05-10 14:30&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;starts_at)<span class="ot">;</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;2030-05-10T14:30&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;startsAtInputValue())<span class="ot">;</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;2030-05-10 14:30&#39;</span><span class="ot">,</span> <span class="va">$found</span>-&gt;starts_at)<span class="ot">;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_starts_at_input_value_keeps_invalid_text()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="st">&#39;amanhã cedo&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;amanhã cedo&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;startsAtInputValue())<span class="ot">;</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>params()</code> é a fábrica de Evento válido; sem a troca todo
+teste que salva quebra.</li>
+<li><code>-1 hour</code>: prova a regra por hora (com
+<code>notPastDate</code> passaria).</li>
+<li><code>+1 hour</code>, nunca "agora": o minuto pode virar entre
+montar e validar.</li>
+<li><code>datetime_local_format</code>: <code>T</code> normalizado,
+<code>value</code> com <code>T</code>, grava e relê do banco
+(<code>:00</code> dos segundos cortado pelo <code>__set</code>).</li>
+<li><code>test_past_event_can_be_edited_when_starts_at_does_not_change</code>
+é a prova do <code>HH:MM:SS</code>: carrega do banco, muda a descrição,
+salva.</li>
+</ul>
+<h2 id="9-testsunitmodelseventsenrollmenttestphp">9.
+<code>tests/Unit/Models/Events/EnrollmentTest.php</code></h2>
+<p><code>setUp</code> (linha ~45), no <code>new Event([...])</code>:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: <code>setUp</code> salva um Evento; chave antiga -&gt;
+<code>save()</code> falso -&gt; todos os testes de Inscrição caem.</p>
+<h2 id="10-testsintegrationcontrollersadmineventscontrollertestphp">10.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) <code>test_index_shows_date_and_enrollments_over_capacity</code>
+(linha ~59):</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">10</span><span class="ot">,</span> <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39; 14:30&#39;</span>])<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39; 14:30&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>test_new_renders_form</code>: <code>'type="date"'</code>
+vira:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;type=&quot;datetime-local&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span></code></pre></div>
+<p>c) Teste novo depois de
+<code>test_create_with_valid_data_saves_event_for_logged_admin</code>:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_accepts_starts_at_from_datetime_local_input()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$day</span> <span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="st">&quot;</span>{<span class="va">$day</span>}<span class="st">T08:45&quot;</span>])]</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;</span>{<span class="va">$day</span>}<span class="st"> 08:45&quot;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;starts_at)<span class="ot">;</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>d) <code>test_edit_renders_form_filled</code>: no
+<code>createEvent([...])</code>, depois de
+<code>'audience' =&gt; ['professors', 'staff'],</code>:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39; 14:30&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>e no fim do teste:</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;type=&quot;datetime-local&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;value=&quot;&#39;</span> <span class="op">.</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>)) <span class="op">.</span> <span class="st">&#39;T14:30&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span></code></pre></div>
+<p>e) <code>validParams()</code> (linha ~280):</p>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Integração prova form -&gt; <code>FIELDS</code> -&gt;
+<code>__set</code> -&gt; banco -&gt; view.</li>
+<li><code>T08:45</code> é exatamente o que o navegador manda; gravar
+<code>08:45</code> prova a normalização no caminho real do POST.</li>
+<li><code>edit</code> com <code>value="...T14:30"</code>: o form reabre
+preenchido no formato do input (caminho do <code>HH:MM:SS</code> ao
+contrário).</li>
+</ul>
+<h2 id="11-testsintegrationaccesseventsaccesstestphp">11.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) <code>setUp</code> (linha ~37):</p>
+<div class="sourceCode" id="cb27"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+30 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b) POST de criação via HTTP (linha ~150):</p>
+<div class="sourceCode" id="cb28"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: teste de acesso bate nas rotas por HTTP; <code>setUp</code>
+precisa de Evento salvo e o POST precisa passar na validação.</p>
+<h2 id="12-testsacceptanceadmineventsbaseeventscestphp">12.
+<code>tests/Acceptance/admin/events/BaseEventsCest.php</code></h2>
+<p>a) <code>startsOn()</code> vira <code>startsAt()</code> (linha ~68),
+às 19:00:</p>
+<div class="sourceCode" id="cb29"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> startsAt(<span class="dt">int</span> <span class="va">$number</span>)<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+&#39;</span> <span class="op">.</span> (<span class="dv">13</span> <span class="op">+</span> <span class="va">$number</span>) <span class="op">.</span> <span class="st">&#39; days&#39;</span>)) <span class="op">.</span> <span class="st">&#39; 19:00&#39;</span><span class="ot">;</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) <code>seedEvents</code>:
+<code>'starts_at' =&gt; $this-&gt;startsAt($number),</code> (e
+<code>starts_on</code> -&gt; <code>starts_at</code> no docblock
+acima).</p>
+<p>c) <code>fillEventForm</code>: docblock
+<code>starts_on (Y-m-d)</code> vira <code>starts_at (Y-m-d H:i)</code>;
+bloco do <code>executeJS</code>:</p>
+<div class="sourceCode" id="cb30"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">array_key_exists</span>(<span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="va">$data</span>)) {</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>            <span class="co">// input[type=datetime-local] depende do idioma do navegador ao digitar; definir o valor ISO</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>            <span class="co">// (Y-m-d\TH:i) é determinístico.</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;executeJS(</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>                <span class="st">&quot;document.getElementById(&#39;event_starts_at&#39;).value = arguments[0];&quot;</span><span class="ot">,</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>                [<span class="fu">str_replace</span>(<span class="st">&#39; &#39;</span><span class="ot">,</span> <span class="st">&#39;T&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$data</span>[<span class="st">&#39;starts_at&#39;</span>])]</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>            )<span class="ot">;</span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>        }</span></code></pre></div>
+<p>d) <code>validEventData</code>:</p>
+<div class="sourceCode" id="cb31"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+1 day&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>seedEvents</code> não confere <code>save()</code>: chave
+errada -&gt; Cests falham com "0 linhas", sem mensagem.</li>
+<li><code>fillField</code> não digita em <code>datetime-local</code> de
+forma confiável (depende do idioma). <code>executeJS</code> põe o valor
+ISO direto, como a base fazia com o <code>date</code>. Troca o espaço
+por <code>T</code> porque os dados dos Cests estão em
+<code>Y-m-d H:i</code>.</li>
+</ul>
+<h2 id="13-testsacceptanceadmineventscreatesuccessfullycestphp">13.
+<code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></h2>
+<p>Assert do banco (linha ~43):</p>
+<div class="sourceCode" id="cb32"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="va">$data</span>[<span class="st">&#39;starts_at&#39;</span>]<span class="ot">,</span> <span class="va">$event</span>-&gt;starts_at)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>assertSame</code> com <code>Y-m-d H:i</code> só passa
+porque o <code>__set</code> corta os <code>:00</code> que o MySQL
+devolve.</p>
+<h2 id="14-testsacceptanceadmineventscreatewithinvaliddatacestphp">14.
+<code>tests/Acceptance/admin/events/CreateWithInvalidDataCest.php</code></h2>
+<p>a) Lista de obrigatórios (linha ~23):</p>
+<div class="sourceCode" id="cb33"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_at&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span>] <span class="kw">as</span> <span class="va">$field</span>) {</span></code></pre></div>
+<p>b) Teste de valores inválidos: data de <code>-1 day</code> vira
+<code>-1 hour</code>, e os asserts usam
+<code>#event_starts_at</code>:</p>
+<div class="sourceCode" id="cb34"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> [<span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;-1 hour&#39;</span>))])<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeElement(<span class="st">&#39;#event_starts_at.is-invalid&#39;</span>)<span class="ot">;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;não pode estar no passado!&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_starts_at ~ .invalid-feedback&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>-1 hour</code> prova a regra por hora no navegador
+real (hoje mais cedo é recusado).</p>
+<h2 id="15-testsacceptanceadmineventslisteventscestphp">15.
+<code>tests/Acceptance/admin/events/ListEventsCest.php</code></h2>
+<p>Linha ~28:</p>
+<div class="sourceCode" id="cb36"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertContains(<span class="fu">date</span>(<span class="st">&#39;d/m/Y H:i&#39;</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_at))<span class="ot">,</span> <span class="va">$row</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: listagem agora mostra <code>d/m/Y H:i</code>.</p>
+<h2 id="16-testsacceptanceadmineventsupdatesuccessfullycestphp">16.
+<code>tests/Acceptance/admin/events/UpdateSuccessfullyCest.php</code></h2>
+<p>a) Dados (linha ~19):</p>
+<div class="sourceCode" id="cb37"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+90 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b) Campo preenchido (linha ~37):</p>
+<div class="sourceCode" id="cb38"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#event_starts_at&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;startsAtInputValue())<span class="ot">;</span></span></code></pre></div>
+<p>c) Assert do banco (linha ~55):</p>
+<div class="sourceCode" id="cb39"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="va">$data</span>[<span class="st">&#39;starts_at&#39;</span>]<span class="ot">,</span> <span class="va">$stored</span>-&gt;starts_at)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: o input mostra o valor com <code>T</code>;
+<code>startsAtInputValue()</code> é a fonte da verdade. Obs.: este Cest
+<strong>troca</strong> a data, então não prova o caso "editar sem mexer
+na hora" (quem prova é o <code>EventTest</code>).</p>
+<h2 id="17-testsacceptanceadmineventsupdatewithinvaliddatacestphp">17.
+<code>tests/Acceptance/admin/events/UpdateWithInvalidDataCest.php</code></h2>
+<p>a) Dados (linha ~27):</p>
+<div class="sourceCode" id="cb40"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_at&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d H:i&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;-2 days&#39;</span>))<span class="ot">,</span></span></code></pre></div>
+<p>b) Asserts (linha ~38):</p>
+<div class="sourceCode" id="cb41"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeElement(<span class="st">&#39;#event_starts_at.is-invalid&#39;</span>)<span class="ot">;</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;não pode estar no passado!&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_starts_at ~ .invalid-feedback&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: só renomeia; regra e mensagem são as mesmas.</p>
+<h2 id="forma-a-alternativa-menor">Forma (A), alternativa menor</h2>
+<p>Mantém <code>starts_on DATE</code> e soma
+<code>starts_time TIME NOT NULL</code> (e
+<code>ends_time TIME NULL</code>) depois dela. Mesmo roteiro de M1:</p>
+<ul>
+<li>model: <code>@property</code>, <code>$columns</code>, e
+<code>Validations::notEmpty('starts_time', $this) &amp;&amp; Validations::validDate('starts_time', $this, 'H:i') &amp;&amp; ...</code>;
+<code>ends_time &gt; starts_time</code> comparando strings
+<code>H:i</code>;</li>
+<li>cortar segundos antes de validar
+(<code>substr((string) $this-&gt;starts_time, 0, 5)</code>): MySQL
+devolve <code>14:00:00</code>;</li>
+<li><code>FIELDS</code>, <code>&lt;input type="time"&gt;</code> (Cest
+com <code>executeJS</code>), view com
+<code>date('d/m/Y', ...) . ' ' . substr($event-&gt;starts_time, 0, 5)</code>;</li>
+<li>"não no passado" por hora: juntar
+<code>starts_on . ' ' . starts_time</code>.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb42"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-rn</span> starts_on app database tests   <span class="co"># tem que voltar vazio</span></span></code></pre></div>
+<p>No navegador (admin): listagem mostra <code>19/11/2026 08:00</code>
+etc. "Editar" abre o <code>datetime-local</code> preenchido. Salvar
+<strong>sem mexer na hora</strong> funciona (é onde o
+<code>HH:MM:SS</code> morde). Hoje, uma hora atrás -&gt; "não pode estar
+no passado!" sob o campo.</p>
+<p>Commit (inglês):
+<code>feat: Replace event date with starts_at datetime</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>MySQL devolve <code>TIME</code>/<code>DATETIME</code> com segundos
+(<code>14:30:00</code>): sem normalizar, editar sem mexer na hora falha
+em <code>validDate</code>.</li>
+<li><code>datetime-local</code> envia <code>T</code>
+(<code>2026-11-20T19:00</code>): troque por espaço antes de validar ou
+use <code>'Y-m-d\TH:i'</code>.</li>
+<li><code>type="time"</code>/<code>datetime-local</code> no Selenium:
+<code>fillField</code> não digita; use <code>executeJS</code> como a
+base faz para <code>date</code>.</li>
+<li><code>notPastDate</code> compara só o dia (zera a hora): teste com
+<code>-1 hour</code>, não só com dia.</li>
+<li>Não use "agora" como valor válido nos testes; use
+<code>+1 hour</code>.</li>
+<li>Fuso: PHP em <code>America/Sao_Paulo</code>, <code>DATETIME</code>
+sem fuso. Não troque por <code>TIMESTAMP</code>.</li>
+<li><code>strtotime('')</code> vira 1970 na view: proteja se o valor
+puder vir vazio.</li>
+<li>Forma B mexe em tudo que cita <code>starts_on</code>: M4 conflita;
+N3, N5, N9 e Q2 precisam trocar para <code>starts_at</code>.</li>
+</ul>
+</body>
+</html>

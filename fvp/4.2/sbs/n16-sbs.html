@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>n16-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="n16-passo-a-passo-busca-filtro-e-ordenação-juntos-mantidos-na-paginação">N16
+passo a passo: Busca, filtro e ordenação juntos, mantidos na
+paginação</h1>
+<p>Pedido típico: "na listagem, busca pelo título, filtro por tipo e
+ordenação escolhida (coluna e direção), tudo junto e preservado ao
+trocar de página". Variante: "a listagem aceita <code>?q=</code>,
+<code>?kind=</code>, <code>?sort=</code> e <code>?dir=</code>, e o link
+da página 2 mantém os quatro". Chance: média-alta. Tempo: 35-45 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/n16-busca-filtro-ordenacao/</code> (patch, bundle
+e árvore <code>projeto/</code>). Sem pré-requisito: sai de
+<code>main</code>, autocontido (junta N1 forma 2, N2, N3 e N8; não
+aplique junto com eles). Schema não muda.</p>
+<p>Contexto: o framework não tem <code>LIKE</code> nem
+<code>ORDER BY</code>; <code>where</code> e <code>Paginator</code> só
+fazem igualdade unida por <code>AND</code>. Hoje a <code>index</code>
+ignora tudo que não é <code>page</code> e a lista sai sem
+<code>ORDER BY</code>.</p>
+<p>Ordem = fluxo da requisição: <code>Paginator</code> (executa o SQL)
+-&gt; model (monta WHERE/ORDER BY, valida) -&gt; controller -&gt; views
+-&gt; testes. Na prova, prioridade: funcionar no navegador, depois
+testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Paginator.php</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/paginator/_pages.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/SearchEventsCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>, <code>./run phpstan</code>,
+<code>./run test:browser</code>.</p>
+<h2 id="1-libpaginatorphp">1. <code>lib/Paginator.php</code></h2>
+<p>Cinco pontos.</p>
+<p>a) Construtor (linha ~18): docblock acima e quatro parâmetros
+opcionais no fim; ajuste da página entre <code>loadTotals()</code> e
+<code>loadRegisters()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $conditions filtros por igualdade (WHERE coluna = valor)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">string</span><span class="co"> $where condição SQL extra, com placeholders nomeados, somada às de $conditions com AND</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $binds valores dos placeholders de $where</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">string|null</span><span class="co"> $orderBy cláusula do ORDER BY; quem chama monta a partir de uma lista fechada</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, string&gt; $queryParams parâmetros mantidos na query string dos links de página</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> <span class="bu">__construct</span>(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">string</span> <span class="va">$class</span><span class="ot">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">int</span> <span class="va">$page</span><span class="ot">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">int</span> <span class="va">$per_page</span><span class="ot">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">string</span> <span class="va">$table</span><span class="ot">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$attributes</span><span class="ot">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$conditions</span> <span class="op">=</span> []<span class="ot">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="ot">?</span><span class="dt">string</span> <span class="va">$route</span> <span class="op">=</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">string</span> <span class="va">$where</span> <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="ot">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$binds</span> <span class="op">=</span> []<span class="ot">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="ot">?</span><span class="dt">string</span> <span class="va">$orderBy</span> <span class="op">=</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$queryParams</span> <span class="op">=</span> []</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    ) {</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;loadTotals()<span class="ot">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Página além da última (ex.: depois de filtrar) vira a última; sem registros, a 1.</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;page <span class="op">=</span> <span class="fu">max</span>(<span class="dv">1</span><span class="ot">,</span> <span class="fu">min</span>(<span class="va">$this</span>-&gt;page<span class="ot">,</span> <span class="va">$this</span>-&gt;totalOfPages))<span class="ot">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;loadRegisters()<span class="ot">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) Getter novo depois de <code>perPage()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, string</span><span class="kw">&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> queryParams()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;queryParams<span class="ot">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>c) <code>loadRegisters()</code> (linha ~122), <code>ORDER BY</code>
+antes do <code>LIMIT</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$attributes</span> <span class="op">=</span> <span class="fu">implode</span>(<span class="st">&#39;, &#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;attributes)<span class="ot">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$order</span> <span class="op">=</span> <span class="va">$this</span>-&gt;orderBy <span class="op">!==</span> <span class="kw">null</span> <span class="ot">?</span> <span class="st">&quot;ORDER BY </span>{<span class="va">$this</span>-&gt;orderBy}<span class="st">&quot;</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span><span class="ot">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$sql</span> <span class="op">=</span> <span class="ss">&lt;&lt;&lt;SQL</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">            SELECT id, </span>{<span class="va">$attributes</span>}<span class="st"> FROM </span>{<span class="va">$this</span>-&gt;table}</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">            </span>{<span class="va">$this</span>-&gt;buildConditions()}</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="st">            </span>{<span class="va">$order</span>}</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="st">            LIMIT :limit OFFSET :offset</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ss">        SQL</span>;</span></code></pre></div>
+<p>d) <code>buildConditions()</code> (fim do arquivo), troca o
+corpo:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * O mesmo WHERE serve ao COUNT (loadTotals) e à página (loadRegisters).</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> buildConditions()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$parts</span> <span class="op">=</span> <span class="fu">array_map</span>(</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>            <span class="kw">fn</span>(<span class="va">$column</span>) =&gt; <span class="st">&quot;</span>{<span class="va">$column</span>}<span class="st"> = :</span>{<span class="va">$column</span>}<span class="st">&quot;</span><span class="ot">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="fu">array_keys</span>(<span class="va">$this</span>-&gt;conditions)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;where <span class="op">!==</span> <span class="st">&#39;&#39;</span>) {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$parts</span>[] <span class="op">=</span> <span class="st">&quot;(</span>{<span class="va">$this</span>-&gt;where}<span class="st">)&quot;</span><span class="ot">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$parts</span> <span class="op">===</span> [] <span class="ot">?</span> <span class="st">&#39;&#39;</span> <span class="ot">:</span> <span class="st">&#39; WHERE &#39;</span> <span class="op">.</span> <span class="fu">implode</span>(<span class="st">&#39; AND &#39;</span><span class="ot">,</span> <span class="va">$parts</span>)<span class="ot">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>e) <code>bindConditions()</code>, troca o corpo:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> bindConditions(<span class="bu">PDOStatement</span> <span class="va">$stmt</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$this</span>-&gt;conditions <span class="op">+</span> <span class="va">$this</span>-&gt;binds <span class="kw">as</span> <span class="va">$name</span> =&gt; <span class="va">$value</span>) {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$stmt</span>-&gt;bindValue(<span class="va">$name</span><span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>Paginator</code> é quem executa o SQL e é o único objeto que
+<code>_pages.phtml</code> enxerga; por isso guarda também
+<code>queryParams</code>.</li>
+<li>Parâmetros novos opcionais e no fim: <code>Event::paginate()</code>
+e quem já chama o construtor continuam funcionando.</li>
+<li><code>COUNT</code> (<code>loadTotals</code>) e página
+(<code>loadRegisters</code>) passam pelo mesmo
+<code>buildConditions()</code>/<code>bindConditions()</code>: o total
+não tem como contar uma coisa e a página mostrar outra.</li>
+<li><code>ORDER BY</code> só no <code>SELECT</code> (no
+<code>COUNT</code> é inútil).</li>
+<li><code>$where</code> entre parênteses: um <code>OR</code> futuro não
+escapa do <code>AND</code>.</li>
+<li><code>max(1, min(...))</code>: depois de filtrar,
+<code>/page/4?q=Oficina</code> (1 página) cairia em "Nenhum evento
+cadastrado." sem link de volta. Sem registros, <code>totalOfPages</code>
+é 0 -&gt; página 1.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>LIKE</code> só no <code>SELECT</code>: "Mostrando 1 - 2 de 16"
+e links pra páginas vazias.</li>
+<li><code>conditions + binds</code>: a chave da esquerda vence. Bind
+chamado <code>:kind</code> sumiria calado; use <code>:q</code>.</li>
+</ul>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Cinco pontos.</p>
+<p>a) Import, entre <code>Model</code> e <code>Validations</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Database\ActiveRecord\Model<span class="ot">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Paginator<span class="ot">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Validations<span class="ot">;</span></span></code></pre></div>
+<p>b) Docblock da classe, depois de
+<code>@property int|string $capacity</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">int</span><span class="op">|</span><span class="dt">string</span> <span class="va">$capacity</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>phpstan<span class="op">-</span>type ListingFilters <span class="dt">array</span>{q<span class="ot">:</span> <span class="dt">string</span><span class="ot">,</span> kind<span class="ot">:</span> <span class="ot">?</span><span class="dt">string</span><span class="ot">,</span> <span class="fu">sort</span><span class="ot">:</span> <span class="dt">string</span><span class="ot">,</span> <span class="fu">dir</span><span class="ot">:</span> <span class="dt">string</span>}</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a> <span class="op">*/</span></span></code></pre></div>
+<p>c) Listas fechadas depois de <code>AUDIENCES</code> (antes de
+<code>protected static string $table</code>):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Ordens da listagem (`?sort=`), com o rótulo do formulário; &#39;id&#39; (cadastro) é o padrão. */</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">SORTS</span> <span class="op">=</span> [</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;id&#39;</span> =&gt; <span class="st">&#39;Cadastro&#39;</span><span class="ot">,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Título&#39;</span><span class="ot">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="st">&#39;Data&#39;</span><span class="ot">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Direções da listagem (`?dir=`), com o rótulo do formulário; &#39;asc&#39; é o padrão. */</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">DIRS</span> <span class="op">=</span> [</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;asc&#39;</span> =&gt; <span class="st">&#39;Crescente&#39;</span><span class="ot">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;desc&#39;</span> =&gt; <span class="st">&#39;Decrescente&#39;</span><span class="ot">,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>d) Quatro métodos novos depois de <code>hasEnrollments()</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Lê os parâmetros da listagem (q, kind, sort, dir) como chegaram da requisição.</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * Ausente ou vazio: sem busca, todos os tipos, ordem de cadastro, crescente. Inválido: não some</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * calado; ganha uma mensagem na chave do parâmetro e o valor padrão no lugar.</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;mixed&gt;</span><span class="co"> $params</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array{0: ListingFilters, 1: array</span><span class="kw">&lt;string</span><span class="ot">, string</span><span class="kw">&gt;</span><span class="co">}</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> listingFilters(<span class="dt">array</span> <span class="va">$params</span>)<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$errors</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$q</span> <span class="op">=</span> <span class="va">$params</span>[<span class="st">&#39;q&#39;</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$q</span> <span class="op">=</span> <span class="fu">is_string</span>(<span class="va">$q</span>) <span class="ot">?</span> <span class="fu">trim</span>(<span class="va">$q</span>) <span class="ot">:</span> <span class="va">$q</span><span class="ot">;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$qValid</span> <span class="op">=</span> <span class="va">$q</span> <span class="op">===</span> <span class="kw">null</span> <span class="op">||</span> (<span class="fu">is_string</span>(<span class="va">$q</span>) <span class="op">&amp;&amp;</span> <span class="fu">mb_strlen</span>(<span class="va">$q</span>) <span class="op">&lt;=</span> <span class="dv">255</span>)<span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$qValid</span>) {</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$errors</span>[<span class="st">&#39;q&#39;</span>] <span class="op">=</span> <span class="st">&#39;Busca inválida (até 255 caracteres).&#39;</span><span class="ot">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$kind</span> <span class="op">=</span> <span class="kw">self</span>::choice(<span class="va">$params</span>[<span class="st">&#39;kind&#39;</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">KINDS</span>)<span class="ot">;</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$sort</span> <span class="op">=</span> <span class="kw">self</span>::choice(<span class="va">$params</span>[<span class="st">&#39;sort&#39;</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">SORTS</span>)<span class="ot">;</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$dir</span> <span class="op">=</span> <span class="kw">self</span>::choice(<span class="va">$params</span>[<span class="st">&#39;dir&#39;</span>] <span class="op">??</span> <span class="kw">null</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">DIRS</span>)<span class="ot">;</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$checks</span> <span class="op">=</span> [</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; [<span class="va">$kind</span><span class="ot">,</span> <span class="st">&#39;Tipo inválido.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;sort&#39;</span> =&gt; [<span class="va">$sort</span><span class="ot">,</span> <span class="st">&#39;Ordenação inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;dir&#39;</span> =&gt; [<span class="va">$dir</span><span class="ot">,</span> <span class="st">&#39;Direção inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$checks</span> <span class="kw">as</span> <span class="va">$param</span> =&gt; [<span class="va">$value</span><span class="ot">,</span> <span class="va">$message</span>]) {</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="va">$value</span> <span class="op">===</span> <span class="kw">false</span>) {</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>                <span class="va">$errors</span>[<span class="va">$param</span>] <span class="op">=</span> <span class="va">$message</span><span class="ot">;</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$filters</span> <span class="op">=</span> [</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;q&#39;</span> =&gt; <span class="va">$qValid</span> <span class="op">&amp;&amp;</span> <span class="fu">is_string</span>(<span class="va">$q</span>) <span class="ot">?</span> <span class="va">$q</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span><span class="ot">,</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="fu">is_string</span>(<span class="va">$kind</span>) <span class="ot">?</span> <span class="va">$kind</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;sort&#39;</span> =&gt; <span class="fu">is_string</span>(<span class="va">$sort</span>) <span class="ot">?</span> <span class="va">$sort</span> <span class="ot">:</span> <span class="st">&#39;id&#39;</span><span class="ot">,</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;dir&#39;</span> =&gt; <span class="fu">is_string</span>(<span class="va">$dir</span>) <span class="ot">?</span> <span class="va">$dir</span> <span class="ot">:</span> <span class="st">&#39;asc&#39;</span><span class="ot">,</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [<span class="va">$filters</span><span class="ot">,</span> <span class="va">$errors</span>]<span class="ot">;</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="co">     * Uma página da listagem com busca por título, filtro por tipo e ordenação, tudo junto.</span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="co">     * O WHERE e o ORDER BY são montados aqui; o Paginator usa o mesmo WHERE (e os mesmos valores)</span></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="co">     * no COUNT e na consulta da página, que recebe o ORDER BY e o LIMIT/OFFSET.</span></span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">ListingFilters</span><span class="co"> $filters valores lidos por listingFilters()</span></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> listingPage(<span class="dt">array</span> <span class="va">$filters</span><span class="ot">,</span> <span class="dt">int</span> <span class="va">$page</span><span class="ot">,</span> <span class="dt">int</span> <span class="va">$perPage</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$route</span>)<span class="ot">:</span> Paginator</span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$where</span> <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="ot">;</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$binds</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$filters</span>[<span class="st">&#39;q&#39;</span>] <span class="op">!==</span> <span class="st">&#39;&#39;</span>) {</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>            <span class="co">// &#39;!&#39; escapa os curingas do LIKE: &quot;100%&quot; procura o texto &quot;100%&quot;, não &quot;100&quot; seguido de qualquer coisa.</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a>            <span class="va">$term</span> <span class="op">=</span> <span class="fu">strtr</span>(<span class="va">$filters</span>[<span class="st">&#39;q&#39;</span>]<span class="ot">,</span> [<span class="st">&#39;!&#39;</span> =&gt; <span class="st">&#39;!!&#39;</span><span class="ot">,</span> <span class="st">&#39;%&#39;</span> =&gt; <span class="st">&#39;!%&#39;</span><span class="ot">,</span> <span class="st">&#39;_&#39;</span> =&gt; <span class="st">&#39;!_&#39;</span>])<span class="ot">;</span></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>            <span class="va">$where</span> <span class="op">=</span> <span class="st">&quot;title LIKE :q ESCAPE &#39;!&#39;&quot;</span><span class="ot">;</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>            <span class="va">$binds</span>[<span class="st">&#39;q&#39;</span>] <span class="op">=</span> <span class="st">&quot;%</span>{<span class="va">$term</span>}<span class="st">%&quot;</span><span class="ot">;</span></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Nome de coluna não aceita bind: só entra o que está na lista. O id desempata valores iguais.</span></span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$column</span> <span class="op">=</span> <span class="fu">array_key_exists</span>(<span class="va">$filters</span>[<span class="st">&#39;sort&#39;</span>]<span class="ot">,</span> <span class="kw">self</span>::<span class="cn">SORTS</span>) <span class="ot">?</span> <span class="va">$filters</span>[<span class="st">&#39;sort&#39;</span>] <span class="ot">:</span> <span class="st">&#39;id&#39;</span><span class="ot">;</span></span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$dir</span> <span class="op">=</span> <span class="va">$filters</span>[<span class="st">&#39;dir&#39;</span>] <span class="op">===</span> <span class="st">&#39;desc&#39;</span> <span class="ot">?</span> <span class="st">&#39;DESC&#39;</span> <span class="ot">:</span> <span class="st">&#39;ASC&#39;</span><span class="ot">;</span></span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>        <span class="va">$order</span> <span class="op">=</span> <span class="va">$column</span> <span class="op">===</span> <span class="st">&#39;id&#39;</span> <span class="ot">?</span> <span class="st">&quot;id </span>{<span class="va">$dir</span>}<span class="st">&quot;</span> <span class="ot">:</span> <span class="st">&quot;</span>{<span class="va">$column</span>}<span class="st"> </span>{<span class="va">$dir</span>}<span class="st">, id ASC&quot;</span><span class="ot">;</span></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>        <span class="va">$kind</span> <span class="op">=</span> <span class="va">$filters</span>[<span class="st">&#39;kind&#39;</span>]<span class="ot">;</span></span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">new</span> Paginator(</span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>            <span class="kw">class</span><span class="ot">:</span> <span class="kw">static</span>::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="va">$page</span><span class="ot">,</span></span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a>            per_page<span class="ot">:</span> <span class="va">$perPage</span><span class="ot">,</span></span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a>            table<span class="ot">:</span> <span class="kw">static</span>::<span class="va">$table</span><span class="ot">,</span></span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a>            attributes<span class="ot">:</span> <span class="kw">static</span>::<span class="va">$columns</span><span class="ot">,</span></span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a>            conditions<span class="ot">:</span> <span class="va">$kind</span> <span class="op">!==</span> <span class="kw">null</span> <span class="ot">?</span> [<span class="st">&#39;kind&#39;</span> =&gt; <span class="va">$kind</span>] <span class="ot">:</span> []<span class="ot">,</span></span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="va">$route</span><span class="ot">,</span></span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>            where<span class="ot">:</span> <span class="va">$where</span><span class="ot">,</span></span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a>            binds<span class="ot">:</span> <span class="va">$binds</span><span class="ot">,</span></span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a>            orderBy<span class="ot">:</span> <span class="va">$order</span><span class="ot">,</span></span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a>            queryParams<span class="ot">:</span> <span class="kw">self</span>::listingQuery(<span class="va">$filters</span>)<span class="ot">,</span></span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a><span class="co">     * Query string dos links de página: só o que difere do padrão.</span></span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-88"><a href="#cb9-88" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">ListingFilters</span><span class="co"> $filters</span></span>
+<span id="cb9-89"><a href="#cb9-89" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, string</span><span class="kw">&gt;</span></span>
+<span id="cb9-90"><a href="#cb9-90" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> listingQuery(<span class="dt">array</span> <span class="va">$filters</span>)<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb9-92"><a href="#cb9-92" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-93"><a href="#cb9-93" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">array_filter</span>([</span>
+<span id="cb9-94"><a href="#cb9-94" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;q&#39;</span> =&gt; <span class="va">$filters</span>[<span class="st">&#39;q&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-95"><a href="#cb9-95" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="va">$filters</span>[<span class="st">&#39;kind&#39;</span>] <span class="op">??</span> <span class="st">&#39;&#39;</span><span class="ot">,</span></span>
+<span id="cb9-96"><a href="#cb9-96" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;sort&#39;</span> =&gt; <span class="va">$filters</span>[<span class="st">&#39;sort&#39;</span>] <span class="op">===</span> <span class="st">&#39;id&#39;</span> <span class="ot">?</span> <span class="st">&#39;&#39;</span> <span class="ot">:</span> <span class="va">$filters</span>[<span class="st">&#39;sort&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-97"><a href="#cb9-97" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;dir&#39;</span> =&gt; <span class="va">$filters</span>[<span class="st">&#39;dir&#39;</span>] <span class="op">===</span> <span class="st">&#39;asc&#39;</span> <span class="ot">?</span> <span class="st">&#39;&#39;</span> <span class="ot">:</span> <span class="va">$filters</span>[<span class="st">&#39;dir&#39;</span>]<span class="ot">,</span></span>
+<span id="cb9-98"><a href="#cb9-98" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">,</span> <span class="kw">fn</span>(<span class="dt">string</span> <span class="va">$value</span>) =&gt; <span class="va">$value</span> <span class="op">!==</span> <span class="st">&#39;&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-99"><a href="#cb9-99" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-100"><a href="#cb9-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-101"><a href="#cb9-101" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb9-102"><a href="#cb9-102" aria-hidden="true" tabindex="-1"></a><span class="co">     * Valor de uma lista fechada: null se ausente ou vazio, false se inválido.</span></span>
+<span id="cb9-103"><a href="#cb9-103" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb9-104"><a href="#cb9-104" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, string&gt; $allowed</span></span>
+<span id="cb9-105"><a href="#cb9-105" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb9-106"><a href="#cb9-106" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="kw">function</span> choice(<span class="dt">mixed</span> <span class="va">$value</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$allowed</span>)<span class="ot">:</span> <span class="dt">string</span><span class="op">|</span><span class="kw">false</span><span class="op">|</span><span class="kw">null</span></span>
+<span id="cb9-107"><a href="#cb9-107" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-108"><a href="#cb9-108" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$value</span> <span class="op">===</span> <span class="kw">null</span> <span class="op">||</span> <span class="va">$value</span> <span class="op">===</span> <span class="st">&#39;&#39;</span>) {</span>
+<span id="cb9-109"><a href="#cb9-109" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb9-110"><a href="#cb9-110" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb9-111"><a href="#cb9-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-112"><a href="#cb9-112" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">is_string</span>(<span class="va">$value</span>) <span class="op">&amp;&amp;</span> <span class="fu">array_key_exists</span>(<span class="va">$value</span><span class="ot">,</span> <span class="va">$allowed</span>) <span class="ot">?</span> <span class="va">$value</span> <span class="ot">:</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb9-113"><a href="#cb9-113" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Validação e SQL no model; controller só repassa.
+<code>SORTS</code>/<code>DIRS</code> servem de allowlist
+<strong>e</strong> de rótulo do form (view lê a constante).</li>
+<li><code>choice()</code>: três estados. <code>null</code> =
+ausente/vazio (padrão, sem erro); <code>false</code> = inválido (erro +
+padrão); string = válido.</li>
+<li>Inválido não some calado: mensagem na chave do parâmetro, padrão no
+lugar. Sem 500, sem silêncio.</li>
+<li><code>is_string</code> antes de
+<code>trim</code>/<code>array_key_exists</code>: <code>?q[]=x</code>
+chega como array e daria <code>TypeError</code> (500).</li>
+<li><code>LIKE</code> com bind (<code>:q</code>): o termo nunca entra no
+SQL. <code>strtr</code> com array troca <code>!</code>, <code>%</code> e
+<code>_</code> numa passada só (o <code>!!</code> gerado não é
+reescapado): "100%" não acha "100 dias", "a_b" não acha "axb".</li>
+<li><code>ESCAPE '!'</code>: escape padrão do MySQL é a barra, que
+também teria de ser escapada; <code>!</code> explícito vale igual no
+PostgreSQL.</li>
+<li><code>ORDER BY</code> não aceita bind (nome de coluna não é valor):
+lista fechada. <code>listingPage()</code> é pública e pode ser chamada
+sem <code>listingFilters()</code>: confere <code>sort</code> de novo e
+troca <code>dir</code> por <code>ASC</code>/<code>DESC</code>
+fixos.</li>
+<li><code>, id ASC</code>: desempate. Valores iguais saem em qualquer
+ordem e um Evento poderia aparecer em duas páginas.</li>
+<li>Padrão <code>id</code> (ordem de cadastro, a da base): testes
+antigos e <code>CreateSuccessfullyCest</code> seguem verdes.</li>
+<li><code>kind</code> vai em <code>conditions</code> (igualdade que o
+<code>Paginator</code> já sabia fazer).</li>
+<li><code>listingQuery()</code> só leva o que difere do padrão:
+<code>PaginateEventsCest</code> compara URL exata
+(<code>/admin/events/page/2</code>), e <code>http_build_query</code>
+mantém <code>''</code> (<code>?kind=</code>).</li>
+<li><code>@phpstan-type ListingFilters</code>: formato do array num
+lugar só, pro <code>phpstan</code>.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>bindValue(':q', "%{$q}%")</code> sem escapar passa nos testes
+comuns e falha em "100%" ou "a_b". Escape o <code>!</code>
+primeiro.</li>
+<li><code>ORDER BY {$request-&gt;getParam('sort')}</code>: injeção de
+SQL.</li>
+<li>Busca segue a collation (<code>utf8mb4_0900_ai_ci</code>): "oficina"
+acha "Oficina", "introducao" acha "Introdução".</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>a) <code>index()</code> (linha ~16), troca
+<code>Event::paginate(...)</code> por:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> index(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        [<span class="va">$filters</span><span class="ot">,</span> <span class="va">$errors</span>] <span class="op">=</span> Event::listingFilters(<span class="va">$request</span>-&gt;getParams())<span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> Event::listingPage(</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$filters</span><span class="ot">,</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="va">$this</span>-&gt;pageParam(<span class="va">$request</span>)<span class="ot">,</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>            perPage<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span><span class="ot">,</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="st">&#39;admin.events.paginate&#39;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> <span class="va">$paginator</span>-&gt;registers()<span class="ot">;</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="st">&#39;Eventos&#39;</span><span class="ot">;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;render(<span class="st">&#39;admin/events/index&#39;</span><span class="ot">,</span> <span class="fu">compact</span>(<span class="st">&#39;events&#39;</span><span class="ot">,</span> <span class="st">&#39;paginator&#39;</span><span class="ot">,</span> <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;filters&#39;</span><span class="ot">,</span> <span class="st">&#39;errors&#39;</span>))<span class="ot">;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) Privado novo antes de <code>findEvent()</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Número da página (`/admin/events/page/{page}` ou `?page=`): inteiro maior que zero, senão a 1.</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * A última página é garantida pelo Paginator.</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> pageParam(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">int</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> <span class="fu">filter_var</span>(<span class="va">$request</span>-&gt;getParam(<span class="st">&#39;page&#39;</span><span class="ot">,</span> <span class="dv">1</span>)<span class="ot">,</span> <span class="cn">FILTER_VALIDATE_INT</span><span class="ot">,</span> [<span class="st">&#39;options&#39;</span> =&gt; [<span class="st">&#39;min_range&#39;</span> =&gt; <span class="dv">1</span>]])<span class="ot">;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">is_int</span>(<span class="va">$page</span>) <span class="ot">?</span> <span class="va">$page</span> <span class="ot">:</span> <span class="dv">1</span><span class="ot">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Controller fino: <code>q</code>, <code>kind</code>,
+<code>sort</code>, <code>dir</code> vão crus ao model
+(<code>getParams()</code>), sem <code>(int)</code> nem
+<code>?? ''</code>.</li>
+<li><code>filters</code> e <code>errors</code> no <code>compact</code>:
+a view preenche o form e mostra os avisos.</li>
+<li><code>filter_var</code> com <code>min_range</code> 1, não
+<code>(int)</code>: <code>(int) '2abc'</code> vira 2. Página inválida
+vira 1 (é navegação, não filtro). Página além da última:
+<code>Paginator</code> resolve.</li>
+<li>Rota <code>/admin/events/page/{page}</code> não muda: query string
+chega em <code>getParams()</code> junto do <code>page</code>.</li>
+</ul>
+<p>Armadilha: filtro na rota
+(<code>/admin/events/page/{page}/{sortBy}</code>) não casa o regex de
+nome de <code>core/Router/Route.php</code> (só minúsculas,
+<code>_</code> e vírgula): 404.</p>
+<h2 id="4-appviewsadmineventsindexphtml">4.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) Topo do arquivo, antes do
+<code>&lt;div class="mb-3"&gt;</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="kw">use</span> App\Models\Event<span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>b) Depois do <code>&lt;/div&gt;</code> do botão "Novo Evento" e antes
+do <code>if (empty($events))</code>, o form e os avisos:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>form method<span class="op">=</span><span class="st">&quot;get&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.index&#39;) ?&gt;&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-flex gap-2 mb-3&quot;</span><span class="op">&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>label <span class="kw">class</span><span class="op">=</span><span class="st">&quot;visually-hidden&quot;</span> <span class="cf">for</span><span class="op">=</span><span class="st">&quot;filter_q&quot;</span><span class="op">&gt;</span>Buscar por título<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>input <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-control&quot;</span> type<span class="op">=</span><span class="st">&quot;search&quot;</span> id<span class="op">=</span><span class="st">&quot;filter_q&quot;</span> name<span class="op">=</span><span class="st">&quot;q&quot;</span> placeholder<span class="op">=</span><span class="st">&quot;Título&quot;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>           value<span class="op">=</span><span class="st">&quot;&lt;?= htmlspecialchars(</span><span class="va">$filters</span>[<span class="er">&#39;</span><span class="st">q&#39;]) ?&gt;&quot;</span><span class="op">&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>label <span class="kw">class</span><span class="op">=</span><span class="st">&quot;visually-hidden&quot;</span> <span class="cf">for</span><span class="op">=</span><span class="st">&quot;filter_kind&quot;</span><span class="op">&gt;</span>Tipo<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>select <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-select&quot;</span> id<span class="op">=</span><span class="st">&quot;filter_kind&quot;</span> name<span class="op">=</span><span class="st">&quot;kind&quot;</span><span class="op">&gt;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>option value<span class="op">=</span><span class="st">&quot;&quot;</span><span class="op">&gt;</span>Todos os tipos<span class="op">&lt;/</span>option<span class="op">&gt;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (Event::<span class="cn">KINDS</span> <span class="kw">as</span> <span class="va">$value</span> =&gt; <span class="va">$label</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>option value<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$value</span><span class="st"> ?&gt;&quot;</span> <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$filters</span>[<span class="st">&#39;kind&#39;</span>] <span class="op">===</span> <span class="va">$value</span> <span class="ot">?</span> <span class="st">&#39;selected&#39;</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span> <span class="kw">?&gt;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$label</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>option<span class="op">&gt;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>select<span class="op">&gt;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>label <span class="kw">class</span><span class="op">=</span><span class="st">&quot;visually-hidden&quot;</span> <span class="cf">for</span><span class="op">=</span><span class="st">&quot;filter_sort&quot;</span><span class="op">&gt;</span>Ordenar por<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>select <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-select&quot;</span> id<span class="op">=</span><span class="st">&quot;filter_sort&quot;</span> name<span class="op">=</span><span class="st">&quot;sort&quot;</span><span class="op">&gt;</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (Event::<span class="cn">SORTS</span> <span class="kw">as</span> <span class="va">$value</span> =&gt; <span class="va">$label</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>option value<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$value</span><span class="st"> ?&gt;&quot;</span> <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$filters</span>[<span class="st">&#39;sort&#39;</span>] <span class="op">===</span> <span class="va">$value</span> <span class="ot">?</span> <span class="st">&#39;selected&#39;</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span> <span class="kw">?&gt;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$label</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>option<span class="op">&gt;</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>select<span class="op">&gt;</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>label <span class="kw">class</span><span class="op">=</span><span class="st">&quot;visually-hidden&quot;</span> <span class="cf">for</span><span class="op">=</span><span class="st">&quot;filter_dir&quot;</span><span class="op">&gt;</span>Direção<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>select <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-select&quot;</span> id<span class="op">=</span><span class="st">&quot;filter_dir&quot;</span> name<span class="op">=</span><span class="st">&quot;dir&quot;</span><span class="op">&gt;</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (Event::<span class="cn">DIRS</span> <span class="kw">as</span> <span class="va">$value</span> =&gt; <span class="va">$label</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>option value<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$value</span><span class="st"> ?&gt;&quot;</span> <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$filters</span>[<span class="st">&#39;dir&#39;</span>] <span class="op">===</span> <span class="va">$value</span> <span class="ot">?</span> <span class="st">&#39;selected&#39;</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span> <span class="kw">?&gt;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$label</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>option<span class="op">&gt;</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>select<span class="op">&gt;</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span><span class="op">&gt;</span>Filtrar<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (<span class="va">$errors</span> <span class="kw">as</span> <span class="va">$error</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;alert alert-warning&quot;</span> role<span class="op">=</span><span class="st">&quot;alert&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$error</span>) <span class="kw">?&gt;</span><span class="op">&lt;/</span>div<span class="op">&gt;</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>c) Mensagem de lista vazia (linha ~6), troca
+<code>&lt;p&gt;Nenhum evento cadastrado.&lt;/p&gt;</code> por:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>p<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> Event::listingQuery(<span class="va">$filters</span>) <span class="op">!==</span> [] <span class="ot">?</span> <span class="st">&#39;Nenhum evento encontrado.&#39;</span> <span class="ot">:</span> <span class="st">&#39;Nenhum evento cadastrado.&#39;</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>p<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Form GET: filtro é leitura, URL compartilhável, sem CSRF/PRG.</li>
+<li>Navegador descarta a query string do <code>action</code>: os quatro
+campos ficam no form; <code>action</code> aponta pra
+<code>admin.events.index</code> sem <code>page</code>, então filtrar
+volta à página 1.</li>
+<li>Form antes do <code>if (empty($events))</code>: aparece mesmo sem
+resultado.</li>
+<li>View burra: opções vêm de
+<code>KINDS</code>/<code>SORTS</code>/<code>DIRS</code>;
+<code>selected</code> usa <code>$filters</code> já validado;
+<code>htmlspecialchars</code> no <code>q</code> (XSS).</li>
+<li>Avisos de <code>$errors</code> na view, não em flash:
+<code>FlashMessage</code> guarda um texto por tipo (dois inválidos -&gt;
+só o último) e o <code>_flash_message.phtml</code> nem escapa.</li>
+<li>Com filtro e sem resultado, "cadastrado" seria falso.</li>
+</ul>
+<h2 id="5-appviewspaginator_pagesphtml">5.
+<code>app/views/paginator/_pages.phtml</code></h2>
+<p>a) Topo do arquivo, antes do <code>&lt;nav&gt;</code>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="co">// URL de cada link: a página mais os parâmetros guardados no Paginator (busca, filtro, ordenação).</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="va">$pageUrl</span> <span class="op">=</span> <span class="kw">fn</span> (<span class="dt">int</span> <span class="va">$p</span>) =&gt; route(<span class="va">$paginator</span>-&gt;getRouteName()<span class="ot">,</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="va">$p</span>] <span class="op">+</span> <span class="va">$paginator</span>-&gt;queryParams())<span class="ot">;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="kw">?&gt;</span></span></code></pre></div>
+<p>b) Nos três links, troca
+<code>route($paginator-&gt;getRouteName(), ['page' =&gt; ...])</code>
+pela closure:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$paginator</span>-&gt;previousPage<span class="st">()) ?&gt;&quot;</span><span class="op">&gt;</span>Anterior<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$page</span><span class="st">) ?&gt;&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$page</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$paginator</span>-&gt;nextPage<span class="st">()) ?&gt;&quot;</span><span class="op">&gt;</span>Próxima<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Partial só enxerga <code>$paginator</code>: por isso os filtros
+moram nele.</li>
+<li><code>route()</code> (<code>core/Router/Router.php</code>) põe na
+query string o que não é parâmetro da URI
+(<code>http_build_query</code>): <code>page</code> vai no caminho,
+<code>q</code>/<code>kind</code>/<code>sort</code>/<code>dir</code>
+viram <code>?q=...</code>.</li>
+<li>Closure única: os três links montam a URL igual.</li>
+</ul>
+<h2 id="6-testsunitmodelseventseventtestphp">6.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p><code>DataProvider</code> já está importado. Bloco novo depois de
+<code>test_paginate_should_default_the_route_name_to_the_table</code> e
+antes de <code>/* --- relações --- */</code>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- listagem: busca, filtro e ordenação ------------------- */</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * Filtros já validados, com o padrão no que não foi informado.</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $params</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array{q: string, kind: ?string, sort: string, dir: string}</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> filters(<span class="dt">array</span> <span class="va">$params</span> <span class="op">=</span> [])<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>        [<span class="va">$filters</span><span class="ot">,</span> <span class="va">$errors</span>] <span class="op">=</span> Event::listingFilters(<span class="va">$params</span>)<span class="ot">;</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> <span class="va">$errors</span>)<span class="ot">;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$filters</span><span class="ot">;</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;Event&gt;</span><span class="co"> $events</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;int</span><span class="ot">, string</span><span class="kw">&gt;</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> titles(<span class="dt">array</span> <span class="va">$events</span>)<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">array_map</span>(<span class="kw">fn</span>(Event <span class="va">$event</span>) =&gt; <span class="va">$event</span>-&gt;title<span class="ot">,</span> <span class="va">$events</span>)<span class="ot">;</span></span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_filters_should_default_when_params_are_missing_or_empty()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$default</span> <span class="op">=</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;id&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;asc&#39;</span>]<span class="ot">;</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="va">$default</span><span class="ot">,</span> []]<span class="ot">,</span> Event::listingFilters([]))<span class="ot">;</span></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>            [<span class="va">$default</span><span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>            Event::listingFilters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;  &#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;&#39;</span>])</span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_filters_should_accept_valid_params()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>            [[<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>]<span class="ot">,</span> []]<span class="ot">,</span></span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>            Event::listingFilters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39; git &#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>])</span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{string, mixed, string}</span><span class="kw">&gt;</span></span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> invalidListingParamProvider()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb17-49"><a href="#cb17-49" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-50"><a href="#cb17-50" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb17-51"><a href="#cb17-51" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;tipo fora da lista&#39;</span> =&gt; [<span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;party&#39;</span><span class="ot">,</span> <span class="st">&#39;Tipo inválido.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-52"><a href="#cb17-52" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;coluna real fora da lista&#39;</span> =&gt; [<span class="st">&#39;sort&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;Ordenação inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-53"><a href="#cb17-53" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;coluna com SQL&#39;</span> =&gt; [<span class="st">&#39;sort&#39;</span><span class="ot">,</span> <span class="st">&#39;id; DROP TABLE events&#39;</span><span class="ot">,</span> <span class="st">&#39;Ordenação inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-54"><a href="#cb17-54" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;direção maiúscula&#39;</span> =&gt; [<span class="st">&#39;dir&#39;</span><span class="ot">,</span> <span class="st">&#39;DESC&#39;</span><span class="ot">,</span> <span class="st">&#39;Direção inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-55"><a href="#cb17-55" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;sort como array&#39;</span> =&gt; [<span class="st">&#39;sort&#39;</span><span class="ot">,</span> [<span class="st">&#39;title&#39;</span>]<span class="ot">,</span> <span class="st">&#39;Ordenação inválida.&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-56"><a href="#cb17-56" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;busca como array&#39;</span> =&gt; [<span class="st">&#39;q&#39;</span><span class="ot">,</span> [<span class="st">&#39;x&#39;</span>]<span class="ot">,</span> <span class="st">&#39;Busca inválida (até 255 caracteres).&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-57"><a href="#cb17-57" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;busca com 256 caracteres&#39;</span> =&gt; [<span class="st">&#39;q&#39;</span><span class="ot">,</span> <span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">256</span>)<span class="ot">,</span> <span class="st">&#39;Busca inválida (até 255 caracteres).&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb17-59"><a href="#cb17-59" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-60"><a href="#cb17-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-61"><a href="#cb17-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;invalidListingParamProvider&#39;</span>)<span class="at">]</span></span>
+<span id="cb17-62"><a href="#cb17-62" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_filters_should_report_invalid_param_and_use_the_default(</span>
+<span id="cb17-63"><a href="#cb17-63" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$param</span><span class="ot">,</span></span>
+<span id="cb17-64"><a href="#cb17-64" aria-hidden="true" tabindex="-1"></a>        <span class="dt">mixed</span> <span class="va">$value</span><span class="ot">,</span></span>
+<span id="cb17-65"><a href="#cb17-65" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$message</span></span>
+<span id="cb17-66"><a href="#cb17-66" aria-hidden="true" tabindex="-1"></a>    )<span class="ot">:</span> <span class="dt">void</span> {</span>
+<span id="cb17-67"><a href="#cb17-67" aria-hidden="true" tabindex="-1"></a>        <span class="va">$default</span> <span class="op">=</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;id&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;asc&#39;</span>]<span class="ot">;</span></span>
+<span id="cb17-68"><a href="#cb17-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-69"><a href="#cb17-69" aria-hidden="true" tabindex="-1"></a>        [<span class="va">$filters</span><span class="ot">,</span> <span class="va">$errors</span>] <span class="op">=</span> Event::listingFilters([<span class="va">$param</span> =&gt; <span class="va">$value</span>])<span class="ot">;</span></span>
+<span id="cb17-70"><a href="#cb17-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-71"><a href="#cb17-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="va">$param</span> =&gt; <span class="va">$message</span>]<span class="ot">,</span> <span class="va">$errors</span>)<span class="ot">;</span></span>
+<span id="cb17-72"><a href="#cb17-72" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$default</span><span class="ot">,</span> <span class="va">$filters</span>)<span class="ot">;</span></span>
+<span id="cb17-73"><a href="#cb17-73" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-74"><a href="#cb17-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-75"><a href="#cb17-75" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_filters_should_keep_valid_params_next_to_an_invalid_one()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-76"><a href="#cb17-76" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-77"><a href="#cb17-77" aria-hidden="true" tabindex="-1"></a>        [<span class="va">$filters</span><span class="ot">,</span> <span class="va">$errors</span>] <span class="op">=</span> Event::listingFilters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;party&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;up&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-79"><a href="#cb17-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;Tipo inválido.&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;Direção inválida.&#39;</span>]<span class="ot">,</span> <span class="va">$errors</span>)<span class="ot">;</span></span>
+<span id="cb17-80"><a href="#cb17-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;asc&#39;</span>]<span class="ot">,</span> <span class="va">$filters</span>)<span class="ot">;</span></span>
+<span id="cb17-81"><a href="#cb17-81" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-82"><a href="#cb17-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-83"><a href="#cb17-83" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_filters_should_accept_a_search_with_255_characters()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-84"><a href="#cb17-84" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-85"><a href="#cb17-85" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="fu">str_repeat</span>(<span class="st">&#39;á&#39;</span><span class="ot">,</span> <span class="dv">255</span>)<span class="ot">,</span> <span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="fu">str_repeat</span>(<span class="st">&#39;á&#39;</span><span class="ot">,</span> <span class="dv">255</span>)])[<span class="st">&#39;q&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-86"><a href="#cb17-86" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-87"><a href="#cb17-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-88"><a href="#cb17-88" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_search_filter_and_count_with_the_same_where()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-89"><a href="#cb17-89" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-90"><a href="#cb17-90" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb17-91"><a href="#cb17-91" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Oficina </span>{<span class="va">$i</span>}<span class="st">&quot;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-92"><a href="#cb17-92" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb17-93"><a href="#cb17-93" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina na palestra&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-94"><a href="#cb17-94" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra 1&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-95"><a href="#cb17-95" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra 2&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-96"><a href="#cb17-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-97"><a href="#cb17-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$filters</span> <span class="op">=</span> <span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-98"><a href="#cb17-98" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page1</span> <span class="op">=</span> Event::listingPage(<span class="va">$filters</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-99"><a href="#cb17-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page2</span> <span class="op">=</span> Event::listingPage(<span class="va">$filters</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-100"><a href="#cb17-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-101"><a href="#cb17-101" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">7</span><span class="ot">,</span> <span class="va">$page1</span>-&gt;totalOfRegisters())<span class="ot">;</span></span>
+<span id="cb17-102"><a href="#cb17-102" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">2</span><span class="ot">,</span> <span class="va">$page1</span>-&gt;totalOfPages())<span class="ot">;</span></span>
+<span id="cb17-103"><a href="#cb17-103" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Oficina 1&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 2&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 3&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 4&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 5&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page1</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-104"><a href="#cb17-104" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Oficina 6&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 7&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page2</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-105"><a href="#cb17-105" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">7</span><span class="ot">,</span> <span class="va">$page2</span>-&gt;totalOfRegisters())<span class="ot">;</span></span>
+<span id="cb17-106"><a href="#cb17-106" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>]<span class="ot">,</span> <span class="va">$page1</span>-&gt;queryParams())<span class="ot">;</span></span>
+<span id="cb17-107"><a href="#cb17-107" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-108"><a href="#cb17-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-109"><a href="#cb17-109" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_ignore_case_in_the_search()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-110"><a href="#cb17-110" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-111"><a href="#cb17-111" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Git&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-112"><a href="#cb17-112" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra de Docker&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-113"><a href="#cb17-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-114"><a href="#cb17-114" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;GIT&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-115"><a href="#cb17-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-116"><a href="#cb17-116" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Oficina de Git&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-117"><a href="#cb17-117" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-118"><a href="#cb17-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-119"><a href="#cb17-119" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_sort_by_the_chosen_column_and_break_ties_by_id()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-120"><a href="#cb17-120" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-121"><a href="#cb17-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Bravo&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-122"><a href="#cb17-122" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Delta&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-123"><a href="#cb17-123" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Alfa&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-124"><a href="#cb17-124" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Bravo&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-125"><a href="#cb17-125" aria-hidden="true" tabindex="-1"></a>        <span class="va">$bravos</span> <span class="op">=</span> <span class="fu">array_map</span>(<span class="kw">fn</span>(Event <span class="va">$event</span>) =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> Event::where([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Bravo&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb17-126"><a href="#cb17-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-127"><a href="#cb17-127" aria-hidden="true" tabindex="-1"></a>        <span class="va">$desc</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-128"><a href="#cb17-128" aria-hidden="true" tabindex="-1"></a>        <span class="va">$asc</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-129"><a href="#cb17-129" aria-hidden="true" tabindex="-1"></a>        <span class="va">$default</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters()<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-130"><a href="#cb17-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-131"><a href="#cb17-131" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Delta&#39;</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Alfa&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$desc</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-132"><a href="#cb17-132" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Alfa&#39;</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Delta&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$asc</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-133"><a href="#cb17-133" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Títulos iguais saem por id, nas duas direções.</span></span>
+<span id="cb17-134"><a href="#cb17-134" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$bravos</span><span class="ot">,</span> [<span class="va">$desc</span>-&gt;registers()[<span class="dv">1</span>]-&gt;id<span class="ot">,</span> <span class="va">$desc</span>-&gt;registers()[<span class="dv">2</span>]-&gt;id])<span class="ot">;</span></span>
+<span id="cb17-135"><a href="#cb17-135" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="va">$bravos</span><span class="ot">,</span> [<span class="va">$asc</span>-&gt;registers()[<span class="dv">1</span>]-&gt;id<span class="ot">,</span> <span class="va">$asc</span>-&gt;registers()[<span class="dv">2</span>]-&gt;id])<span class="ot">;</span></span>
+<span id="cb17-136"><a href="#cb17-136" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Delta&#39;</span><span class="ot">,</span> <span class="st">&#39;Alfa&#39;</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$default</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-137"><a href="#cb17-137" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-138"><a href="#cb17-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-139"><a href="#cb17-139" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_sort_by_date_descending()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-140"><a href="#cb17-140" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-141"><a href="#cb17-141" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Daqui a 10 dias&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))])<span class="ot">;</span></span>
+<span id="cb17-142"><a href="#cb17-142" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Daqui a 30 dias&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+30 days&#39;</span>))])<span class="ot">;</span></span>
+<span id="cb17-143"><a href="#cb17-143" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Daqui a 20 dias&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+20 days&#39;</span>))])<span class="ot">;</span></span>
+<span id="cb17-144"><a href="#cb17-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-145"><a href="#cb17-145" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-146"><a href="#cb17-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-147"><a href="#cb17-147" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Daqui a 30 dias&#39;</span><span class="ot">,</span> <span class="st">&#39;Daqui a 20 dias&#39;</span><span class="ot">,</span> <span class="st">&#39;Daqui a 10 dias&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-148"><a href="#cb17-148" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-149"><a href="#cb17-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-150"><a href="#cb17-150" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_treat_percent_and_underscore_as_literal_text()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-151"><a href="#cb17-151" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-152"><a href="#cb17-152" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;100% prático&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-153"><a href="#cb17-153" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;100 dias de código&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-154"><a href="#cb17-154" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Variável a_b&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-155"><a href="#cb17-155" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Variável axb&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-156"><a href="#cb17-156" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Atenção! Vagas&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-157"><a href="#cb17-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-158"><a href="#cb17-158" aria-hidden="true" tabindex="-1"></a>        <span class="va">$percent</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;100%&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-159"><a href="#cb17-159" aria-hidden="true" tabindex="-1"></a>        <span class="va">$underscore</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;a_b&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-160"><a href="#cb17-160" aria-hidden="true" tabindex="-1"></a>        <span class="va">$bang</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;o! V&#39;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-161"><a href="#cb17-161" aria-hidden="true" tabindex="-1"></a>        <span class="va">$injection</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&quot;&#39; OR &#39;1&#39;=&#39;1&quot;</span>])<span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-162"><a href="#cb17-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-163"><a href="#cb17-163" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;100% prático&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$percent</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-164"><a href="#cb17-164" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Variável a_b&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$underscore</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-165"><a href="#cb17-165" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Atenção! Vagas&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$bang</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-166"><a href="#cb17-166" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$injection</span>-&gt;totalOfRegisters())<span class="ot">;</span></span>
+<span id="cb17-167"><a href="#cb17-167" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-168"><a href="#cb17-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-169"><a href="#cb17-169" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_beyond_the_last_should_become_the_last()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-170"><a href="#cb17-170" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-171"><a href="#cb17-171" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb17-172"><a href="#cb17-172" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Oficina </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb17-173"><a href="#cb17-173" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb17-174"><a href="#cb17-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-175"><a href="#cb17-175" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span>])<span class="ot">,</span> <span class="dv">9</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-176"><a href="#cb17-176" aria-hidden="true" tabindex="-1"></a>        <span class="va">$empty</span> <span class="op">=</span> Event::listingPage(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;nada&#39;</span>])<span class="ot">,</span> <span class="dv">3</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-177"><a href="#cb17-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-178"><a href="#cb17-178" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">2</span><span class="ot">,</span> <span class="va">$page</span>-&gt;getPage())<span class="ot">;</span></span>
+<span id="cb17-179"><a href="#cb17-179" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Oficina 6&#39;</span><span class="ot">,</span> <span class="st">&#39;Oficina 7&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-180"><a href="#cb17-180" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$empty</span>-&gt;getPage())<span class="ot">;</span></span>
+<span id="cb17-181"><a href="#cb17-181" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> <span class="va">$empty</span>-&gt;registers())<span class="ot">;</span></span>
+<span id="cb17-182"><a href="#cb17-182" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-183"><a href="#cb17-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-184"><a href="#cb17-184" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_page_should_not_trust_unchecked_sort_and_dir()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-185"><a href="#cb17-185" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-186"><a href="#cb17-186" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Bravo&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-187"><a href="#cb17-187" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Alfa&#39;</span>])<span class="ot">;</span></span>
+<span id="cb17-188"><a href="#cb17-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-189"><a href="#cb17-189" aria-hidden="true" tabindex="-1"></a>        <span class="va">$filters</span> <span class="op">=</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title; DROP TABLE events&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;DESC; --&#39;</span>]<span class="ot">;</span></span>
+<span id="cb17-190"><a href="#cb17-190" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> Event::listingPage(<span class="va">$filters</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-191"><a href="#cb17-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-192"><a href="#cb17-192" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;Bravo&#39;</span><span class="ot">,</span> <span class="st">&#39;Alfa&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>-&gt;titles(<span class="va">$page</span>-&gt;registers()))<span class="ot">;</span></span>
+<span id="cb17-193"><a href="#cb17-193" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">2</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb17-194"><a href="#cb17-194" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-195"><a href="#cb17-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-196"><a href="#cb17-196" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_listing_query_should_keep_only_what_differs_from_the_default()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb17-197"><a href="#cb17-197" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-198"><a href="#cb17-198" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> Event::listingQuery(<span class="va">$this</span>-&gt;filters()))<span class="ot">;</span></span>
+<span id="cb17-199"><a href="#cb17-199" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(</span>
+<span id="cb17-200"><a href="#cb17-200" aria-hidden="true" tabindex="-1"></a>            [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;50%&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;starts_on&#39;</span>]<span class="ot">,</span></span>
+<span id="cb17-201"><a href="#cb17-201" aria-hidden="true" tabindex="-1"></a>            Event::listingQuery(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;50%&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;asc&#39;</span>]))</span>
+<span id="cb17-202"><a href="#cb17-202" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb17-203"><a href="#cb17-203" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>]<span class="ot">,</span> Event::listingQuery(<span class="va">$this</span>-&gt;filters([<span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;id&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>])))<span class="ot">;</span></span>
+<span id="cb17-204"><a href="#cb17-204" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Regra no model, testada sem HTTP: padrão, válidos, 7 inválidos (data
+provider), válidos ao lado de inválidos, limite de 255.</li>
+<li><code>listingPage</code>: mesmo WHERE no <code>COUNT</code> e na
+página (7 de 10, 2 páginas), caixa ignorada, desempate por
+<code>id</code>, <code>%</code>/<code>_</code>/<code>!</code> literais,
+aspas sem injeção, página além da última vira a última,
+<code>sort</code>/<code>dir</code> não conferidos não entram no
+SQL.</li>
+<li><code>createEvent</code> já existe no arquivo
+(<code>EVT:59-65</code>).</li>
+</ul>
+<h2 id="7-testsintegrationcontrollersadmineventscontrollertestphp">7.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Testes novos depois de
+<code>test_index_lists_five_events_per_page</code> (termina em
+<code>assertStringNotContainsString('Evento 5', $page2);</code>):</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_keeps_search_kind_and_sort_in_links()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Oficina </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina X&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra 1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page1</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span>]</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 5 de 7&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Oficina X&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Palestra 1&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThan(<span class="fu">strpos</span>(<span class="va">$page1</span><span class="ot">,</span> <span class="st">&#39;Oficina 3&#39;</span>)<span class="ot">,</span> <span class="fu">strpos</span>(<span class="va">$page1</span><span class="ot">,</span> <span class="st">&#39;Oficina 7&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/admin/events/page/2?q=Oficina&amp;kind=workshop&amp;sort=title&amp;dir=desc&#39;</span><span class="ot">,</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page1</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O formulário volta preenchido.</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;value=&quot;Oficina&quot;&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;option value=&quot;workshop&quot;\s+selected&gt;/&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;option value=&quot;title&quot;\s+selected&gt;/&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;option value=&quot;desc&quot;\s+selected&gt;/&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_second_page_keeps_search_kind_and_sort()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Oficina </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina X&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page2</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; <span class="st">&#39;desc&#39;</span><span class="ot">,</span> <span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;2&#39;</span>]</span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 6 - 7 de 7&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThan(<span class="fu">strpos</span>(<span class="va">$page2</span><span class="ot">,</span> <span class="st">&#39;Oficina 1&#39;</span>)<span class="ot">,</span> <span class="fu">strpos</span>(<span class="va">$page2</span><span class="ot">,</span> <span class="st">&#39;Oficina 2&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Oficina 3&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(</span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/admin/events/page/1?q=Oficina&amp;kind=workshop&amp;sort=title&amp;dir=desc&#39;</span><span class="ot">,</span></span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page2</span></span>
+<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_with_invalid_sort_shows_warning_and_registration_order()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-53"><a href="#cb18-53" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-54"><a href="#cb18-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Bravo&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-55"><a href="#cb18-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Alfa&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-56"><a href="#cb18-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-57"><a href="#cb18-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;description&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-58"><a href="#cb18-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-59"><a href="#cb18-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(</span>
+<span id="cb18-60"><a href="#cb18-60" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;&lt;div class=&quot;alert alert-warning&quot; role=&quot;alert&quot;&gt;Ordenação inválida.&lt;/div&gt;&#39;</span><span class="ot">,</span></span>
+<span id="cb18-61"><a href="#cb18-61" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb18-62"><a href="#cb18-62" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-63"><a href="#cb18-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThan(<span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Alfa&#39;</span>)<span class="ot">,</span> <span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Bravo&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-64"><a href="#cb18-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;option value=&quot;id&quot;\s+selected&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-65"><a href="#cb18-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;sort=description&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-66"><a href="#cb18-66" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-67"><a href="#cb18-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-68"><a href="#cb18-68" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_shows_every_invalid_param_and_keeps_the_valid_ones()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-69"><a href="#cb18-69" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-70"><a href="#cb18-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-71"><a href="#cb18-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra de Git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;lecture&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-72"><a href="#cb18-72" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Docker&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-73"><a href="#cb18-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-74"><a href="#cb18-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(</span>
+<span id="cb18-75"><a href="#cb18-75" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span></span>
+<span id="cb18-76"><a href="#cb18-76" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb18-77"><a href="#cb18-77" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;Git&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;party&#39;</span><span class="ot">,</span> <span class="st">&#39;sort&#39;</span> =&gt; <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;dir&#39;</span> =&gt; [<span class="st">&#39;desc&#39;</span>]]</span>
+<span id="cb18-78"><a href="#cb18-78" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb18-79"><a href="#cb18-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-80"><a href="#cb18-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Tipo inválido.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-81"><a href="#cb18-81" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Direção inválida.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-82"><a href="#cb18-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">2</span><span class="ot">,</span> <span class="fu">substr_count</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;alert-warning&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-83"><a href="#cb18-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;party&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-84"><a href="#cb18-84" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Busca e ordenação válidas continuam valendo; tipo e direção voltam ao padrão.</span></span>
+<span id="cb18-85"><a href="#cb18-85" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThan(<span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Palestra de Git&#39;</span>)<span class="ot">,</span> <span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Oficina de Git&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-86"><a href="#cb18-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Oficina de Docker&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-87"><a href="#cb18-87" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-88"><a href="#cb18-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-89"><a href="#cb18-89" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_without_params_keeps_registration_order_and_clean_links()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-90"><a href="#cb18-90" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-91"><a href="#cb18-91" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">6</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb18-92"><a href="#cb18-92" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Evento </span>{<span class="va">$i</span>}<span class="st">&quot;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+&#39;</span> <span class="op">.</span> (<span class="dv">20</span> <span class="op">-</span> <span class="va">$i</span>) <span class="op">.</span> <span class="st">&#39; days&#39;</span>))])<span class="ot">;</span></span>
+<span id="cb18-93"><a href="#cb18-93" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb18-94"><a href="#cb18-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-95"><a href="#cb18-95" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb18-96"><a href="#cb18-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-97"><a href="#cb18-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThan(<span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Evento 5&#39;</span>)<span class="ot">,</span> <span class="fu">strpos</span>(<span class="va">$response</span><span class="ot">,</span> <span class="st">&#39;Evento 1&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-98"><a href="#cb18-98" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/page/2&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-99"><a href="#cb18-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;alert-warning&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-100"><a href="#cb18-100" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-101"><a href="#cb18-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-102"><a href="#cb18-102" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_search_escapes_the_term_and_shows_message_without_results()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-103"><a href="#cb18-103" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-104"><a href="#cb18-104" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Git&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-105"><a href="#cb18-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-106"><a href="#cb18-106" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;q&#39;</span> =&gt; <span class="st">&#39;&lt;b&gt;&quot;x&quot;&lt;/b&gt;&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-107"><a href="#cb18-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-108"><a href="#cb18-108" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Nenhum evento encontrado.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-109"><a href="#cb18-109" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;value=&quot;&amp;lt;b&amp;gt;&amp;quot;x&amp;quot;&amp;lt;/b&amp;gt;&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-110"><a href="#cb18-110" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;&lt;b&gt;&quot;x&quot;&lt;/b&gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-111"><a href="#cb18-111" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Oficina de Git&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb18-112"><a href="#cb18-112" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-113"><a href="#cb18-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-114"><a href="#cb18-114" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_page_param_must_be_a_positive_integer()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-115"><a href="#cb18-115" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-116"><a href="#cb18-116" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb18-117"><a href="#cb18-117" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Evento </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb18-118"><a href="#cb18-118" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb18-119"><a href="#cb18-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-120"><a href="#cb18-120" aria-hidden="true" tabindex="-1"></a>        <span class="va">$text</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;2abc&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-121"><a href="#cb18-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$beyond</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;9&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-122"><a href="#cb18-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-123"><a href="#cb18-123" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 5 de 7&#39;</span><span class="ot">,</span> <span class="va">$text</span>)<span class="ot">;</span></span>
+<span id="cb18-124"><a href="#cb18-124" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 6 - 7 de 7&#39;</span><span class="ot">,</span> <span class="va">$beyond</span>)<span class="ot">;</span></span>
+<span id="cb18-125"><a href="#cb18-125" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Caminho todo: <code>getParams()</code> -&gt; model -&gt;
+<code>Paginator</code> -&gt; view e links. O primeiro é o teste do
+catálogo, mais o form preenchido.</li>
+<li>Inválido: aviso escapado, padrão aplicado, nada do valor ruim nos
+links. Dois inválidos -&gt; dois avisos (prova o "não flash").</li>
+<li>Sem parâmetros: links limpos (<code>/page/2</code> sem
+<code>?</code>), ordem de cadastro; os testes antigos da
+<code>index</code> seguem verdes.</li>
+<li>Confere títulos dos Eventos, não o rótulo: "Oficina"/"Palestra"
+também aparecem no <code>&lt;select&gt;</code>.</li>
+</ul>
+<p>Armadilha: <code>ControllerTestCase</code> usa um
+<code>Request</code> por teste e <code>addParams</code> acumula; um
+segundo <code>get</code> sem <code>q</code> ainda busca o <code>q</code>
+anterior. Um cenário por teste, ou passe as quatro chaves
+(<code>'q' =&gt; ''</code>). No último teste funciona porque só
+<code>page</code> muda.</p>
+<h2 id="8-testsacceptanceadmineventssearcheventscestphp-novo">8.
+<code>tests/Acceptance/admin/events/SearchEventsCest.php</code>
+(novo)</h2>
+<p>Arquivo inteiro:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * Busca por título, filtro por tipo e ordenação escolhida, juntos e mantidos ao trocar de página.</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> SearchEventsCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> searchSortPaginateAndFilter(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Buscar, ordenar e filtrar a listagem, mantendo tudo ao paginar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// &quot;1&quot; casa o Evento 01 e os Eventos 10 a 16 (&quot;Evento 1&quot; não casaria o 01).</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;fillField(<span class="st">&#39;#filter_q&#39;</span><span class="ot">,</span> <span class="st">&#39;1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#filter_sort&#39;</span><span class="ot">,</span> <span class="st">&#39;Título&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#filter_dir&#39;</span><span class="ot">,</span> <span class="st">&#39;Decrescente&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Filtrar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 5 de 8&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeTitlesInOrder(<span class="va">$page</span><span class="ot">,</span> [<span class="dv">16</span><span class="ot">,</span> <span class="dv">15</span><span class="ot">,</span> <span class="dv">14</span><span class="ot">,</span> <span class="dv">13</span><span class="ot">,</span> <span class="dv">12</span>])<span class="ot">;</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Página 2: busca e ordenação continuam na URL e na tela.</span></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInCurrentUrl(<span class="st">&#39;/admin/events/page/2?q=1&amp;sort=title&amp;dir=desc&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 6 - 8 de 8&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeTitlesInOrder(<span class="va">$page</span><span class="ot">,</span> [<span class="dv">11</span><span class="ot">,</span> <span class="dv">10</span><span class="ot">,</span> <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="dv">1</span>)<span class="ot">,</span> <span class="st">&#39;table tbody tr:last-child&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeInField(<span class="st">&#39;#filter_q&#39;</span><span class="ot">,</span> <span class="st">&#39;1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeOptionIsSelected(<span class="st">&#39;#filter_sort&#39;</span><span class="ot">,</span> <span class="st">&#39;Título&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeOptionIsSelected(<span class="st">&#39;#filter_dir&#39;</span><span class="ot">,</span> <span class="st">&#39;Decrescente&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Filtro por tipo junto: Palestras são os Eventos 01, 05, 09 e 13; só 13 e 01 casam a busca.</span></span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;selectOption(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Palestra&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Filtrar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 2 de 2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeTitlesInOrder(<span class="va">$page</span><span class="ot">,</span> [<span class="dv">13</span><span class="ot">,</span> <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> invalidParamShowsWarningAndUsesDefault(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Ver um aviso quando a listagem recebe um parâmetro inválido&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events?kind=party&amp;sort=title&amp;dir=desc&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Tipo inválido.&#39;</span><span class="ot">,</span> <span class="st">&#39;.alert-warning&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O tipo recusado volta a &quot;Todos os tipos&quot;; a ordenação válida continua valendo.</span></span>
+<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeOptionIsSelected(<span class="st">&#39;#filter_kind&#39;</span><span class="ot">,</span> <span class="st">&#39;Todos os tipos&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 5 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-51"><a href="#cb19-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="dv">16</span>)<span class="ot">,</span> <span class="st">&#39;table tbody tr:first-child&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-52"><a href="#cb19-52" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a><span class="co">     * Linhas da tabela: exatamente estes Eventos, nesta ordem.</span></span>
+<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;int</span><span class="co">, int&gt; $numbers</span></span>
+<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> seeTitlesInOrder(AcceptanceTester <span class="va">$page</span><span class="ot">,</span> <span class="dt">array</span> <span class="va">$numbers</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="fu">count</span>(<span class="va">$numbers</span>))<span class="ot">;</span></span>
+<span id="cb19-62"><a href="#cb19-62" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$numbers</span> <span class="kw">as</span> <span class="va">$index</span> =&gt; <span class="va">$number</span>) {</span>
+<span id="cb19-63"><a href="#cb19-63" aria-hidden="true" tabindex="-1"></a>            <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;title(<span class="va">$number</span>)<span class="ot">,</span> <span class="st">&#39;table tbody tr:nth-child(&#39;</span> <span class="op">.</span> (<span class="va">$index</span> <span class="op">+</span> <span class="dv">1</span>) <span class="op">.</span> <span class="st">&#39;)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Navegador real: prova que o form GET envia os quatro campos e que o
+link "2" leva a query string.</li>
+<li><code>BaseEventsCest</code> semeia 16 Eventos
+<code>Evento %02d</code> com tipos em rodízio; <code>title($n)</code>
+monta o título.</li>
+<li>Termo "1", não "Evento 1": "Evento 01" não contém "Evento 1" (daria
+7, não 8).</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># SearchEventsCest</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem <code>db:populate</code> (schema não mudou). No navegador
+(populate, admin):</p>
+<ul>
+<li>buscar "de", Título, Decrescente: "Mostrando 1 - 5 de 14", link
+<code>/admin/events/page/2?q=de&amp;sort=title&amp;dir=desc</code>; na
+página 2 a ordem continua.</li>
+<li><code>/admin/events/page/9?q=Oficina</code>: as 4 Oficinas,
+"Mostrando 1 - 4 de 4".</li>
+<li><code>/admin/events?kind=x&amp;dir=up</code>: avisos "Tipo
+inválido." e "Direção inválida." e a listagem padrão.</li>
+</ul>
+<p>Commit (inglês):
+<code>feat: Search, filter and sort admin events together</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>COUNT</code> e página com o mesmo <code>WHERE</code>
+(<code>buildConditions()</code>); <code>LIKE</code> só no
+<code>SELECT</code> dá total errado e páginas vazias.
+<code>ORDER BY</code> só no <code>SELECT</code>.</li>
+<li><code>conditions + binds</code>: chave da esquerda vence; bind
+<code>:kind</code> some calado. Use <code>:q</code>.</li>
+<li><code>%</code> e <code>_</code> digitados: escapar. Escape padrão do
+MySQL é a barra; <code>ESCAPE '!'</code> deixa explícito e vale no
+PostgreSQL.</li>
+<li><code>ORDER BY</code> não aceita bind: lista fechada, conferida de
+novo em <code>listingPage()</code>; <code>dir</code> vira
+<code>ASC</code>/<code>DESC</code> fixos.</li>
+<li>Padrão fora da query string: <code>PaginateEventsCest</code> compara
+URL exata. <code>http_build_query</code> mantém <code>''</code>
+(<code>?kind=</code>): <code>listingQuery()</code> filtra.</li>
+<li>Form GET: navegador descarta a query string do <code>action</code>;
+os quatro campos no form, <code>action</code> sem
+<code>page</code>.</li>
+<li>Página fora do intervalo depois de filtrar: sem o ajuste no
+construtor, "Nenhum evento cadastrado." sem paginação. Alternativa:
+<code>redirectTo</code> pra última página.</li>
+<li>Filtro na rota (<code>/page/{page}/{sortBy}</code>): não casa o
+regex de <code>Route.php</code>, 404.
+<code>/admin/events/page/abc</code> chega como <code>'abc'</code>.</li>
+<li><code>ControllerTestCase</code>: <code>params</code> acumulam entre
+<code>get()</code> do mesmo teste.</li>
+<li>Padrão <code>starts_on</code>: quebra
+<code>CreateSuccessfullyCest</code> (N3) e, sem desempate por
+<code>id</code>, o teste de cinco por página (mesma data).</li>
+<li>Dois inválidos em flash: só o último aparece. Use
+<code>$errors</code> na view com <code>htmlspecialchars</code>.</li>
+<li><code>?q[]=x</code> chega como array: <code>is_string</code> antes
+de <code>trim()</code>.</li>
+<li>Busca segue a collation: "oficina" acha "Oficina", "introducao" acha
+"Introdução".</li>
+</ul>
+</body>
+</html>

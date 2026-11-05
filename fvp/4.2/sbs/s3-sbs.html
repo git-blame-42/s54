@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>s3-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="s3-passo-a-passo-teste-unitário-do-método-novo-do-model">S3
+passo a passo: teste unitário do método novo do model</h1>
+<p>Pedido típico: "você criou o <code>Event::duplicate()</code>; escreva
+os testes unitários dele no <code>EventTest</code>: título, data,
+inscrições, dono e se a cópia é gravada". Chance: alta. Tempo: 10-15
+min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/s3-teste-unitario-model/</code> (patch, bundle e
+árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo em
+formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisito: P6 (<code>p6-duplicar-evento</code>) aplicado. O patch
+traz dois commits: o 1º é a base P6
+(<code>feat: Duplicate an Event from the listing</code>); este guia
+cobre só o 2º. O que o <code>duplicate()</code> do P6 faz (é o que os
+testes conferem):</p>
+<ul>
+<li>devolve <code>new Event()</code> com todas as <code>$columns</code>
+copiadas, <strong>sem salvar</strong> (o controller chama
+<code>save()</code>);</li>
+<li>título: <code>mb_substr($this-&gt;title, 0, 247) . ' (cópia)'</code>
+(cabe em <code>VARCHAR(255)</code>);</li>
+<li><code>starts_on</code>: hoje + 7 dias;</li>
+<li>Inscrições não são copiadas (ficam em <code>event_user</code>).</li>
+</ul>
+<p>Ordem: só teste, nenhum código de aplicação muda. Testa o model
+isolado (sem rota, controller, view). Na prova, prioridade: teste passa,
+depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+</ol>
+<p>Depois: <code>./run test ... --filter duplicate</code>,
+<code>./run test tests/Unit</code>, <code>./run phpcs</code>.</p>
+<h2 id="1-testsunitmodelseventseventtestphp">1.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Seção nova depois do teste
+<code>test_available_spots_should_be_capacity_minus_enrollments</code>
+(linha ~490) e antes do comentário
+<code>/* ---...--- starts_on: "não passada" só no create e quando a data muda ---...--- */</code>.</p>
+<p>Helpers que já existem no topo e serão usados:</p>
+<ul>
+<li><code>createUser($name, $email, $role = 'participant')</code>;</li>
+<li><code>params([...])</code>: Evento válido com sobrescritas;</li>
+<li><code>createEvent([...])</code>: <code>new Event(params)</code> +
+<code>assertTrue(save())</code>;</li>
+<li><code>enroll($event, N)</code>: cria N Participantes e
+Inscrições;</li>
+<li><code>createPastEvent()</code> (linha ~499): Evento salvo e movido
+para -10 dias.</li>
+</ul>
+<p>a) Cabeçalho da seção e teste "não salva":</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- duplicate ------------------- */</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_return_a_new_unsaved_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$event</span>-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$copy</span>-&gt;newRecord())<span class="ot">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: <code>duplicate()</code> não grava. <code>newRecord()</code>
+= sem <code>id</code>; <code>all()</code> com 1 = só o original no
+banco. Contrato do método documentado em teste.</p>
+<p>b) Título:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_append_copy_to_the_title()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Git&#39;</span>])-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Oficina de Git (cópia)&#39;</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_keep_the_title_within_255_characters()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">255</span>)])-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">255</span><span class="ot">,</span> <span class="fu">mb_strlen</span>(<span class="va">$copy</span>-&gt;title))<span class="ot">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringEndsWith(<span class="st">&#39; (cópia)&#39;</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$copy</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Caso comum + caso de borda (título no limite da coluna).</li>
+<li><code>mb_strlen</code>, não <code>strlen</code>: "ó" tem 2
+bytes.</li>
+<li><code>save()</code> no fim: prova que a validação de tamanho do
+model aceita.</li>
+</ul>
+<p>c) Data:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_move_starts_on_to_seven_days_from_today()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+60 days&#39;</span>))])-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+7 days&#39;</span>))<span class="ot">,</span> <span class="va">$copy</span>-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_of_a_past_event_should_be_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createPastEvent()-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$copy</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Original em +60 dias: se a cópia mantivesse a data, o teste falharia
+(com +7 no original passaria por acaso).</li>
+<li>Datas relativas (<code>strtotime</code>), nunca fixas: teste não
+apodrece.</li>
+<li>Evento passado: cópia nasce em data futura e passa no "não passada"
+do model.</li>
+</ul>
+<p>d) Demais colunas e dono:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_keep_the_other_columns_and_the_user()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Outro Admin&#39;</span><span class="ot">,</span> <span class="st">&#39;other@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id<span class="ot">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;hybrid&#39;</span><span class="ot">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; <span class="st">&#39;staff,community&#39;</span><span class="ot">,</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Laboratório B203&#39;</span><span class="ot">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">25</span><span class="ot">,</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$event</span>-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$other</span>-&gt;id<span class="ot">,</span> <span class="va">$copy</span>-&gt;user_id)<span class="ot">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;workshop&#39;</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;kind)<span class="ot">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;hybrid&#39;</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;modality)<span class="ot">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals([<span class="st">&#39;staff&#39;</span><span class="ot">,</span> <span class="st">&#39;community&#39;</span>]<span class="ot">,</span> <span class="va">$copy</span>-&gt;audienceList())<span class="ot">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$event</span>-&gt;description<span class="ot">,</span> <span class="va">$copy</span>-&gt;description)<span class="ot">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Laboratório B203&#39;</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;location)<span class="ot">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">25</span><span class="ot">,</span> <span class="va">$copy</span>-&gt;capacity)<span class="ot">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><strong>Outro</strong> admin como dono: com o admin do
+<code>setUp</code> o teste passaria mesmo se <code>duplicate()</code>
+pusesse o usuário logado.</li>
+<li>Valores diferentes do padrão de <code>params()</code>: prova cópia
+real, não coincidência com a fábrica.</li>
+<li><code>audienceList()</code>: confere o SET pelo método do model,
+como o resto do arquivo.</li>
+</ul>
+<p>e) Persistência sem Inscrições:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_be_persisted_without_enrollments()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">5</span>])<span class="ot">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$event</span><span class="ot">,</span> <span class="dv">3</span>)<span class="ot">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$copy</span> <span class="op">=</span> <span class="va">$event</span>-&gt;duplicate()<span class="ot">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$copy</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> Event::findById(<span class="va">$copy</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$found</span>)<span class="ot">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotEquals(<span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="va">$found</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;</span>{<span class="va">$event</span>-&gt;title}<span class="st"> (cópia)&quot;</span><span class="ot">,</span> <span class="va">$found</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$found</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">3</span><span class="ot">,</span> <span class="va">$event</span>-&gt;enrollmentsCount())<span class="ot">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">2</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>"Persistido" pede <code>save()</code> + <code>findById</code> (lê do
+banco); <code>isValid()</code> sozinho não prova gravação.</li>
+<li>Confere os dois lados (cópia 0, original 3): Inscrições nem movidas
+nem copiadas.</li>
+<li><code>assertSame(0, ...)</code>: tipo e valor (inteiro).</li>
+</ul>
+<p>f) Original intacto:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_duplicate_should_not_change_the_original()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Original&#39;</span>])<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;duplicate()-&gt;save()<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$original</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Original&#39;</span><span class="ot">,</span> <span class="va">$original</span>-&gt;title)<span class="ot">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$event</span>-&gt;starts_on<span class="ot">,</span> <span class="va">$original</span>-&gt;starts_on)<span class="ot">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: pega o erro clássico de alterar <code>$this</code> em vez de
+<code>$copy</code> (ou salvar em cima do original).</p>
+<p>Regras gerais (valem para qualquer método novo):</p>
+<ul>
+<li>Nome <code>test_&lt;metodo&gt;_should_&lt;efeito&gt;</code>, inglês,
+<code>snake_case</code>; sem <code>test_</code> o PHPUnit não roda.</li>
+<li>Arranje (<code>createEvent</code>), aja (chame o método), confira
+(uma asserção principal; mais só se forem do mesmo efeito).</li>
+<li>Cada teste recria o schema: não há dados do populate; crie
+tudo.</li>
+<li>Mensagens de validação: <code>errorsOf($event)</code> ou
+<code>errors('campo')</code>.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li>Se o seu <code>duplicate()</code> salva a cópia, troque o 1º teste
+por <code>assertFalse($copy-&gt;newRecord())</code> e tire os
+<code>save()</code> dos outros.</li>
+<li>Com P1:
+<code>assertNotEquals($event-&gt;checkin_code, $copy-&gt;checkin_code)</code>
+depois do <code>save()</code>; com P5:
+<code>assertEquals('scheduled', $copy-&gt;status)</code>.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php <span class="at">--filter</span> duplicate</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test                  <span class="co"># suíte toda</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Sem mudança de schema: não precisa <code>./run db:populate</code>.
+Esperado no <code>--filter duplicate</code>: 8 testes, 37 asserções.</p>
+<p>No navegador: nada novo (só teste). Opcional: duplicar um Evento na
+listagem e ver "(cópia)" com data de hoje + 7 dias.</p>
+<p>Commit (inglês):
+<code>test: Cover Event::duplicate() with unit tests</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Só <code>isValid()</code> não prova gravação (M3):
+<code>save()</code> + <code>findById</code>.</li>
+<li>Datas <code>+N days</code> relativas, nunca fixas
+(<code>'2026-12-01'</code> apodrece).</li>
+<li>Schema recriado por teste: sem dados do populate.</li>
+<li>Nome em inglês, <code>snake_case</code>, prefixo
+<code>test_</code>.</li>
+<li>Admin do <code>setUp</code> para checar <code>user_id</code> não
+distingue dono original de usuário logado: use outro.</li>
+<li><code>strlen</code> em vez de <code>mb_strlen</code>: "ó" conta
+2.</li>
+</ul>
+</body>
+</html>

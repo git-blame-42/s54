@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>n10-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="n10-passo-a-passo-página-e-id-inválidos-sem-conversão-silenciosa">N10
+passo a passo: Página e id inválidos sem conversão silenciosa</h1>
+<p>Pedido típico: "<code>/admin/events/page/abc</code> mostra a página
+1, <code>/admin/events/page/999</code> mostra tabela vazia e
+<code>/admin/events/1abc</code> abre o Evento 1. Trate página e id
+inválidos sem <code>(int)</code> às cegas". Chance: média-alta. Tempo:
+15-25 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/n10-pagina-id-invalido/</code>
+(patch, bundle e árvore <code>projeto/</code>). Sem pré-requisito: sai
+de <code>main</code>. Schema não muda.</p>
+<p>Ordem = fluxo da requisição: <code>Paginator</code> (quem sabe
+quantas páginas existem) -&gt; controller -&gt; testes. Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Paginator.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>tests/Unit/Lib/PaginatorTest.php</code> (novo)</li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/PaginateEventsCest.php</code></li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>, <code>./run phpstan</code>,
+<code>./run test:browser</code>.</p>
+<h2 id="1-libpaginatorphp">1. <code>lib/Paginator.php</code></h2>
+<p>Dois pontos.</p>
+<p>a) Fim do construtor (linha ~27), <code>loadRegisters()</code> só no
+intervalo:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    ) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;loadTotals()<span class="ot">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$this</span>-&gt;isOutOfRange()) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;loadRegisters()<span class="ot">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) Método novo, depois de <code>isPage()</code> e antes de
+<code>entriesInfo()</code> (linha ~81):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * A página pedida não existe: menor que 1 ou depois da última. Sem registros, só a página 1 é válida</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * (a listagem vazia mostra &quot;Nenhum evento cadastrado.&quot;).</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> isOutOfRange()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;page <span class="op">&lt;</span> <span class="dv">1</span> <span class="op">||</span> <span class="va">$this</span>-&gt;page <span class="op">&gt;</span> <span class="fu">max</span>(<span class="dv">1</span><span class="ot">,</span> <span class="va">$this</span>-&gt;totalOfPages())<span class="ot">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Quem sabe o total de páginas é o <code>Paginator</code>
+(<code>totalOfPages()</code>, calculado em <code>loadTotals()</code>).
+Controller só pergunta: fica fino.</li>
+<li><code>loadTotals()</code> roda antes: o <code>COUNT</code> vem
+primeiro, então <code>isOutOfRange()</code> já pode ser chamado no
+construtor.</li>
+<li>Fora do intervalo não consulta à toa nem calcula <code>OFFSET</code>
+gigante; <code>registers()</code> devolve <code>[]</code> (valor inicial
+da propriedade).</li>
+<li><code>max(1, ...)</code>: tabela vazia tem
+<code>totalOfPages()</code> 0, e a página 1 tem de continuar
+válida.</li>
+</ul>
+<p>Armadilha: sem o <code>max(1, ...)</code>, a página 1 vira "fora do
+intervalo" com tabela vazia e o redirect entra em laço para
+<code>/page/0</code>.</p>
+<h2 id="2-appcontrollersadmineventscontrollerphp">2.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Três pontos. <code>FlashMessage</code> já está importado no topo.</p>
+<p>a) <code>index()</code> (linha ~16), validação antes de
+<code>Event::paginate</code> e checagem logo depois:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> index(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;page&#39;</span>) <span class="op">===</span> <span class="kw">null</span> <span class="ot">?</span> <span class="dv">1</span> <span class="ot">:</span> <span class="va">$this</span>-&gt;positiveInt(<span class="va">$request</span>-&gt;getParam(<span class="st">&#39;page&#39;</span>))<span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$page</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Página inválida!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.index&#39;</span>))<span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> Event::paginate(</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="va">$page</span><span class="ot">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            per_page<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span><span class="ot">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="st">&#39;admin.events.paginate&#39;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$paginator</span>-&gt;isOutOfRange()) {</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Página inexistente! Mostrando a última página.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.paginate&#39;</span><span class="ot">,</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="fu">max</span>(<span class="dv">1</span><span class="ot">,</span> <span class="va">$paginator</span>-&gt;totalOfPages())]))<span class="ot">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> <span class="va">$paginator</span>-&gt;registers()<span class="ot">;</span></span></code></pre></div>
+<p>(sai a linha
+<code>page: max(1, (int) $request-&gt;getParam('page', 1)),</code>)</p>
+<p>b) <code>findEvent()</code> (linha ~132), troca o corpo:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> findEvent(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="ot">?</span>Event</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sem (int) silencioso: &quot;abc&quot; viraria 0 e &quot;1abc&quot; viraria 1 (outro Evento!).</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$id</span> <span class="op">=</span> <span class="va">$this</span>-&gt;positiveInt(<span class="va">$request</span>-&gt;getParam(<span class="st">&#39;id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$id</span> <span class="op">===</span> <span class="kw">null</span> <span class="ot">?</span> <span class="kw">null</span> <span class="ot">:</span> Event::findById(<span class="va">$id</span>)<span class="ot">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>c) Método privado novo, logo depois de <code>findEvent()</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Inteiro &gt;= 1 vindo da URL, ou null. Aceita só dígitos (ctype_digit), sem zero à esquerda e sem</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * estourar PHP_INT_MAX; o int é aceito porque os testes de controller passam `[&#39;page&#39; =&gt; 2]`.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> positiveInt(<span class="dt">mixed</span> <span class="va">$value</span>)<span class="ot">:</span> <span class="ot">?</span><span class="dt">int</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">is_int</span>(<span class="va">$value</span>)) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="va">$value</span> <span class="op">&gt;=</span> <span class="dv">1</span> <span class="ot">?</span> <span class="va">$value</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="fu">is_string</span>(<span class="va">$value</span>) <span class="op">||</span> <span class="op">!</span><span class="fu">ctype_digit</span>(<span class="va">$value</span>) <span class="op">||</span> <span class="va">$value</span> <span class="op">!==</span> (<span class="dt">string</span>) (<span class="dt">int</span>) <span class="va">$value</span>) {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (<span class="dt">int</span>) <span class="va">$value</span> <span class="op">&gt;=</span> <span class="dv">1</span> <span class="ot">?</span> (<span class="dt">int</span>) <span class="va">$value</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>(int) 'abc'</code> = 0, <code>(int) '1abc'</code> = 1: o
+<code>max(1, (int) ...)</code> escondia o erro e
+<code>findById((int) ...)</code> abria ou removia o Evento errado.
+<code>ctype_digit</code> recusa tudo que não for só dígitos.</li>
+<li>Parâmetro de rota chega como string (<code>{page}</code>,
+<code>{id}</code>); teste de controller passa <code>int</code>. Por isso
+o <code>is_int</code> separado.</li>
+<li><code>$value !== (string) (int) $value</code>: recusa
+<code>02</code> (URL canônica única) e o estouro de
+<code>PHP_INT_MAX</code> com a mesma regra.</li>
+<li>Sem <code>page</code> (rota <code>/admin/events</code>):
+<code>getParam</code> dá <code>null</code> -&gt; página 1, como
+antes.</li>
+<li>Redirect + flash, não 404: framework não tem 404 própria pra essa
+rota, o usuário volta a uma listagem útil, e o teste confere
+<code>Location</code> (mesmo padrão de "Evento não encontrado!").</li>
+<li>Depois da última vai pra última (não pra 1): é o que acontece ao
+remover o único Evento da última página.</li>
+<li><code>findEvent</code> serve <code>show</code>, <code>edit</code>,
+<code>update</code> e <code>destroy</code>: id inválido -&gt;
+<code>null</code> -&gt; "Evento não encontrado!" de sempre nas
+quatro.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>is_numeric</code> no lugar de <code>ctype_digit</code>: aceita
+<code>1.5</code>, <code>1e3</code>, <code>-1</code> e
+<code> 1</code>.</li>
+<li><code>ctype_digit(2)</code> (int) é obsoleto no PHP 8.1+ e trata o
+número como código ASCII: <code>false</code>. Daí o <code>is_int</code>
+antes.</li>
+<li>Esquecer o <code>return</code> depois do <code>redirectTo()</code>:
+no teste de controller o redirect só imprime <code>Location:</code> e o
+método segue renderizando.</li>
+<li>Com N1/N4 aplicados, o redirect pra última página tem de levar
+<code>kind</code>/<code>per_page</code>
+(<code>array_merge(['page' =&gt; ...], $paginator-&gt;queryParams())</code>).</li>
+</ul>
+<h2 id="3-testsunitlibpaginatortestphp-novo">3.
+<code>tests/Unit/Lib/PaginatorTest.php</code> (novo)</h2>
+<p>Arquivo inteiro:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Unit\Lib<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\TestCase<span class="ot">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PaginatorTest <span class="kw">extends</span> TestCase</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createUsers(<span class="dt">int</span> <span class="va">$total</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="va">$total</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>            <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;name&#39;</span> =&gt; <span class="st">&quot;Usuário </span>{<span class="va">$i</span>}<span class="st">&quot;</span><span class="ot">,</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;email&#39;</span> =&gt; <span class="st">&quot;usuario</span>{<span class="va">$i</span>}<span class="st">@example.com&quot;</span><span class="ot">,</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>            ])<span class="ot">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>            <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_is_out_of_range_should_be_false_for_existing_pages()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createUsers(<span class="dv">7</span>)<span class="ot">;</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(User::paginate(<span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(User::paginate(<span class="dv">2</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_is_out_of_range_should_be_true_after_the_last_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createUsers(<span class="dv">7</span>)<span class="ot">;</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> User::paginate(<span class="dv">3</span><span class="ot">,</span> <span class="dv">5</span>)<span class="ot">;</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$paginator</span>-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">2</span><span class="ot">,</span> <span class="va">$paginator</span>-&gt;totalOfPages())<span class="ot">;</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> <span class="va">$paginator</span>-&gt;registers())<span class="ot">;</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_is_out_of_range_should_be_true_below_page_one()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createUsers(<span class="dv">2</span>)<span class="ot">;</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(User::paginate(<span class="dv">0</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(User::paginate(<span class="op">-</span><span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_page_one_of_an_empty_table_should_not_be_out_of_range()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> User::paginate(<span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span>)<span class="ot">;</span></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">0</span><span class="ot">,</span> <span class="va">$paginator</span>-&gt;totalOfPages())<span class="ot">;</span></span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$paginator</span>-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(User::paginate(<span class="dv">2</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;isOutOfRange())<span class="ot">;</span></span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>Paginator</code> é de <code>lib/</code>, genérico: testa com
+<code>User</code> pra não depender de Eventos. <code>paginate()</code>
+vem do <code>Model</code>, vale pra qualquer model.</li>
+<li>Cobre os 4 casos: existente, depois da última (sem registros
+carregados), abaixo de 1, tabela vazia.</li>
+</ul>
+<h2 id="4-testsintegrationcontrollersadmineventscontrollertestphp">4.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) Import no topo, entre <code>Auth</code> e
+<code>ControllerTestCase</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Authentication\Auth<span class="ot">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\Attributes\DataProvider<span class="ot">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Integration\Controllers\ControllerTestCase<span class="ot">;</span></span></code></pre></div>
+<p>b) Testes novos depois de
+<code>test_index_lists_five_events_per_page</code> (termina em
+<code>assertStringNotContainsString('Evento 5', $page2);</code>):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_accepts_page_as_digit_string()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Evento </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;2&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 6&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 6 - 7 de 7&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{mixed}</span><span class="kw">&gt;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> invalidPageProvider()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;texto&#39;</span> =&gt; [<span class="st">&#39;abc&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;zero&#39;</span> =&gt; [<span class="st">&#39;0&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;negativo&#39;</span> =&gt; [<span class="st">&#39;-1&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;dígitos com sufixo&#39;</span> =&gt; [<span class="st">&#39;2abc&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;zero à esquerda&#39;</span> =&gt; [<span class="st">&#39;02&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;decimal&#39;</span> =&gt; [<span class="st">&#39;1.5&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;estouro de inteiro&#39;</span> =&gt; [<span class="st">&#39;99999999999999999999&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;array&#39;</span> =&gt; [[<span class="st">&#39;2&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;invalidPageProvider&#39;</span>)<span class="at">]</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_with_invalid_page_redirects_to_first_page(<span class="dt">mixed</span> <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="va">$page</span>])<span class="ot">;</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Página inválida!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_with_page_after_the_last_redirects_to_last_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Evento </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])<span class="ot">;</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;999&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events/page/2&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Página inexistente! Mostrando a última página.&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_with_page_two_and_no_events_redirects_to_page_one()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="st">&#39;2&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events/page/1&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{string}</span><span class="kw">&gt;</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> invalidIdSuffixProvider()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;texto&#39;</span> =&gt; [<span class="st">&#39;abc&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;dígitos com sufixo&#39;</span> =&gt; [<span class="st">&#39;{id}abc&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;zero à esquerda&#39;</span> =&gt; [<span class="st">&#39;0{id}&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;negativo&#39;</span> =&gt; [<span class="st">&#39;-{id}&#39;</span>]<span class="ot">,</span></span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;invalidIdSuffixProvider&#39;</span>)<span class="at">]</span></span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_with_invalid_id_redirects_to_index(<span class="dt">string</span> <span class="va">$pattern</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a>        <span class="va">$id</span> <span class="op">=</span> <span class="fu">str_replace</span>(<span class="st">&#39;{id}&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="va">$pattern</span>)<span class="ot">;</span></span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$id</span>])<span class="ot">;</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_destroy_with_id_followed_by_letters_does_not_remove_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Antes, (int) &quot;1abc&quot; virava 1 e removia o Evento 1.</span></span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;delete(</span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;destroy&#39;</span><span class="ot">,</span></span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="st">&quot;</span>{<span class="va">$event</span>-&gt;id}<span class="st">abc&quot;</span>]</span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(Event::findById(<span class="va">$event</span>-&gt;id))<span class="ot">;</span></span>
+<span id="cb8-97"><a href="#cb8-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb8-98"><a href="#cb8-98" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb8-99"><a href="#cb8-99" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Teste de controller chama a ação direto com <code>Request</code>
+montado; o redirect só imprime <code>Location: ...</code>, daí o
+<code>assertSame</code>.</li>
+<li>Data provider: 8 páginas inválidas num teste só; o id usa
+<code>{id}</code> porque o id real só existe depois de
+<code>createEvent()</code>.</li>
+<li><code>'2'</code> como string: prova que a rota real (string) segue
+ok.</li>
+<li><code>destroy</code> com <code>1abc</code> é o caso grave: antes
+removia outro Evento.</li>
+<li><code>$_SESSION['flash']</code> limpo no <code>setUp</code> do
+teste: flash não vaza.</li>
+</ul>
+<h2 id="5-testsintegrationaccesseventsaccesstestphp">5.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>Teste novo antes de
+<code>test_admin_should_be_redirected_to_index_when_event_does_not_exist</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_be_redirected_when_page_or_id_is_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&#39;/admin/events/page/abc&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$page</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> <span class="va">$page</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$outOfRange</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&#39;/admin/events/page/999&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$outOfRange</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/admin/events/page/1&#39;</span><span class="ot">,</span> <span class="va">$outOfRange</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$id</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">abc&quot;</span>)<span class="ot">;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$id</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/admin/events&#39;</span><span class="ot">,</span> <span class="va">$id</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>HTTP real, passando pelo Router: parâmetro chega como
+<strong>string</strong>, como no navegador. O teste de controller não
+prova isso.</li>
+<li><code>loggedClient</code>: sem sessão a rota de admin daria 302 pro
+login e o teste passaria por engano.</li>
+<li><code>/page/999</code> -&gt; <code>/page/1</code>: o
+<code>setUp</code> cria um só Evento (1 página).</li>
+</ul>
+<h2 id="6-testsacceptanceadmineventspaginateeventscestphp">6.
+<code>tests/Acceptance/admin/events/PaginateEventsCest.php</code></h2>
+<p>Método novo antes do privado <code>seeEventsOfPage</code> (que já
+existe):</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> openNonexistentPage(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Paginação dos registros (página inexistente ou inválida)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Depois da última: vai para a última (4) com aviso.</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/page/9&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/4&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Página inexistente! Mostrando a última página.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">4</span>)<span class="ot">;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Não numérica: volta para a primeira com aviso.</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/page/abc&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Página inválida!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span>)<span class="ot">;</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: navegador real (Selenium) com os 16 Eventos do
+<code>BaseEventsCest</code> (4 páginas). Confere URL depois do redirect,
+flash na tela e os Eventos certos da página.</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Lib/PaginatorTest.php</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/EventsAccessTest.php</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># PaginateEventsCest</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem <code>db:populate</code> (schema não mudou). No navegador
+(populate, admin): <code>/admin/events/page/9</code> -&gt;
+<code>/page/4</code> com "Página inexistente!...";
+<code>/admin/events/page/abc</code> e <code>/page/0</code> -&gt;
+<code>/admin/events</code> com "Página inválida!";
+<code>/admin/events/1abc</code> -&gt; <code>/admin/events</code> com
+"Evento não encontrado!".</p>
+<p>Commit (inglês):
+<code>fix: Validate page and id params without silent int casts</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Parâmetro de rota chega como string; padrão
+<code>getParam('page', 1)</code> é <code>int</code>: trate os dois
+(<code>is_int</code> separado, ausente = página 1).</li>
+<li><code>ctype_digit('')</code> é <code>false</code>;
+<code>ctype_digit('007')</code> é <code>true</code>: pra recusar zero à
+esquerda, compare <code>(string) (int) $page === $page</code>.</li>
+<li><code>totalOfPages</code> é 0 sem Eventos: página 1 continua válida
+(<code>max(1, ...)</code>), senão laço de redirect.</li>
+<li><code>(int) 'abc'</code> vira 0 e cai em "não encontrado" por sorte;
+<code>(int) '12abc'</code> vira 12 e abre outro Evento: é o que a
+validação fecha.</li>
+<li>Sem a correção, página além da última nem chega ao
+<code>entriesInfo</code>: <code>index.phtml</code> mostra "Nenhum evento
+cadastrado." (falso) e a navegação fica no <code>else</code>, sem link
+de volta.</li>
+<li><code>is_numeric</code> aceita <code>1.5</code>, <code>1e3</code>,
+<code>-1</code>, <code> 1</code>: use <code>ctype_digit</code>.</li>
+<li>Sem <code>return</code> depois de <code>redirectTo()</code>: segue
+renderizando.</li>
+<li>Catálogo sugere flash + volta à página 1 também pra página além da
+última; o exemplo redireciona pra última. Escolha um e teste.</li>
+</ul>
+</body>
+</html>

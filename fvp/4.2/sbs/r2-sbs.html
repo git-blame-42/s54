@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>r2-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="r2-passo-a-passo-nome-do-criador-no-show-e-na-listagem">R2 passo
+a passo: nome do criador no <code>show</code> e na listagem</h1>
+<p>Pedido típico: "mostre quem cadastrou o Evento, nos detalhes e na
+listagem; use a relação com o usuário" (<code>BelongsTo</code>, que a
+rubrica da 4.3 cobra). Chance: média-alta. Tempo: 10-15 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/r2-nome-do-criador/</code>
+(patch, bundle e árvore <code>projeto/</code>). Sem pré-requisito: parte
+da <code>main</code>. Schema, rotas, controller e populate não
+mudam.</p>
+<p>Ordem = fluxo da requisição: model -&gt; views -&gt; testes. Na
+prova, prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/ListEventsCest.php</code></li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>.</p>
+<h2 id="1-appmodelseventphp">1. <code>app/Models/Event.php</code></h2>
+<p>Depois do método <code>user(): BelongsTo</code> (linhas ~117-120) e
+antes de <code>enrollmentsCount()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;belongsTo(User::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span>)<span class="ot">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * Nome de quem cadastrou o Evento (relação BelongsTo com users).</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">     * A FK fk_events_user garante que o usuário existe.</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> creatorName()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$creator</span> <span class="op">=</span> <span class="va">$this</span>-&gt;user()-&gt;get()<span class="ot">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$creator</span> <span class="kw">instanceof</span> User <span class="ot">?</span> <span class="va">$creator</span>-&gt;name <span class="ot">:</span> <span class="st">&#39;&#39;</span><span class="ot">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>A relação já existe (<code>user()</code> -&gt;
+<code>BelongsTo</code>). Só usa: sem SQL novo, sem <code>JOIN</code> à
+mão.</li>
+<li><code>BelongsTo::get()</code> devolve <code>Model</code>, não
+<code>User</code>
+(<code>core/Database/ActiveRecord/BelongsTo.php:14</code>). Em
+<code>app/</code> o <code>phpstan</code> exige
+<code>instanceof User</code> antes de <code>-&gt;name</code>.</li>
+<li>Método no model: regra num só lugar; as duas views só chamam
+<code>creatorName()</code>.</li>
+<li><code>''</code> só satisfaz o tipo: <code>user_id NOT NULL</code> +
+FK (<code>SCH:35-36</code>) garantem o usuário.</li>
+</ul>
+<h2 id="2-appviewsadmineventsshowphtml">2.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Dentro do <code>&lt;dl&gt;</code>, depois do <code>&lt;/dd&gt;</code>
+de "Vagas" e antes de <code>&lt;/dl&gt;</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        (<span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;availableSpots() <span class="kw">?&gt;</span> disponíveis)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>dd<span class="op">&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Criado por<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;creatorName()) <span class="kw">?&gt;</span><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span><span class="fu">dl</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Forma direta, se o professor pedir exatamente ela (na view
+<code>Model</code> basta, o <code>__get</code> resolve
+<code>name</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span><span class="op">&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;user()-&gt;get()-&gt;name) <span class="kw">?&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>View burra: chama o model e escapa. Controller não muda: o
+<code>show</code> já passa <code>$event</code>.</li>
+<li><code>htmlspecialchars</code>: o nome vem do cadastro de usuário
+(XSS).</li>
+<li>Par <code>dt</code>/<code>dd</code> segue o padrão dos outros
+campos.</li>
+</ul>
+<h2 id="3-appviewsadmineventsindexphtml">3.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) <code>&lt;thead&gt;</code>, depois de
+<code>&lt;th&gt;Vagas&lt;/th&gt;</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Vagas<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Criado por<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Ações<span class="op">&lt;/</span>th<span class="op">&gt;</span></span></code></pre></div>
+<p>b) <code>&lt;tbody&gt;</code>, depois do <code>&lt;td&gt;</code> de
+vagas e <strong>antes</strong> do <code>&lt;td&gt;</code> de ações:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;enrollmentsCount() <span class="kw">?&gt;</span><span class="op">/&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;capacity <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;creatorName()) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Ordem dos <code>&lt;td&gt;</code> tem que bater com a dos
+<code>&lt;th&gt;</code>.</li>
+<li>N+1: uma consulta por linha (5 por página), igual a
+<code>enrollmentsCount()</code>. Aceitável aqui; com muitas linhas,
+<code>JOIN</code> num método do model.</li>
+<li>Catálogo marca a coluna como opcional; o pedido do exemplo
+cobra.</li>
+</ul>
+<h2 id="4-testsunitmodelseventseventtestphp">4.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Depois de <code>test_event_should_belong_to_its_creator</code> (bloco
+"relações", linhas ~443-449):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_creator_name_should_return_the_name_of_the_creator()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Outra Administradora&#39;</span><span class="ot">,</span> <span class="st">&#39;other@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$mine</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento 1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$theirs</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento 2&#39;</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Administrador&#39;</span><span class="ot">,</span> <span class="va">$mine</span>-&gt;creatorName())<span class="ot">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Outra Administradora&#39;</span><span class="ot">,</span> <span class="va">$theirs</span>-&gt;creatorName())<span class="ot">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: dois criadores provam que o nome vem de <code>user_id</code>
+de cada Evento, não do admin logado. <code>Administrador</code> é o nome
+do admin do <code>setUp</code> deste teste.</p>
+<h2 id="5-testsintegrationcontrollersadmineventscontrollertestphp">5.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) Depois de
+<code>test_index_shows_date_and_enrollments_over_capacity</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_shows_creator_name()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento do Admin&#39;</span>])<span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createAdmin(<span class="st">&#39;Outra Administradora&#39;</span><span class="ot">,</span> <span class="st">&#39;outra.admin@example.com&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento da Outra&#39;</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;&lt;th&gt;Criado por&lt;/th&gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Evento do Admin.*?&lt;td&gt;Admin&lt;\/td&gt;/s&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Evento da Outra.*?&lt;td&gt;Outra Administradora&lt;\/td&gt;/s&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_renders_creator_name()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;dt[^&gt;]*&gt;Criado por&lt;\/dt&gt;\s*&lt;dd[^&gt;]*&gt;Admin&lt;\/dd&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_escapes_creator_name()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$creator</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createAdmin(<span class="st">&#39;Ana &lt;b&gt;Admin&lt;/b&gt;&#39;</span><span class="ot">,</span> <span class="st">&#39;ana@example.com&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$creator</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Ana &amp;lt;b&amp;gt;Admin&amp;lt;/b&amp;gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;&lt;b&gt;Admin&lt;/b&gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) Helper, depois de <code>createEvent()</code> e antes de
+<code>enroll()</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createAdmin(<span class="dt">string</span> <span class="va">$name</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span>)<span class="ot">:</span> User</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="va">$name</span><span class="ot">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="st">&#39;admin&#39;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>Admin</code> é o nome do admin do <code>setUp</code> deste
+teste (<code>ECT:23</code>).</li>
+<li>Regex com <code>.*?</code> e <code>/s</code>: casa o nome na mesma
+linha da tabela do título certo.</li>
+<li>Teste de escape: prova o <code>htmlspecialchars</code> (rubrica
+cobra XSS).</li>
+<li><code>User</code> já está importado.</li>
+</ul>
+<h2 id="6-testsacceptanceadmineventslisteventscestphp">6.
+<code>tests/Acceptance/admin/events/ListEventsCest.php</code></h2>
+<p>a) <code>listAllEvents</code>, depois de
+<code>$page-&gt;seeNumberOfElements('table tbody tr', self::PER_PAGE);</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Criado por&#39;</span><span class="ot">,</span> <span class="st">&#39;table thead&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>b) No laço das linhas, depois de
+<code>$this-&gt;assertContains($event-&gt;location, $row);</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertContains(<span class="va">$this</span>-&gt;admin-&gt;name<span class="ot">,</span> <span class="va">$row</span>)<span class="ot">;</span></span></code></pre></div>
+<p>c) <code>listEventsHasLinksToShowAndEdit</code>, depois de
+<code>$page-&gt;see($event-&gt;description);</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Criado por&#39;</span>)<span class="ot">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$this</span>-&gt;admin-&gt;name)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: confere no navegador real o cabeçalho, o nome em cada linha
+e no <code>show</code>. <code>$this-&gt;admin</code> vem do
+<code>BaseEventsCest</code> (dono dos 16 Eventos semeados).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser    <span class="co"># ListEventsCest (aceitação)</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem <code>./run db:populate</code>: schema não mudou.</p>
+<p>No navegador (populate): <code>/admin/events/1</code> mostra "Criado
+por Administrador"; listagem tem a coluna com o mesmo nome em todas as
+linhas (populate tem um só admin).</p>
+<p>Commit (inglês):
+<code>feat: Show event creator name in listing and show</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>get()</code> devolve <code>Model</code>, não
+<code>User</code>: na view tudo bem; em <code>app/</code> use
+<code>instanceof User</code> ou <code>creatorName()</code> no model
+(melhor).</li>
+<li><code>__get</code> mágico permite
+<code>$event-&gt;user-&gt;name</code> (<code>MODEL:55-68</code>);
+prefira a forma explícita <code>user()-&gt;get()</code>.</li>
+<li><code>user_id</code> sem usuário é impossível (FK
+<code>SCH:35-36</code>); não precisa tratar.</li>
+<li>Esquecer <code>htmlspecialchars</code> no nome.</li>
+<li><code>&lt;td&gt;</code> fora de ordem em relação ao
+<code>&lt;th&gt;</code>.</li>
+</ul>
+</body>
+</html>

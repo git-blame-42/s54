@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p5-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="p5-passo-a-passo-status-do-evento-cancelar-e-encerrar">P5 passo
+a passo: Status do Evento: cancelar e encerrar</h1>
+<p>Pedido típico: "o administrador pode cancelar um Evento; cancelado
+aparece com destaque, não aceita inscrição nem edição. Acrescente
+'encerrar'. Todo Evento novo nasce agendado". Chance: alta. Tempo: 25-35
+min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/p5-status-cancelar-encerrar/</code> (patch,
+bundle e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo
+em formato "um arquivo por vez, com o motivo". Sem pré-requisito: sai de
+<code>main</code>.</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; rota -&gt;
+controller -&gt; views -&gt; testes. Populate não muda (construtor dá o
+padrão). Na prova, prioridade: funcionar no navegador, depois testar,
+depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CancelEventCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: <code>./run db:populate</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE events</code>, logo após
+<code>capacity</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    capacity    <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Situação do Evento: agendado (padrão), cancelado ou encerrado.</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    status      ENUM(<span class="st">&#39;scheduled&#39;</span>, <span class="st">&#39;canceled&#39;</span>, <span class="st">&#39;finished&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="st">&#39;scheduled&#39;</span>,</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>ActiveRecord não cria coluna. <code>save()</code> insere todas as
+chaves de <code>$columns</code>; coluna ausente -&gt;
+<code>Unknown column</code>.</li>
+<li><code>ENUM</code> restringe no banco; a lista igual vai pro model
+(<code>STATUSES</code> + <code>inclusion</code>).</li>
+</ul>
+<p>Armadilha: o <code>DEFAULT 'scheduled'</code> nunca é usado:
+<code>save()</code> manda todas as colunas, inclusive <code>NULL</code>,
+e o <code>NOT NULL</code> recusa. O padrão vai no construtor do model
+(passo 2c). No fim, <code>./run db:populate</code>.</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Seis pontos.</p>
+<p>a) Docblock da classe, depois de
+<code>@property int|string $capacity</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">string</span> <span class="va">$status</span> um dos valores de <span class="cn">STATUSES</span><span class="ot">;</span> muda só por cancel() e finish()</span></code></pre></div>
+<p>Por quê: atributo dinâmico (<code>__get</code>/<code>__set</code>);
+sem <code>@property</code> o <code>phpstan</code> reclama.</p>
+<p>b) Constante, depois de <code>AUDIENCES</code> e antes de
+<code>$table</code>; e <code>'status'</code> no fim de
+<code>$columns</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Valores do ENUM `status`, com o rótulo exibido na listagem e no show. */</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">STATUSES</span> <span class="op">=</span> [</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;scheduled&#39;</span> =&gt; <span class="st">&#39;Agendado&#39;</span><span class="ot">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;canceled&#39;</span> =&gt; <span class="st">&#39;Cancelado&#39;</span><span class="ot">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;finished&#39;</span> =&gt; <span class="st">&#39;Encerrado&#39;</span><span class="ot">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;capacity&#39;</span><span class="ot">,</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;status&#39;</span><span class="ot">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Chave = valor do banco (inglês); valor = rótulo da tela (pt-BR).
+Mesmo padrão de <code>KINDS</code>/<code>MODALITIES</code>.</li>
+<li><code>$columns</code> monta <code>INSERT</code>/<code>UPDATE</code>;
+sem ele <code>status</code> nunca vai ao banco.</li>
+</ul>
+<p>c) Construtor, logo depois de <code>$columns</code> (cópia do de
+<code>app/Models/User.php</code>, que faz o mesmo com
+<code>role</code>):</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Model::save() grava todas as colunas, então o DEFAULT &#39;scheduled&#39; do schema não vale:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * um Evento novo já nasce com status &#39;scheduled&#39; no objeto.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $params</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> <span class="bu">__construct</span>(<span class="va">$params</span> <span class="op">=</span> [])</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::<span class="bu">__construct</span>(<span class="va">$params</span>)<span class="ot">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;status <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;status <span class="op">=</span> <span class="st">&#39;scheduled&#39;</span><span class="ot">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Padrão no objeto: populate, testes e Cests continuam sem passar
+<code>status</code>.</li>
+<li><code>parent::__construct</code> primeiro: é ele que preenche os
+atributos.</li>
+</ul>
+<p>Armadilha: <code>$this-&gt;status ??= 'scheduled'</code> não
+funciona. <code>Model</code> não define <code>__isset</code>;
+<code>??</code> vê sempre "não definido" e sobrescreve o valor vindo do
+banco. Use <code>=== null</code>.</p>
+<p>d) <code>validates()</code>, no fim do método, depois do bloco
+<code>if</code> de <code>capacity</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span> Validations::integerMin(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="dv">1</span>)) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesCapacityAgainstEnrollments()<span class="ot">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;status&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>            Validations::inclusion(<span class="st">&#39;status&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="fu">array_keys</span>(<span class="kw">self</span>::<span class="cn">STATUSES</span>))<span class="ot">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: validação no model. <code>&amp;&amp;</code> = curto-circuito
+(não duplica erro). <code>inclusion</code> com <code>array_keys</code> =
+mesma lista do <code>ENUM</code>.</p>
+<p>e) Logo depois de <code>validates()</code>, consultas e rótulo:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> isCanceled()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;status <span class="op">===</span> <span class="st">&#39;canceled&#39;</span><span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> isFinished()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;status <span class="op">===</span> <span class="st">&#39;finished&#39;</span><span class="ot">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> statusLabel()<span class="ot">:</span> <span class="dt">string</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">self</span>::<span class="cn">STATUSES</span>[<span class="va">$this</span>-&gt;status] <span class="op">??</span> <span class="va">$this</span>-&gt;status<span class="ot">;</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>f) Em seguida, as transições:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Cancela o Evento. Só um Evento agendado pode ser cancelado; senão retorna false</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * e registra o motivo em errors(&#39;base&#39;). Usa save(), então passa por validates().</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> cancel()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;status <span class="op">!==</span> <span class="st">&#39;scheduled&#39;</span>) {</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;base&#39;</span><span class="ot">,</span> <span class="st">&#39;só um evento agendado pode ser cancelado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;status <span class="op">=</span> <span class="st">&#39;canceled&#39;</span><span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co">     * Encerra o Evento manualmente (variante &quot;encerrar&quot;). Mesma regra de cancel().</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> finish()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;status <span class="op">!==</span> <span class="st">&#39;scheduled&#39;</span>) {</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;base&#39;</span><span class="ot">,</span> <span class="st">&#39;só um evento agendado pode ser encerrado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;status <span class="op">=</span> <span class="st">&#39;finished&#39;</span><span class="ot">;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Regra de transição no model; controller só pergunta e escolhe a
+flash. Mesma forma do <code>safeDestroy()</code>.</li>
+<li>Motivo em <code>errors('base')</code>: erro do objeto, não de um
+campo.</li>
+<li><code>statusLabel()</code> tira o lookup da view (view burra).</li>
+</ul>
+<p>Armadilha: <code>cancel()</code> chama <code>save()</code>, que roda
+<code>validates()</code> inteiro: Evento com capacidade abaixo das
+inscrições ou data inválida não cancela. Se o professor quiser cancelar
+mesmo assim, use
+<code>$this-&gt;update(['status' =&gt; 'canceled'])</code> (não valida)
+e explique.</p>
+<h2 id="3-configroutesphp">3. <code>config/routes.php</code></h2>
+<p>Grupo <code>admin</code>, depois de
+<code>admin.events.destroy</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>        Route::delete(<span class="st">&#39;/admin/events/{id}&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;destroy&#39;</span>])</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.destroy&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        Route::put(<span class="st">&#39;/admin/events/{id}/cancel&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;cancel&#39;</span>])</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.cancel&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        Route::put(<span class="st">&#39;/admin/events/{id}/finish&#39;</span><span class="ot">,</span> [AdminEventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;finish&#39;</span>])</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>            -&gt;name(<span class="st">&#39;admin.events.finish&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Grupo <code>admin</code>: middleware barra Participante (-&gt;
+<code>/dashboard</code>) e sem sessão (-&gt; <code>/login</code>) antes
+do controller.</li>
+<li><code>PUT</code>: altera recurso existente (RESTful). No HTML vai
+como <code>POST</code> + <code>_method=PUT</code>, igual ao
+<code>update</code>.</li>
+<li>Ordem não importa (<code>GET /admin/events/{id}</code> só casa
+<code>GET</code>), mas mantenha junto das outras.</li>
+</ul>
+<h2 id="4-appcontrollersadmineventscontrollerphp">4.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>a) <code>edit</code>, depois do bloco <code>eventNotFound()</code>,
+antes de <code>$title = 'Editar Evento';</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span>-&gt;isCanceled()) {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;canceledEventNotEditable(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        }</span></code></pre></div>
+<p>b) <code>update</code>, mesmo bloco, logo depois do
+<code>eventNotFound()</code> e antes de
+<code>$this-&gt;fill($event, $request);</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span>-&gt;isCanceled()) {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;canceledEventNotEditable(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fill(<span class="va">$event</span><span class="ot">,</span> <span class="va">$request</span>)<span class="ot">;</span></span></code></pre></div>
+<p>c) Ações novas, depois de <code>destroy</code> (antes do docblock de
+<code>fill</code>):</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> cancel(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;findEvent(<span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;eventNotFound()<span class="ot">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span>-&gt;cancel()) {</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>            FlashMessage::success(<span class="st">&#39;Evento cancelado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="va">$event</span>-&gt;errors(<span class="st">&#39;base&#39;</span>) <span class="op">??</span> <span class="st">&#39;Não foi possível cancelar o evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> finish(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;findEvent(<span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;eventNotFound()<span class="ot">;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span>-&gt;finish()) {</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>            FlashMessage::success(<span class="st">&#39;Evento encerrado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="va">$event</span>-&gt;errors(<span class="st">&#39;base&#39;</span>) <span class="op">??</span> <span class="st">&#39;Não foi possível encerrar o evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>d) Helper privado, depois de <code>findEvent</code> e antes de
+<code>eventNotFound</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> canceledEventNotEditable(Event <span class="va">$event</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        FlashMessage::danger(<span class="st">&#39;Evento cancelado não pode ser editado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;admin.events.show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Molde: <code>destroy</code> (ação curta com flash) +
+<code>findEvent</code>/<code>eventNotFound</code>.</li>
+<li>PRG: sempre <code>redirectTo</code> para o <code>show</code>.</li>
+<li>Bloqueio em <code>edit</code> <strong>e</strong>
+<code>update</code>: só esconder o link não basta, o <code>PUT</code>
+pode vir direto.</li>
+<li>Early return igual ao <code>eventNotFound()</code>.</li>
+</ul>
+<p>Armadilha: <code>status</code> <strong>não</strong> entra em
+<code>FIELDS</code>. Com ele lá (ou num <code>&lt;select&gt;</code> do
+form), qualquer admin "descancela" pela edição. Só as ações mudam o
+status (há teste).</p>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) Troque o <code>&lt;td&gt;</code> do título por um com badge:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;title) <span class="kw">?&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>span <span class="kw">class</span><span class="op">=</span><span class="st">&quot;badge text-bg-secondary&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;statusLabel()) <span class="kw">?&gt;</span><span class="op">&lt;/</span>span<span class="op">&gt;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>b) Na coluna de ações, depois do <code>&lt;/form&gt;</code> de
+"Remover":</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">if</span> (<span class="va">$event</span>-&gt;status <span class="op">===</span> <span class="st">&#39;scheduled&#39;</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                                  action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.cancel&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                                <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;PUT&quot;</span><span class="op">&gt;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>                                <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-warning&quot;</span><span class="op">&gt;</span>Cancelar Evento<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>                            <span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>View só exibe; rótulo vem de <code>statusLabel()</code>.</li>
+<li>Botão de ação que muda dado = form <code>post</code>, nunca link
+<code>GET</code>.</li>
+<li>"Cancelar Evento", não "Cancelar": o form já tem um link "Cancelar"
+(voltar sem salvar).</li>
+</ul>
+<p>Armadilha: sem o
+<code>&lt;input type="hidden" name="_method" value="PUT"&gt;</code> o
+navegador manda <code>POST</code>, não casa a rota <code>PUT</code> e
+cai no 404.</p>
+<h2 id="6-appviewsadmineventsshowphtml">6.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>a) Dentro do <code>&lt;dl&gt;</code>, depois do
+<code>&lt;/dd&gt;</code> de vagas:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Situação<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span><span class="op">&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>span id<span class="op">=</span><span class="st">&quot;event_status&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;badge text-bg-secondary&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;statusLabel()) <span class="kw">?&gt;</span><span class="op">&lt;/</span>span<span class="op">&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>dd<span class="op">&gt;</span></span></code></pre></div>
+<p>b) Depois do link "Editar", antes de "Voltar":</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="cf">if</span> (<span class="va">$event</span>-&gt;status <span class="op">===</span> <span class="st">&#39;scheduled&#39;</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.cancel&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;PUT&quot;</span><span class="op">&gt;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-outline-warning&quot;</span><span class="op">&gt;</span>Cancelar Evento<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.finish&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;_method&quot;</span> value<span class="op">=</span><span class="st">&quot;PUT&quot;</span><span class="op">&gt;</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-outline-secondary&quot;</span><span class="op">&gt;</span>Encerrar Evento<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>Por quê: <code>id="event_status"</code> dá seletor estável pro Cest.
+Botões só em agendado (o model recusaria de qualquer jeito).</p>
+<h2 id="7-testsunitmodelseventseventtestphp">7.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Depois de
+<code>test_audience_should_survive_a_round_trip_in_the_database</code>
+(antes do bloco <code>save / update / destroy / busca</code>). Usa
+<code>params()</code>, <code>createEvent()</code> e
+<code>enroll()</code> que já existem:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- status (cancelar / encerrar) ------------------- */</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_event_should_be_scheduled()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params())<span class="ot">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;scheduled&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Agendado&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;statusLabel())<span class="ot">;</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;scheduled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_status_should_accept_every_enum_value()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="fu">array_keys</span>(Event::<span class="cn">STATUSES</span>) <span class="kw">as</span> <span class="va">$status</span>) {</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;status&#39;</span> =&gt; <span class="va">$status</span>])))-&gt;isValid()<span class="ot">,</span> <span class="va">$status</span>)<span class="ot">;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_status_outside_enum_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;postponed&#39;</span>]))<span class="ot">;</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é uma opção válida!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;status&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_should_cancel_a_scheduled_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;cancel())<span class="ot">;</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isCanceled())<span class="ot">;</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Cancelado&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;statusLabel())<span class="ot">;</span></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_should_fail_for_an_already_canceled_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;cancel())<span class="ot">;</span></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;só um evento agendado pode ser cancelado!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;base&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_should_fail_for_a_finished_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;finished&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;cancel())<span class="ot">;</span></span>
+<span id="cb18-53"><a href="#cb18-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;só um evento agendado pode ser cancelado!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;base&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-54"><a href="#cb18-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;finished&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-55"><a href="#cb18-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-56"><a href="#cb18-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-57"><a href="#cb18-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_finish_should_finish_a_scheduled_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-58"><a href="#cb18-58" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-59"><a href="#cb18-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb18-60"><a href="#cb18-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-61"><a href="#cb18-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;finish())<span class="ot">;</span></span>
+<span id="cb18-62"><a href="#cb18-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-63"><a href="#cb18-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isFinished())<span class="ot">;</span></span>
+<span id="cb18-64"><a href="#cb18-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;finished&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-65"><a href="#cb18-65" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-66"><a href="#cb18-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-67"><a href="#cb18-67" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_finish_should_fail_for_a_canceled_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-68"><a href="#cb18-68" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-69"><a href="#cb18-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])<span class="ot">;</span></span>
+<span id="cb18-70"><a href="#cb18-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-71"><a href="#cb18-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;finish())<span class="ot">;</span></span>
+<span id="cb18-72"><a href="#cb18-72" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;só um evento agendado pode ser encerrado!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;base&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-73"><a href="#cb18-73" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-74"><a href="#cb18-74" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-75"><a href="#cb18-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-76"><a href="#cb18-76" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_should_not_save_an_invalid_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-77"><a href="#cb18-77" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-78"><a href="#cb18-78" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">5</span>])<span class="ot">;</span></span>
+<span id="cb18-79"><a href="#cb18-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;enroll(<span class="va">$event</span><span class="ot">,</span> <span class="dv">3</span>)<span class="ot">;</span></span>
+<span id="cb18-80"><a href="#cb18-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;capacity <span class="op">=</span> <span class="dv">2</span><span class="ot">;</span></span>
+<span id="cb18-81"><a href="#cb18-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-82"><a href="#cb18-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;cancel())<span class="ot">;</span></span>
+<span id="cb18-83"><a href="#cb18-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;scheduled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb18-84"><a href="#cb18-84" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Padrão no construtor, <code>inclusion</code>, transições válidas e
+inválidas.</li>
+<li>Último teste documenta a armadilha: <code>cancel()</code> passa por
+<code>validates()</code>.</li>
+<li>Mensagem de <code>inclusion</code> vem de
+<code>lib/Validations.php</code>; copie exata.</li>
+</ul>
+<h2 id="8-testsintegrationcontrollersadmineventscontrollertestphp">8.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Depois do último teste de <code>destroy</code> (antes do docblock de
+<code>validParams()</code>). Usa <code>createEvent()</code>,
+<code>validParams()</code>, <code>put()</code>/<code>get()</code> do
+<code>ControllerTestCase</code>:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- status ------------------- */</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_and_show_display_the_status_badge()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento Cancelado&#39;</span><span class="ot">,</span> <span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Evento Agendado&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$index</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Evento Cancelado\s*&lt;span class=&quot;badge text-bg-secondary&quot;&gt;Cancelado/&#39;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Evento Agendado\s*&lt;span class=&quot;badge text-bg-secondary&quot;&gt;Agendado/&#39;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/cancel&quot;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Situação&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/id=&quot;event_status&quot;[^&gt;]*&gt;Cancelado&lt;/&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Cancelar Evento&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_scheduled_event_has_cancel_and_finish_buttons()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$index</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/cancel</span><span class="sc">\&quot;</span><span class="st"> method=</span><span class="sc">\&quot;</span><span class="st">post</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Cancelar Evento&#39;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/cancel</span><span class="sc">\&quot;</span><span class="st"> method=</span><span class="sc">\&quot;</span><span class="st">post</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/finish</span><span class="sc">\&quot;</span><span class="st"> method=</span><span class="sc">\&quot;</span><span class="st">post</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;name=&quot;_method&quot; value=&quot;PUT&quot;&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Encerrar Evento&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_twice_is_rejected()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;cancel&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;cancel&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;só um evento agendado pode ser cancelado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_cancels_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb19-49"><a href="#cb19-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-50"><a href="#cb19-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;cancel&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-51"><a href="#cb19-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-52"><a href="#cb19-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb19-53"><a href="#cb19-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-54"><a href="#cb19-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento cancelado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-55"><a href="#cb19-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-56"><a href="#cb19-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-57"><a href="#cb19-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_of_a_finished_event_is_rejected()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-58"><a href="#cb19-58" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-59"><a href="#cb19-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;finished&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-60"><a href="#cb19-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-61"><a href="#cb19-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;cancel&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-62"><a href="#cb19-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-63"><a href="#cb19-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;finished&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb19-64"><a href="#cb19-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-65"><a href="#cb19-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;só um evento agendado pode ser cancelado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-66"><a href="#cb19-66" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-67"><a href="#cb19-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-68"><a href="#cb19-68" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_cancel_with_unknown_id_redirects_to_index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-69"><a href="#cb19-69" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-70"><a href="#cb19-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;cancel&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="dv">9999</span>])<span class="ot">;</span></span>
+<span id="cb19-71"><a href="#cb19-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-72"><a href="#cb19-72" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /admin/events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-73"><a href="#cb19-73" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-74"><a href="#cb19-74" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-75"><a href="#cb19-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-76"><a href="#cb19-76" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_finish_finishes_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-77"><a href="#cb19-77" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-78"><a href="#cb19-78" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb19-79"><a href="#cb19-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-80"><a href="#cb19-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(action<span class="ot">:</span> <span class="st">&#39;finish&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-81"><a href="#cb19-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-82"><a href="#cb19-82" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;finished&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb19-83"><a href="#cb19-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-84"><a href="#cb19-84" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento encerrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-85"><a href="#cb19-85" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-86"><a href="#cb19-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-87"><a href="#cb19-87" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_edit_of_a_canceled_event_redirects_to_show()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-88"><a href="#cb19-88" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-89"><a href="#cb19-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-90"><a href="#cb19-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-91"><a href="#cb19-91" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;edit&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb19-92"><a href="#cb19-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-93"><a href="#cb19-93" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-94"><a href="#cb19-94" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento cancelado não pode ser editado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-95"><a href="#cb19-95" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-96"><a href="#cb19-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-97"><a href="#cb19-97" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_update_of_a_canceled_event_keeps_the_record()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-98"><a href="#cb19-98" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-99"><a href="#cb19-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Original&#39;</span><span class="ot">,</span> <span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-100"><a href="#cb19-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-101"><a href="#cb19-101" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(</span>
+<span id="cb19-102"><a href="#cb19-102" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb19-103"><a href="#cb19-103" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb19-104"><a href="#cb19-104" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Mudou&#39;</span>])]</span>
+<span id="cb19-105"><a href="#cb19-105" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb19-106"><a href="#cb19-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-107"><a href="#cb19-107" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Original&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;title)<span class="ot">;</span></span>
+<span id="cb19-108"><a href="#cb19-108" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb19-109"><a href="#cb19-109" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento cancelado não pode ser editado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb19-110"><a href="#cb19-110" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb19-111"><a href="#cb19-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-112"><a href="#cb19-112" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_update_ignores_status_sent_by_the_form()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb19-113"><a href="#cb19-113" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb19-114"><a href="#cb19-114" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb19-115"><a href="#cb19-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-116"><a href="#cb19-116" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;put(</span>
+<span id="cb19-117"><a href="#cb19-117" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb19-118"><a href="#cb19-118" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb19-119"><a href="#cb19-119" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;status&#39;</span> =&gt; <span class="st">&#39;canceled&#39;</span>])]</span>
+<span id="cb19-120"><a href="#cb19-120" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb19-121"><a href="#cb19-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-122"><a href="#cb19-122" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;scheduled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb19-123"><a href="#cb19-123" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>put(...)</code> chama a ação direto; <code>redirectTo</code>
+vira <code>Location: ...</code>. Comparação exata (texto da flash
+também).</li>
+<li>Último teste prova que <code>status</code> fora de
+<code>FIELDS</code> é ignorado no form.</li>
+</ul>
+<h2 id="9-testsintegrationaccesseventsaccesstestphp">9.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>a) Docblock de <code>eventRoutes()</code>:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> <span class="kw">As</span> <span class="dv">10</span> rotas admin<span class="op">.</span>events<span class="op">.*</span> (index<span class="ot">,</span> paginate<span class="ot">,</span> <span class="kw">new</span><span class="ot">,</span> create<span class="ot">,</span> show<span class="ot">,</span> edit<span class="ot">,</span> update<span class="ot">,</span> destroy<span class="ot">,</span> cancel<span class="ot">,</span> finish)<span class="op">.</span></span></code></pre></div>
+<p>b) Em <code>eventRoutes()</code> <strong>e</strong> em
+<code>methodOverrideRoutes()</code>, depois de
+<code>'admin.events.destroy' =&gt; [...]</code>:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.cancel&#39;</span> =&gt; [<span class="st">&#39;PUT&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/1/cancel&#39;</span>]<span class="ot">,</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.finish&#39;</span> =&gt; [<span class="st">&#39;PUT&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/1/finish&#39;</span>]<span class="ot">,</span></span></code></pre></div>
+<p>c) Testes novos, depois do teste que tenta criar/alterar/remover como
+Participante (termina com <code>'Palestra de Acesso'</code>):</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_participant_should_not_cancel_or_finish_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;participant)<span class="ot">;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span>-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/cancel&quot;</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span>-&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/finish&quot;</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;scheduled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$this</span>-&gt;event-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_cancel_an_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>            -&gt;post(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/cancel&quot;</span><span class="ot">,</span> [<span class="st">&#39;form_params&#39;</span> =&gt; [<span class="st">&#39;_method&#39;</span> =&gt; <span class="st">&#39;PUT&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById(<span class="va">$this</span>-&gt;event-&gt;id)-&gt;status)<span class="ot">;</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Os providers alimentam os testes já existentes: sem sessão -&gt;
+<code>/login</code>, Participante -&gt; <code>/dashboard</code>. Rota
+nova entra nos dois.</li>
+<li><code>methodOverrideRoutes()</code>: o navegador manda
+<code>POST</code> + <code>_method</code>; prova o caminho real.</li>
+</ul>
+<h2 id="10-testsacceptanceadmineventscanceleventcestphp-novo">10.
+<code>tests/Acceptance/admin/events/CancelEventCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\<span class="fu">Assert</span><span class="ot">;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * Situação do Evento (Agendado, Cancelado, Encerrado), com cancelar pela listagem ou pelo show e encerrar pelo show.</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CancelEventCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> cancelScheduledEvent(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">2</span>]<span class="ot">;</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Cancelar um Evento agendado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Agendado&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Ver&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Agendado&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_status&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Cancelar Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cancelado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Cancelado&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_status&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Cancelar Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Encerrar Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="st">&#39;canceled&#39;</span><span class="ot">,</span> Event::findById((<span class="dt">int</span>) <span class="va">$event</span>-&gt;id)<span class="ot">?</span>-&gt;status)<span class="ot">;</span></span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Cancelado&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Agendado&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 03&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> cancelEventFromTheListing(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">4</span>]<span class="ot">;</span></span>
+<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Cancelar um Evento pela listagem&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Cancelar Evento&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 04&#39;</span>))<span class="ot">;</span></span>
+<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cancelado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Cancelado&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_status&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-51"><a href="#cb23-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> canceledEventCannotBeEdited(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb23-52"><a href="#cb23-52" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb23-53"><a href="#cb23-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">2</span>]<span class="ot">;</span></span>
+<span id="cb23-54"><a href="#cb23-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;cancel()<span class="ot">;</span></span>
+<span id="cb23-55"><a href="#cb23-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-56"><a href="#cb23-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Evento cancelado não aceita edição&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-57"><a href="#cb23-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/edit&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-58"><a href="#cb23-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-59"><a href="#cb23-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cancelado não pode ser editado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Editar Evento&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-62"><a href="#cb23-62" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-63"><a href="#cb23-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-64"><a href="#cb23-64" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> finishScheduledEvent(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb23-65"><a href="#cb23-65" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb23-66"><a href="#cb23-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">3</span>]<span class="ot">;</span></span>
+<span id="cb23-67"><a href="#cb23-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-68"><a href="#cb23-68" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Encerrar um Evento agendado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-69"><a href="#cb23-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-70"><a href="#cb23-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-71"><a href="#cb23-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Encerrar Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-72"><a href="#cb23-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-73"><a href="#cb23-73" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb23-74"><a href="#cb23-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento encerrado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-75"><a href="#cb23-75" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Encerrado&#39;</span><span class="ot">,</span> <span class="st">&#39;#event_status&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-76"><a href="#cb23-76" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="st">&#39;finished&#39;</span><span class="ot">,</span> Event::findById((<span class="dt">int</span>) <span class="va">$event</span>-&gt;id)<span class="ot">?</span>-&gt;status)<span class="ot">;</span></span>
+<span id="cb23-77"><a href="#cb23-77" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-78"><a href="#cb23-78" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê: navegador real (Selenium). <code>rowOf(...)</code> (do
+<code>BaseEventsCest</code>) limita o clique à linha certa da tabela.
+Cobre show, listagem, bloqueio de edição e encerrar.</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>No navegador (admin): listagem mostra badge "Agendado"; "Cancelar
+Evento" num Evento sem inscrições -&gt; "Evento cancelado!", badge
+"Cancelado", botões somem; abrir <code>/admin/events/{id}/edit</code>
+dele -&gt; volta ao show com "Evento cancelado não pode ser editado!".
+"Encerrar Evento" noutro -&gt; "Encerrado".</p>
+<p>Commit (inglês):
+<code>feat: Add Event status with cancel and finish actions</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Confiar no <code>DEFAULT</code> do schema: <code>save()</code> manda
+<code>NULL</code>; padrão no construtor.</li>
+<li><code>??=</code> no construtor sobrescreve o valor do banco (sem
+<code>__isset</code>); use <code>=== null</code>.</li>
+<li><code>status</code> em <code>FIELDS</code> ou no form: admin
+"descancela" pela edição.</li>
+<li>Esquecer <code>_method=PUT</code> no form: 404.</li>
+<li><code>cancel()</code> sem checar <code>scheduled</code> deixa
+cancelar encerrado.</li>
+<li><code>cancel()</code> passa por <code>validates()</code>: Evento
+inválido não cancela; alternativa
+<code>update(['status' =&gt; 'canceled'])</code>.</li>
+<li><code>finished</code> por data: <code>isFinished()</code> comparando
+<code>starts_on &lt; date('Y-m-d')</code> sem gravar, ou tarefa
+<code>./run</code> que atualiza.</li>
+<li>Com P2 aplicado: <code>Enrollment::validates()</code> deve recusar
+inscrição em cancelado
+(<code>addError('base', 'evento cancelado!')</code>). Não está no
+exemplo.</li>
+<li>Flash e <code>Location</code> comparados por texto exato nos
+testes.</li>
+</ul>
+</body>
+</html>

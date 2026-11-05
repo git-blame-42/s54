@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>m17-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="m17-passo-a-passo-campo-simnão-por-checkbox-certificado">M17
+passo a passo: Campo sim/não por checkbox (certificado)</h1>
+<p>Pedido típico: "marque se o Evento emite certificado. Checkbox no
+form; listagem e detalhe mostram Sim ou Não. Cadastrar ou editar com a
+caixa desmarcada não pode dar erro." Chance: média-alta. Tempo: 25-35
+min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/m17-checkbox-certificado/</code> (patch, bundle e
+árvore <code>projeto/</code>). Pré-requisitos: nenhum (base
+<code>main</code>).</p>
+<p>Forma do exemplo: coluna <code>has_certificate</code>; hidden
+<code>value="0"</code> antes do checkbox; no fim de
+<code>validates()</code>, <code>normalizeHasCertificate()</code>
+(nulo/vazio -&gt; <code>'0'</code>, int do banco -&gt; string) e depois
+<code>inclusion(['0', '1'])</code>. Sem padrão no construtor. Desmarcado
+nunca dá erro, nem em POST sem o campo.</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; controller -&gt;
+views -&gt; dados -&gt; testes. Na prova, prioridade: funcionar no
+navegador, depois testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/_form.phtml</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>database/Populate/populate.php</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/BaseEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CertificateCheckboxCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: <code>./run db:populate</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE events</code>, logo após <code>capacity</code>
+(antes de <code>created_at</code>):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    capacity    <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Sim/não do checkbox &quot;Emite certificado&quot;. O DEFAULT não socorre o Model::save(), que grava NULL</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- quando o atributo é nulo; quem garante 0/1 é a normalização em Event::validates().</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    has_certificate TINYINT(<span class="dv">1</span>) <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="dv">0</span>,</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>MySQL não tem boolean de verdade; <code>TINYINT(1)</code> guarda
+0/1.</li>
+<li><code>save()</code> insere <strong>todas</strong> as chaves de
+<code>$columns</code>
+(<code>core/Database/ActiveRecord/Model.php:139-184</code>). Atributo
+<code>null</code> -&gt; <code>NULL</code> explícito -&gt;
+<code>1048 Column cannot be null</code> -&gt; 500. O
+<code>DEFAULT 0</code> nunca é usado.</li>
+</ul>
+<p>Armadilha: testes recriam o schema; o banco de dev não. No fim,
+<code>./run db:populate</code>, senão <code>Unknown column</code> só no
+navegador.</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Quatro pontos.</p>
+<p>a) Docblock da classe, depois de
+<code>@property int|string $capacity</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">int</span><span class="op">|</span><span class="dt">string</span><span class="op">|</span><span class="kw">null</span> <span class="va">$has_certificate</span> <span class="st">&#39;0&#39;</span><span class="op">/</span><span class="st">&#39;1&#39;</span> vindo <span class="cf">do</span> formulário<span class="ot">;</span> o banco (<span class="cn">TINYINT</span>) devolve <span class="dt">int</span> <span class="dv">0</span><span class="op">/</span><span class="dv">1</span></span></code></pre></div>
+<p>b) <code>$columns</code>, depois de <code>'capacity',</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;has_certificate&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>c) <code>validates()</code>, no fim, depois do bloco <code>if</code>
+de <code>capacity</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span> Validations::integerMin(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="dv">1</span>)) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesCapacityAgainstEnrollments()<span class="ot">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;normalizeHasCertificate()<span class="ot">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        Validations::inclusion(<span class="st">&#39;has_certificate&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> [<span class="st">&#39;0&#39;</span><span class="ot">,</span> <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>d) Dois métodos novos, logo depois de <code>validates()</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Deixa `has_certificate` como &#39;0&#39; ou &#39;1&#39; (string), o formato que vem do formulário.</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * - Checkbox desmarcado não vai no POST: o controller recebe null; sem isso o INSERT manda NULL</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">     *   para uma coluna NOT NULL e a página quebra com erro 500. Nulo e vazio viram &#39;0&#39;.</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">     * - Evento lido do banco: o TINYINT volta como int (0 ou 1), e o inclusion() compara com ===;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">     *   sem converter, editar e salvar um Evento já gravado seria recusado.</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">     * Outros valores (&#39;2&#39;, &#39;on&#39;, &#39;sim&#39;) ficam como estão para o inclusion() recusar.</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> normalizeHasCertificate()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$value</span> <span class="op">=</span> <span class="va">$this</span>-&gt;has_certificate<span class="ot">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$value</span> <span class="op">===</span> <span class="kw">null</span> <span class="op">||</span> <span class="va">$value</span> <span class="op">===</span> <span class="st">&#39;&#39;</span>) {</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;has_certificate <span class="op">=</span> <span class="st">&#39;0&#39;</span><span class="ot">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">elseif</span> (<span class="fu">is_int</span>(<span class="va">$value</span>)) {</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;has_certificate <span class="op">=</span> <span class="dt">(string)</span> <span class="va">$value</span><span class="ot">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">     * O Evento emite certificado? Compara como string: o banco devolve int 1, o formulário envia &#39;1&#39;.</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> hasCertificate()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dt">(string)</span> <span class="va">$this</span>-&gt;has_certificate <span class="op">===</span> <span class="st">&#39;1&#39;</span><span class="ot">;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>@property</code>: atributo dinâmico; sem ele o
+<code>phpstan</code> reclama. <code>int|string|null</code> cobre form
+(string), banco (int) e ausente (null).</li>
+<li><code>$columns</code>: lista que monta
+<code>INSERT</code>/<code>UPDATE</code>. Esquecer -&gt; coluna nunca vai
+ao banco.</li>
+<li><code>validates()</code> roda em <code>isValid()</code> e
+<code>save()</code>: normalizar ali vale para create, edit, populate,
+testes, qualquer <code>save()</code>.</li>
+<li>Normaliza <strong>antes</strong> do <code>inclusion()</code>:
+<code>inclusion</code> usa <code>in_array</code> estrito
+(<code>lib/Validations.php:38</code>). <code>TINYINT</code> volta do PDO
+como <strong>int</strong> <code>1</code>; sem converter, Evento lido do
+banco e salvo de novo reprova contra <code>['0', '1']</code>.</li>
+<li>Só nulo/vazio viram <code>'0'</code>. Lixo (<code>'2'</code>,
+<code>'on'</code>, <code>'sim'</code>) segue para o
+<code>inclusion()</code> recusar com "não é uma opção válida!".</li>
+<li><code>hasCertificate()</code>: comparação estrita num lugar só, com
+cast. View e testes usam o método, nunca <code>== 1</code> solto.</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>Constante <code>FIELDS</code> (linha ~14), quebrada em linhas (em uma
+linha ficaria com 128 col, rente ao limite de 130 do
+<code>phpcs.xml</code>):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">FIELDS</span> <span class="op">=</span> [</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="st">&#39;kind&#39;</span><span class="ot">,</span> <span class="st">&#39;modality&#39;</span><span class="ot">,</span> <span class="st">&#39;starts_on&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span><span class="ot">,</span> <span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="st">&#39;has_certificate&#39;</span><span class="ot">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Allowlist: o método privado copia
+<code>$params[$field] ?? null</code> de cada chave de
+<code>FIELDS</code> pro model, como string. Fora da lista não
+chega.</li>
+<li>Checkbox desmarcado sem hidden -&gt; chave ausente -&gt;
+<code>?? null</code> -&gt; nulo no model. Por isso o hidden (form) e a
+normalização (model).</li>
+</ul>
+<p>Armadilha: não converta no controller (<code>(bool)</code>,
+<code>(int)</code>, <code>?? '0'</code>): <code>true</code> não está na
+lista e <code>'abc'</code> viraria <code>true</code>. Regra fica no
+model.</p>
+<h2 id="4-appviewsadminevents_formphtml">4.
+<code>app/views/admin/events/_form.phtml</code></h2>
+<p>Depois do <code>&lt;/div&gt;</code> do bloco de
+<code>capacity</code>, antes do
+<code>&lt;button type="submit"&gt;</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;mb-3 form-check&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="co">/* Checkbox desmarcado não é enviado: o hidden vem ANTES e manda &#39;0&#39;; marcado, o &#39;1&#39; sobrescreve. */</span> <span class="kw">?&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;hidden&quot;</span> name<span class="op">=</span><span class="st">&quot;event[has_certificate]&quot;</span> value<span class="op">=</span><span class="st">&quot;0&quot;</span><span class="op">&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>input type<span class="op">=</span><span class="st">&quot;checkbox&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-check-input&lt;?= </span><span class="va">$invalid</span><span class="st">(&#39;has_certificate&#39;) ?&gt;&quot;</span> id<span class="op">=</span><span class="st">&quot;event_has_certificate&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>            name<span class="op">=</span><span class="st">&quot;event[has_certificate]&quot;</span> value<span class="op">=</span><span class="st">&quot;1&quot;</span> <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;hasCertificate() <span class="ot">?</span> <span class="st">&#39;checked&#39;</span> <span class="ot">:</span> <span class="st">&#39;&#39;</span> <span class="kw">?&gt;</span><span class="op">&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>label <span class="kw">class</span><span class="op">=</span><span class="st">&quot;form-check-label&quot;</span> <span class="cf">for</span><span class="op">=</span><span class="st">&quot;event_has_certificate&quot;</span><span class="op">&gt;</span>Emite certificado<span class="op">&lt;/</span>label<span class="op">&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$feedback</span>(<span class="st">&#39;has_certificate&#39;</span>) <span class="kw">?&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>div<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Checkbox desmarcado não vai no POST. Hidden com o mesmo
+<code>name</code> garante que a chave sempre chega.</li>
+<li>PHP fica com o <strong>último</strong> valor de nome repetido:
+hidden antes -&gt; marcado manda <code>1</code> por cima do
+<code>0</code>.</li>
+<li><code>checked</code> via <code>hasCertificate()</code>: no
+<code>edit</code> o valor vem do banco como int <code>1</code>;
+<code>=== '1'</code> abriria desmarcado.</li>
+<li><code>form-check</code>/<code>form-check-input</code>: classes
+Bootstrap de checkbox (<code>is-invalid</code> + <code>$feedback</code>
+funcionam igual aos outros campos).</li>
+</ul>
+<p>Armadilha: hidden <strong>depois</strong> do checkbox -&gt; sempre
+<code>0</code>, a caixa nunca fica marcada ao salvar.</p>
+<h2 id="5-appviewsadmineventsindexphtml">5.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) <code>&lt;thead&gt;</code>, depois de
+<code>&lt;th&gt;Vagas&lt;/th&gt;</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Certificado<span class="op">&lt;/</span>th<span class="op">&gt;</span></span></code></pre></div>
+<p>b) <code>&lt;tbody&gt;</code>, depois do <code>&lt;td&gt;</code> de
+vagas e <strong>antes</strong> do <code>&lt;td&gt;</code> de ações:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;enrollmentsCount() <span class="kw">?&gt;</span><span class="op">/&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;capacity <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;hasCertificate() <span class="ot">?</span> <span class="st">&#39;Sim&#39;</span> <span class="ot">:</span> <span class="st">&#39;Não&#39;</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: view só exibe; a decisão sim/não é do model. Ordem dos
+<code>&lt;td&gt;</code> bate com a dos <code>&lt;th&gt;</code>. Texto
+fixo, sem dado do usuário: dispensa <code>htmlspecialchars</code>.</p>
+<h2 id="6-appviewsadmineventsshowphtml">6.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Dentro do <code>&lt;dl&gt;</code>, depois do <code>&lt;/dd&gt;</code>
+de vagas (o que fecha com "disponíveis)"), antes do
+<code>&lt;/dl&gt;</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Certificado<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9 certificate&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;hasCertificate() <span class="ot">?</span> <span class="st">&#39;Sim&#39;</span> <span class="ot">:</span> <span class="st">&#39;Não&#39;</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: mesmo padrão <code>dt</code>/<code>dd</code>. Classe
+<code>certificate</code> dá um seletor fixo pros testes
+(<code>'.certificate'</code> no Cest,
+<code>&lt;dd class="col-sm-9 certificate"&gt;Sim&lt;/dd&gt;</code> no de
+integração).</p>
+<h2 id="7-databasepopulatepopulatephp">7.
+<code>database/Populate/populate.php</code></h2>
+<p>No <code>new Event([...])</code> do <code>foreach</code> (linhas
+~134-143), depois de <code>'capacity' =&gt; $capacity,</code>:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Palestras não emitem certificado; oficinas, minicursos e semanas acadêmicas emitem.</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$kind</span> <span class="op">===</span> <span class="st">&#39;lecture&#39;</span> <span class="ot">?</span> <span class="st">&#39;0&#39;</span> <span class="ot">:</span> <span class="st">&#39;1&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Dá variedade (Sim/Não) na listagem sem mexer nas linhas posicionais
+do array de dados (o <code>foreach</code> destrutura por posição).</li>
+<li>Mesmo sem a linha o populate funcionaria (normalização vira
+<code>'0'</code>); a linha é pra tela mostrar os dois casos.</li>
+</ul>
+<h2 id="8-testsunitmodelseventseventtestphp">8.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Bloco novo depois de
+<code>test_audience_should_survive_a_round_trip_in_the_database</code>
+(linha ~297), antes de
+<code>/* --- save / update / destroy / busca --- */</code>:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- has_certificate (checkbox sim/não) ------------------- */</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_has_certificate_should_accept_zero_and_one()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;0&#39;</span><span class="ot">,</span> <span class="st">&#39;1&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$value</span>])))-&gt;isValid()<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_unchecked_has_certificate_should_be_saved_as_zero()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Checkbox desmarcado sem o hidden: o atributo chega nulo (ou vazio) e não pode virar NULL no INSERT.</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$value</span>]))<span class="ot">;</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;0&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_has_certificate_outside_zero_and_one_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="st">&#39;on&#39;</span><span class="ot">,</span> <span class="st">&#39;sim&#39;</span><span class="ot">,</span> <span class="st">&#39;-1&#39;</span><span class="ot">,</span> <span class="st">&#39; 1&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$value</span>]))<span class="ot">;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não é uma opção válida!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;has_certificate&#39;</span>)<span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_has_certificate_from_the_database_is_int_and_event_stays_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O TINYINT volta como int; o inclusion() usa ===, por isso o model normaliza antes de validar.</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$found</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$found</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;1&#39;</span><span class="ot">,</span> <span class="va">$found</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span>-&gt;title <span class="op">=</span> <span class="st">&#39;Título editado&#39;</span><span class="ot">;</span></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$found</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_has_certificate_can_be_unchecked_on_edit()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span> <span class="op">=</span> Event::findById(<span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$found</span>-&gt;has_certificate <span class="op">=</span> <span class="st">&#39;0&#39;</span><span class="ot">;</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$found</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_has_certificate_helper_should_compare_as_string()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;1&#39;</span><span class="ot">,</span> <span class="dv">1</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Event([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$value</span>]))-&gt;hasCertificate()<span class="ot">,</span> <span class="fu">var_export</span>(<span class="va">$value</span><span class="ot">,</span> <span class="kw">true</span>))<span class="ot">;</span></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;0&#39;</span><span class="ot">,</span> <span class="dv">0</span><span class="ot">,</span> <span class="kw">null</span><span class="ot">,</span> <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="dv">2</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse((<span class="kw">new</span> Event([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$value</span>]))-&gt;hasCertificate()<span class="ot">,</span> <span class="fu">var_export</span>(<span class="va">$value</span><span class="ot">,</span> <span class="kw">true</span>))<span class="ot">;</span></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>params()</code> não muda: sem <code>has_certificate</code>, a
+normalização vira <code>'0'</code>. Todos os testes antigos seguem
+válidos.</li>
+<li>Cobre os quatro riscos: nulo (500), lixo (<code>inclusion</code>),
+int do banco (<code>===</code>), desmarcar na edição.</li>
+<li><code>assertSame(1, ...)</code>: confere o tipo (int do PDO), não só
+o valor.</li>
+<li>Prova do exemplo: comentar <code>normalizeHasCertificate()</code>
+derruba 2 dos 6 (nulo e lido do banco).</li>
+</ul>
+<h2 id="9-testsintegrationcontrollersadmineventscontrollertestphp">9.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) <code>validParams()</code> (linhas ~272-284), depois de
+<code>'capacity' =&gt; '20',</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>            <span class="co">// O hidden do formulário sempre envia &#39;0&#39;; com o checkbox marcado, chega &#39;1&#39;.</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;0&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>b) Bloco novo depois de
+<code>test_destroy_keeps_event_with_enrollments</code> (linha ~265),
+antes do docblock de <code>validParams()</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- has_certificate (checkbox sim/não) ------------------- */</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_form_sends_zero_in_a_hidden_before_the_certificate_checkbox()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;new&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O hidden precisa vir antes: com nomes repetidos, o PHP fica com o último valor enviado.</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/name=&quot;event\[has_certificate\]&quot; value=&quot;0&quot;&gt;\s*&lt;input type=&quot;checkbox&quot;[^&gt;]*&#39;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span> <span class="st">&#39;id=&quot;event_has_certificate&quot;\s+name=&quot;event\[has_certificate\]&quot; value=&quot;1&quot;/&#39;</span><span class="ot">,</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertDoesNotMatchRegularExpression(<span class="st">&#39;/id=&quot;event_has_certificate&quot;[^&gt;]*checked/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Emite certificado&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_certificate_checked_saves_one_and_show_displays_yes()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])]</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$event</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;&lt;dd class=&quot;col-sm-9 certificate&quot;&gt;Sim&lt;/dd&gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_certificate_unchecked_saves_zero()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;0&#39;</span>])]</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$event</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_without_the_certificate_field_does_not_break()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>        <span class="co">// POST de um formulário sem o hidden: o checkbox desmarcado simplesmente não vem.</span></span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$params</span> <span class="op">=</span> <span class="va">$this</span>-&gt;validParams()<span class="ot">;</span></span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$params</span>[<span class="st">&#39;has_certificate&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$params</span>])<span class="ot">;</span></span>
+<span id="cb14-54"><a href="#cb14-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-55"><a href="#cb14-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-56"><a href="#cb14-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb14-57"><a href="#cb14-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$event</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb14-58"><a href="#cb14-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-59"><a href="#cb14-59" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-60"><a href="#cb14-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-61"><a href="#cb14-61" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_invalid_certificate_value_shows_error_below_the_field()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-62"><a href="#cb14-62" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-63"><a href="#cb14-63" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb14-64"><a href="#cb14-64" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb14-65"><a href="#cb14-65" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-66"><a href="#cb14-66" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;2&#39;</span>])]</span>
+<span id="cb14-67"><a href="#cb14-67" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-68"><a href="#cb14-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-69"><a href="#cb14-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb14-70"><a href="#cb14-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(</span>
+<span id="cb14-71"><a href="#cb14-71" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;/class=&quot;form-check-input is-invalid&quot; id=&quot;event_has_certificate&quot;.*?&#39;</span></span>
+<span id="cb14-72"><a href="#cb14-72" aria-hidden="true" tabindex="-1"></a>                <span class="op">.</span> <span class="st">&#39;&lt;div class=&quot;invalid-feedback&quot;&gt;não é uma opção válida!&lt;\/div&gt;/s&#39;</span><span class="ot">,</span></span>
+<span id="cb14-73"><a href="#cb14-73" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb14-74"><a href="#cb14-74" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-75"><a href="#cb14-75" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-76"><a href="#cb14-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-77"><a href="#cb14-77" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_edit_checks_the_certificate_of_a_saved_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-78"><a href="#cb14-78" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-79"><a href="#cb14-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-80"><a href="#cb14-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-81"><a href="#cb14-81" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;edit&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb14-82"><a href="#cb14-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-83"><a href="#cb14-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/id=&quot;event_has_certificate&quot;[^&gt;]*checked/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-84"><a href="#cb14-84" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-85"><a href="#cb14-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-86"><a href="#cb14-86" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_update_with_certificate_unchecked_clears_it()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-87"><a href="#cb14-87" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-88"><a href="#cb14-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-89"><a href="#cb14-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-90"><a href="#cb14-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;put(</span>
+<span id="cb14-91"><a href="#cb14-91" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb14-92"><a href="#cb14-92" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb14-93"><a href="#cb14-93" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;0&#39;</span>])]</span>
+<span id="cb14-94"><a href="#cb14-94" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb14-95"><a href="#cb14-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-96"><a href="#cb14-96" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb14-97"><a href="#cb14-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-98"><a href="#cb14-98" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-99"><a href="#cb14-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-100"><a href="#cb14-100" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_shows_whether_each_event_has_certificate()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-101"><a href="#cb14-101" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-102"><a href="#cb14-102" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Com certificado&#39;</span><span class="ot">,</span> <span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-103"><a href="#cb14-103" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Sem certificado&#39;</span><span class="ot">,</span> <span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="st">&#39;0&#39;</span>])<span class="ot">;</span></span>
+<span id="cb14-104"><a href="#cb14-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-105"><a href="#cb14-105" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb14-106"><a href="#cb14-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-107"><a href="#cb14-107" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;&lt;th&gt;Certificado&lt;/th&gt;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-108"><a href="#cb14-108" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Com certificado&lt;\/td&gt;.*?&lt;td&gt;Sim&lt;\/td&gt;/s&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-109"><a href="#cb14-109" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/Sem certificado&lt;\/td&gt;.*?&lt;td&gt;Não&lt;\/td&gt;/s&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb14-110"><a href="#cb14-110" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>validParams()</code> imita o form real: o hidden sempre manda
+<code>'0'</code>.</li>
+<li>Integração prova form -&gt; <code>FIELDS</code> -&gt; model -&gt;
+banco -&gt; view: ordem hidden/checkbox, marcado grava <code>1</code> e
+<code>show</code> diz Sim, POST sem o campo não quebra (PRG:
+<code>Location:</code>), <code>'2'</code> mostra erro embaixo do campo,
+<code>edit</code> abre marcado, <code>update</code> desmarca,
+<code>index</code> mostra Sim/Não.</li>
+</ul>
+<h2 id="10-testsacceptanceadmineventsbaseeventscestphp">10.
+<code>tests/Acceptance/admin/events/BaseEventsCest.php</code></h2>
+<p>a) <code>seedEvents</code> (linhas ~84-94), depois de
+<code>'capacity' =&gt; ...,</code>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Eventos pares emitem certificado (Evento 02 sim, Evento 01 não).</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>                <span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="va">$number</span> <span class="op">%</span> <span class="dv">2</span> <span class="op">===</span> <span class="dv">0</span> <span class="ot">?</span> <span class="st">&#39;1&#39;</span> <span class="ot">:</span> <span class="st">&#39;0&#39;</span><span class="ot">,</span></span></code></pre></div>
+<p>b) <code>fillEventForm</code>: docblock, acrescente à lista de
+chaves:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> online<span class="ot">,</span> hybrid)<span class="ot">,</span> audience (lista de valores)<span class="ot">,</span> starts_on (<span class="cn">Y</span><span class="op">-</span>m<span class="op">-</span>d)<span class="ot">,</span> location<span class="ot">,</span> capacity<span class="ot">,</span> has_certificate</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>     <span class="op">*</span> (<span class="kw">true</span> marca o checkbox<span class="ot">,</span> <span class="kw">false</span> desmarca)<span class="op">.</span></span></code></pre></div>
+<p>c) <code>fillEventForm</code>, antes do
+<code>if (array_key_exists('starts_on', $data))</code>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">array_key_exists</span>(<span class="st">&#39;has_certificate&#39;</span><span class="ot">,</span> <span class="va">$data</span>)) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (<span class="va">$data</span>[<span class="st">&#39;has_certificate&#39;</span>]) {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>                <span class="va">$page</span>-&gt;checkOption(<span class="st">&#39;#event_has_certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>            } <span class="cf">else</span> {</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>                <span class="va">$page</span>-&gt;uncheckOption(<span class="st">&#39;#event_has_certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>seedEvents</code> cria os 16 Eventos do navegador;
+pares/ímpares dão os dois casos na listagem.</li>
+<li><code>fillEventForm</code> só mexe no que está em
+<code>$data</code>. <code>checkOption</code>/ <code>uncheckOption</code>
+clicam no checkbox de verdade (o hidden segue junto).</li>
+</ul>
+<p>Armadilha: <code>seedEvents</code> não confere o <code>save()</code>;
+valor inválido aqui faz os Cests falharem sem mensagem clara.</p>
+<h2
+id="11-testsacceptanceadmineventscertificatecheckboxcestphp-novo">11.
+<code>tests/Acceptance/admin/events/CertificateCheckboxCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\admin\events<span class="ot">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\<span class="fu">Assert</span><span class="ot">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * Checkbox &quot;Emite certificado&quot;: marcado grava 1, desmarcado grava 0 (o checkbox desmarcado não vai no</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co"> * POST; o hidden com value=0 antes dele garante o envio).</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> CertificateCheckboxCest <span class="kw">extends</span> BaseEventsCest</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> createEventWithCertificate(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$data</span> <span class="op">=</span> <span class="va">$this</span>-&gt;validEventData([<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="kw">true</span>])<span class="ot">;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Cadastrar Evento marcando &quot;Emite certificado&quot;&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSeeCheckboxIsChecked(<span class="st">&#39;#event_has_certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> <span class="va">$data</span>)<span class="ot">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cadastrado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Sim&#39;</span><span class="ot">,</span> <span class="st">&#39;.certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$stored</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="va">$data</span>[<span class="st">&#39;title&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertInstanceOf(Event::<span class="kw">class</span><span class="ot">,</span> <span class="va">$stored</span>)<span class="ot">;</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$stored</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> createEventWithoutCertificate(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$data</span> <span class="op">=</span> <span class="va">$this</span>-&gt;validEventData()<span class="ot">;</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Cadastrar Evento com &quot;Emite certificado&quot; desmarcado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/new&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> <span class="va">$data</span>)<span class="ot">;</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento cadastrado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Não&#39;</span><span class="ot">,</span> <span class="st">&#39;.certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$stored</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="va">$data</span>[<span class="st">&#39;title&#39;</span>]])<span class="ot">;</span></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertInstanceOf(Event::<span class="kw">class</span><span class="ot">,</span> <span class="va">$stored</span>)<span class="ot">;</span></span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$stored</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> uncheckCertificateOnEdit(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">2</span>]<span class="ot">;</span></span>
+<span id="cb18-53"><a href="#cb18-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-54"><a href="#cb18-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Desmarcar &quot;Emite certificado&quot; ao editar um Evento&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-55"><a href="#cb18-55" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-56"><a href="#cb18-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Sim&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-57"><a href="#cb18-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Não&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 01&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-58"><a href="#cb18-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-59"><a href="#cb18-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Editar&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 02&#39;</span>))<span class="ot">;</span></span>
+<span id="cb18-60"><a href="#cb18-60" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCheckboxIsChecked(<span class="st">&#39;#event_has_certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-61"><a href="#cb18-61" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;fillEventForm(<span class="va">$page</span><span class="ot">,</span> [<span class="st">&#39;has_certificate&#39;</span> =&gt; <span class="kw">false</span>])<span class="ot">;</span></span>
+<span id="cb18-62"><a href="#cb18-62" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Salvar&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-63"><a href="#cb18-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-64"><a href="#cb18-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/admin/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-65"><a href="#cb18-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento atualizado com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-66"><a href="#cb18-66" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Não&#39;</span><span class="ot">,</span> <span class="st">&#39;.certificate&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-67"><a href="#cb18-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-68"><a href="#cb18-68" aria-hidden="true" tabindex="-1"></a>        <span class="va">$stored</span> <span class="op">=</span> Event::findById((<span class="dt">int</span>) <span class="va">$event</span>-&gt;id)<span class="ot">;</span></span>
+<span id="cb18-69"><a href="#cb18-69" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertInstanceOf(Event::<span class="kw">class</span><span class="ot">,</span> <span class="va">$stored</span>)<span class="ot">;</span></span>
+<span id="cb18-70"><a href="#cb18-70" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$stored</span>-&gt;has_certificate)<span class="ot">;</span></span>
+<span id="cb18-71"><a href="#cb18-71" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-72"><a href="#cb18-72" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Herda <code>BaseEventsCest</code>: login admin,
+<code>seedEvents</code>, <code>fillEventForm</code>, <code>rowOf</code>,
+<code>$this-&gt;events</code>.</li>
+<li>O terceiro caso é o que morde no navegador: editar, desmarcar,
+salvar, ver "Não". Hidden e normalização cobrem isso; sem os dois, dá
+500.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>No navegador (<code>admin@example.com</code> / <code>123456</code>):
+<code>/admin/events</code> tem a coluna "Certificado" (palestras Não,
+demais Sim). Criar marcado -&gt; Sim no <code>show</code>. Editar,
+desmarcar, salvar -&gt; Não.</p>
+<p>Commit (inglês):
+<code>feat: Add certificate checkbox to events</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Sem hidden e sem normalização, desmarcar dá 500: chave some do POST,
+<code>?? null</code> põe <code>null</code> e o
+<code>INSERT</code>/<code>UPDATE</code> manda <code>NULL</code> numa
+coluna <code>NOT NULL</code>.</li>
+<li>Hidden depois do checkbox: PHP fica com o último valor, sempre
+<code>0</code>.</li>
+<li><code>DEFAULT 0</code> do schema não é usado: <code>save()</code>
+grava todas as colunas. Sem normalizar, testes (<code>params()</code>) e
+POSTs que não mandam o campo quebram.</li>
+<li><code>TINYINT</code> volta do PDO como <strong>int</strong>;
+<code>inclusion(['0', '1'])</code> é estrito: sem normalizar, Evento
+lido e salvo de novo reprova.</li>
+<li><code>checked</code> com <code>=== '1'</code> (ou <code>== 1</code>
+solto) na view: use o método do model
+(<code>hasCertificate()</code>).</li>
+<li>Não converta no controller (<code>(bool)</code>,
+<code>?? '0'</code>); regra no model.</li>
+<li>Normalizar tudo que não é <code>'1'</code> para <code>'0'</code>
+esconde lixo (<code>'on'</code>, <code>'sim'</code>): deixe o
+<code>inclusion()</code> recusar.</li>
+<li>Esquecer <code>db:populate</code>: <code>Unknown column</code> só no
+navegador.</li>
+</ul>
+</body>
+</html>

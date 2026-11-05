@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>t2-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="t2-passo-a-passo-phpcs-phpstan-e-ci-verdes">T2 passo a passo:
+<code>phpcs</code>, <code>phpstan</code> e CI verdes</h1>
+<p>Pedido típico: implícito em todo pedido; o professor abre a aba
+Actions da PR e vê se o job "Code Quality Check" passou. Chance: alta
+(CI é item da rubrica da PR). Tempo: 5 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/t2-phpcs-phpstan-verdes/</code> (só README: sem
+patch nem commit). Os erros abaixo foram reproduzidos num clone de
+<code>main</code> e descartados. Pré-requisito: a modificação do cenário
+já feita.</p>
+<p>Ordem = a da CI: autoload (PSR-4) -&gt; <code>phpcs</code> -&gt;
+<code>phpstan</code> -&gt; testes. Na prova: <code>phpcbf</code>
+primeiro (automático), depois o que sobrar à mão.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<p>Não se editam; leia para saber o que a CI cobra.</p>
+<ol type="1">
+<li><code>.github/workflows/ci.yml</code></li>
+<li><code>phpcs.xml</code></li>
+<li><code>phpstan.neon</code></li>
+<li><code>composer.json</code> (PSR-4)</li>
+</ol>
+<p>Onde as correções caem: no arquivo que o comando apontar (seções 5 a
+10, uma por erro típico).</p>
+<h2 id="1-githubworkflowsciyml">1.
+<code>.github/workflows/ci.yml</code></h2>
+<p>Job "Code Quality Check", nesta ordem:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">--optimize</span> <span class="at">--strict-psr</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> codecept build</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Os três saem com código 1 e deixam o job vermelho, inclusive o
+<code>phpcs</code> com só um WARNING.</li>
+<li>Jobs "Tests" (Unit, Integration) e "Acceptance Tests" também têm que
+ficar verdes.</li>
+</ul>
+<h2 id="2-phpcsxml">2. <code>phpcs.xml</code></h2>
+<ul>
+<li>PSR-12, <code>lineLimit</code> 130.</li>
+<li>snake_case em nome de método só liberado em <code>*Test.php</code>;
+<code>_before</code> só em <code>*Cest.php</code>.</li>
+<li><code>database/</code> fica fora (populate não passa pelo
+<code>phpcs</code>).</li>
+</ul>
+<h2 id="3-phpstanneon">3. <code>phpstan.neon</code></h2>
+<ul>
+<li>Nível 6, <code>paths</code>: <code>app</code>, <code>core</code>,
+<code>tests</code>.</li>
+<li><code>lib/</code> (onde está <code>Validations.php</code>)
+<strong>não</strong> é analisado: erro de tipo lá só aparece em
+teste.</li>
+<li><code>./run phpstan</code> roda <code>codecept build</code> antes
+(gera <code>tests/Support/_generated</code>, excluído); por isso
+demora.</li>
+</ul>
+<h2 id="4-composerjson">4. <code>composer.json</code></h2>
+<p>PSR-4: <code>App\</code> = <code>app/</code>, <code>Core\</code> =
+<code>core/</code>, <code>Tests\</code> = <code>tests/</code>,
+<code>Database\</code> = <code>database/</code>, <code>Lib\</code> =
+<code>lib/</code>, <code>Config\</code> = <code>config/</code>. Classe
+nova segue a seção 10.</p>
+<h2 id="receita-antes-de-cada-commit">Receita (antes de cada
+commit)</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcbf                                  <span class="co"># automático</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs                                   <span class="co"># o que sobrou: manual</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan                                 <span class="co"># tipos</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span>  <span class="co"># só se criou classe</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5      <span class="co"># só se mexeu em view/fluxo</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser</span></code></pre></div>
+<p>Para cada linha da saída, procure o identificador (ex.
+<code>missingType.iterableValue</code>,
+<code>Generic.Files.LineLength.TooLong</code>) nas seções abaixo.</p>
+<h2 id="5-linha--130-colunas-phpcs-manual">5. Linha &gt; 130 colunas
+(<code>phpcs</code>, manual)</h2>
+<p>Exemplo: terceira condição no <code>if</code> da capacidade em
+<code>app/Models/Event.php</code>, <code>validates()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a> <span class="ex">79</span> <span class="kw">|</span> <span class="ex">WARNING</span> <span class="kw">|</span> <span class="ex">Line</span> exceeds 130 characters<span class="kw">;</span> <span class="ex">contains</span> 139 characters</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">|</span>         <span class="kw">|</span> <span class="kw">(</span><span class="ex">Generic.Files.LineLength.TooLong</span><span class="kw">)</span></span></code></pre></div>
+<p>Correção: um operando por linha (PSR-12):</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    Validations::integerMin(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="dv">1</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">$this</span>-&gt;capacity <span class="op">!==</span> <span class="st">&#39;ilimitado&#39;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>) {</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>phpcbf</code> não resolve (não aparece com
+<code>[x]</code>).</li>
+<li>Chamada longa: um argumento por linha, ou lista numa variável
+(<code>$fields = [...]; foreach ($fields as $field)</code>), como no
+<code>errorsOf()</code> do
+<code>tests/Unit/Models/Events/EventTest.php</code> (M5).</li>
+</ul>
+<h2 id="6-espaçamento-psr-12-phpcs-automático">6. Espaçamento PSR-12
+(<code>phpcs</code>, automático)</h2>
+<p>Exemplo: <code>if(count($conditions)==0){</code>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a> <span class="ex">124</span> <span class="kw">|</span> <span class="ex">ERROR</span> <span class="kw">|</span> <span class="ex">[x]</span> Expected 1 space after IF keyword<span class="kw">;</span> <span class="ex">0</span> found</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a> <span class="ex">124</span> <span class="kw">|</span> <span class="ex">ERROR</span> <span class="kw">|</span> <span class="ex">[x]</span> Expected at least 1 space before <span class="st">&quot;==&quot;</span><span class="kw">;</span> <span class="ex">0</span> found</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a> <span class="ex">124</span> <span class="kw">|</span> <span class="ex">ERROR</span> <span class="kw">|</span> <span class="ex">[x]</span> Expected at least 1 space after <span class="st">&quot;==&quot;</span><span class="kw">;</span> <span class="ex">0</span> found</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a> <span class="ex">124</span> <span class="kw">|</span> <span class="ex">ERROR</span> <span class="kw">|</span> <span class="ex">[x]</span> Expected 1 space after closing parenthesis<span class="kw">;</span> <span class="ex">found</span> 0</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">PHPCBF</span> CAN FIX THE 4 MARKED SNIFF VIOLATIONS AUTOMATICALLY</span></code></pre></div>
+<p>Correção:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcbf</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> diff     <span class="co"># phpcbf sem caminho mexe no projeto inteiro</span></span></code></pre></div>
+<p>Vira <code>if (count($conditions) == 0) {</code>.</p>
+<p>Por quê: <code>[x]</code> = corrigível sozinho. Revise o
+<code>git diff</code> para não levar mudança de outro arquivo no
+commit.</p>
+<h2 id="7-array-sem-tipo-do-valor-phpstan-missingtypeiterablevalue">7.
+<code>array</code> sem tipo do valor (<code>phpstan</code>,
+<code>missingType.iterableValue</code>)</h2>
+<p>Exemplo: método novo em <code>app/Models/Event.php</code> sem
+PHPDoc:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> upcoming(<span class="dt">array</span> <span class="va">$conditions</span>)<span class="ot">:</span> <span class="dt">array</span></span></code></pre></div>
+<p>Correção: PHPDoc no padrão de
+<code>core/Database/ActiveRecord/Model.php</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $conditions</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;static&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> upcoming(<span class="dt">array</span> <span class="va">$conditions</span>)<span class="ot">:</span> <span class="dt">array</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Nível 6 exige o tipo dos itens de todo <code>array</code>.</li>
+<li>Outros formatos já usados: <code>array&lt;int, string&gt;</code>
+(lista), <code>array&lt;string, array{string, string}&gt;</code> (data
+provider, S4), <code>array&lt;int, Event&gt;</code> (lista de Eventos
+fora de método estático).</li>
+</ul>
+<h2 id="8-model-onde-se-espera-event-phpstan-returntype">8.
+<code>?Model</code> onde se espera <code>?Event</code>
+(<code>phpstan</code>, <code>return.type</code>)</h2>
+<p>Exemplo em <code>app/Models/User.php</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">function</span> findEvent(<span class="dt">int</span> <span class="va">$id</span>)<span class="ot">:</span> <span class="ot">?</span>Event</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">$this</span>-&gt;events()-&gt;findById(<span class="va">$id</span>)<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a> <span class="ex">96</span>     Method App<span class="dt">\M</span>odels<span class="dt">\U</span>ser::findEvent<span class="er">(</span><span class="kw">)</span> <span class="ex">should</span> return</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>        <span class="ex">App\Models\Event</span><span class="kw">|</span><span class="ex">null</span> but returns</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="ex">Core\Database\ActiveRecord\Model</span><span class="kw">|</span><span class="ex">null.</span></span></code></pre></div>
+<p>Correção com <code>instanceof</code> (não <code>@var</code>, não
+cast):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events()-&gt;findById(<span class="va">$id</span>)<span class="ot">;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> <span class="va">$event</span> <span class="kw">instanceof</span> Event <span class="ot">?</span> <span class="va">$event</span> <span class="ot">:</span> <span class="kw">null</span><span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>HasMany</code>/<code>BelongsTo</code> só conhecem
+<code>Model</code>. <code>Event::findById</code> e
+<code>Event::findBy</code> devolvem <code>static|null</code>, sem esse
+problema.</p>
+<h2 id="9-propriedade-mágica-desconhecida-phpstan-propertynotfound">9.
+Propriedade mágica desconhecida (<code>phpstan</code>,
+<code>property.notFound</code>)</h2>
+<p>Model de verdade (<code>app/Models/...</code>): declare a coluna no
+docblock da classe, em vez de ignorar:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">string</span><span class="op">|</span><span class="kw">null</span> <span class="va">$link</span></span></code></pre></div>
+<p>Model anônimo de teste
+(<code>tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</code>):
+mantenha o comentário na linha, padrão do arquivo:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="va">$this</span>-&gt;model-&gt;quantity <span class="op">=</span> <span class="va">$value</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span></code></pre></div>
+<p>Por quê: atributos são dinâmicos
+(<code>__get</code>/<code>__set</code>); o <code>phpstan</code> só os
+conhece pelo <code>@property</code>. Ignore genérico em
+<code>app/</code> é penalizado; a única exceção aceita é o model anônimo
+de teste.</p>
+<h2 id="10-classe-fora-do-psr-4-composer---strict-psr">10. Classe fora
+do PSR-4 (<code>composer --strict-psr</code>)</h2>
+<p>Exemplo: <code>app/Services/EventStats.php</code> com
+<code>namespace App\Service;</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">Class</span> App<span class="dt">\S</span>ervice<span class="dt">\E</span>ventStats located in</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./app/Services/EventStats.php</span> does not comply with psr-4</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">autoloading</span> standard. Skipping.</span></code></pre></div>
+<p>Correção: namespace = caminho (<code>App\Services</code> em
+<code>app/Services/</code>), classe = nome do arquivo, e de novo:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span></span></code></pre></div>
+<p>Por quê: a CI roda esse comando; sai com 1. Sem
+<code>dump-autoload</code> a classe nova pode nem ser achada
+(<code>Class ... not found</code>).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs      <span class="co"># nenhum FILE listado</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan    <span class="co"># [OK] No errors</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span>   <span class="co"># nenhum &quot;does not comply&quot;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser   <span class="co"># só se mexeu em view ou fluxo</span></span></code></pre></div>
+<p>Na PR: aba Actions, jobs "Tests", "Acceptance Tests" e "Code Quality
+Check" verdes.</p>
+<p>Commit: sem commit próprio; vai junto do cenário, em inglês
+<code>type: Title</code>, na branch com o nome pedido.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>WARNING do <code>phpcs</code> também reprova (código de saída
+1).</li>
+<li><code>lib/</code> fora do <code>phpstan</code>: erro de tipo em
+<code>Validations.php</code> só aparece quando um teste chama o
+método.</li>
+<li><code>// @phpstan-ignore-line</code> genérico ou
+<code>ignoreErrors</code> amplo no <code>phpstan.neon</code>: penalizado
+(issue do grupo 6).</li>
+<li>Linha &gt; 130 colunas: <code>phpcs</code> falha; quebre.</li>
+<li><code>phpcbf</code> sem caminho mexe no projeto todo: revise o
+<code>git diff</code>.</li>
+<li><code>use</code> sem uso e código comentado: <code>phpcs</code> não
+pega; revise à mão.</li>
+<li>snake_case em nome de teste só em <code>*Test.php</code>; em
+<code>*Cest.php</code>, camelCase.</li>
+</ul>
+</body>
+</html>

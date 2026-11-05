@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p1-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="p1-passo-a-passo-código-de-check-in-aleatório-1000-9999-por-evento">P1
+passo a passo: Código de check-in aleatório (1000-9999) por Evento</h1>
+<p>Pedido típico: "cada Evento recebe, ao ser criado, um código numérico
+aleatório de 4 dígitos (1000 a 9999), único, gerado pelo backend, que
+não vem do form e aparece no detalhe e na listagem". Chance: alta.
+Tempo: 25-35 min. Pré-requisito: nenhum (parte de <code>main</code>). É
+a transposição do pedido real da FVP 4.1 (P12) para o CRUD.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/p1-codigo-checkin-aleatorio/</code> (patch,
+bundle e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo
+em formato "um arquivo por vez, com o motivo".</p>
+<p>Ordem = fluxo da requisição: banco -&gt; model -&gt; views -&gt;
+testes. Controller e populate <strong>não</strong> mudam. Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>database/schema.sql</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code></li>
+<li><code>app/views/admin/events/show.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></li>
+</ol>
+<p>Não mexa: <code>app/Controllers/Admin/EventsController.php</code>
+(<code>FIELDS</code> fica sem <code>checkin_code</code>) e
+<code>database/Populate/populate.php</code> (o <code>save()</code> gera
+o código dos 16 Eventos).</p>
+<p>Depois: <code>./run db:populate</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-databaseschemasql">1. <code>database/schema.sql</code></h2>
+<p>Em <code>CREATE TABLE events</code>:</p>
+<p>a) Logo após <code>capacity</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    capacity    <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Código de check-in (1000 a 9999), gerado pelo Event::save() no cadastro; nunca vem do formulário.</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    checkin_code <span class="dt">SMALLINT</span> UNSIGNED <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    created_at  <span class="dt">TIMESTAMP</span> <span class="kw">NOT</span> <span class="kw">NULL</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span></code></pre></div>
+<p>b) Depois do <code>CONSTRAINT check_events_capacity ...</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">CONSTRAINT</span> check_events_capacity <span class="kw">CHECK</span> (capacity <span class="op">&gt;=</span> <span class="dv">1</span>),</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">UNIQUE</span> <span class="kw">KEY</span> uq_events_checkin_code (checkin_code),</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>save()</code> do framework insere <strong>todas</strong> as
+colunas de <code>$columns</code>; coluna tem que existir.</li>
+<li><code>SMALLINT UNSIGNED</code> (0-65535) cabe a faixa; 1000-9999 é
+cobrado no model.</li>
+<li><code>DEFAULT</code> não resolve: o <code>INSERT</code> mandaria
+<code>NULL</code>. O código precisa estar no objeto antes do
+<code>INSERT</code>.</li>
+<li><code>UNIQUE KEY</code>: garante a regra no banco mesmo em corrida
+entre dois cadastros simultâneos; o model dá a mensagem amigável.</li>
+</ul>
+<p>Armadilha: banco de dev não recria sozinho. No fim,
+<code>./run db:populate</code>.</p>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p>Cinco pontos.</p>
+<p>a) Docblock da classe, depois de
+<code>@property int|string $capacity</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> <span class="pp">@</span>property <span class="dt">int</span><span class="op">|</span><span class="dt">string</span><span class="op">|</span><span class="kw">null</span> <span class="va">$checkin_code</span> gerado por save() via newCheckinCode()<span class="ot">,</span> nunca pelo formulário</span></code></pre></div>
+<p>Por quê: atributo dinâmico (<code>__get</code>/<code>__set</code>);
+sem <code>@property</code> o <code>phpstan</code> reclama.
+<code>null</code> porque Evento novo nasce sem código.</p>
+<p>b) Constantes, depois do array <code>AUDIENCES</code> e antes de
+<code>$table</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Faixa do código de check-in. */</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">CHECKIN_CODE_MIN</span> <span class="op">=</span> <span class="dv">1000</span><span class="ot">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">const</span> <span class="cn">CHECKIN_CODE_MAX</span> <span class="op">=</span> <span class="dv">9999</span><span class="ot">;</span></span></code></pre></div>
+<p>Por quê: um lugar só para a faixa; testes e Cest usam as
+constantes.</p>
+<p>c) <code>$columns</code>, depois de <code>'capacity',</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;capacity&#39;</span><span class="ot">,</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;checkin_code&#39;</span><span class="ot">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    ]<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: sem isso o valor fica no objeto mas não vai ao
+<code>INSERT</code>, e o MySQL recusa (<code>NOT NULL</code>).</p>
+<p>d) <code>validates()</code>, no fim, depois do <code>if</code> de
+<code>capacity</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span> Validations::integerMin(<span class="st">&#39;capacity&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="dv">1</span>)) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;validatesCapacityAgainstEnrollments()<span class="ot">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Evento novo sem código é válido: o save() gera o código antes de gravar.</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$this</span>-&gt;newRecord() <span class="op">||</span> <span class="op">!</span><span class="va">$this</span>-&gt;isCheckinCodeBlank()) {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>            Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;checkin_code&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                Validations::integerMin(<span class="st">&#39;checkin_code&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">CHECKIN_CODE_MIN</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                <span class="va">$this</span>-&gt;validatesCheckinCodeMax() <span class="op">&amp;&amp;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                Validations::uniqueness(<span class="st">&#39;checkin_code&#39;</span><span class="ot">,</span> <span class="va">$this</span>)<span class="ot">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Validação mora no model. <code>&amp;&amp;</code> = curto-circuito:
+um erro por campo.</li>
+<li><code>lib/Validations.php</code> não tem <code>integerMax</code>:
+método privado (abaixo).</li>
+<li><code>uniqueness</code> na edição compara com o próprio registro:
+salvar sem mudar o código continua válido; cobre quem força código
+repetido.</li>
+<li>O <code>if</code>: Evento novo sem código pula o bloco. Validar
+<code>notEmpty</code> sempre quebraria <code>isValid()</code> antes do
+<code>save()</code> e os testes que o chamam num Evento novo
+(<code>test_valid_event_should_be_valid</code>...).</li>
+</ul>
+<p>e) Métodos novos, logo depois do fim de <code>validates()</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Ao criar o Evento, gera o código de check-in se ele ainda não foi definido.</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * Na edição o código nunca muda.</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> save()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;newRecord() <span class="op">&amp;&amp;</span> <span class="va">$this</span>-&gt;isCheckinCodeBlank()) {</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;checkin_code <span class="op">=</span> <span class="kw">self</span>::newCheckinCode()<span class="ot">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">parent</span>::save()<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">     * Sorteia um código de check-in na faixa 1000–9999 que nenhum outro Evento usa.</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co">     * Repete o sorteio enquanto o código já existir no banco.</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> newCheckinCode()<span class="ot">:</span> <span class="dt">int</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">do</span> {</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>            <span class="va">$code</span> <span class="op">=</span> <span class="fu">random_int</span>(<span class="kw">self</span>::<span class="cn">CHECKIN_CODE_MIN</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">CHECKIN_CODE_MAX</span>)<span class="ot">;</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">while</span> (<span class="kw">self</span>::exists([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="va">$code</span>]))<span class="ot">;</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$code</span><span class="ot">;</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> isCheckinCodeBlank()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;checkin_code <span class="op">===</span> <span class="kw">null</span> <span class="op">||</span> <span class="va">$this</span>-&gt;checkin_code <span class="op">===</span> <span class="st">&#39;&#39;</span><span class="ot">;</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validatesCheckinCodeMax()<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> ((<span class="dt">int</span>) <span class="va">$this</span>-&gt;checkin_code <span class="op">&gt;</span> <span class="kw">self</span>::<span class="cn">CHECKIN_CODE_MAX</span>) {</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;checkin_code&#39;</span><span class="ot">,</span> <span class="st">&#39;deve ser menor ou igual a &#39;</span> <span class="op">.</span> <span class="kw">self</span>::<span class="cn">CHECKIN_CODE_MAX</span> <span class="op">.</span> <span class="st">&#39;!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="ot">;</span></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>save()</code> sobrescrito: <code>Model::save()</code> chama
+<code>isValid()</code> e depois <code>INSERT</code>. Gerando antes do
+<code>parent::save()</code>, o código já está no objeto na validação e
+no <code>INSERT</code>.</li>
+<li>Todo caminho que cria Evento (controller, populate, testes, Cests)
+ganha código sem mudar nada. Regra de negócio no model; gerar no
+controller o professor recusa; na view, nunca.</li>
+<li><code>newRecord()</code> (<code>id === null</code>): só gera ao
+criar. Sem isso, cada edição trocaria um código já divulgado.</li>
+<li><code>random_int</code>: gerador criptograficamente seguro
+(imprevisível). <code>rand()</code>/<code>mt_rand()</code> funcionam,
+mas é o que se espera ver.</li>
+<li>Laço <code>do/while exists</code>: sem ele, colisão (9000 valores)
+-&gt; <code>save()</code> falha no <code>uniqueness</code> e o admin vê
+"dados incorretos" sem ter errado. <code>exists()</code> usa
+<code>where</code> com igualdade (prepare/bind).</li>
+<li><code>static</code>: sortear não depende de um Evento carregado.
+Reaproveitável (ex. ação "regenerar", O1).</li>
+<li><code>validatesCheckinCodeMax</code> devolve <code>bool</code> para
+entrar na cadeia <code>&amp;&amp;</code>.</li>
+</ul>
+<h2 id="3-appviewsadmineventsindexphtml">3.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>a) <code>&lt;thead&gt;</code>, depois de
+<code>&lt;th&gt;Vagas&lt;/th&gt;</code>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Vagas<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Código<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Ações<span class="op">&lt;/</span>th<span class="op">&gt;</span></span></code></pre></div>
+<p>b) <code>&lt;tbody&gt;</code>, depois do <code>&lt;td&gt;</code> de
+vagas, antes do <code>&lt;td&gt;</code> de ações:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;enrollmentsCount() <span class="kw">?&gt;</span><span class="op">/&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;capacity <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;checkin_code <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>View só exibe; <code>paginate()</code> já traz todas as colunas de
+<code>$columns</code>.</li>
+<li><code>(int)</code> é o escape de número (dispensa
+<code>htmlspecialchars</code>).</li>
+<li>Ordem dos <code>&lt;td&gt;</code> = ordem dos
+<code>&lt;th&gt;</code>.</li>
+</ul>
+<h2 id="4-appviewsadmineventsshowphtml">4.
+<code>app/views/admin/events/show.phtml</code></h2>
+<p>Dentro do <code>&lt;dl&gt;</code>, depois do <code>&lt;/dd&gt;</code>
+de vagas, antes do <code>&lt;/dl&gt;</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>        (<span class="op">&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$event</span>-&gt;availableSpots() <span class="kw">?&gt;</span> disponíveis)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>dd<span class="op">&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dt <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-3&quot;</span><span class="op">&gt;</span>Código de check<span class="op">-</span>in<span class="op">&lt;/</span>dt<span class="op">&gt;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>dd <span class="kw">class</span><span class="op">=</span><span class="st">&quot;col-sm-9&quot;</span> id<span class="op">=</span><span class="st">&quot;event_checkin_code&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;checkin_code <span class="kw">?&gt;</span><span class="op">&lt;/</span>dd<span class="op">&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;/</span><span class="fu">dl</span><span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê: par <code>dt</code>/<code>dd</code> no padrão dos outros
+campos. <code>id</code> serve de seletor para o Cest
+(<code>#event_checkin_code</code>).</p>
+<p>Não mexa em <code>_form.phtml</code>: código não tem
+<code>&lt;input&gt;</code>.</p>
+<h2 id="5-testsunitmodelseventseventtestphp">5.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Nova seção depois de
+<code>test_audience_should_survive_a_round_trip_in_the_database</code>,
+antes do comentário
+<code>/* --- save / update / destroy / busca --- */</code>.
+<code>params()</code> e <code>createEvent()</code> já existem e não
+mudam:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/* ------------------- código de check-in ------------------- */</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_checkin_code_should_be_between_1000_and_9999()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">0</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;</span> <span class="dv">200</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$code</span> <span class="op">=</span> Event::newCheckinCode()<span class="ot">;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertGreaterThanOrEqual(<span class="dv">1000</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertLessThanOrEqual(<span class="dv">9999</span><span class="ot">,</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_new_checkin_code_should_not_return_a_code_in_use()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$codes</span> <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">20</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$codes</span>[] <span class="op">=</span> (<span class="dt">int</span>) <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&quot;Evento </span>{<span class="va">$i</span>}<span class="st">&quot;</span>])-&gt;checkin_code<span class="ot">;</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">20</span><span class="ot">,</span> <span class="fu">array_unique</span>(<span class="va">$codes</span>))<span class="ot">;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">0</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;</span> <span class="dv">200</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertNotContains(Event::newCheckinCode()<span class="ot">,</span> <span class="va">$codes</span>)<span class="ot">;</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_save_should_generate_the_checkin_code_of_a_new_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params())<span class="ot">;</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNull(<span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertGreaterThanOrEqual(<span class="dv">1000</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThanOrEqual(<span class="dv">9999</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$event</span>-&gt;checkin_code<span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::where([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="va">$event</span>-&gt;checkin_code]))<span class="ot">;</span></span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_existing_event_with_blank_checkin_code_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;checkin_code <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="ot">;</span></span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não pode ser vazio!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;checkin_code&#39;</span>))<span class="ot">;</span></span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_checkin_code_should_be_unique()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$existing</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Outro&#39;</span><span class="ot">,</span> <span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="va">$existing</span>-&gt;checkin_code]))<span class="ot">;</span></span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;já existe um registro com esse dado&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;checkin_code&#39;</span>))<span class="ot">;</span></span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_checkin_code_outside_the_range_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$messages</span> <span class="op">=</span> [</span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;999&#39;</span> =&gt; <span class="st">&#39;deve ser maior ou igual a 1000!&#39;</span><span class="ot">,</span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;10000&#39;</span> =&gt; <span class="st">&#39;deve ser menor ou igual a 9999!&#39;</span><span class="ot">,</span></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;abcd&#39;</span> =&gt; <span class="st">&#39;deve ser um número inteiro!&#39;</span><span class="ot">,</span></span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> (<span class="va">$messages</span> <span class="kw">as</span> <span class="va">$code</span> =&gt; <span class="va">$message</span>) {</span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>            <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="dt">(string)</span> <span class="va">$code</span>]))<span class="ot">;</span></span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid()<span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="va">$message</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;checkin_code&#39;</span>)<span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$code</span>)<span class="ot">;</span></span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="dv">1000</span>])))-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="dv">9999</span>])))-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_existing_event_should_keep_its_checkin_code_when_updated()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> <span class="va">$event</span>-&gt;checkin_code<span class="ot">;</span></span>
+<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;title <span class="op">=</span> <span class="st">&#39;Título novo&#39;</span><span class="ot">;</span></span>
+<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$code</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Faixa: 200 sorteios. Unicidade: 20 Eventos com códigos distintos e o
+sorteio nunca devolve um em uso.</li>
+<li>Evento novo: <code>null</code> -&gt; <code>isValid()</code> ok -&gt;
+<code>save()</code> gera e grava.</li>
+<li>Existente com código vazio, repetido, fora da faixa ou não inteiro:
+cada um com a mensagem do <code>Validations</code>. Limites 1000 e 9999
+valem.</li>
+<li>Edição não troca o código (<code>newRecord()</code> falso).</li>
+</ul>
+<h2 id="6-testsintegrationcontrollersadmineventscontrollertestphp">6.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Depois de <code>test_create_ignores_user_id_sent_by_the_form</code>
+(é o modelo de "ignora campo enviado pelo form"):</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_generates_the_checkin_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams()])<span class="ot">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertGreaterThanOrEqual(<span class="dv">1000</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertLessThanOrEqual(<span class="dv">9999</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_ignores_checkin_code_sent_by_the_form()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="st">&#39;1&#39;</span>])]</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findBy([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de Testes&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$event</span>)<span class="ot">;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotEquals(<span class="dv">1</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertGreaterThanOrEqual(<span class="dv">1000</span><span class="ot">,</span> <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_update_does_not_change_the_checkin_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>        <span class="va">$code</span> <span class="op">=</span> <span class="va">$event</span>-&gt;checkin_code<span class="ot">;</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;put(</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;update&#39;</span><span class="ot">,</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;checkin_code&#39;</span> =&gt; <span class="st">&#39;1234&#39;</span>])]</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="va">$code</span><span class="ot">,</span> Event::findById(<span class="va">$event</span>-&gt;id)-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_and_show_display_the_checkin_code()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$index</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$show</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;&lt;th&gt;Código&lt;/th&gt;&#39;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;&lt;td&gt;</span>{<span class="va">$event</span>-&gt;checkin_code}<span class="st">&lt;/td&gt;&quot;</span><span class="ot">,</span> <span class="va">$index</span>)<span class="ot">;</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Código de check-in&#39;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;&gt;</span>{<span class="va">$event</span>-&gt;checkin_code}<span class="st">&lt;/dd&gt;&quot;</span><span class="ot">,</span> <span class="va">$show</span>)<span class="ot">;</span></span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Prova a allowlist <code>FIELDS</code>: <code>checkin_code</code> no
+POST (create e update) é ignorado; o <code>fill</code> só copia o que
+está em <code>FIELDS</code>.</li>
+<li>Código gerado também pelo caminho do controller.</li>
+<li><code>index</code>/<code>show</code> exibem o valor salvo.</li>
+<li><code>validParams()</code> e <code>createEvent()</code> não
+mudam.</li>
+</ul>
+<h2 id="7-testsacceptanceadmineventscreatesuccessfullycestphp">7.
+<code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></h2>
+<p>a) Depois de <code>$page-&gt;see($data['location']);</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$data</span>[<span class="st">&#39;location&#39;</span>])<span class="ot">;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O código de check-in foi gerado pelo sistema e aparece no show.</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Código de check-in&#39;</span>)<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="dt">(string)</span> <span class="va">$event</span>-&gt;checkin_code<span class="ot">,</span> <span class="st">&#39;#event_checkin_code&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>b) Depois de
+<code>Assert::assertSame(0, $event-&gt;enrollmentsCount());</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertGreaterThanOrEqual(Event::<span class="cn">CHECKIN_CODE_MIN</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertLessThanOrEqual(Event::<span class="cn">CHECKIN_CODE_MAX</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="va">$event</span>-&gt;checkin_code)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: navegador real. <code>$event</code> já é buscado no banco
+antes (linha <code>Event::findBy(['title' =&gt; ...])</code>); confere o
+código na tela (<code>show</code>) e a faixa no banco.
+<code>fillEventForm</code>/<code>validEventData</code> não mudam (código
+não está no form).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># com selenium no ar</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Conferir no banco (<code>./run db:console</code>):</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="kw">id</span>, checkin_code <span class="kw">FROM</span> <span class="kw">events</span>;</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="fu">COUNT</span>(<span class="kw">DISTINCT</span> checkin_code) <span class="kw">FROM</span> <span class="kw">events</span>;  <span class="co">-- 16</span></span></code></pre></div>
+<p>No navegador: criar um Evento (form sem campo de código) -&gt;
+<code>show</code> mostra "Código de check-in" com valor 1000-9999;
+coluna "Código" na listagem. Editar e salvar -&gt; código igual.</p>
+<p>Commit (inglês):
+<code>feat: Generate a random check-in code for each Event</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Gerar no controller ("regra de negócio no model") ou na view.</li>
+<li><code>checkin_code</code> em <code>FIELDS</code> ou num
+<code>&lt;input&gt;</code>: pedido diz que não vem do form;
+<code>test_create_ignores_checkin_code_sent_by_the_form</code>
+pega.</li>
+<li>Esquecer <code>$columns</code>: valor não vai ao
+<code>INSERT</code>, MySQL recusa.</li>
+<li>Gerar sem <code>newRecord()</code>: troca o código a cada
+edição.</li>
+<li><code>rand()</code>/<code>mt_rand()</code> servem, mas
+<code>random_int()</code> é o correto.</li>
+<li>Sem laço de unicidade: colisão; o <code>uniqueness</code> barra, o
+<code>save()</code> devolve <code>false</code> e o admin vê "dados
+incorretos" sem ter errado.</li>
+<li><code>notEmpty('checkin_code')</code> sempre: <code>isValid()</code>
+antes do <code>save()</code> acusa vazio e quebra
+<code>test_valid_event_should_be_valid</code> e outros. Por isso o
+<code>if</code>; alternativa: gerar no construtor (padrão
+<code>app/Models/User.php:28-35</code>).</li>
+<li><code>exists()</code> usa <code>where</code> com igualdade.</li>
+<li>"Regenerar código" é ação nova
+(<code>PUT /admin/events/{id}/checkin_code</code>, O1), nunca campo no
+form.</li>
+<li>P6 (duplicar): zere <code>$copy-&gt;checkin_code = null;</code> para
+gerar outro.</li>
+</ul>
+</body>
+</html>

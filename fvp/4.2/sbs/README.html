@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+<h1 id="passo-a-passo-sbs-dos-cenários-fvp-42">Passo a passo (sbs) dos
+cenários FVP 4.2</h1>
+<p>Um guia por cenário de chance <strong>alta</strong> ou
+<strong>média-alta</strong> do <code>catalogo.md</code>, no formato "um
+arquivo por vez": para cada arquivo tocado, onde mexer, o que digitar e
+o motivo (o que aquilo ensina sobre o framework). Mesma solução dos
+<code>exemplos/&lt;id&gt;-*/</code> (patch, bundle,
+<code>projeto/</code>), só que em ordem de execução e com o porquê.</p>
+<p><code>&lt;id&gt;-sbs.md</code> é a fonte;
+<code>&lt;id&gt;-sbs.html</code> é gerado com <code>pandoc</code>
+(<code>fvp/4.2/sbs/gerar-html.sh</code>).</p>
+<p>Ordem sugerida de leitura: <code>m1-sbs.md</code> primeiro (é o mais
+básico e o molde dos outros).</p>
+<h2 id="chance-alta">Chance alta</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Guia</th>
+<th>Cenário</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td><code>m1-sbs.md</code></td>
+<td>Campo novo em <code>events</code> com validação</td>
+</tr>
+<tr>
+<td>M2</td>
+<td><code>m2-sbs.md</code></td>
+<td>Validação nova em <code>lib/Validations.php</code></td>
+</tr>
+<tr>
+<td>N1</td>
+<td><code>n1-sbs.md</code></td>
+<td>Filtro por tipo com <code>where</code> na paginação</td>
+</tr>
+<tr>
+<td>P1</td>
+<td><code>p1-sbs.md</code></td>
+<td>Código de check-in aleatório (1000-9999)</td>
+</tr>
+<tr>
+<td>P5</td>
+<td><code>p5-sbs.md</code></td>
+<td>Status do Evento: cancelar e encerrar</td>
+</tr>
+<tr>
+<td>P23</td>
+<td><code>p23-sbs.md</code></td>
+<td>Código do registro exigido para remover</td>
+</tr>
+<tr>
+<td>S1</td>
+<td><code>s1-sbs.md</code></td>
+<td>Teste de aceitação da modificação</td>
+</tr>
+<tr>
+<td>S2</td>
+<td><code>s2-sbs.md</code></td>
+<td>Teste de acesso por HTTP da rota nova</td>
+</tr>
+<tr>
+<td>S3</td>
+<td><code>s3-sbs.md</code></td>
+<td>Teste unitário do método novo do model</td>
+</tr>
+<tr>
+<td>T1</td>
+<td><code>t1-sbs.md</code></td>
+<td>Populate: campo novo, mais Eventos, segundo admin</td>
+</tr>
+<tr>
+<td>T2</td>
+<td><code>t2-sbs.md</code></td>
+<td><code>phpcs</code>, <code>phpstan</code> e CI verdes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="chance-média-alta">Chance média-alta</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Guia</th>
+<th>Cenário</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M4</td>
+<td><code>m4-sbs.md</code></td>
+<td>Data de término não anterior ao início</td>
+</tr>
+<tr>
+<td>M6</td>
+<td><code>m6-sbs.md</code></td>
+<td>Unicidade (título único na mesma data)</td>
+</tr>
+<tr>
+<td>M7</td>
+<td><code>m7-sbs.md</code></td>
+<td>Horário do Evento (<code>TIME</code> ou <code>DATETIME</code>)</td>
+</tr>
+<tr>
+<td>M17</td>
+<td><code>m17-sbs.md</code></td>
+<td>Campo sim/não por checkbox (certificado)</td>
+</tr>
+<tr>
+<td>M18</td>
+<td><code>m18-sbs.md</code></td>
+<td>Janela de datas: antecedência e limite</td>
+</tr>
+<tr>
+<td>N3</td>
+<td><code>n3-sbs.md</code></td>
+<td>Ordenar por data no <code>Paginator</code></td>
+</tr>
+<tr>
+<td>N4</td>
+<td><code>n4-sbs.md</code></td>
+<td>Mudar <code>per_page</code> ou deixar o usuário escolher</td>
+</tr>
+<tr>
+<td>N10</td>
+<td><code>n10-sbs.md</code></td>
+<td>Página e id inválidos, sem <code>(int)</code> cego</td>
+</tr>
+<tr>
+<td>N16</td>
+<td><code>n16-sbs.md</code></td>
+<td>Busca, filtro e ordenação juntos na paginação</td>
+</tr>
+<tr>
+<td>O1</td>
+<td><code>o1-sbs.md</code></td>
+<td>Rota RESTful nova com página (lotados)</td>
+</tr>
+<tr>
+<td>O2</td>
+<td><code>o2-sbs.md</code></td>
+<td>Eventos para o Participante (lista e detalhe)</td>
+</tr>
+<tr>
+<td>O5</td>
+<td><code>o5-sbs.md</code></td>
+<td>Admin vê e lista só os próprios Eventos</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>p2-sbs.md</code></td>
+<td>Inscrição do Participante em um Evento</td>
+</tr>
+<tr>
+<td>P6</td>
+<td><code>p6-sbs.md</code></td>
+<td>Duplicar Evento</td>
+</tr>
+<tr>
+<td>P7</td>
+<td><code>p7-sbs.md</code></td>
+<td>"Meus eventos" do Participante</td>
+</tr>
+<tr>
+<td>P13</td>
+<td><code>p13-sbs.md</code></td>
+<td>Admin inscreve e remove um Participante</td>
+</tr>
+<tr>
+<td>P16</td>
+<td><code>p16-sbs.md</code></td>
+<td>Remover só com código de confirmação</td>
+</tr>
+<tr>
+<td>Q1</td>
+<td><code>q1-sbs.md</code></td>
+<td>Só o dono edita e remove</td>
+</tr>
+<tr>
+<td>R2</td>
+<td><code>r2-sbs.md</code></td>
+<td>Nome do criador no <code>show</code> e na listagem</td>
+</tr>
+<tr>
+<td>S4</td>
+<td><code>s4-sbs.md</code></td>
+<td>Testes de borda pedidos pelo professor</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

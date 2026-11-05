@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p2-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1
+id="p2-passo-a-passo-inscrição-do-participante-post-eventsidenrollments">P2
+passo a passo: Inscrição do Participante
+(<code>POST /events/{id}/enrollments</code>)</h1>
+<p>Pedido típico: "o Participante logado se inscreve em um Evento, se
+houver vaga e se ainda não estiver inscrito; botão 'Inscrever-se' no
+detalhe do Evento e flash com sucesso ou motivo da recusa". Chance:
+média-alta. Tempo: 30-40 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/p2-inscricao-participante/</code> (patch, bundle
+e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo em
+formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisito: O2
+(<code>exemplos/o2-eventos-para-participante</code>, commit
+<code>feat: Add events listing and details for participants</code>). O
+patch traz os 2 commits (O2 + P2); aqui só o do P2. O O2 cria
+<code>app/Controllers/EventsController.php</code>,
+<code>app/views/events/show.phtml</code>, as rotas
+<code>events.index</code>/<code>events.show</code> e os testes de
+Participante que este cenário estende (guia:
+<code>sbs/o2-sbs.md</code>).</p>
+<p>Ordem = fluxo da requisição: model -&gt; rota -&gt; controller -&gt;
+view -&gt; testes. Schema não muda (<code>event_user</code> com
+<code>UNIQUE (event_id, user_id)</code> já existe). Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>app/Models/Enrollment.php</code></li>
+<li><code>app/Models/User.php</code></li>
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/EnrollmentsController.php</code> (novo)</li>
+<li><code>app/views/events/show.phtml</code></li>
+<li><code>tests/Unit/Models/Events/EnrollmentTest.php</code></li>
+<li><code>tests/Unit/Models/Users/UserTest.php</code></li>
+<li><code>tests/Integration/Controllers/EnrollmentsControllerTest.php</code>
+(novo)</li>
+<li><code>tests/Integration/Controllers/EventsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/ParticipantEventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/events/BaseParticipantEventsCest.php</code></li>
+<li><code>tests/Acceptance/events/ParticipantEnrollCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: <code>./run composer dump-autoload</code>, suíte,
+<code>./run phpcs</code>.</p>
+<h2 id="1-appmodelsenrollmentphp">1.
+<code>app/Models/Enrollment.php</code></h2>
+<p>a) Import, depois de
+<code>use Core\Database\ActiveRecord\Model;</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Validations<span class="ot">;</span></span></code></pre></div>
+<p>b) Depois de
+<code>protected static array $columns = ['event_id', 'user_id'];</code>
+e antes de <code>public function event(): BelongsTo</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> validates()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span>Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;event_id&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">||</span> <span class="op">!</span>Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;user_id&#39;</span><span class="ot">,</span> <span class="va">$this</span>)) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span>Validations::uniqueness([<span class="st">&#39;event_id&#39;</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span>]<span class="ot">,</span> <span class="va">$this</span>)) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;base&#39;</span><span class="ot">,</span> <span class="st">&#39;você já está inscrito neste evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;validatesAvailableSpots()<span class="ot">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">     * Só ao criar: o Evento precisa existir e ter vaga (availableSpots() &gt; 0).</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> validatesAvailableSpots()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="va">$this</span>-&gt;newRecord()) {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findById((<span class="dt">int</span>) <span class="va">$this</span>-&gt;event_id)<span class="ot">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;event_id&#39;</span><span class="ot">,</span> <span class="st">&#39;evento não encontrado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">elseif</span> (<span class="va">$event</span>-&gt;availableSpots() <span class="op">&lt;=</span> <span class="dv">0</span>) {</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;addError(<span class="st">&#39;base&#39;</span><span class="ot">,</span> <span class="st">&#39;não há vagas neste evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Regra de negócio mora no model. <code>save()</code> chama
+<code>isValid()</code> -&gt; <code>validates()</code>; populate, testes
+e controller passam pela mesma regra.</li>
+<li><code>uniqueness</code> aceita array: checa o par
+<code>event_id</code> + <code>user_id</code>. Vira mensagem pro usuário
+em vez de <code>PDOException</code> (500) do <code>UNIQUE</code>.</li>
+<li><code>uniqueness</code> grava erro em
+<code>event_id</code>/<code>user_id</code> ("já existe um registro...");
+a flash lê <code>base</code>, por isso o
+<code>addError('base', ...)</code>.</li>
+<li>Vagas só em <code>newRecord()</code>: depois de gravada, a própria
+Inscrição já conta em <code>availableSpots()</code>.</li>
+<li><code>Event</code> está no mesmo namespace
+(<code>App\Models</code>): sem <code>use</code>.</li>
+</ul>
+<p>Armadilha: corrida do mesmo usuário (dois POSTs juntos) passa os dois
+pela validação; o <code>UNIQUE</code> lança <code>PDOException</code> no
+segundo. Se pedirem, <code>try/catch (PDOException)</code> +
+<code>addError('base', ...)</code> como no <code>safeDestroy()</code> de
+<code>Event</code>.</p>
+<h2 id="2-appmodelsuserphp">2. <code>app/Models/User.php</code></h2>
+<p>Depois do método <code>events()</code> (Eventos criados pelo
+admin):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Inscrições deste usuário (Participante) em Eventos.</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> enrollments()<span class="ot">:</span> HasMany</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;hasMany(Enrollment::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> isEnrolledIn(Event <span class="va">$event</span>)<span class="ot">:</span> <span class="dt">bool</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$this</span>-&gt;newRecord() <span class="op">||</span> <span class="va">$event</span>-&gt;newRecord()) {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> Enrollment::exists([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>hasMany</code> = relação 1xN do framework, cópia de
+<code>events()</code>. <code>events()</code> continua sendo "criados
+por"; não reaproveite.</li>
+<li><code>isEnrolledIn</code> deixa a view perguntar "inscrito?" sem SQL
+fora do model (view burra).</li>
+<li><code>exists([...])</code> com duas condições usa
+<code>where</code>, que junta várias com <code>AND</code>.</li>
+<li>Guarda de <code>newRecord()</code>: sem <code>id</code> não há o que
+consultar.</li>
+</ul>
+<h2 id="3-configroutesphp">3. <code>config/routes.php</code></h2>
+<p>a) Import, depois de
+<code>use App\Controllers\DashboardController;</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Controllers\EnrollmentsController<span class="ot">;</span></span></code></pre></div>
+<p>b) No grupo <code>auth</code>, depois de <code>events.show</code> e
+antes do grupo <code>admin</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    Route::get(<span class="st">&#39;/events/{id}&#39;</span><span class="ot">,</span> [EventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;show&#39;</span>])-&gt;name(<span class="st">&#39;events.show&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Inscrição do usuário logado no Evento.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    Route::post(<span class="st">&#39;/events/{id}/enrollments&#39;</span><span class="ot">,</span> [EnrollmentsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;create&#39;</span>])</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        -&gt;name(<span class="st">&#39;events.enrollments.create&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Grupo <code>auth</code>: middleware barra sem sessão (302
+<code>/login</code>) antes do controller.</li>
+<li>RESTful: recurso aninhado <code>enrollments</code> +
+<code>create</code> (P3 faz o <code>destroy</code>).
+<code>/events/{id}/enroll</code> funciona, mas é verbo na URI e a
+rubrica critica.</li>
+<li><code>POST</code> porque cria recurso; sem
+<code>_method</code>.</li>
+</ul>
+<h2 id="4-appcontrollersenrollmentscontrollerphp-novo">4.
+<code>app/Controllers/EnrollmentsController.php</code> (novo)</h2>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> App\Controllers<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Enrollment<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Controllers\Controller<span class="ot">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Core\Http\Request<span class="ot">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\FlashMessage<span class="ot">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"> * Inscrição do usuário logado em um Evento (área do Participante).</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EnrollmentsController <span class="kw">extends</span> Controller</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> create(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> Event::findById((<span class="dt">int</span>) <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$event</span> <span class="op">===</span> <span class="kw">null</span>) {</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="st">&#39;Evento não encontrado!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;events.index&#39;</span>))<span class="ot">;</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span><span class="ot">;</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$enrollment</span> <span class="op">=</span> <span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;currentUser()<span class="ot">?</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="va">$enrollment</span>-&gt;save()) {</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>            FlashMessage::success(<span class="st">&#39;Inscrição realizada com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>            FlashMessage::danger(<span class="va">$enrollment</span>-&gt;errors(<span class="st">&#39;base&#39;</span>) <span class="op">??</span> <span class="st">&#39;Não foi possível realizar a inscrição!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;redirectTo(route(<span class="st">&#39;events.show&#39;</span><span class="ot">,</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>{id}</code> da rota chega por
+<code>$request-&gt;getParam('id')</code>.</li>
+<li><code>user_id</code> sempre de <code>currentUser()</code>, nunca do
+form: senão o usuário inscreve outro (mass assignment). Há teste para
+isso.</li>
+<li>Controller só pergunta ao model (<code>save()</code>) e escolhe a
+flash; motivo da recusa vem de <code>errors('base')</code>.</li>
+<li>PRG: sempre <code>redirectTo</code> para <code>events.show</code>
+(O2), nunca <code>render</code> depois de POST.</li>
+<li>Classe nova: namespace = pasta (PSR-4);
+<code>./run composer dump-autoload</code> se não achar.</li>
+</ul>
+<p>Armadilha: <code>redirectTo</code> sem <code>return</code> no "não
+encontrado": no teste de controller ele só ecoa <code>Location:</code> e
+o método seguiria.</p>
+<h2 id="5-appviewseventsshowphtml">5.
+<code>app/views/events/show.phtml</code></h2>
+<p>a) Dentro do <code>&lt;dd&gt;</code> de vagas, depois de
+<code>(&lt;?= $event-&gt;availableSpots() ?&gt; disponíveis)</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">if</span> (<span class="va">$event</span>-&gt;availableSpots() <span class="op">===</span> <span class="dv">0</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>span <span class="kw">class</span><span class="op">=</span><span class="st">&quot;badge text-bg-danger&quot;</span><span class="op">&gt;</span>Lotado<span class="op">&lt;/</span>span<span class="op">&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>b) Depois do <code>&lt;/dl&gt;</code>, antes do link "Voltar":</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="cf">if</span> (<span class="va">$this</span>-&gt;currentUser()<span class="ot">?</span>-&gt;isEnrolledIn(<span class="va">$event</span>)) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>p <span class="kw">class</span><span class="op">=</span><span class="st">&quot;text-success&quot;</span><span class="op">&gt;</span>Você está inscrito neste evento<span class="op">.&lt;/</span>p<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">else</span> <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>form <span class="kw">class</span><span class="op">=</span><span class="st">&quot;d-inline&quot;</span> action<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;events.enrollments.create&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span> method<span class="op">=</span><span class="st">&quot;post&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>button type<span class="op">=</span><span class="st">&quot;submit&quot;</span> <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span><span class="op">&gt;</span>Inscrever<span class="op">-</span>se<span class="op">&lt;/</span>button<span class="op">&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>form<span class="op">&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-secondary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;events.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Voltar<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>View só exibe; a pergunta "inscrito?" é do model
+(<code>isEnrolledIn</code>).</li>
+<li><code>route('events.enrollments.create', [...])</code>: URL pelo
+nome da rota, não à mão.</li>
+<li>Botão aparece mesmo lotado: quem decide é o model, a flash explica
+("não há vagas"). Facilita P9 (lista de espera).</li>
+<li>Form <code>method="post"</code>: link <code>GET</code> não casa a
+rota.</li>
+</ul>
+<h2 id="6-testsunitmodelseventsenrollmenttestphp">6.
+<code>tests/Unit/Models/Events/EnrollmentTest.php</code></h2>
+<p>Troque
+<code>test_the_same_participant_cannot_enroll_twice_in_an_event</code>
+(antes esperava <code>PDOException</code>) e acrescente os testes
+abaixo. <code>User</code>, <code>PDOException</code> já estão
+importados.</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_the_same_participant_cannot_enroll_twice_in_an_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$params</span> <span class="op">=</span> [<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue((<span class="kw">new</span> Enrollment(<span class="va">$params</span>))-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$duplicate</span> <span class="op">=</span> <span class="kw">new</span> Enrollment(<span class="va">$params</span>)<span class="ot">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$duplicate</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;você já está inscrito neste evento!&#39;</span><span class="ot">,</span> <span class="va">$duplicate</span>-&gt;errors(<span class="st">&#39;base&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Enrollment::all())<span class="ot">;</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_the_unique_index_still_blocks_duplicates_without_validation()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$params</span> <span class="op">=</span> [<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]<span class="ot">;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment(<span class="va">$params</span>))-&gt;save()<span class="ot">;</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;expectException(<span class="bu">PDOException</span>::<span class="kw">class</span>)<span class="ot">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$duplicate</span> <span class="op">=</span> <span class="kw">new</span> <span class="kw">class</span> (<span class="va">$params</span>) <span class="kw">extends</span> Enrollment {</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>            <span class="kw">public</span> <span class="kw">function</span> validates()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>            {</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        }<span class="ot">;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$duplicate</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_enrollment_is_rejected_when_the_event_is_full()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;event-&gt;update([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createParticipant(<span class="st">&#39;outro@example.com&#39;</span>)<span class="ot">;</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$enrollment</span> <span class="op">=</span> <span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id])<span class="ot">;</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$enrollment</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;não há vagas neste evento!&#39;</span><span class="ot">,</span> <span class="va">$enrollment</span>-&gt;errors(<span class="st">&#39;base&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Enrollment::all())<span class="ot">;</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_enrollment_takes_the_last_available_spot()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;event-&gt;update([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$enrollment</span> <span class="op">=</span> <span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id])<span class="ot">;</span></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$enrollment</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">0</span><span class="ot">,</span> <span class="va">$this</span>-&gt;event-&gt;availableSpots())<span class="ot">;</span></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_enrollment_requires_an_existing_event_and_a_user()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>        <span class="va">$unknownEvent</span> <span class="op">=</span> <span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="dv">9999</span><span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id])<span class="ot">;</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>        <span class="va">$withoutUser</span> <span class="op">=</span> <span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="kw">null</span>])<span class="ot">;</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$unknownEvent</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$unknownEvent</span>-&gt;errors(<span class="st">&#39;event_id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$withoutUser</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertNotNull(<span class="va">$withoutUser</span>-&gt;errors(<span class="st">&#39;user_id&#39;</span>))<span class="ot">;</span></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Enrollment::all())<span class="ot">;</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createParticipant(<span class="dt">string</span> <span class="va">$email</span>)<span class="ot">:</span> User</span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="st">&#39;Outro Participante&#39;</span><span class="ot">,</span></span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Com a validação, a duplicata não chega ao banco: <code>save()</code>
+falso, não exceção. O teste antigo passa a falhar; atualize.</li>
+<li>Classe anônima com <code>validates()</code> vazio prova que o
+<code>UNIQUE</code> do schema continua como última barreira.</li>
+<li><code>update(['capacity' =&gt; 1])</code> grava sem validar: monta o
+lotado rápido.</li>
+<li>Cobertura: duplicata, lotado, última vaga, Evento inexistente, sem
+<code>user_id</code>.</li>
+</ul>
+<h2 id="7-testsunitmodelsusersusertestphp">7.
+<code>tests/Unit/Models/Users/UserTest.php</code></h2>
+<p>a) Imports, antes de <code>use App\Models\User;</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Enrollment<span class="ot">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span></code></pre></div>
+<p>b) Teste novo, no fim da classe (depois de
+<code>test_update_should_not_change_the_password</code>):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_enrollments_and_is_enrolled_in_should_reflect_the_user_enrollments()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event([</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;user-&gt;id<span class="ot">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina&#39;</span><span class="ot">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&#39;Descrição&#39;</span><span class="ot">,</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;online&#39;</span><span class="ot">,</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; <span class="st">&#39;students&#39;</span><span class="ot">,</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Online&#39;</span><span class="ot">,</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">5</span><span class="ot">,</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;user2-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> <span class="va">$this</span>-&gt;user2-&gt;enrollments()-&gt;get())<span class="ot">;</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> <span class="va">$this</span>-&gt;user-&gt;enrollments()-&gt;get())<span class="ot">;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;user2-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;user-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;user2-&gt;isEnrolledIn(<span class="kw">new</span> Event()))<span class="ot">;</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: método novo no model = teste unitário.
+<code>enrollments()-&gt;get()</code> executa o <code>HasMany</code>;
+<code>new Event()</code> cobre a guarda de <code>newRecord()</code>.</p>
+<h2
+id="8-testsintegrationcontrollersenrollmentscontrollertestphp-novo">8.
+<code>tests/Integration/Controllers/EnrollmentsControllerTest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Integration\Controllers<span class="ot">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Enrollment<span class="ot">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Event<span class="ot">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Lib\Authentication\Auth<span class="ot">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co"> * Inscrição do Participante logado (POST /events/{id}/enrollments).</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EnrollmentsControllerTest <span class="kw">extends</span> ControllerTestCase</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">CONTROLLER</span> <span class="op">=</span> <span class="st">&#39;App\Controllers\EnrollmentsController&#39;</span><span class="ot">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> User <span class="va">$admin</span><span class="ot">;</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> User <span class="va">$participant</span><span class="ot">;</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> setUp()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::setUp()<span class="ot">;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>] <span class="op">=</span> []<span class="ot">;</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;admin <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Administrador&#39;</span><span class="ot">,</span> <span class="st">&#39;admin@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;admin&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;participant <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Participante&#39;</span><span class="ot">,</span> <span class="st">&#39;participante@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;participant&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>        Auth::login(<span class="va">$this</span>-&gt;participant)<span class="ot">;</span></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> tearDown()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>        <span class="kw">unset</span>(<span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>        <span class="kw">parent</span>::tearDown()<span class="ot">;</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_enrolls_the_logged_user()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">2</span>])<span class="ot">;</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Inscrição realizada com sucesso!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;success&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;participant-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="dv">1</span><span class="ot">,</span> <span class="va">$event</span>-&gt;availableSpots())<span class="ot">;</span></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_ignores_user_id_sent_by_the_form()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(</span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;admin-&gt;id]</span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;participant-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;admin-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_twice_keeps_a_single_enrollment()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(</span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;você já está inscrito neste evento!&#39;</span><span class="ot">,</span></span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a>            <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>]</span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> Enrollment::where([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_in_a_full_event_is_rejected()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Outro&#39;</span><span class="ot">,</span> <span class="st">&#39;outro@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;participant&#39;</span>)<span class="ot">;</span></span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&quot;Location: /events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(</span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;não há vagas neste evento!&#39;</span><span class="ot">,</span></span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a>            <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>]</span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;participant-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_unknown_event_redirects_to_index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="dv">9999</span>])<span class="ot">;</span></span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame(<span class="st">&#39;Location: /events&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;Evento não encontrado!&#39;</span><span class="ot">,</span> <span class="va">$_SESSION</span>[<span class="st">&#39;flash&#39;</span>][<span class="st">&#39;danger&#39;</span>])<span class="ot">;</span></span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Enrollment::all())<span class="ot">;</span></span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createUser(<span class="dt">string</span> <span class="va">$name</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$role</span>)<span class="ot">:</span> User</span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="kw">new</span> User([</span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;name&#39;</span> =&gt; <span class="va">$name</span><span class="ot">,</span></span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;email&#39;</span> =&gt; <span class="va">$email</span><span class="ot">,</span></span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;password_confirmation&#39;</span> =&gt; <span class="st">&#39;123456&#39;</span><span class="ot">,</span></span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;role&#39;</span> =&gt; <span class="va">$role</span><span class="ot">,</span></span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a>        ])<span class="ot">;</span></span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $overrides</span></span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> createEvent(<span class="dt">array</span> <span class="va">$overrides</span> <span class="op">=</span> [])<span class="ot">:</span> Event</span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="fu">array_merge</span>([</span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;admin-&gt;id<span class="ot">,</span></span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina de PHP&#39;</span><span class="ot">,</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;description&#39;</span> =&gt; <span class="st">&#39;Oficina prática.&#39;</span><span class="ot">,</span></span>
+<span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;kind&#39;</span> =&gt; <span class="st">&#39;workshop&#39;</span><span class="ot">,</span></span>
+<span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;modality&#39;</span> =&gt; <span class="st">&#39;online&#39;</span><span class="ot">,</span></span>
+<span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;audience&#39;</span> =&gt; <span class="st">&#39;students&#39;</span><span class="ot">,</span></span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;starts_on&#39;</span> =&gt; <span class="fu">date</span>(<span class="st">&#39;Y-m-d&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span></span>
+<span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Laboratório B203&#39;</span><span class="ot">,</span></span>
+<span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">20</span><span class="ot">,</span></span>
+<span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">,</span> <span class="va">$overrides</span>))<span class="ot">;</span></span>
+<span id="cb12-132"><a href="#cb12-132" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span>-&gt;save()<span class="ot">;</span></span>
+<span id="cb12-133"><a href="#cb12-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-134"><a href="#cb12-134" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$event</span><span class="ot">;</span></span>
+<span id="cb12-135"><a href="#cb12-135" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-136"><a href="#cb12-136" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>ControllerTestCase</code> chama a ação direto;
+<code>redirectTo</code> vira o texto <code>Location: ...</code>
+devolvido. Compara exato.</li>
+<li><code>Auth::login($this-&gt;participant)</code> no
+<code>setUp</code>: <code>currentUser()</code> precisa de sessão.</li>
+<li>Teste do <code>user_id</code> no form prova a allowlist (só
+<code>currentUser()</code>).</li>
+</ul>
+<p>Armadilha: zerar <code>$_SESSION['flash'] = []</code> no meio de um
+teste faz o PHPStan inferir <code>array{}</code> e acusar
+<code>offsetAccess.notFound</code> depois. Zere só no
+<code>setUp</code>.</p>
+<h2 id="9-testsintegrationcontrollerseventscontrollertestphp">9.
+<code>tests/Integration/Controllers/EventsControllerTest.php</code></h2>
+<p>Teste do O2 (área do Participante,
+<code>App\Controllers\EventsController</code>). Depois de
+<code>test_show_renders_event_without_admin_actions</code>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_offers_enroll_button_when_not_enrolled()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;action=</span><span class="sc">\&quot;</span><span class="st">/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">/enrollments</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Inscrever-se&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Você está inscrito neste evento.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_tells_when_already_enrolled()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent()<span class="ot">;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Você está inscrito neste evento.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Inscrever-se&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_show_marks_full_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$full</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">1</span>])<span class="ot">;</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$full</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;admin-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$open</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;capacity&#39;</span> =&gt; <span class="dv">2</span>])<span class="ot">;</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>        <span class="va">$fullPage</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$full</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>        <span class="va">$openPage</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;show&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;id&#39;</span> =&gt; <span class="va">$open</span>-&gt;id])<span class="ot">;</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Lotado&#39;</span><span class="ot">,</span> <span class="va">$fullPage</span>)<span class="ot">;</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Lotado&#39;</span><span class="ot">,</span> <span class="va">$openPage</span>)<span class="ot">;</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: prova os três ramos da view (botão, "inscrito", badge
+"Lotado") lendo o HTML renderizado.</p>
+<h2 id="10-testsintegrationaccessparticipanteventsaccesstestphp">10.
+<code>tests/Integration/Access/ParticipantEventsAccessTest.php</code></h2>
+<p>a) Import, antes de <code>use App\Models\Event;</code>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Enrollment<span class="ot">;</span></span></code></pre></div>
+<p>b) No fim da classe, depois de
+<code>test_unknown_event_should_redirect_participant_to_events</code>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_enroll_should_redirect_to_login_without_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newClient()-&gt;post(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/enrollments&quot;</span>)<span class="ot">;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/login&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Enrollment::all())<span class="ot">;</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_participant_should_enroll_and_return_to_the_event()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;participant)-&gt;post(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">/enrollments&quot;</span>)<span class="ot">;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;event-&gt;id}<span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$this</span>-&gt;participant-&gt;isEnrolledIn(<span class="va">$this</span>-&gt;event))<span class="ot">;</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: teste de acesso sobe o servidor e bate por HTTP (Guzzle).
+Prova o middleware <code>auth</code> (sem sessão -&gt;
+<code>/login</code>) e a rota real.</p>
+<h2 id="11-testsacceptanceeventsbaseparticipanteventscestphp">11.
+<code>tests/Acceptance/events/BaseParticipantEventsCest.php</code></h2>
+<p>a) Import, depois de <code>namespace</code>:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\User<span class="ot">;</span></span></code></pre></div>
+<p>b) Depois do <code>_before</code>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Troca a sessão para um Participante novo, sem nenhuma Inscrição.</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">function</span> loginAsNewParticipant(AcceptanceTester <span class="va">$page</span><span class="ot">,</span> <span class="dt">string</span> <span class="va">$email</span>)<span class="ot">:</span> User</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Participante Novo&#39;</span><span class="ot">,</span> <span class="va">$email</span><span class="ot">,</span> <span class="st">&#39;participant&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/logout&#39;</span>)<span class="ot">;</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;login(<span class="va">$email</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PASSWORD</span>)<span class="ot">;</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$user</span><span class="ot">;</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: o Participante 1 do seed já está inscrito no Evento 01
+(lotado) e receberia "já está inscrito". Para ver "não há vagas" precisa
+de alguém sem Inscrição. <code>createUser</code> vem do
+<code>BaseEventsCest</code>.</p>
+<h2 id="12-testsacceptanceeventsparticipantenrollcestphp-novo">12.
+<code>tests/Acceptance/events/ParticipantEnrollCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\events<span class="ot">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> App\Models\Enrollment<span class="ot">;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\<span class="fu">Assert</span><span class="ot">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ParticipantEnrollCest <span class="kw">extends</span> BaseParticipantEventsCest</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> enrollInEventWithSpots(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">2</span>]<span class="ot">;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Inscrição do Participante em Evento com vagas&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;0/22&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Inscrever-se&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Inscrição realizada com sucesso!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;1/22&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Você está inscrito neste evento.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Inscrever-se&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertTrue(<span class="va">$this</span>-&gt;participants[<span class="dv">1</span>]-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> alreadyEnrolledParticipantSeesNoButton(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Participante já inscrito não vê o botão de inscrição&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;events[<span class="dv">3</span>]-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Você está inscrito neste evento.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Inscrever-se&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> enrollInFullEventIsRejected(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="va">$this</span>-&gt;events[<span class="dv">1</span>]<span class="ot">;</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$user</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loginAsNewParticipant(<span class="va">$page</span><span class="ot">,</span> <span class="st">&#39;novo@example.com&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Inscrição recusada em Evento lotado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;3/3&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Lotado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-48"><a href="#cb18-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Inscrever-se&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-49"><a href="#cb18-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-50"><a href="#cb18-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/events/</span>{<span class="va">$event</span>-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb18-51"><a href="#cb18-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;não há vagas neste evento!&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-52"><a href="#cb18-52" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;3/3&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-53"><a href="#cb18-53" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertFalse(<span class="va">$user</span>-&gt;isEnrolledIn(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb18-54"><a href="#cb18-54" aria-hidden="true" tabindex="-1"></a>        <span class="fu">Assert</span>::assertCount(<span class="dv">3</span><span class="ot">,</span> Enrollment::where([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$event</span>-&gt;id]))<span class="ot">;</span></span>
+<span id="cb18-55"><a href="#cb18-55" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-56"><a href="#cb18-56" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê: navegador real (Selenium). Três caminhos: com vaga, já
+inscrito (Evento 03 do seed), lotado (Evento 01, 3/3).</p>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> composer dump-autoload <span class="at">-o</span> <span class="at">--strict-psr</span>   <span class="co"># classe nova</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EnrollmentTest.php</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/EnrollmentsControllerTest.php</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> db:populate       <span class="co"># populate passa pela validação nova</span></span></code></pre></div>
+<p>Schema não muda. No navegador: <code>fernanda@example.com</code> /
+<code>123456</code>, "Eventos", "Ver" no Evento 2, "Inscrever-se" -&gt;
+"Inscrição realizada com sucesso!". De novo: botão some, "Você está
+inscrito". Evento 1 (3/3, "Lotado") -&gt; "não há vagas neste evento!".
+<code>user@example.com</code> já está no 1 e no 2 (veria "já está
+inscrito").</p>
+<p>Commit (inglês):
+<code>feat: Allow participants to enroll in events</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>user_id</code> vindo do form: nunca; sempre
+<code>currentUser()-&gt;id</code>.</li>
+<li><code>EnrollmentTest</code> antigo espera <code>PDOException</code>
+na duplicata; com a validação passa a falhar. Atualize.</li>
+<li><code>uniqueness</code> marca erro em
+<code>event_id</code>/<code>user_id</code>; flash lê <code>base</code>:
+<code>addError('base', ...)</code> explícito.</li>
+<li>Vagas validadas na edição contam a própria Inscrição: só em
+<code>newRecord()</code>.</li>
+<li>Concorrência: vaga a mais por corrida é aceitável, saiba dizer;
+duplicata do mesmo usuário em corrida -&gt; <code>PDOException</code> do
+<code>UNIQUE</code> (trate como <code>safeDestroy</code>, se
+pedirem).</li>
+<li><code>enrollmentsCount()</code>/<code>safeDestroy()</code> já contam
+Inscrições: Evento com inscritos continua não removível.</li>
+<li>Verbo na URI (<code>/enroll</code>) funciona, mas rubrica cobra
+RESTful (<code>enrollments</code> + <code>create</code>).</li>
+<li><code>redirectTo</code> sem <code>return</code> no "não encontrado"
+segue executando no teste.</li>
+<li>Admin também consegue se inscrever (rota só <code>auth</code>);
+decida com o professor.</li>
+</ul>
+</body>
+</html>

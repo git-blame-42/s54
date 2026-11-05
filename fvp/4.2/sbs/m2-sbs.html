@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>m2-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="m2-passo-a-passo-validação-nova-em-libvalidationsphp">M2 passo a
+passo: validação nova em <code>lib/Validations.php</code></h1>
+<p>Pedido típico: "o título do Evento não pode passar de 100 caracteres;
+crie a validação no <code>Validations</code> do framework, use no model
+e teste" (<code>maxLength</code>). Chance: alta. Tempo: 15-20 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/m2-validacao-maxlength/</code>
+(patch, bundle e árvore <code>projeto/</code>). Sem pré-requisito: parte
+da <code>main</code>.</p>
+<p>Ordem = fluxo da validação: framework (<code>lib/</code>) -&gt; model
+-&gt; testes. Schema, controller e views não mudam. Na prova,
+prioridade: funcionar no navegador, depois testar, depois
+<code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Validations.php</code></li>
+<li><code>app/Models/Event.php</code></li>
+<li><code>tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</code></li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code></li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>. Sem <code>db:populate</code>
+(schema igual).</p>
+<h2 id="1-libvalidationsphp">1. <code>lib/Validations.php</code></h2>
+<p>Método novo logo depois de <code>integerMin</code> (linhas ~78-94),
+antes do docblock de <code>validDate</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="ot">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">     * O texto deve ter no máximo $max caracteres (conta caracteres, não bytes: &quot;ç&quot; vale 1).</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> maxLength(<span class="va">$attribute</span><span class="ot">,</span> <span class="va">$obj</span><span class="ot">,</span> <span class="dt">int</span> <span class="va">$max</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$value</span> <span class="op">=</span> <span class="va">$obj</span>-&gt;<span class="va">$attribute</span><span class="ot">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="fu">is_scalar</span>(<span class="va">$value</span>) <span class="op">&amp;&amp;</span> <span class="fu">mb_strlen</span>((<span class="dt">string</span>) <span class="va">$value</span>) <span class="op">&gt;</span> <span class="va">$max</span>) {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>            <span class="va">$obj</span>-&gt;addError(<span class="va">$attribute</span><span class="ot">,</span> <span class="st">&quot;deve ter no máximo </span>{<span class="va">$max</span>}<span class="st"> caracteres!&quot;</span>)<span class="ot">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">false</span><span class="ot">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">true</span><span class="ot">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>lib/Validations.php</code> é a caixa de regras reutilizáveis
+do framework. Formato fixo:
+<code>estático ($attribute, $obj, ...)</code>, lê
+<code>$obj-&gt;$attribute</code>, chama <code>addError</code> e devolve
+<code>bool</code>. Copie <code>integerMin</code>.</li>
+<li>Devolver <code>bool</code> é o que permite encadear com
+<code>&amp;&amp;</code> no model.</li>
+<li><code>mb_strlen</code>, não <code>strlen</code>:
+<code>strlen('ção')</code> = 5 bytes; <code>mb_strlen</code> = 3. Com
+<code>strlen</code>, título acentuado seria barrado antes dos 100.</li>
+<li><code>is_scalar</code>: array atribuído direto ao model não estoura
+<code>Array to string conversion</code> (o <code>ErrorsHandler</code>
+vira 500). Pelo form (<code>event[title][]=x</code>) o array nem chega:
+o <code>fill()</code> do controller já troca valor não escalar por
+<code>null</code>.</li>
+<li>Mensagem pt-BR terminada em <code>!</code>, como as demais.</li>
+<li><code>int $max</code> tipado: <code>lib/</code> fica fora do
+<code>phpstan</code>, mas o <code>phpcs</code> roda.</li>
+</ul>
+<h2 id="2-appmodelseventphp">2. <code>app/Models/Event.php</code></h2>
+<p><code>validates()</code>, primeira linha (linha ~62). Trocar:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="va">$this</span>)<span class="ot">;</span></span></code></pre></div>
+<p>por:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="va">$this</span>) <span class="op">&amp;&amp;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>            Validations::maxLength(<span class="st">&#39;title&#39;</span><span class="ot">,</span> <span class="va">$this</span><span class="ot">,</span> <span class="dv">100</span>)<span class="ot">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        Validations::<span class="cn">notEmpty</span>(<span class="st">&#39;description&#39;</span><span class="ot">,</span> <span class="va">$this</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Validação mora no model, nunca no controller (recusado na prova).
+<code>save()</code> chama <code>validates()</code> e só grava sem
+erros.</li>
+<li><code>&amp;&amp;</code> = curto-circuito: vazio mostra só "não pode
+ser vazio!". Mesmo encadeamento de <code>kind</code>,
+<code>modality</code>, <code>starts_on</code> logo abaixo.</li>
+<li><code>100</code> literal, como o <code>1</code> de
+<code>integerMin</code>. O <code>VARCHAR(255)</code> do schema fica; a
+regra de negócio é mais estrita.</li>
+<li>Controller/view não mudam: o form já mostra
+<code>$event-&gt;errors('title')</code> via
+<code>$feedback('title')</code>.</li>
+</ul>
+<h2 id="3-testsunitlibvalidationsnumberanddatevalidationstestphp">3.
+<code>tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</code></h2>
+<p>a) <code>setUp</code> (linha ~16), model anônimo ganha coluna de
+texto:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>            <span class="kw">protected</span> <span class="kw">static</span> <span class="dt">array</span> <span class="va">$columns</span> <span class="op">=</span> [<span class="st">&#39;quantity&#39;</span><span class="ot">,</span> <span class="st">&#39;day&#39;</span><span class="ot">,</span> <span class="st">&#39;name&#39;</span>]<span class="ot">;</span></span></code></pre></div>
+<p>b) Testes novos depois de
+<code>test_integer_min_should_reject_non_integers</code> (antes de
+<code>test_valid_date_should_accept_real_dates</code>):</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_max_length_should_accept_texts_up_to_the_maximum()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;abc&#39;</span><span class="ot">,</span> <span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">10</span>)<span class="ot">,</span> <span class="fu">str_repeat</span>(<span class="st">&#39;ç&#39;</span><span class="ot">,</span> <span class="dv">10</span>)] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;model-&gt;name <span class="op">=</span> <span class="va">$value</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertTrue(Validations::maxLength(<span class="st">&#39;name&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="dv">10</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$this</span>-&gt;model-&gt;hasErrors())<span class="ot">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_max_length_should_reject_texts_above_the_maximum()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">foreach</span> ([<span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">11</span>)<span class="ot">,</span> <span class="fu">str_repeat</span>(<span class="st">&#39;ã&#39;</span><span class="ot">,</span> <span class="dv">11</span>)<span class="ot">,</span> <span class="st">&#39;Semana Acadêmica&#39;</span>] <span class="kw">as</span> <span class="va">$value</span>) {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;model-&gt;name <span class="op">=</span> <span class="va">$value</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertFalse(Validations::maxLength(<span class="st">&#39;name&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="dv">10</span>)<span class="ot">,</span> <span class="va">$value</span>)<span class="ot">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter no máximo 10 caracteres!&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model-&gt;errors(<span class="st">&#39;name&#39;</span>))<span class="ot">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_max_length_should_count_characters_not_bytes()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// &quot;ção&quot; tem 3 caracteres e 5 bytes: strlen() daria 5 e rejeitaria.</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;model-&gt;name <span class="op">=</span> <span class="st">&#39;ção&#39;</span><span class="ot">;</span> <span class="co">// @phpstan-ignore-line</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(Validations::maxLength(<span class="st">&#39;name&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="dv">3</span>))<span class="ot">;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(Validations::maxLength(<span class="st">&#39;name&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;model<span class="ot">,</span> <span class="dv">2</span>))<span class="ot">;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Testa a função do framework isolada, sem banco, num model
+anônimo.</li>
+<li>Model só aceita atributo listado em <code>$columns</code>
+(<code>__set</code>). Sem <code>name</code>:
+<code>Property name not found</code>.</li>
+<li><code>// @phpstan-ignore-line</code>: propriedade mágica, o
+<code>phpstan</code> não conhece. Mantenha como nas linhas de
+<code>quantity</code>.</li>
+<li>Três casos: até o limite, acima, caracteres vs bytes.</li>
+</ul>
+<h2 id="4-testsunitmodelseventseventtestphp">4.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Depois do método privado <code>errorsOf()</code> (linha ~128-138),
+antes de <code>test_kind_should_accept_every_enum_value</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_title_with_100_characters_should_be_valid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">str_repeat</span>(<span class="st">&#39;é&#39;</span><span class="ot">,</span> <span class="dv">100</span>)]))<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertTrue(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_title_with_more_than_100_characters_should_be_invalid()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$event</span> <span class="op">=</span> <span class="kw">new</span> Event(<span class="va">$this</span>-&gt;params([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">101</span>)]))<span class="ot">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;isValid())<span class="ot">;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertFalse(<span class="va">$event</span>-&gt;save())<span class="ot">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;deve ter no máximo 100 caracteres!&#39;</span><span class="ot">,</span> <span class="va">$event</span>-&gt;errors(<span class="st">&#39;title&#39;</span>))<span class="ot">;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">1</span><span class="ot">,</span> <span class="va">$this</span>-&gt;errorsOf(<span class="va">$event</span>))<span class="ot">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Prova que o model usa a regra: 100 (acentuado) passa, 101
+falha.</li>
+<li><code>errorsOf()</code> lista campos à mão;
+<code>assertCount(1, ...)</code> garante que só <code>title</code> tem
+erro.</li>
+<li><code>Event::all()</code> vazio: <code>save()</code> não
+gravou.</li>
+</ul>
+<h2 id="5-testsintegrationcontrollersadmineventscontrollertestphp">5.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>Depois de
+<code>test_create_with_invalid_data_renders_form_with_errors_and_values</code>
+(linha ~114-138), antes de
+<code>test_create_without_audience_marks_audience_field</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_create_with_title_above_100_characters_renders_form_with_error()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="fu">str_repeat</span>(<span class="st">&#39;a&#39;</span><span class="ot">,</span> <span class="dv">101</span>)<span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;post(</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;create&#39;</span><span class="ot">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;event&#39;</span> =&gt; <span class="va">$this</span>-&gt;validParams([<span class="st">&#39;title&#39;</span> =&gt; <span class="va">$title</span>])]</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertCount(<span class="dv">0</span><span class="ot">,</span> Event::all())<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Novo Evento\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;&lt;div class=&quot;invalid-feedback&quot;&gt;deve ter no máximo 100 caracteres!&lt;/div&gt;&#39;</span><span class="ot">,</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            <span class="va">$response</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;value=</span><span class="sc">\&quot;</span>{<span class="va">$title</span>}<span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Caminho completo: POST -&gt; <code>FIELDS</code> -&gt; model -&gt;
+<code>validates()</code> falha -&gt; controller renderiza
+<code>new</code> de novo (sem redirect) com o erro.</li>
+<li><code>value="..."</code>: o form devolve o que o usuário
+digitou.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># Unit + Integration (o PHPUnit não roda os Cests)</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser      <span class="co"># Acceptance</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>No navegador: Admin, "Novo Evento", título com 101 letras, Salvar.
+Form volta com "deve ter no máximo 100 caracteres!" sob o título e os
+outros campos preenchidos.</p>
+<p>Commit (inglês):
+<code>feat: Add maxLength validation and limit event title to 100 characters</code>.</p>
+<p>Variantes (receita no README do exemplo): <code>minLength</code>
+(<code>&lt;</code>, mensagem "deve ter no mínimo {$min} caracteres!"),
+<code>integerMax</code> (cópia de <code>integerMin</code> com
+<code>&gt;</code>, "deve ser menor ou igual a {$max}!"),
+<code>format</code> com
+<code>preg_match('/^[\p{L}\p{N} ]+$/u', $value) !== 1</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>strlen</code> conta bytes: use <code>mb_strlen</code>
+(acentos).</li>
+<li><code>null</code>: <code>notEmpty</code> primeiro, por isso o
+<code>&amp;&amp;</code>.</li>
+<li>Mensagem pt-BR terminada em <code>!</code>.</li>
+<li>Validação no controller: recusada (regra de negócio no model).</li>
+<li>Model anônimo do teste sem a coluna <code>name</code>:
+<code>Property name not found</code>. Mantenha o
+<code>// @phpstan-ignore-line</code>.</li>
+<li><code>lib/</code> fora do <code>phpstan</code>: tipe
+<code>int $max</code> mesmo assim.</li>
+<li><code>integerMax</code> tem caso real: <code>capacity</code> &gt;
+2147483647 (<code>INT</code>) passa no <code>integerMin</code> e estoura
+no <code>INSERT</code> (<code>PDOException</code>, 500).</li>
+<li>Caso real na base: título/local &gt; 255 caracteres passa no
+<code>notEmpty</code> e estoura o <code>VARCHAR(255)</code> (MySQL
+estrito, 500). <code>VARCHAR</code> conta caracteres
+(<code>mb_strlen</code>); <code>description</code> é <code>TEXT</code>,
+limite em bytes (<code>strlen</code>).</li>
+</ul>
+</body>
+</html>

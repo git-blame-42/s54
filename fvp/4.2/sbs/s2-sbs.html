@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>s2-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="s2-passo-a-passo-teste-de-acesso-por-http-da-rota-nova">S2 passo
+a passo: teste de acesso por HTTP da rota nova</h1>
+<p>Pedido típico: "escreva o teste de acesso da rota nova
+(<code>/admin/events/full</code>): sem login vai para o login,
+Participante não entra e o Administrador vê a página". Chance: alta.
+Tempo: 15-20 min.</p>
+<p>Exemplo pronto:
+<code>fvp/4.2/exemplos/s2-teste-acesso-rota-nova/</code> (patch, bundle
+e árvore <code>projeto/</code>). Este arquivo é o mesmo conteúdo em
+formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisito: O1 (<code>o1-rota-eventos-lotados</code>) aplicado:
+rota <code>GET /admin/events/full</code>
+(<code>admin.events.full</code>), ação <code>full</code>, view com
+"Eventos lotados". O patch traz dois commits: o 1º é a base O1
+(<code>feat: List full events in admin area</code>); este guia cobre só
+o 2º.</p>
+<p>Ordem: só teste, nenhum código de aplicação muda. Fluxo do teste = o
+da requisição real: cliente HTTP -&gt; Router -&gt; middlewares
+<code>auth</code>/<code>admin</code> -&gt; controller -&gt; resposta. Na
+prova, prioridade: teste passa, depois provar que falha com a rota
+quebrada, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>tests/Integration/Access/EventsAccessTest.php</code></li>
+</ol>
+<p>Depois: <code>./run test tests/Integration/Access</code>,
+<code>./run phpcs</code>.</p>
+<h2 id="1-testsintegrationaccesseventsaccesstestphp">1.
+<code>tests/Integration/Access/EventsAccessTest.php</code></h2>
+<p>Três pontos.</p>
+<p>a) Docblock de <code>eventRoutes()</code> (linha ~81): atualize a
+contagem.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * As 9 rotas admin.events.* (index, paginate, new, full, create, show, edit, update, destroy).</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span></code></pre></div>
+<p>Por quê: só documentação; mantém o comentário honesto.</p>
+<p>b) <code>eventRoutes()</code> (linhas ~85-97), depois de
+<code>'admin.events.new'</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.new&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/new&#39;</span>]<span class="ot">,</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.full&#39;</span> =&gt; [<span class="st">&#39;GET&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events/full&#39;</span>]<span class="ot">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;admin.events.create&#39;</span> =&gt; [<span class="st">&#39;POST&#39;</span><span class="ot">,</span> <span class="st">&#39;/admin/events&#39;</span>]<span class="ot">,</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>eventRoutes()</code> é data provider
+(<code>#[DataProvider('eventRoutes')]</code>) de dois testes que já
+existem:
+<code>test_events_route_should_redirect_to_login_without_session</code>
+(302 -&gt; <code>/login</code>) e
+<code>test_events_route_should_redirect_participant_to_dashboard</code>
+(302 -&gt; <code>/dashboard</code>).</li>
+<li>Uma linha = rota nova coberta nos dois. Prova os middlewares
+<code>auth</code> e <code>admin</code> do grupo em
+<code>config/routes.php</code>.</li>
+<li>Chave = nome da rota; aparece no relatório do PHPUnit.</li>
+<li>GET: não vai em <code>methodOverrideRoutes()</code> (só PUT e
+DELETE).</li>
+</ul>
+<p>c) Teste novo, depois de
+<code>test_admin_should_access_events_index_and_new</code> (linha ~174),
+antes de
+<code>test_admin_should_be_redirected_to_index_when_event_does_not_exist</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Pega a rota declarada depois de &#39;/admin/events/{id}&#39;: o Router casaria &#39;full&#39; como id e</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * responderia 302 com &quot;Evento não encontrado!&quot;. O teste de controller não passa pelo Router.</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_admin_should_access_full_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$client</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;admin)<span class="ot">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$client</span>-&gt;get(<span class="st">&#39;/admin/events/full&#39;</span>)<span class="ot">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">200</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Eventos lotados&#39;</span><span class="ot">,</span> <span class="dt">(string)</span> <span class="va">$response</span>-&gt;getBody())<span class="ot">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Os testes do provider só provam o bloqueio: sem sessão dá 302 para
+<code>/login</code> mesmo com a rota quebrada. Não distinguem.</li>
+<li>Admin com 200 prova que a rota chega na ação certa. É o único que
+pega <code>full</code> declarada depois de
+<code>/admin/events/{id}</code> (Router casaria <code>full</code> como
+<code>{id}</code>).</li>
+<li>Cópia de
+<code>test_admin_should_access_events_index_and_new</code>.</li>
+<li><code>loggedClient($this-&gt;admin)</code>: faz POST
+<code>/login</code> e já confere 302 para <code>/dashboard</code>; o
+cookie de sessão fica no cliente
+(<code>'cookies' =&gt; true</code>).</li>
+<li>Texto "Eventos lotados": 200 sozinho não basta se outra rota
+responder 200 no lugar.</li>
+<li>Por HTTP (Guzzle contra <code>http://web:8080</code>), não pelo
+<code>ControllerTestCase</code>: este chama a ação direto, sem Router
+nem middleware.</li>
+</ul>
+<p>Armadilhas:</p>
+<ul>
+<li><code>newClient</code> usa
+<code>'allow_redirects' =&gt; false</code>: sem isso o Guzzle segue o
+302 e o teste vê 200 da página de destino.</li>
+<li>Schema recriado a cada teste: o Evento do <code>setUp</code> tem
+<code>id</code> 1; <code>eventRoutes()</code> usa <code>/1</code>
+fixo.</li>
+<li>Rota <code>auth</code> sem admin (O2, P2, P7): classe nova em
+<code>tests/Integration/Access/</code> copiando
+<code>DashboardAccessTest</code>. Rota pública: espere 200 sem
+sessão.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> up <span class="at">-d</span>                 <span class="co"># web e php_test de pé (teste usa web:8080)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test                  <span class="co"># suíte toda</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span></code></pre></div>
+<p>Sem mudança de schema: não precisa
+<code>./run db:populate</code>.</p>
+<p>Prova de que o teste testa algo: em <code>config/routes.php</code>,
+mova a linha da rota <code>full</code> para depois de
+<code>Route::get('/admin/events/{id}', ...)</code> e rode
+<code>./run test tests/Integration</code>. Esperado: só
+<code>Admin should access full events</code> falha ("Failed asserting
+that 302 matches expected 200"); os de controller do O1 e os do provider
+continuam verdes. Desfaça.</p>
+<p>No navegador: deslogado, <code>/admin/events/full</code> -&gt;
+<code>/login</code>; como Participante -&gt; <code>/dashboard</code>;
+como admin -&gt; página "Eventos lotados".</p>
+<p>Commit (inglês):
+<code>test: Cover full events route access over HTTP</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li>Testar só "sem sessão": passa com a rota quebrada. O que importa é o
+admin logado com 200.</li>
+<li>Teste passa pelo Router de verdade: pega rota mal posicionada (o
+<code>ControllerTestCase</code> não pega).</li>
+<li><code>loggedClient</code> exige 302 para <code>/dashboard</code>
+após login: se o login mudar (P12, A4 da 4.1), ajuste.</li>
+<li><code>allow_redirects =&gt; false</code> no cliente, senão o 302
+vira 200.</li>
+<li>Confira status e texto da página.</li>
+<li>PUT/DELETE vão também em <code>methodOverrideRoutes()</code>; GET
+não.</li>
+<li><code>id</code> do Evento do <code>setUp</code> é 1 (schema recriado
+por teste).</li>
+<li>Contêiner <code>web</code> de pé (<code>./run up -d</code>) para
+<code>tests/Integration</code>.</li>
+</ul>
+</body>
+</html>

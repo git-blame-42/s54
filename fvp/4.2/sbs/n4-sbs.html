@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>n4-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="n4-passo-a-passo-mudar-per_page-ou-deixar-o-usuário-escolher">N4
+passo a passo: Mudar <code>per_page</code> ou deixar o usuário
+escolher</h1>
+<p>Pedido típico: "mostre 10 Eventos por página; depois, deixe o usuário
+escolher 5, 10 ou 20, sem perder a escolha ao trocar de página". Chance:
+média-alta. Tempo: 5-10 min (mais 10 com a escolha pelo usuário).</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/n4-per-page/</code> (patch,
+bundle e árvore <code>projeto/</code>). O patch faz as duas partes.
+Pré-requisitos: nenhum (parte de <code>main</code>). Schema não
+muda.</p>
+<p>Ordem = fluxo da requisição: model (<code>Paginator</code> e
+<code>Model::paginate</code>) -&gt; controller -&gt; views -&gt; testes.
+Rota não muda. Na prova, prioridade: funcionar no navegador, depois
+testar, depois <code>phpcs</code>.</p>
+<p>Só "10 por página" (sem escolha)? Faça só: passo 3a
+(<code>PER_PAGE = 10</code>), passo 7a e os Cests (8 a 11). Os demais
+passos são da variante <code>?per_page=</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>lib/Paginator.php</code> (variante)</li>
+<li><code>core/Database/ActiveRecord/Model.php</code> (variante)</li>
+<li><code>app/Controllers/Admin/EventsController.php</code></li>
+<li><code>app/views/admin/events/index.phtml</code> (variante)</li>
+<li><code>app/views/paginator/_pages.phtml</code> (variante)</li>
+<li><code>tests/Unit/Models/Events/EventTest.php</code> (variante)</li>
+<li><code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></li>
+<li><code>tests/Acceptance/admin/events/BaseEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/ListEventsCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></li>
+<li><code>tests/Acceptance/admin/events/PaginateEventsCest.php</code></li>
+</ol>
+<h2 id="1-libpaginatorphp">1. <code>lib/Paginator.php</code></h2>
+<p>a) PHPDoc logo acima do
+<code>public function __construct(</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $conditions</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $queryParams parâmetros extras repassados aos links de página (ex.: per_page)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> <span class="bu">__construct</span>(</span></code></pre></div>
+<p>b) Último parâmetro do construtor, depois de <code>$route</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$conditions</span> <span class="op">=</span> []<span class="ot">,</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="ot">?</span><span class="dt">string</span> <span class="va">$route</span> <span class="op">=</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">private</span> <span class="dt">array</span> <span class="va">$queryParams</span> <span class="op">=</span> []</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    ) {</span></code></pre></div>
+<p>c) Getter novo, depois de <code>perPage()</code> (linha ~40):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * Parâmetros que os links de página (`_pages.phtml`) mantêm na query string.</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">     *</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, mixed</span><span class="kw">&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> queryParams()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">$this</span>-&gt;queryParams<span class="ot">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>_pages.phtml</code> é incluído por
+<code>renderPagesNavigation()</code>; lá só existem
+<code>$paginator</code> e <code>$this</code>. O <code>per_page</code>
+tem que viajar <strong>dentro</strong> do <code>Paginator</code>.</li>
+<li><code>queryParams</code> genérico (não um <code>perPage</code> fixo
+no link): mesmo mecanismo do N1 (<code>?kind=</code>).</li>
+<li><code>perPage()</code> já existe; a view usa para marcar a opção
+ativa.</li>
+</ul>
+<h2 id="2-coredatabaseactiverecordmodelphp">2.
+<code>core/Database/ActiveRecord/Model.php</code></h2>
+<p><code>paginate()</code> (linha ~284): parâmetro novo, PHPDoc e
+repasse.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@param</span><span class="co"> </span><span class="cv">array&lt;string</span><span class="co">, mixed&gt; $queryParams parâmetros extras mantidos nos links de página</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> paginate(</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> <span class="va">$page</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">int</span> <span class="va">$per_page</span> <span class="op">=</span> <span class="dv">10</span><span class="ot">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">string</span> <span class="va">$route</span> <span class="op">=</span> <span class="kw">null</span><span class="ot">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">array</span> <span class="va">$queryParams</span> <span class="op">=</span> []</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    )<span class="ot">:</span> Paginator {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">new</span> Paginator(</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>            <span class="kw">class</span><span class="ot">:</span> <span class="kw">static</span>::<span class="kw">class</span><span class="ot">,</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="va">$page</span><span class="ot">,</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>            per_page<span class="ot">:</span> <span class="va">$per_page</span><span class="ot">,</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>            table<span class="ot">:</span> <span class="kw">static</span>::<span class="va">$table</span><span class="ot">,</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            attributes<span class="ot">:</span> <span class="kw">static</span>::<span class="va">$columns</span><span class="ot">,</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="va">$route</span><span class="ot">,</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            queryParams<span class="ot">:</span> <span class="va">$queryParams</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Controller chama <code>Event::paginate()</code>, não o
+<code>Paginator</code>; sem repassar aqui, o <code>queryParams:</code>
+do controller não chega.</li>
+<li><code>@param array&lt;string, mixed&gt;</code>: <code>core/</code>
+entra no <code>phpstan</code> nível 6; <code>array</code> sem tipo -&gt;
+<code>missingType.iterableValue</code>.</li>
+</ul>
+<h2 id="3-appcontrollersadmineventscontrollerphp">3.
+<code>app/Controllers/Admin/EventsController.php</code></h2>
+<p>a) Constantes (linha ~12):</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">PER_PAGE</span> <span class="op">=</span> <span class="dv">10</span><span class="ot">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Valores aceitos em `?per_page=` (lista fechada: 0 daria divisão por zero no Paginator). */</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">const</span> <span class="cn">PER_PAGE_OPTIONS</span> <span class="op">=</span> [<span class="dv">5</span><span class="ot">,</span> <span class="dv">10</span><span class="ot">,</span> <span class="dv">20</span>]<span class="ot">;</span></span></code></pre></div>
+<p>b) <code>index()</code> inteiro:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> index(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$perPage</span> <span class="op">=</span> <span class="va">$this</span>-&gt;perPage(<span class="va">$request</span>)<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> Event::paginate(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>            page<span class="ot">:</span> <span class="fu">max</span>(<span class="dv">1</span><span class="ot">,</span> (<span class="dt">int</span>) <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;page&#39;</span><span class="ot">,</span> <span class="dv">1</span>))<span class="ot">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>            per_page<span class="ot">:</span> <span class="va">$perPage</span><span class="ot">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            route<span class="ot">:</span> <span class="st">&#39;admin.events.paginate&#39;</span><span class="ot">,</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>            queryParams<span class="ot">:</span> <span class="va">$perPage</span> <span class="op">!==</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span> <span class="ot">?</span> [<span class="st">&#39;per_page&#39;</span> =&gt; <span class="va">$perPage</span>] <span class="ot">:</span> []</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$events</span> <span class="op">=</span> <span class="va">$paginator</span>-&gt;registers()<span class="ot">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$perPageOptions</span> <span class="op">=</span> <span class="kw">self</span>::<span class="cn">PER_PAGE_OPTIONS</span><span class="ot">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="st">&#39;Eventos&#39;</span><span class="ot">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;render(<span class="st">&#39;admin/events/index&#39;</span><span class="ot">,</span> <span class="fu">compact</span>(<span class="st">&#39;events&#39;</span><span class="ot">,</span> <span class="st">&#39;paginator&#39;</span><span class="ot">,</span> <span class="st">&#39;perPageOptions&#39;</span><span class="ot">,</span> <span class="st">&#39;title&#39;</span>))<span class="ot">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>c) Método privado novo, antes de <code>findEvent()</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">     * `?per_page=` só vale se estiver na lista fechada; qualquer outro valor (0, texto, array) usa o padrão.</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> perPage(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">int</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$perPage</span> <span class="op">=</span> <span class="va">$request</span>-&gt;getParam(<span class="st">&#39;per_page&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="fu">is_scalar</span>(<span class="va">$perPage</span>) <span class="op">||</span> <span class="op">!</span><span class="fu">ctype_digit</span>((<span class="dt">string</span>) <span class="va">$perPage</span>)) {</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span><span class="ot">;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">in_array</span>((<span class="dt">int</span>) <span class="va">$perPage</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE_OPTIONS</span><span class="ot">,</span> <span class="kw">true</span>) <span class="ot">?</span> (<span class="dt">int</span>) <span class="va">$perPage</span> <span class="ot">:</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span><span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Lista fechada: <code>0</code> dá divisão por zero em
+<code>Paginator::loadTotals</code>
+(<code>ceil($total / $this-&gt;per_page)</code>); valor enorme devolve a
+tabela inteira. Nunca o valor cru.</li>
+<li><code>is_scalar</code> + <code>ctype_digit</code> antes do cast:
+<code>?per_page[]=5</code> é array e <code>(int) 'abc'</code> daria 0.
+(Versão curta do catálogo, também segura:
+<code>(int) getParam('per_page', self::PER_PAGE)</code> +
+<code>in_array(..., [5, 10, 20], true)</code>.)</li>
+<li><code>per_page</code> nos links só quando difere do padrão: URLs
+antigas (<code>/admin/events/page/2</code>) não mudam.</li>
+<li><code>$perPageOptions</code> via <code>compact</code>: view não lê
+constante privada.</li>
+</ul>
+<h2 id="4-appviewsadmineventsindexphtml">4.
+<code>app/views/admin/events/index.phtml</code></h2>
+<p>Depois do <code>&lt;/table&gt;</code>, antes de
+<code>&lt;?php $paginator-&gt;renderPagesNavigation(); ?&gt;</code>
+(linha ~40):</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>table<span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>div <span class="kw">class</span><span class="op">=</span><span class="st">&quot;per-page mb-2&quot;</span><span class="op">&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        Por página<span class="ot">:</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (<span class="va">$perPageOptions</span> <span class="kw">as</span> <span class="va">$option</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-secondary &lt;?= </span><span class="va">$paginator</span>-&gt;perPage<span class="st">() === </span><span class="va">$option</span><span class="st"> ? &#39;active&#39; : &#39;&#39; ?&gt;&quot;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>               href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;admin.events.index&#39;, [&#39;per_page&#39; =&gt; </span><span class="va">$option</span><span class="st">]) ?&gt;&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$option</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>div<span class="op">&gt;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span><span class="ot">?</span>php <span class="va">$paginator</span>-&gt;renderPagesNavigation()<span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Links (GET), não form: escolher é leitura, vai na URL.</li>
+<li><code>route('admin.events.index', ['per_page' =&gt; 5])</code>:
+<code>per_page</code> não está na URI, vira query string -&gt;
+<code>/admin/events?per_page=5</code> (volta à página 1, certo ao mudar
+o tamanho).</li>
+<li><code>active</code> compara com
+<code>$paginator-&gt;perPage()</code>: view só exibe.</li>
+<li>Classe <code>per-page</code>: o Cest clica em
+<code>'5', '.per-page'</code>.</li>
+</ul>
+<h2 id="5-appviewspaginator_pagesphtml">5.
+<code>app/views/paginator/_pages.phtml</code></h2>
+<p>a) No topo do arquivo, antes de <code>&lt;nav ...&gt;</code>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="co">// URL de cada link: a página mais os parâmetros extras guardados no Paginator (ex.: filtros).</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="va">$pageUrl</span> <span class="op">=</span> <span class="kw">fn</span> (<span class="dt">int</span> <span class="va">$p</span>) =&gt; route(<span class="va">$paginator</span>-&gt;getRouteName()<span class="ot">,</span> <span class="fu">array_merge</span>([<span class="st">&#39;page&#39;</span> =&gt; <span class="va">$p</span>]<span class="ot">,</span> <span class="va">$paginator</span>-&gt;queryParams()))<span class="ot">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">?&gt;</span></span></code></pre></div>
+<p>b) Troque os três
+<code>route($paginator-&gt;getRouteName(), ['page' =&gt; X])</code>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$paginator</span>-&gt;previousPage<span class="st">()) ?&gt;&quot;</span><span class="op">&gt;</span>Anterior<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$page</span><span class="st">) ?&gt;&quot;</span><span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="va">$page</span> <span class="kw">?&gt;</span><span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;page-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= </span><span class="va">$pageUrl</span><span class="st">(</span><span class="va">$paginator</span>-&gt;nextPage<span class="st">()) ?&gt;&quot;</span><span class="op">&gt;</span>Próxima<span class="op">&lt;/</span>a<span class="op">&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>route()</code> troca <code>{page}</code> e põe o resto como
+query string: <code>/admin/events/page/2?per_page=5</code>.</li>
+<li>Sem <code>queryParams</code>, página 1 mostra 5 e página 2 volta
+para 10 (salto no "Mostrando ...").</li>
+</ul>
+<p>Armadilha: não escreva <code>'per_page' =&gt; $perPage</code> aqui.
+Variável indefinida no partial -&gt; warning -&gt;
+<code>ErrorsHandler</code> -&gt; 500.</p>
+<h2 id="6-testsunitmodelseventseventtestphp">6.
+<code>tests/Unit/Models/Events/EventTest.php</code></h2>
+<p>Teste novo depois de
+<code>test_paginate_should_default_the_route_name_to_the_table</code>
+(linha ~435):</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_paginate_should_keep_the_given_query_params()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$paginator</span> <span class="op">=</span> Event::paginate(<span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span><span class="ot">,</span> <span class="st">&#39;admin.events.paginate&#39;</span><span class="ot">,</span> [<span class="st">&#39;per_page&#39;</span> =&gt; <span class="dv">5</span>])<span class="ot">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([<span class="st">&#39;per_page&#39;</span> =&gt; <span class="dv">5</span>]<span class="ot">,</span> <span class="va">$paginator</span>-&gt;queryParams())<span class="ot">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertSame([]<span class="ot">,</span> Event::paginate(<span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span>)-&gt;queryParams())<span class="ot">;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê: prova o repasse <code>Model::paginate</code> -&gt;
+<code>Paginator</code> e o default <code>[]</code>. Os testes de
+paginação do <code>EventTest</code> usam <code>paginate(1, 5)</code>
+explícito: não dependem de <code>PER_PAGE</code>, não mudam.</p>
+<h2 id="7-testsintegrationcontrollersadmineventscontrollertestphp">7.
+<code>tests/Integration/Controllers/Admin/EventsControllerTest.php</code></h2>
+<p>a) Troque <code>test_index_lists_five_events_per_page</code> (linhas
+~39-57) por:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_lists_ten_events_per_page()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Títulos com zero à esquerda: &#39;Evento 1&#39; casaria com &#39;Evento 10&#39;, &#39;Evento 11&#39;...</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">12</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">sprintf</span>(<span class="st">&#39;Evento %02d&#39;</span><span class="ot">,</span> <span class="va">$i</span>)])<span class="ot">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page1</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page2</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;page&#39;</span> =&gt; <span class="dv">2</span>])<span class="ot">;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Eventos\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Novo Evento&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 01&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 10&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento 11&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 10 de 12&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/page/2&quot;&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 11&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 12&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento 10&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>b) <code>use</code> novo (variante):</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> PHPUnit\Framework\Attributes\DataProvider<span class="ot">;</span></span></code></pre></div>
+<p>c) Testes novos logo depois (variante):</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_uses_per_page_param_and_keeps_it_in_page_links()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">7</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">sprintf</span>(<span class="st">&#39;Evento %02d&#39;</span><span class="ot">,</span> <span class="va">$i</span>)])<span class="ot">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page1</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;per_page&#39;</span> =&gt; <span class="st">&#39;5&#39;</span>])<span class="ot">;</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page2</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>            action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>            controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>            params<span class="ot">:</span> [<span class="st">&#39;per_page&#39;</span> =&gt; <span class="st">&#39;5&#39;</span><span class="ot">,</span> <span class="st">&#39;page&#39;</span> =&gt; <span class="dv">2</span>]</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        )<span class="ot">;</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 05&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento 06&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 5 de 7&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/page/2?per_page=5&quot;&#39;</span><span class="ot">,</span> <span class="va">$page1</span>)<span class="ot">;</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 06&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 07&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento 05&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/page/1?per_page=5&quot;&#39;</span><span class="ot">,</span> <span class="va">$page2</span>)<span class="ot">;</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a><span class="co">     * </span><span class="an">@return</span><span class="co"> array</span><span class="kw">&lt;string</span><span class="ot">, array{mixed}</span><span class="kw">&gt;</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> invalidPerPageProvider()<span class="ot">:</span> <span class="dt">array</span></span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;zero&#39;</span> =&gt; [<span class="st">&#39;0&#39;</span>]<span class="ot">,</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;fora da lista&#39;</span> =&gt; [<span class="st">&#39;7&#39;</span>]<span class="ot">,</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;negativo&#39;</span> =&gt; [<span class="st">&#39;-5&#39;</span>]<span class="ot">,</span></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;texto&#39;</span> =&gt; [<span class="st">&#39;abc&#39;</span>]<span class="ot">,</span></span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>            <span class="st">&#39;array&#39;</span> =&gt; [[<span class="st">&#39;5&#39;</span>]]<span class="ot">,</span></span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>        ]<span class="ot">;</span></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">#[</span>DataProvider(<span class="st">&#39;invalidPerPageProvider&#39;</span>)<span class="at">]</span></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_ignores_invalid_per_page(<span class="dt">mixed</span> <span class="va">$perPage</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="va">$i</span> <span class="op">=</span> <span class="dv">1</span><span class="ot">;</span> <span class="va">$i</span> <span class="op">&lt;=</span> <span class="dv">12</span><span class="ot">;</span> <span class="va">$i</span><span class="op">++</span>) {</span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>            <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="fu">sprintf</span>(<span class="st">&#39;Evento %02d&#39;</span><span class="ot">,</span> <span class="va">$i</span>)])<span class="ot">;</span></span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span><span class="ot">,</span> params<span class="ot">:</span> [<span class="st">&#39;per_page&#39;</span> =&gt; <span class="va">$perPage</span>])<span class="ot">;</span></span>
+<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Evento 10&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb16-48"><a href="#cb16-48" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Evento 11&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb16-49"><a href="#cb16-49" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Mostrando 1 - 10 de 12&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb16-50"><a href="#cb16-50" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/admin/events/page/2&quot;&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb16-51"><a href="#cb16-51" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;/admin/events/page/2?per_page=&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb16-52"><a href="#cb16-52" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>O teste antigo criava 7 Eventos e esperava "Evento 6" só na página
+2: com 10 por página falha. 12 Eventos = 2 páginas.</li>
+<li><code>sprintf('Evento %02d')</code>: com 10+ Eventos,
+<code>'Evento 1'</code> casa com <code>'Evento 10'</code> (mesmo truque
+do <code>BaseEventsCest.php:63-66</code>).</li>
+<li>Variante: link da página 2 mantém <code>?per_page=5</code>;
+inválidos (<code>0</code>, <code>7</code>, <code>-5</code>,
+<code>abc</code>, array) caem no padrão sem <code>per_page</code> no
+link.</li>
+</ul>
+<h2 id="8-testsacceptanceadmineventsbaseeventscestphp">8.
+<code>tests/Acceptance/admin/events/BaseEventsCest.php</code></h2>
+<p>a) Constante (linha ~23):</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="kw">const</span> <span class="cn">PER_PAGE</span> <span class="op">=</span> <span class="dv">10</span><span class="ot">;</span></span></code></pre></div>
+<p>b) Docblock da classe (linha ~14), troque "4 páginas de 5" por:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a> <span class="op">*</span> Reproduz o formato <span class="cf">do</span> populate<span class="ot">:</span> <span class="dv">16</span> Eventos (<span class="dv">2</span> páginas de <span class="dv">10</span>)<span class="ot">,</span> um Evento lotado (<span class="dv">3</span><span class="op">/</span><span class="dv">3</span> vagas<span class="ot">,</span> caso <span class="cn">P02</span>)<span class="ot">,</span></span></code></pre></div>
+<p>Por quê: os Cests usam <code>self::PER_PAGE</code> para contar
+linhas; tem que bater com o controller.</p>
+<h2 id="9-testsacceptanceadmineventslisteventscestphp">9.
+<code>tests/Acceptance/admin/events/ListEventsCest.php</code></h2>
+<p>a) Comentário antes do <code>grabMultiple</code> (linha ~19):</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Primeira página: os 10 primeiros Eventos (ordem do banco, que no populate coincide com a data).</span></span></code></pre></div>
+<p>b) <code>dontSee</code> no fim do método (linha ~41), sem números
+fixos:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="kw">self</span>::<span class="cn">PER_PAGE</span> <span class="op">+</span> <span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span>))<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: <code>title(6)</code> estaria na página 1 com 10 por página.
+Derivar de <code>PER_PAGE</code> evita quebrar de novo.</p>
+<h2 id="10-testsacceptanceadmineventscreatesuccessfullycestphp">10.
+<code>tests/Acceptance/admin/events/CreateSuccessfullyCest.php</code></h2>
+<p>Depois de <code>$page-&gt;see($data['location']);</code> (linha
+~32):</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 2ª página (10 por página).</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/page/2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="va">$data</span>[<span class="st">&#39;title&#39;</span>]<span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 11 - 17 de 17&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê: antes abria <code>/admin/events/page/4</code> ("Mostrando 16
+- 17 de 17"); com 10 por página o Evento 17 está na página 2.</p>
+<h2 id="11-testsacceptanceadmineventspaginateeventscestphp">11.
+<code>tests/Acceptance/admin/events/PaginateEventsCest.php</code></h2>
+<p>Reescreva o arquivo (o antigo clica nas páginas 3 e 4, que não
+existem mais). Helper ganha o parâmetro <code>$perPage</code>:</p>
+<div class="sourceCode" id="cb22"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>    <span class="co">/** Confere que a página mostra exatamente os Eventos dela (ordem de data). */</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">function</span> seeEventsOfPage(AcceptanceTester <span class="va">$page</span><span class="ot">,</span> <span class="dt">int</span> <span class="va">$number</span><span class="ot">,</span> <span class="dt">int</span> <span class="va">$perPage</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$first</span> <span class="op">=</span> (<span class="va">$number</span> <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> <span class="va">$perPage</span> <span class="op">+</span> <span class="dv">1</span><span class="ot">;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$last</span> <span class="op">=</span> <span class="fu">min</span>(<span class="va">$number</span> <span class="op">*</span> <span class="va">$perPage</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">TOTAL_EVENTS</span>)<span class="ot">;</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>        <span class="co">// resto igual ao original</span></span></code></pre></div>
+<p>Cenário principal (<code>paginateEvents</code>), 2 páginas:</p>
+<div class="sourceCode" id="cb23"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Página 1: Eventos 01 a 10.</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 10 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeElement(<span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Anterior, 1, 2, Próxima.</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;.pagination .page-item&#39;</span><span class="ot">,</span> <span class="dv">4</span>)<span class="ot">;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Página 2 (última) por &quot;Próxima&quot;: Eventos 11 a 16.</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Próxima&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 11 - 16 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Volta por &quot;Anterior&quot;.</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Anterior&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Página 2 pelo número.</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;2&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span></code></pre></div>
+<p><code>openPageTwoAndThreeDirectly</code> vira
+<code>openPageTwoDirectly</code>:</p>
+<div class="sourceCode" id="cb24"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> openPageTwoDirectly(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Paginação dos registros (acesso direto à página 2)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events/page/2&#39;</span>)<span class="ot">;</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="va">$this</span>-&gt;title(<span class="dv">1</span>))<span class="ot">;</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Cenários novos (variante):</p>
+<div class="sourceCode" id="cb25"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> choosePerPage(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Paginação dos registros (usuário escolhe 5 por página)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;5&#39;</span><span class="ot">,</span> <span class="st">&#39;.per-page&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events?per_page=5&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">5</span>)<span class="ot">;</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 5 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Anterior, 1, 2, 3, 4, Próxima.</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;.pagination .page-item&#39;</span><span class="ot">,</span> <span class="dv">6</span>)<span class="ot">;</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Os links de página mantêm o per_page.</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Próxima&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/2?per_page=5&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">2</span><span class="ot">,</span> <span class="dv">5</span>)<span class="ot">;</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 6 - 10 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;4&#39;</span><span class="ot">,</span> <span class="st">&#39;.pagination&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events/page/4?per_page=5&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">4</span><span class="ot">,</span> <span class="dv">5</span>)<span class="ot">;</span></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// 20 por página: tudo numa página só.</span></span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;20&#39;</span><span class="ot">,</span> <span class="st">&#39;.per-page&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/admin/events?per_page=20&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="dv">20</span>)<span class="ot">;</span></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 16 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> invalidPerPageFallsBackToDefault(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Paginação dos registros (per_page inválido usa o padrão)&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/admin/events?per_page=0&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;seeEventsOfPage(<span class="va">$page</span><span class="ot">,</span> <span class="dv">1</span><span class="ot">,</span> <span class="kw">self</span>::<span class="cn">PER_PAGE</span>)<span class="ot">;</span></span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Mostrando 1 - 10 de 16&#39;</span>)<span class="ot">;</span></span>
+<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Com 10 por página e 16 Eventos há só 2 páginas: reescreva o cenário,
+não só os textos.</li>
+<li><code>.page-item</code> conta Anterior + números + Próxima: 4 com
+10, 6 com 5.</li>
+<li>Variante no navegador real: escolha de 5 e 20, <code>per_page</code>
+mantido nos links, <code>?per_page=0</code> cai no padrão.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb26"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Unit/Models/Events/EventTest.php</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/Admin/EventsControllerTest.php</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Sem <code>db:populate</code>: schema não mudou.</p>
+<p>No navegador: <code>/admin/events</code> mostra "Mostrando 1 - 10 de
+16" e duas páginas. Clique em "5" em "Por página:"; a "Próxima" leva a
+<code>/admin/events/page/2?per_page=5</code>.
+<code>/admin/events?per_page=0</code> mostra a listagem normal de
+10.</p>
+<p>Commit (inglês):
+<code>feat: Show 10 events per page and allow choosing per_page</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>per_page</code> 0 dá divisão por zero no
+<code>Paginator</code>: nunca o valor cru; lista fechada.</li>
+<li>Com 10+ Eventos nos testes, <code>'Evento 1'</code> casa com
+<code>'Evento 10'</code>: use
+<code>sprintf('Evento %02d', $i)</code>.</li>
+<li><code>test_index_lists_five_events_per_page</code> assume 5: ajuste
+(12 Eventos).</li>
+<li><code>PaginateEventsCest</code> clica nas páginas 3 e 4:
+reescreva.</li>
+<li><code>CreateSuccessfullyCest</code> abre
+<code>/admin/events/page/4</code>: vira página 2.</li>
+<li>Esquecer <code>per_page</code> nos links: página 2 volta para o
+padrão.</li>
+<li><code>$perPage</code> dentro de <code>_pages.phtml</code>: variável
+indefinida, 500.</li>
+<li><code>array</code> sem PHPDoc em <code>Model::paginate</code>:
+<code>phpstan</code> nível 6.</li>
+<li><code>EventTest</code> usa <code>paginate(1, 5)</code> explícito:
+não muda.</li>
+<li>Aplicando junto com N1: uma só propriedade <code>queryParams</code>;
+junte <code>kind</code> e <code>per_page</code> no mesmo array.</li>
+</ul>
+</body>
+</html>

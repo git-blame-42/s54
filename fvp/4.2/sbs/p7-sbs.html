@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR" xml:lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>p7-sbs</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="p7-passo-a-passo-meus-eventos-do-participante">P7 passo a passo:
+"Meus eventos" do Participante</h1>
+<p>Pedido típico: "uma página com os Eventos em que o Participante
+logado está inscrito, com link na navbar". Chance: média-alta. Tempo:
+20-30 min.</p>
+<p>Exemplo pronto: <code>fvp/4.2/exemplos/p7-meus-eventos/</code>
+(patch, bundle e árvore <code>projeto/</code>). Este arquivo é o mesmo
+conteúdo em formato "um arquivo por vez, com o motivo".</p>
+<p>Pré-requisitos: P2 (inscrição do Participante), que está sobre O2
+(Eventos para o Participante). O P2 já traz
+<code>User::enrollments()</code> (<code>HasMany</code>),
+<code>Enrollment::event()</code>, o <code>EnrollmentsController</code>
+com <code>create</code> e os testes-base; o O2 traz a rota
+<code>events.show</code>. O <code>solucao.patch</code> tem 3 commits (O2
++ P2 + P7); aqui só o último.</p>
+<p>Ordem = fluxo da requisição: rota -&gt; controller -&gt; views -&gt;
+testes. Schema e model não mudam. Na prova, prioridade: funcionar no
+navegador, depois testar, depois <code>phpcs</code>.</p>
+<h2 id="arquivos-em-ordem">Arquivos, em ordem</h2>
+<ol type="1">
+<li><code>config/routes.php</code></li>
+<li><code>app/Controllers/EnrollmentsController.php</code></li>
+<li><code>app/views/enrollments/index.phtml</code> (novo)</li>
+<li><code>app/views/layouts/_navbar.phtml</code></li>
+<li><code>tests/Integration/Controllers/EnrollmentsControllerTest.php</code></li>
+<li><code>tests/Integration/Access/ParticipantEventsAccessTest.php</code></li>
+<li><code>tests/Acceptance/events/ParticipantMyEventsCest.php</code>
+(novo)</li>
+</ol>
+<p>Depois: suíte, <code>./run phpcs</code>,
+<code>./run phpstan</code>.</p>
+<h2 id="1-configroutesphp">1. <code>config/routes.php</code></h2>
+<p>No grupo <code>Route::middleware('auth')</code>, depois de
+<code>events.show</code> e antes do comentário da inscrição
+(<code>events.enrollments.create</code>):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>    Route::get(<span class="st">&#39;/events/{id}&#39;</span><span class="ot">,</span> [EventsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;show&#39;</span>])-&gt;name(<span class="st">&#39;events.show&#39;</span>)<span class="ot">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Inscrições do usuário logado (&quot;Meus eventos&quot;).</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    Route::get(<span class="st">&#39;/enrollments&#39;</span><span class="ot">,</span> [EnrollmentsController::<span class="kw">class</span><span class="ot">,</span> <span class="st">&#39;index&#39;</span>])-&gt;name(<span class="st">&#39;enrollments.index&#39;</span>)<span class="ot">;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Grupo <code>auth</code>: middleware manda quem não tem sessão para
+<code>/login</code>. Admin e Participante entram; o link só aparece para
+o Participante.</li>
+<li><code>/enrollments</code> + <code>index</code> = listagem RESTful do
+recurso Inscrições do logado, no mesmo controller do
+<code>create</code>. Nada de <code>/my-events</code>.</li>
+<li><code>use</code> do <code>EnrollmentsController</code> já existe
+(veio do P2).</li>
+</ul>
+<h2 id="2-appcontrollersenrollmentscontrollerphp">2.
+<code>app/Controllers/EnrollmentsController.php</code></h2>
+<p>Novo método no topo da classe, antes de <code>create</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> EnrollmentsController <span class="kw">extends</span> Controller</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">/**</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">     * &quot;Meus eventos&quot;: Inscrições do usuário logado, com o Evento de cada uma.</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">     */</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> index()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">/** </span><span class="an">@var</span><span class="co"> </span><span class="do">array</span><span class="kw">&lt;int</span><span class="ot">, Enrollment</span><span class="kw">&gt;</span><span class="co"> </span><span class="do">$enrollments</span><span class="co"> */</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        <span class="va">$enrollments</span> <span class="op">=</span> <span class="va">$this</span>-&gt;currentUser()<span class="ot">?</span>-&gt;enrollments()-&gt;get() <span class="op">??</span> []<span class="ot">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$title</span> <span class="op">=</span> <span class="st">&#39;Meus eventos&#39;</span><span class="ot">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;render(<span class="st">&#39;enrollments/index&#39;</span><span class="ot">,</span> <span class="fu">compact</span>(<span class="st">&#39;enrollments&#39;</span><span class="ot">,</span> <span class="st">&#39;title&#39;</span>))<span class="ot">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> create(Request <span class="va">$request</span>)<span class="ot">:</span> <span class="dt">void</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Consulta mora no model: <code>User::enrollments()</code>
+(<code>HasMany</code> por <code>user_id</code>, do P2). Controller só
+pede; nada de <code>Enrollment::where(...)</code> aqui.</li>
+<li><code>HasMany::get()</code> devolve <code>array&lt;Model&gt;</code>.
+O <code>@var array&lt;int, Enrollment&gt;</code> diz ao
+<code>phpstan</code> o tipo real; sem ele, <code>-&gt;event()</code> na
+view vira erro.</li>
+<li><code>currentUser()</code> é <code>?User</code>: <code>?-&gt;</code>
++ <code>?? []</code>. A rota é <code>auth</code>, mas o
+<code>phpstan</code> não sabe.</li>
+<li>Não use <code>User::events()</code>: são os Eventos
+<strong>criados</strong> pelo admin (<code>events.user_id</code>), não
+as Inscrições.</li>
+<li><code>$title</code> no <code>compact</code>: o layout imprime
+<code>&lt;h1&gt;&lt;?= $title ?&gt;&lt;/h1&gt;</code>; faltando, página
+500.</li>
+</ul>
+<h2 id="3-appviewsenrollmentsindexphtml-novo">3.
+<code>app/views/enrollments/index.phtml</code> (novo)</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span> <span class="cf">if</span> (<span class="kw">empty</span>(<span class="va">$enrollments</span>)) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>p<span class="op">&gt;</span>Você não está inscrito em nenhum evento<span class="op">.&lt;/</span>p<span class="op">&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-primary&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;events.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Ver eventos<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">else</span> <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;</span>table <span class="kw">class</span><span class="op">=</span><span class="st">&quot;table table-striped align-middle&quot;</span><span class="op">&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>thead<span class="op">&gt;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span>tr<span class="op">&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Título<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Data<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Local<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>th<span class="op">&gt;</span>Ações<span class="op">&lt;/</span>th<span class="op">&gt;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;/</span>tr<span class="op">&gt;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;/</span>thead<span class="op">&gt;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;</span>tbody<span class="op">&gt;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">foreach</span> (<span class="va">$enrollments</span> <span class="kw">as</span> <span class="va">$enrollment</span>) <span class="ot">:</span> <span class="kw">?&gt;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span><span class="ot">?</span>php <span class="va">$event</span> <span class="op">=</span> <span class="va">$enrollment</span>-&gt;event()-&gt;get()<span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span>tr<span class="op">&gt;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;title) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$event</span>-&gt;starts_on)) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;&lt;</span><span class="ot">?</span><span class="op">=</span> <span class="fu">htmlspecialchars</span>(<span class="va">$event</span>-&gt;location) <span class="kw">?&gt;</span><span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>td<span class="op">&gt;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;btn btn-sm btn-outline-secondary&quot;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>                            href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;events.show&#39;, [&#39;id&#39; =&gt; </span><span class="va">$event</span>-&gt;id<span class="st">]) ?&gt;&quot;</span><span class="op">&gt;</span>Ver<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>td<span class="op">&gt;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;/</span>tr<span class="op">&gt;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>            <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endforeach</span><span class="ot">;</span> <span class="kw">?&gt;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;/</span>tbody<span class="op">&gt;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;/</span>table<span class="op">&gt;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Pasta <code>enrollments/</code> = nome passado ao
+<code>render('enrollments/index')</code>.</li>
+<li><code>$enrollment-&gt;event()-&gt;get()</code>:
+<code>BelongsTo</code> do <code>Enrollment</code> (P2) devolve o Evento.
+Um SELECT por linha (N+1): aceitável aqui; saiba dizer.</li>
+<li>Sem Inscrições: mensagem + link. Sem o <code>if</code>, a página
+fica em branco.</li>
+<li><code>htmlspecialchars</code> em texto (XSS); <code>date()</code> só
+formata.</li>
+<li>Só título, data e local: resumo. Detalhe e vagas ficam no
+<code>events.show</code> (O2), via botão "Ver".</li>
+<li>Catálogo cita botão "Cancelar inscrição" (P3): não está neste patch.
+Com P3 aplicado, ponha na célula de ações o mesmo form do
+<code>show</code> (<code>events.enrollments.destroy</code>,
+<code>_method=DELETE</code>).</li>
+</ul>
+<h2 id="4-appviewslayouts_navbarphtml">4.
+<code>app/views/layouts/_navbar.phtml</code></h2>
+<p>No ramo <code>else</code> do <code>isAdmin()</code> (não-admin),
+depois do <code>&lt;li&gt;</code> de "Eventos":</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>li <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-item&quot;</span><span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;events.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Eventos<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>li<span class="op">&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;</span>li <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-item&quot;</span><span class="op">&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                        <span class="op">&lt;</span>a <span class="kw">class</span><span class="op">=</span><span class="st">&quot;nav-link&quot;</span> href<span class="op">=</span><span class="st">&quot;&lt;?= route(&#39;enrollments.index&#39;) ?&gt;&quot;</span><span class="op">&gt;</span>Meus eventos<span class="op">&lt;/</span>a<span class="op">&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;/</span>li<span class="op">&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;</span><span class="ot">?</span>php <span class="cf">endif</span><span class="ot">;</span> <span class="kw">?&gt;</span></span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Pedido exige link na navbar. <code>route('enrollments.index')</code>
+gera <code>/enrollments</code> pelo nome: mudar a URI não quebra o
+link.</li>
+<li>Ramo não-admin: admin não se inscreve.</li>
+</ul>
+<h2 id="5-testsintegrationcontrollersenrollmentscontrollertestphp">5.
+<code>tests/Integration/Controllers/EnrollmentsControllerTest.php</code></h2>
+<p>a) Docblock da classe:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"> * Inscrição do Participante logado (POST /events/{id}/enrollments) e &quot;Meus eventos&quot; (GET /enrollments).</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span></code></pre></div>
+<p>b) Testes novos, antes do helper privado <code>createUser</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_lists_only_the_logged_user_events()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$first</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Palestra Inscrita&#39;</span><span class="ot">,</span> <span class="st">&#39;location&#39;</span> =&gt; <span class="st">&#39;Auditório&#39;</span>])<span class="ot">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">$second</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Oficina Inscrita&#39;</span>])<span class="ot">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$notMine</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createEvent([<span class="st">&#39;title&#39;</span> =&gt; <span class="st">&#39;Minicurso de Outro&#39;</span>])<span class="ot">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$other</span> <span class="op">=</span> <span class="va">$this</span>-&gt;createUser(<span class="st">&#39;Outro&#39;</span><span class="ot">,</span> <span class="st">&#39;outro@example.com&#39;</span><span class="ot">,</span> <span class="st">&#39;participant&#39;</span>)<span class="ot">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$first</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$second</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$notMine</span>-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$other</span>-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertMatchesRegularExpression(<span class="st">&#39;/&lt;h1&gt;\s*Meus eventos\s*&lt;\/h1&gt;/&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Palestra Inscrita&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Oficina Inscrita&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Auditório&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="st">&#39;+10 days&#39;</span>))<span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&quot;href=</span><span class="sc">\&quot;</span><span class="st">/events/</span>{<span class="va">$first</span>-&gt;id}<span class="sc">\&quot;</span><span class="st">&quot;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;Minicurso de Outro&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_index_without_enrollments_shows_empty_message()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;get(action<span class="ot">:</span> <span class="st">&#39;index&#39;</span><span class="ot">,</span> controllerName<span class="ot">:</span> <span class="kw">self</span>::<span class="cn">CONTROLLER</span>)<span class="ot">;</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Você não está inscrito em nenhum evento.&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringNotContainsString(<span class="st">&#39;&lt;table&#39;</span><span class="ot">,</span> <span class="va">$response</span>)<span class="ot">;</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li><code>setUp</code> (do P2) já faz
+<code>Auth::login($this-&gt;participant)</code>; o
+<code>createEvent</code> usa <code>starts_on</code> =
+<code>+10 days</code>, daí o assert da data.</li>
+<li>Primeiro teste prova o filtro: dois títulos meus aparecem, o do
+outro Participante não. Também <code>&lt;h1&gt;</code> (prova do
+<code>$title</code>) e link.</li>
+<li>Segundo cobre a mensagem de vazio (sem
+<code>&lt;table&gt;</code>).</li>
+</ul>
+<h2 id="6-testsintegrationaccessparticipanteventsaccesstestphp">6.
+<code>tests/Integration/Access/ParticipantEventsAccessTest.php</code></h2>
+<p>No fim da classe:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_my_events_should_redirect_to_login_without_session()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;newClient()-&gt;get(<span class="st">&#39;/enrollments&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">302</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="st">&#39;/login&#39;</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getHeaderLine(<span class="st">&#39;Location&#39;</span>))<span class="ot">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> test_participant_should_see_my_events_and_navbar_link()<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        (<span class="kw">new</span> Enrollment([<span class="st">&#39;event_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;event-&gt;id<span class="ot">,</span> <span class="st">&#39;user_id&#39;</span> =&gt; <span class="va">$this</span>-&gt;participant-&gt;id]))-&gt;save()<span class="ot">;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$response</span> <span class="op">=</span> <span class="va">$this</span>-&gt;loggedClient(<span class="va">$this</span>-&gt;participant)-&gt;get(<span class="st">&#39;/enrollments&#39;</span>)<span class="ot">;</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">$body</span> <span class="op">=</span> <span class="dt">(string)</span> <span class="va">$response</span>-&gt;getBody()<span class="ot">;</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertEquals(<span class="dv">200</span><span class="ot">,</span> <span class="va">$response</span>-&gt;getStatusCode())<span class="ot">;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;Palestra de Acesso&#39;</span><span class="ot">,</span> <span class="va">$body</span>)<span class="ot">;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;assertStringContainsString(<span class="st">&#39;href=&quot;/enrollments&quot;&#39;</span><span class="ot">,</span> <span class="va">$body</span>)<span class="ot">;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Teste de acesso bate por HTTP no servidor <code>web</code> (Guzzle):
+prova o middleware <code>auth</code> da rota (sem sessão -&gt;
+<code>/login</code>), coisa que o teste de controller não vê.</li>
+<li>Segundo: Participante logado -&gt; 200, Evento na tela e link na
+navbar.</li>
+</ul>
+<h2 id="7-testsacceptanceeventsparticipantmyeventscestphp-novo">7.
+<code>tests/Acceptance/events/ParticipantMyEventsCest.php</code>
+(novo)</h2>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;?php</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">namespace</span> Tests\Acceptance\events<span class="ot">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> Tests\Support\AcceptanceTester<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ParticipantMyEventsCest <span class="kw">extends</span> BaseParticipantEventsCest</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> listOnlyMyEventsFromNavbar(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;&quot;Meus eventos&quot; lista só as Inscrições do Participante logado&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/dashboard&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Meus eventos&#39;</span><span class="ot">,</span> <span class="st">&#39;nav&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&#39;/enrollments&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Meus eventos&#39;</span><span class="ot">,</span> <span class="st">&#39;h1&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento 01&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento 03&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Sala 3&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 03&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="fu">date</span>(<span class="st">&#39;d/m/Y&#39;</span><span class="ot">,</span> <span class="fu">strtotime</span>(<span class="va">$this</span>-&gt;startsOn(<span class="dv">3</span>)))<span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 03&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;dontSee(<span class="st">&#39;Evento 02&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="dv">2</span>)<span class="ot">;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Ver&#39;</span><span class="ot">,</span> <span class="va">$this</span>-&gt;rowOf(<span class="st">&#39;Evento 03&#39;</span>))<span class="ot">;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeCurrentUrlEquals(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;events[<span class="dv">3</span>]-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Você está inscrito neste evento.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> newEnrollmentShowsUpInMyEvents(AcceptanceTester <span class="va">$page</span>)<span class="ot">:</span> <span class="dt">void</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;loginAsNewParticipant(<span class="va">$page</span><span class="ot">,</span> <span class="st">&#39;novo@example.com&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;wantTo(<span class="st">&#39;Inscrição nova aparece em &quot;Meus eventos&quot;&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&#39;/enrollments&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Você não está inscrito em nenhum evento.&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;amOnPage(<span class="st">&quot;/events/</span>{<span class="va">$this</span>-&gt;events[<span class="dv">2</span>]-&gt;id}<span class="st">&quot;</span>)<span class="ot">;</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Inscrever-se&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;click(<span class="st">&#39;Meus eventos&#39;</span><span class="ot">,</span> <span class="st">&#39;nav&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;see(<span class="st">&#39;Evento 02&#39;</span><span class="ot">,</span> <span class="st">&#39;table&#39;</span>)<span class="ot">;</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>        <span class="va">$page</span>-&gt;seeNumberOfElements(<span class="st">&#39;table tbody tr&#39;</span><span class="ot">,</span> <span class="dv">1</span>)<span class="ot">;</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Por quê:</p>
+<ul>
+<li>Herda de <code>BaseParticipantEventsCest</code> (base O2/P2, sobre
+<code>BaseEventsCest</code>): 16 Eventos, Participante 1 inscrito nos
+Eventos 01 e 03, sessão dele; helpers <code>rowOf</code>,
+<code>startsOn</code>, <code>loginAsNewParticipant</code>.</li>
+<li>Primeiro: navbar -&gt; lista certa -&gt; "Ver" leva ao detalhe.</li>
+<li>Segundo: lista vazia, inscreve pelo <code>show</code>, aparece na
+lista.</li>
+</ul>
+<h2 id="fechamento">Fechamento</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Controllers/EnrollmentsControllerTest.php</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test tests/Integration/Access/ParticipantEventsAccessTest.php</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test              <span class="co"># suíte toda</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpcs</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> phpstan</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> selenium <span class="kw">&amp;&amp;</span> <span class="fu">sleep</span> 5</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./run</span> test:browser</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose stop selenium</span></code></pre></div>
+<p>Schema não mudou: <code>./run db:populate</code> não é obrigatório
+(só se o banco de dev estiver sem as Inscrições do populate).</p>
+<p>No navegador: <code>user@example.com</code> / <code>123456</code>,
+"Meus eventos" na navbar -&gt; 4 Eventos do populate (1, 2, 4 e 9).
+"Ver" abre o detalhe.</p>
+<p>Commit (inglês):
+<code>feat: Add my events page for participants</code>.</p>
+<h2 id="armadilhas-resumo">Armadilhas (resumo)</h2>
+<ul>
+<li><code>get()</code> devolve <code>array&lt;Model&gt;</code>: declare
+<code>/** @var array&lt;int, Enrollment&gt; $enrollments */</code> para
+o <code>phpstan</code>.</li>
+<li><code>currentUser()</code> é <code>?User</code>: <code>?-&gt;</code>
+e <code>?? []</code>.</li>
+<li>N+1 (<code>event()-&gt;get()</code> por linha): aceitável, saiba
+dizer. Alternativa: <code>BelongsToMany</code> em <code>User</code> via
+<code>event_user</code> (<code>MODEL:365</code>), com nome
+<code>enrolledEvents()</code> (<code>events()</code> já é dos Eventos
+criados).</li>
+<li>Não use <code>User::events()</code> aqui: são os Eventos criados
+pelo admin.</li>
+<li>Tabela vazia: mensagem "Você não está inscrito em nenhum
+evento.".</li>
+<li><code>$title</code> fora do <code>compact</code>: página 500.</li>
+</ul>
+</body>
+</html>
