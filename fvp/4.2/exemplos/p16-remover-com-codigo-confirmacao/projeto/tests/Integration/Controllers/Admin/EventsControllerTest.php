@@ -277,7 +277,7 @@ class EventsControllerTest extends ControllerTestCase
         );
     }
 
-    /* ------------------- P16: remover com código de confirmação ------------------- */
+    /* ------------------- remover com código de confirmação ------------------- */
 
     public function test_index_remove_button_links_to_the_confirmation_page(): void
     {
@@ -325,7 +325,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertEquals('Código de confirmação inválido! O evento não foi removido.', $_SESSION['flash']['danger']);
     }
 
-    public function test_destroy_with_wrong_code_keeps_the_event_and_the_code(): void
+    public function test_destroy_with_wrong_code_keeps_the_event_and_invalidates_the_code(): void
     {
         $event = $this->createEvent();
         $code = ConfirmationCode::generate("event.{$event->id}");
@@ -340,6 +340,14 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertNotNull(Event::findById($event->id));
         $this->assertSame("Location: /admin/events/{$event->id}/delete", $response);
         $this->assertEquals('Código de confirmação inválido! O evento não foi removido.', $_SESSION['flash']['danger']);
+        // O código errado gasta a tentativa: nem o código certo vale mais.
+        $this->assertNull(ConfirmationCode::current("event.{$event->id}"));
+        $this->delete(
+            action: 'destroy',
+            controllerName: self::CONTROLLER,
+            params: ['id' => $event->id, 'confirmation_code' => (string) $code]
+        );
+        $this->assertNotNull(Event::findById($event->id));
     }
 
     public function test_destroy_without_visiting_the_confirmation_page_keeps_the_event(): void

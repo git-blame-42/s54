@@ -51,7 +51,7 @@ class DeleteEventCest extends BaseEventsCest
     {
         $event = $this->events[2];
 
-        $page->wantTo('Remoção do registro com código de confirmação errado (P16)');
+        $page->wantTo('Remoção do registro com código de confirmação errado');
         $page->amOnPage('/admin/events');
         $page->click('Remover', $this->rowOf('Evento 02'));
 
@@ -68,7 +68,7 @@ class DeleteEventCest extends BaseEventsCest
     }
 
     /**
-     * P16: "Remover" da listagem leva à página de confirmação; o código gerado no servidor
+     * "Remover" da listagem leva à página de confirmação; o código gerado no servidor
      * aparece na tela e é digitado no campo antes de enviar o DELETE.
      */
     private function clickRemove(AcceptanceTester $page, string $title): void

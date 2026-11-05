@@ -15,7 +15,7 @@ Branch no clone: `fvp/p16-remover-com-codigo-confirmacao`, a partir de
 
 | Commit    | Mensagem                                               |
 |-----------|--------------------------------------------------------|
-| `0c88e5c` | `feat: Require a confirmation code to remove an Event` |
+| `e72d5f5` | `feat: Require a confirmation code to remove an Event` |
 
 ## O que mudou
 
@@ -36,12 +36,15 @@ Branch no clone: `fvp/p16-remover-com-codigo-confirmacao`, a partir de
   - `confirmDestroy`: `findEvent` (não achou → `eventNotFound()`),
     `ConfirmationCode::generate("event.{$event->id}")` e renderiza
     `admin/events/delete` com `$event`, `$code`, `$title`;
-  - `destroy`: depois do `findEvent`, `if (!ConfirmationCode::check(
-    $key, $request->getParam('confirmation_code')))` → flash `danger`
-    "Código de confirmação inválido! O evento não foi removido." e
-    redirect para `admin.events.delete`; senão `clear($key)` e segue
-    o fluxo de antes (`safeDestroy`, que mantém a regra das
-    Inscrições);
+  - `destroy`: depois do `findEvent`, `$valid =
+    ConfirmationCode::check($key, $request->getParam(
+    'confirmation_code'))` e, **sempre**, `ConfirmationCode::clear(
+    $key)` (o código vale para uma tentativa só). Inválido → flash
+    `danger` "Código de confirmação inválido! O evento não foi
+    removido." e redirect para `admin.events.delete`, que gera um
+    código novo; válido → segue o fluxo de antes (`safeDestroy`, que
+    mantém a regra P03 do projeto: Evento com Inscrições não é
+    removido);
   - helper privado `confirmationKey(Event $event): string`.
 - `app/views/admin/events/delete.phtml` (nova): título e data do
   Evento, o código em `<strong id="confirmation_code_value">`, form
@@ -56,16 +59,20 @@ Branch no clone: `fvp/p16-remover-com-codigo-confirmacao`, a partir de
   (nem em campo oculto), então só quem abriu a página de confirmação
   na mesma sessão consegue remover. Um `DELETE` forjado direto, sem
   passar pela página, é recusado.
+- Mostrar o código na tela não é segurança contra o próprio usuário
+  (ele lê e digita): é prova de leitura, um passo deliberado antes de
+  uma ação irreversível. Em produção o código iria por e-mail, e aí
+  também confirmaria que quem remove tem acesso à conta.
 - Um código por Evento (`event.{id}`): abrir a confirmação de dois
   Eventos em abas diferentes não mistura os códigos, e o código de um
   não remove o outro.
 - Classe pequena em `lib/`, estática: a lógica fica fora do controller
   e é testável com o array `$_SESSION` do PHPUnit, sem sessão real
   (`session_start`). O controller só gera, confere e limpa.
-- Cada visita à página gera um código novo; depois de um acerto o
-  código é apagado (`clear`), então não serve para uma segunda
-  remoção. Depois de um erro o código continua valendo até a próxima
-  visita, que gera outro.
+- Uma tentativa por código: o `clear` vem logo depois do `check`, certo
+  ou errado. Se o código errado não fosse invalidado, um script podia
+  repetir o `DELETE` testando os 9000 valores com o mesmo código. Cada
+  visita à página gera outro.
 - Validação de parâmetro no limite HTTP: `check` aceita só string ou
   int; `confirmation_code[]=x` vira `false`, sem `TypeError`.
 - `GET .../delete` para a página (não muda nada) e `DELETE` para a ação
@@ -100,8 +107,9 @@ Testes novos:
   `clear` só da chave.
 - `EventsControllerTest`: link "Remover" na listagem; página de
   confirmação com o código da sessão; id inexistente; `destroy` sem
-  código, com código errado, sem ter visitado a página, com código de
-  outro Evento (não remove); com código certo (remove e limpa); certo
+  código, com código errado (não remove e invalida o código: nem o
+  certo vale depois), sem ter visitado a página, com código de outro
+  Evento (não remove); com código certo (remove e limpa); certo
   mas com Inscrições (não remove, mensagem de sempre). Os dois testes
   de `destroy` que já existiam passaram a gerar o código antes.
 - `EventsAccessTest`: rota nova em `eventRoutes()` (sem sessão →
@@ -109,8 +117,8 @@ Testes novos:
   `test_admin_should_access_the_delete_confirmation_page` (200 e
   código de 4 dígitos);
   `test_admin_should_remove_only_with_the_code_shown_on_the_page`
-  (código errado volta à confirmação; lê o código da página por HTTP
-  e remove).
+  (código errado volta à confirmação; abre a página de novo, lê o
+  código novo por HTTP e remove).
 - `DeleteEventCest`: `clickRemove` agora abre a confirmação, lê o
   código com `grabTextFrom('#confirmation_code_value')`, digita e
   envia; cenário novo `deleteWithWrongCodeKeepsTheEvent`.
@@ -139,8 +147,9 @@ docker compose exec web curl -s -b /tmp/c \
 - P1 (código de check-in): também `random_int(1000, 9999)`, mas
   gravado no banco e público para os inscritos; aqui é temporário e
   só na sessão.
-- P3/`safeDestroy` (Evento com Inscrições não é removido): continua
-  valendo depois do código certo.
+- Regra P03 do projeto (`safeDestroy`: Evento com Inscrições não é
+  removido): continua valendo depois do código certo. P17 cria a
+  exceção explícita (remover em cascata).
 - Q2 e Q1: outro *early return* no `destroy`; com eles, a ordem é
   dono → editável → código.
 
@@ -161,7 +170,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-p16 \
     s50/fvp/4.2/exemplos/p16-remover-com-codigo-confirmacao/projeto
 git fetch fvp-p16 fvp/p16-remover-com-codigo-confirmacao
-git cherry-pick 0c88e5c
+git cherry-pick e72d5f5
 git remote remove fvp-p16
 ```
 
@@ -171,7 +180,7 @@ git remote remove fvp-p16
 git fetch \
     s50/fvp/4.2/exemplos/p16-remover-com-codigo-confirmacao/solucao.bundle \
     fvp/p16-remover-com-codigo-confirmacao:fvp-p16
-git cherry-pick 0c88e5c
+git cherry-pick e72d5f5
 # opcional, limpa a ref
 git branch -D fvp-p16
 ```
@@ -223,9 +232,12 @@ Arquivos que costumam conflitar neste cenário e por quê:
   valor junto. O valor certo só existe na sessão.
 - Um código só para a sessão inteira (sem chave por Evento): o código
   visto para o Evento A remove o Evento B.
-- Não limpar o código depois do acerto: ele continua valendo para
-  remover de novo (outro Evento com o mesmo id não existe, mas a regra
-  fica frouxa e o teste `..._clears_the_code` pega).
+- Limpar o código só no acerto: com o código errado ainda valendo, um
+  script repete o `DELETE` e testa os 9000 valores. O teste
+  `test_destroy_with_wrong_code_keeps_the_event_and_invalidates_the_code`
+  pega isso (depois do erro, nem o código certo remove).
+- Não limpar depois do acerto: o mesmo código serve de novo; o teste
+  `test_destroy_with_right_code_removes_and_clears_the_code` pega.
 - Esquecer o `return` depois do `redirectTo` no código errado: em
   produção o `redirectTo` dá `exit`, mas no teste de controller ele só
   imprime e a ação seguiria para o `safeDestroy`.
