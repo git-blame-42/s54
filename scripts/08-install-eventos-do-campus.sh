@@ -18,7 +18,8 @@ uso: $(basename "$0") [-h] [-z]
 Baixa e sobe o projeto Eventos do Câmpus:
   1. git clone \$REPO_URL em $PROJECT_DIR
      (outro lugar: EVENTOS_DIR=/caminho $(basename "$0"))
-  2. cp .env.example .env; ./run composer install; ./run up -d --build
+  2. cp .env.example .env; libera as portas que o compose publica;
+     ./run composer install; ./run up -d --build
   3. ./run db:reset; ./run db:populate; ./run codecept build
   4. ./run test tests/Unit (tem de passar); com FULL=1, também
      ./run test tests/Integration e ./run test:browser
@@ -30,7 +31,10 @@ Outro (fork da equipe, URL ssh...):
 Suíte inteira (Unit, Integration e navegador; leva alguns minutos):
   FULL=1 $(basename "$0")
 
-Precisa de docker funcionando sem sudo e das portas ${PORTS[*]} livres.
+Precisa de docker funcionando sem sudo. Porta que o compose publica
+(${PORTS[*]}) e já está em uso é liberada: container dono -> docker stop;
+processo -> SIGTERM, 3 s, SIGKILL (com sudo se for de outro usuário).
+O que foi parado aparece na saída e fica em freed_ports no estado.
 Se $PROJECT_DIR já existir, o script para e não toca nele.
 
   -h  mostra esta ajuda
@@ -64,7 +68,6 @@ run() {
       "outro lugar."
   fi
   require_docker_ready
-  require_free_ports "${PORTS[@]}"
 
   record_preexisting_images
   mkdir -p "$(dirname "$PROJECT_DIR")"
@@ -75,7 +78,7 @@ run() {
   if (( ! failed )); then
     cd "$PROJECT_DIR"
     info "commit: $(git rev-parse --short HEAD)"
-    framework_bootstrap || failed=1
+    framework_bootstrap "${PORTS[@]}" || failed=1
   fi
   if (( ! failed )); then
     run_step "./run codecept build" ./run codecept build || failed=1

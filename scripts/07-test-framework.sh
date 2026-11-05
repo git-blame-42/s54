@@ -16,14 +16,17 @@ uso: $(basename "$0") [-h] [-z]
 Prova que esta máquina roda o framework da disciplina:
   1. git clone $TEMPLATE_URL
      em /tmp/tsi34d-framework.XXXXXX (sem alterar nada no código)
-  2. cp .env.example .env; ./run composer install; ./run up -d --build
+  2. cp .env.example .env; libera as portas que o compose publica;
+     ./run composer install; ./run up -d --build
   3. ./run db:reset; ./run db:populate; GET http://localhost
   4. ./run test tests/Unit
   5. derruba os containers, apaga volumes, imagens que não existiam
      antes e o diretório temporário
 
-Precisa de docker funcionando sem sudo e das portas ${PORTS[*]} livres.
-Se der tudo certo, não sobra nada na máquina.
+Precisa de docker funcionando sem sudo. Porta que o compose publica
+(${PORTS[*]}) e já está em uso é liberada: container dono -> docker stop;
+processo -> SIGTERM, 3 s, SIGKILL (com sudo se for de outro usuário).
+O que foi parado aparece na saída. Se der tudo certo, não sobra nada na máquina.
 
   -h  mostra esta ajuda
   -z  limpa o que ficou de uma execução interrompida (containers,
@@ -58,7 +61,6 @@ run() {
     undo
   fi
   require_docker_ready
-  require_free_ports "${PORTS[@]}"
 
   record_preexisting_images
   TMP_DIR="$(mktemp -d /tmp/tsi34d-framework.XXXXXX)"
@@ -72,7 +74,7 @@ run() {
   if (( ! failed )); then
     cd "$TMP_DIR/template"
     info "commit: $(git rev-parse --short HEAD)"
-    framework_bootstrap || failed=1
+    framework_bootstrap "${PORTS[@]}" || failed=1
   fi
   if (( ! failed )); then
     run_step "./run test tests/Unit" run_unit_tests || failed=1

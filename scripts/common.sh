@@ -372,11 +372,113 @@ check_http() { # url codigos-aceitos...
 
 ensure_env_file() { [[ -f .env ]] || cp .env.example .env; }
 
-# Sobe o framework no diretório atual (já clonado): .env, composer,
-# compose up, banco, populate e uma requisição HTTP. Para no primeiro
+# --- portas do compose ---------------------------------------------------
+
+# Portas que o compose do diretório atual publica no host (lidas do
+# "docker compose config"), uma por linha.
+compose_published_ports() {
+  docker compose config 2>/dev/null \
+    | sed -n 's/^ *published: "\{0,1\}\([0-9][0-9]*\)"\{0,1\}$/\1/p' \
+    | sort -un
+}
+
+# Dono de uma porta TCP em escuta: "PID nome" (vazio se não deu para
+# descobrir). Sem root o ss só mostra processos do próprio usuário;
+# por isso tenta de novo com sudo, se houver.
+port_owner() { # porta
+  local re='s/.*users:(("\([^"]*\)",pid=\([0-9]*\),.*/\2 \1/p' out
+  out="$(ss -Hltnp "sport = :$1" 2>/dev/null | sed -n "$re" | head -n 1)"
+  if [[ -z "$out" ]] && sudo_ok; then
+    out="$(sudo ss -Hltnp "sport = :$1" 2>/dev/null | sed -n "$re" \
+      | head -n 1)"
+  fi
+  echo "$out"
+}
+
+wait_port_free() { # porta segundos
+  local i
+  for ((i = 0; i < $2; i++)); do
+    port_in_use "$1" || return 0
+    sleep 1
+  done
+  ! port_in_use "$1"
+}
+
+# Anota no estado do script o que foi parado para liberar a porta.
+log_freed_port() { # porta descricao
+  ok "porta $1 liberada: $2"
+  state_set freed_ports "$(state_get freed_ports) $1=${2// /_}"
+}
+
+# Libera uma porta: se um container a publica, docker stop nele; senão
+# SIGTERM no processo dono, espera 3 s e SIGKILL se ainda estiver lá
+# (com sudo se o processo for de outro usuário). Falha se não conseguir.
+free_port() { # porta
+  local p="$1" cid name owner pid sudo_cmd
+  port_in_use "$p" || return 0
+  if docker_usable; then
+    for cid in $(docker ps -q --filter "publish=$p"); do
+      name="$(docker inspect -f '{{.Name}}' "$cid" 2>/dev/null)"
+      name="${name#/}"
+      warn "porta $p em uso pelo container $name ($cid): docker stop"
+      docker stop "$cid" >/dev/null \
+        || die "não consegui parar o container $name (porta $p)."
+      log_freed_port "$p" "container $name parado"
+    done
+    wait_port_free "$p" 5 && return 0
+  fi
+  for _ in 1 2 3; do
+    owner="$(port_owner "$p")"
+    [[ -n "$owner" ]] || die "porta $p em uso e não descobri o dono." \
+      "Veja com: sudo ss -ltnp 'sport = :$p' e encerre à mão."
+    pid="${owner%% *}" name="${owner#* }" sudo_cmd=()
+    warn "porta $p em uso por $name (PID $pid): SIGTERM"
+    if ! kill -TERM "$pid" 2>/dev/null; then
+      if ! { sudo_ok && sudo kill -TERM "$pid" 2>/dev/null; }; then
+        die "sem permissão para encerrar $name (PID $pid), dono da" \
+          "porta $p. Encerre à mão (sudo kill $pid) e rode de novo."
+      fi
+      sudo_cmd=(sudo)
+    fi
+    if ! wait_port_free "$p" 3; then
+      if kill -0 "$pid" 2>/dev/null || [[ ${#sudo_cmd[@]} -gt 0 ]]; then
+        warn "$name (PID $pid) não saiu em 3 s: SIGKILL"
+        "${sudo_cmd[@]}" kill -KILL "$pid" 2>/dev/null || true
+      fi
+    fi
+    if wait_port_free "$p" 3; then
+      log_freed_port "$p" "$name (PID $pid) encerrado"
+      return 0
+    fi
+  done
+  die "porta $p continua em uso depois de 3 tentativas;" \
+    "veja: sudo ss -ltnp 'sport = :$p'"
+}
+
+# Antes de subir o compose do diretório atual: libera cada porta que
+# ele publica (ver free_port). Sem compose legível, usa as portas dadas.
+free_compose_ports() { # [portas padrão...]
+  local -a ports
+  mapfile -t ports < <(compose_published_ports)
+  (( ${#ports[@]} )) || ports=("$@")
+  info "portas publicadas pelo compose: ${ports[*]}"
+  local p busy=0
+  for p in "${ports[@]}"; do
+    if port_in_use "$p"; then
+      busy=1
+      free_port "$p"
+    fi
+  done
+  (( busy )) || ok "todas livres"
+}
+
+# Sobe o framework no diretório atual (já clonado): .env, portas
+# (libera as ocupadas), composer, compose up, banco, populate e uma
+# requisição HTTP. Para no primeiro
 # erro e retorna 1.
-framework_bootstrap() {
+framework_bootstrap() { # [portas padrão...]
   run_step "Arquivo .env" ensure_env_file || return 1
+  run_step "Portas do compose livres" free_compose_ports "$@" || return 1
   run_step "./run composer install" ./run composer install || return 1
   run_step "./run up -d --build" ./run up -d --build || return 1
   run_step "Esperando o MySQL aceitar conexões" wait_for_mysql || return 1
@@ -395,13 +497,6 @@ require_docker_ready() {
     "Rode scripts/05-check-requirements.sh para ver o motivo."
   docker_compose_v2 || die "'docker compose' v2 ausente." \
     "Rode scripts/06-install-docker.sh."
-}
-
-require_free_ports() { # portas...
-  local p busy=()
-  for p in "$@"; do port_in_use "$p" && busy+=("$p"); done
-  (( ${#busy[@]} == 0 )) || die "portas em uso: ${busy[*]}." \
-    "Pare quem as usa (sudo ss -ltnp) ou derrube outro compose."
 }
 
 # Remove um diretório que pode ter arquivos criados por containers

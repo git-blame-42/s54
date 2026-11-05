@@ -159,6 +159,16 @@ db:reset`, `./run db:populate`, faz GET em `http://localhost` e roda
 imagens que não existiam antes e o diretório. Imprime um resumo por
 etapa com tempo. O `-z` limpa os restos de uma execução interrompida.
 
+Portas: antes do `up`, lê do `docker compose config` as portas que o
+compose publica no host (hoje 80, 8080, 4444 e 5900) e libera cada
+uma que estiver em uso. Se o dono é um container, `docker stop` nele
+(outro compose de pé, por exemplo); se é um processo, mostra nome e
+PID, manda SIGTERM, espera 3 s e manda SIGKILL se ele não sair (com
+sudo quando o processo é de outro usuário, como um servidor web do
+sistema). Sem permissão para encerrar, para com a mensagem de como
+fazer à mão. Cada porta liberada aparece na saída. O mesmo vale para
+o 08, que também anota o que parou (`freed_ports` no estado).
+
 ### 08-install-eventos-do-campus.sh
 
 Clona `https://github.com/VitorThorvi/tsi34d-backend` (outro repositório:
@@ -167,7 +177,8 @@ Clona `https://github.com/VitorThorvi/tsi34d-backend` (outro repositório:
 o 07-test-framework.sh, roda `./run codecept build` e `./run test
 tests/Unit` (tem de passar) e ajusta o dono de
 `public/assets/uploads` se houver sudo. Para se o diretório já
-existir. Mostra URL e credenciais do populate
+existir. Libera as portas ocupadas como o 07 (veja acima). Mostra URL e
+credenciais do populate
 (`admin@example.com` / `user@example.com`, senha `123456`). O `-z`
 derruba os containers, apaga volumes, imagens que não existiam antes
 e o diretório.
@@ -349,3 +360,10 @@ apontou os 6 que conflitam (N3, N4, N10, O5, P16, Q1) com os arquivos;
 navegador; `fvp-aplicar N2` sobre o N1 conflitou e voltou o HEAD; o
 `-z` do 14 apagou os 154 branches e devolveu o `.bashrc` byte a byte.
 `FULL=1` no 08: 13/13 etapas (Integration 16 s, navegador 42 s).
+
+A liberação de portas do 07 e do 08 foi testada na mesma VM: com a
+porta 80 presa por um `python3 -m http.server` do root, a 8080 por um
+do usuário e a 4444 por um container nginx, o 08 encerrou os dois
+processos (o do root via sudo), parou o container e seguiu até o fim
+(12/12); com o compose do projeto de pé, o 07 parou os containers web
+e selenium dele e passou.
