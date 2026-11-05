@@ -1,0 +1,790 @@
+From 7b2351fe9de69009af25cda676e3f4073ba1fd5d Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:59:41 -0300
+Subject: [PATCH 1/2] fix: Accept _method override only from POST body
+
+Request read _method from $_REQUEST, so GET /admin/events/16?_method=DELETE
+reached destroy. The override now applies only when the real method is
+POST, reads $_POST, and accepts only PUT and DELETE.
+---
+ core/Http/Request.php                         | 27 +++++++-
+ tests/Integration/Access/EventsAccessTest.php | 58 ++++++++++++++++
+ tests/Unit/Core/Http/RequestTest.php          | 67 +++++++++++++++++++
+ 3 files changed, 151 insertions(+), 1 deletion(-)
+
+diff --git a/core/Http/Request.php b/core/Http/Request.php
+index 2c5fd40..e529ac2 100644
+--- a/core/Http/Request.php
++++ b/core/Http/Request.php
+@@ -4,6 +4,12 @@ namespace Core\Http;
+ 
+ class Request
+ {
++    /**
++     * Métodos que um formulário pode simular com o campo oculto `_method` (HTML só envia GET e POST).
++     * São os únicos além de GET/POST que o Router conhece (Route::put e Route::delete; não há patch).
++     */
++    private const OVERRIDABLE_METHODS = ['PUT', 'DELETE'];
++
+     private string $method;
+     private string $uri;
+ 
+@@ -15,12 +21,31 @@ class Request
+ 
+     public function __construct()
+     {
+-        $this->method = $_REQUEST['_method'] ?? $_SERVER['REQUEST_METHOD'];
++        $this->method = $this->resolveMethod();
+         $this->uri = $_SERVER['REQUEST_URI'];
+         $this->params = $_REQUEST;
+         $this->headers = function_exists('getallheaders') ? getallheaders() : [];
+     }
+ 
++    /**
++     * Método HTTP da requisição. O `_method` só troca o método quando a requisição real é POST e o valor
++     * vem do corpo ($_POST), nunca da query string: assim um GET (link, <img>, prefetch) não vira DELETE.
++     * Valores fora de OVERRIDABLE_METHODS são ignorados.
++     */
++    private function resolveMethod(): string
++    {
++        $method = strtoupper((string) $_SERVER['REQUEST_METHOD']);
++        $override = $_POST['_method'] ?? null;
++
++        if ($method !== 'POST' || !is_string($override)) {
++            return $method;
++        }
++
++        $override = strtoupper($override);
++
++        return in_array($override, self::OVERRIDABLE_METHODS, true) ? $override : $method;
++    }
++
+     public function getMethod(): string
+     {
+         return $this->method;
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..17dc2d5 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -159,6 +159,64 @@ class EventsAccessTest extends TestCase
+         $this->assertEquals('Palestra de Acesso', $events[0]->title);
+     }
+ 
++    public function test_get_with_method_delete_should_not_destroy_the_event(): void
++    {
++        $client = $this->loggedClient($this->admin);
++        $uri = "/admin/events/{$this->event->id}";
++
++        // Antes, o Request lia _method de $_REQUEST e este GET caía no destroy (link ou <img> removia o Evento).
++        $response = $client->get($uri, ['query' => ['_method' => 'DELETE']]);
++
++        // Continua GET: é a rota show.
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringContainsString('Palestra de Acesso', (string) $response->getBody());
++        $this->assertNotNull(Event::findById((int) $this->event->id));
++    }
++
++    public function test_get_with_method_put_should_not_update_the_event(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get("/admin/events/{$this->event->id}", ['query' => [
++            '_method' => 'PUT',
++            'event' => [
++                'title' => 'Alterado por GET',
++                'description' => 'Dados válidos: sem a correção, o update gravaria.',
++                'kind' => 'lecture',
++                'modality' => 'online',
++                'audience' => ['students'],
++                'starts_on' => date('Y-m-d', strtotime('+30 days')),
++                'location' => 'Microsoft Teams',
++                'capacity' => '10',
++            ],
++        ]]);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertEquals('Palestra de Acesso', Event::findById((int) $this->event->id)?->title);
++    }
++
++    public function test_post_with_method_delete_only_in_query_string_should_be_not_found(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        // POST /admin/events/{id} sem _method no corpo: não há rota POST nesse caminho, o Router lança 404.
++        $response = $client->post("/admin/events/{$this->event->id}?_method=DELETE", ['http_errors' => false]);
++
++        $this->assertEquals(404, $response->getStatusCode());
++        $this->assertNotNull(Event::findById((int) $this->event->id));
++    }
++
++    public function test_admin_should_destroy_event_with_method_delete_in_post_body(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post("/admin/events/{$this->event->id}", ['form_params' => ['_method' => 'DELETE']]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/admin/events', $response->getHeaderLine('Location'));
++        $this->assertNull(Event::findById((int) $this->event->id));
++    }
++
+     public function test_admin_should_access_events_index_and_new(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Unit/Core/Http/RequestTest.php b/tests/Unit/Core/Http/RequestTest.php
+index 2b82ddc..d43262a 100644
+--- a/tests/Unit/Core/Http/RequestTest.php
++++ b/tests/Unit/Core/Http/RequestTest.php
+@@ -19,6 +19,8 @@ class RequestTest extends TestCase
+     public function tearDown(): void
+     {
+         $_REQUEST = [];
++        $_POST = [];
++        $_GET = [];
+         unset($_SERVER['REQUEST_METHOD']);
+         unset($_SERVER['REQUEST_URI']);
+         unset($_SERVER['HTTP_ACCEPT']);
+@@ -30,6 +32,71 @@ class RequestTest extends TestCase
+         $this->assertEquals('GET', $request->getMethod());
+     }
+ 
++    public function test_get_with_method_param_should_stay_get(): void
++    {
++        // GET /admin/events/1?_method=DELETE: não pode cair no destroy.
++        $_GET = ['_method' => 'DELETE'];
++        $_REQUEST = $_GET;
++
++        $this->assertEquals('GET', (new Request())->getMethod());
++    }
++
++    public function test_post_with_method_delete_in_body_should_become_delete(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'POST';
++        $_POST = ['_method' => 'DELETE'];
++        $_REQUEST = $_POST;
++
++        $this->assertEquals('DELETE', (new Request())->getMethod());
++    }
++
++    public function test_post_with_method_put_should_be_overridden_case_insensitive(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'POST';
++
++        $_POST = ['_method' => 'PUT'];
++        $this->assertEquals('PUT', (new Request())->getMethod());
++
++        $_POST = ['_method' => 'put'];
++        $this->assertEquals('PUT', (new Request())->getMethod());
++
++        $_POST = ['_method' => 'delete'];
++        $this->assertEquals('DELETE', (new Request())->getMethod());
++    }
++
++    public function test_post_with_method_only_in_query_string_should_stay_post(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'POST';
++        $_GET = ['_method' => 'DELETE'];
++        $_REQUEST = $_GET;
++
++        $this->assertEquals('POST', (new Request())->getMethod());
++    }
++
++    public function test_post_with_invalid_method_should_be_ignored(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'POST';
++
++        // PATCH também: o Router não tem rota PATCH.
++        foreach (['GET', 'HEAD', 'OPTIONS', 'TRACE', 'PATCH', 'FOO', ''] as $value) {
++            $_POST = ['_method' => $value];
++            $this->assertEquals('POST', (new Request())->getMethod(), "_method={$value}");
++        }
++
++        $_POST = ['_method' => ['DELETE']];
++        $this->assertEquals('POST', (new Request())->getMethod(), '_method como array');
++    }
++
++    public function test_real_put_and_delete_should_be_kept(): void
++    {
++        $_SERVER['REQUEST_METHOD'] = 'DELETE';
++        $this->assertEquals('DELETE', (new Request())->getMethod());
++
++        $_SERVER['REQUEST_METHOD'] = 'PUT';
++        $_POST = ['_method' => 'DELETE'];
++        $this->assertEquals('PUT', (new Request())->getMethod());
++    }
++
+     public function test_should_return_uri(): void
+     {
+         $request = new Request();
+-- 
+2.54.0 (Apple Git-157)
+
+
+From 41fd8bac627ebdab7915e8ab697d41d198a49da0 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:07:13 -0300
+Subject: [PATCH 2/2] feat: Protect Event forms with a CSRF token
+
+Adds Lib\Csrf (session token, hash_equals), the csrf_field() helper and the VerifyCsrf middleware (alias csrf). The csrf group wraps the auth group, so auth and admin run first; POST, PUT and DELETE without the right _token get 403, GET passes. Event forms and the remove button carry the token.
+---
+ app/Middleware/VerifyCsrf.php                 |  39 +++++++
+ app/views/admin/events/_form.phtml            |   1 +
+ app/views/admin/events/index.phtml            |   1 +
+ config/App.php                                |   1 +
+ config/routes.php                             |  40 ++++---
+ core/helpers.php                              |  11 ++
+ lib/Csrf.php                                  |  41 +++++++
+ tests/Integration/Access/EventsAccessTest.php | 105 +++++++++++++++++-
+ .../Admin/EventsControllerTest.php            |   5 +
+ .../Unit/App/Middleware/VerifyCsrfDouble.php  |  18 +++
+ tests/Unit/App/Middleware/VerifyCsrfTest.php  |  82 ++++++++++++++
+ tests/Unit/Lib/CsrfTest.php                   |  68 ++++++++++++
+ 12 files changed, 394 insertions(+), 18 deletions(-)
+ create mode 100644 app/Middleware/VerifyCsrf.php
+ create mode 100644 lib/Csrf.php
+ create mode 100644 tests/Unit/App/Middleware/VerifyCsrfDouble.php
+ create mode 100644 tests/Unit/App/Middleware/VerifyCsrfTest.php
+ create mode 100644 tests/Unit/Lib/CsrfTest.php
+
+diff --git a/app/Middleware/VerifyCsrf.php b/app/Middleware/VerifyCsrf.php
+new file mode 100644
+index 0000000..273f4d7
+--- /dev/null
++++ b/app/Middleware/VerifyCsrf.php
+@@ -0,0 +1,39 @@
++<?php
++
++namespace App\Middleware;
++
++use Core\Http\Middleware\Middleware;
++use Core\Http\Request;
++use Lib\Csrf;
++
++/**
++ * Q5: requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da
++ * sessão. GET passa direto. Sem token ou com token errado: 403.
++ */
++class VerifyCsrf implements Middleware
++{
++    private const SAFE_METHODS = ['GET', 'HEAD'];
++
++    public function handle(Request $request): void
++    {
++        if (in_array($request->getMethod(), self::SAFE_METHODS, true)) {
++            return;
++        }
++
++        // Só do corpo do POST (como o _method do O9): token na query string vaza em log e Referer.
++        if (!Csrf::check($_POST[Csrf::FIELD] ?? null)) {
++            $this->deny();
++        }
++    }
++
++    /**
++     * protected para o teste unitário trocar o exit por um registro (dublê, como no F2 da 4.1).
++     */
++    protected function deny(): void
++    {
++        http_response_code(403);
++        echo '<h1>403 - Formulário expirado ou inválido</h1>'
++            . '<p>Volte à página anterior, recarregue e envie de novo.</p>';
++        exit;
++    }
++}
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..ddc3fb5 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -14,6 +14,7 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     : '';
+ ?>
+ <form action="<?= $action ?>" method="post" novalidate>
++    <?= csrf_field() ?>
+     <?php if ($isUpdate) : ?>
+         <input type="hidden" name="_method" value="PUT">
+     <?php endif; ?>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..800f827 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -28,6 +28,7 @@
+                         <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+                         <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+                         <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                            <?= csrf_field() ?>
+                             <input type="hidden" name="_method" value="DELETE">
+                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                         </form>
+diff --git a/config/App.php b/config/App.php
+index b58901e..a01559e 100644
+--- a/config/App.php
++++ b/config/App.php
+@@ -7,5 +7,6 @@ class App
+     public static array $middlewareAliases = [
+         'auth' => \App\Middleware\Authenticate::class,
+         'admin' => \App\Middleware\Admin::class,
++        'csrf' => \App\Middleware\VerifyCsrf::class,
+     ];
+ }
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..e0a9234 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -14,24 +14,30 @@ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.log
+ Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
+ Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
+ 
+-// Área do usuário (somente autenticados)
+-Route::middleware('auth')->group(function () {
+-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
++// Q5: token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do 'auth': o
++// RouteWrapperMiddleware acrescenta os middlewares quando cada grupo fecha, então o grupo interno roda
++// primeiro. Assim auth e admin decidem antes (sem sessão -> /login; Participante -> /dashboard) e o
++// csrf só confere quem já pode estar ali.
++Route::middleware('csrf')->group(function () {
++    // Área do usuário (somente autenticados)
++    Route::middleware('auth')->group(function () {
++        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+ 
+-    // Área administrativa (somente autenticados com perfil admin)
+-    Route::middleware('admin')->group(function () {
+-        Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
++        // Área administrativa (somente autenticados com perfil admin)
++        Route::middleware('admin')->group(function () {
++            Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard.index');
+ 
+-        // Eventos (CRUD RESTful). 'new' vem antes de '{id}', senão 'new' seria capturado como id.
+-        Route::get('/admin/events', [AdminEventsController::class, 'index'])->name('admin.events.index');
+-        Route::get('/admin/events/page/{page}', [AdminEventsController::class, 'index'])
+-            ->name('admin.events.paginate');
+-        Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
+-        Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
+-        Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
+-        Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
+-        Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+-        Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+-            ->name('admin.events.destroy');
++            // Eventos (CRUD RESTful). 'new' vem antes de '{id}', senão 'new' seria capturado como id.
++            Route::get('/admin/events', [AdminEventsController::class, 'index'])->name('admin.events.index');
++            Route::get('/admin/events/page/{page}', [AdminEventsController::class, 'index'])
++                ->name('admin.events.paginate');
++            Route::get('/admin/events/new', [AdminEventsController::class, 'new'])->name('admin.events.new');
++            Route::post('/admin/events', [AdminEventsController::class, 'create'])->name('admin.events.create');
++            Route::get('/admin/events/{id}', [AdminEventsController::class, 'show'])->name('admin.events.show');
++            Route::get('/admin/events/{id}/edit', [AdminEventsController::class, 'edit'])->name('admin.events.edit');
++            Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
++            Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
++                ->name('admin.events.destroy');
++        });
+     });
+ });
+diff --git a/core/helpers.php b/core/helpers.php
+index 50cb552..d533dd1 100644
+--- a/core/helpers.php
++++ b/core/helpers.php
+@@ -10,6 +10,17 @@ if (!function_exists('dd')) {
+     }
+ }
+ 
++if (!function_exists('csrf_field')) {
++    /**
++     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE (Q5).
++     */
++    function csrf_field(): string
++    {
++        return '<input type="hidden" name="' . \Lib\Csrf::FIELD . '" value="'
++            . htmlspecialchars(\Lib\Csrf::token()) . '">';
++    }
++}
++
+ if (!function_exists('route')) {
+     /**
+      * @param string $name
+diff --git a/lib/Csrf.php b/lib/Csrf.php
+new file mode 100644
+index 0000000..dfa67b8
+--- /dev/null
++++ b/lib/Csrf.php
+@@ -0,0 +1,41 @@
++<?php
++
++namespace Lib;
++
++/**
++ * Token CSRF por sessão (Q5; mesmo modelo do A15 da 4.1).
++ *
++ * token() gera 32 bytes aleatórios (64 caracteres hex) na primeira chamada e guarda em
++ * $_SESSION['_token']; as chamadas seguintes devolvem o mesmo valor. check() compara com
++ * hash_equals (tempo constante).
++ */
++class Csrf
++{
++    public const FIELD = '_token';
++
++    public static function token(): string
++    {
++        $token = $_SESSION[self::FIELD] ?? null;
++
++        if (!is_string($token) || $token === '') {
++            $token = bin2hex(random_bytes(32));
++            $_SESSION[self::FIELD] = $token;
++        }
++
++        return $token;
++    }
++
++    /**
++     * true só se há token na sessão e o valor enviado é uma string igual a ele.
++     */
++    public static function check(mixed $token): bool
++    {
++        $expected = $_SESSION[self::FIELD] ?? null;
++
++        if (!is_string($expected) || $expected === '' || !is_string($token)) {
++            return false;
++        }
++
++        return hash_equals($expected, $token);
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 17dc2d5..300d09e 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -210,13 +210,116 @@ class EventsAccessTest extends TestCase
+     {
+         $client = $this->loggedClient($this->admin);
+ 
+-        $response = $client->post("/admin/events/{$this->event->id}", ['form_params' => ['_method' => 'DELETE']]);
++        $response = $client->post("/admin/events/{$this->event->id}", ['form_params' => [
++            '_method' => 'DELETE',
++            '_token' => $this->csrfToken($client),
++        ]]);
+ 
+         $this->assertEquals(302, $response->getStatusCode());
+         $this->assertEquals('/admin/events', $response->getHeaderLine('Location'));
+         $this->assertNull(Event::findById((int) $this->event->id));
+     }
+ 
++    /* ------------------- Q5: token CSRF ------------------- */
++
++    /**
++     * Lê o token CSRF da sessão do cliente na página do formulário (como o navegador faria).
++     */
++    private function csrfToken(Client $client): string
++    {
++        $body = (string) $client->get('/admin/events/new')->getBody();
++        $this->assertSame(1, preg_match('/name="_token" value="([0-9a-f]{64})"/', $body, $matches));
++
++        return $matches[1];
++    }
++
++    /**
++     * @return array<string, mixed>
++     */
++    private function newEventParams(): array
++    {
++        return ['event' => [
++            'title' => 'Evento via POST',
++            'description' => 'Criado no teste de CSRF.',
++            'kind' => 'lecture',
++            'modality' => 'online',
++            'audience' => ['students'],
++            'starts_on' => date('Y-m-d', strtotime('+10 days')),
++            'location' => 'Online',
++            'capacity' => '5',
++        ]];
++    }
++
++    /**
++     * Rotas que alteram estado, como o navegador as envia (POST, com _method quando é PUT/DELETE).
++     *
++     * @return array<string, array{string, array<string, string>}>
++     */
++    public static function stateChangingRoutes(): array
++    {
++        return [
++            'admin.events.create' => ['/admin/events', []],
++            'admin.events.update' => ['/admin/events/1', ['_method' => 'PUT']],
++            'admin.events.destroy' => ['/admin/events/1', ['_method' => 'DELETE']],
++        ];
++    }
++
++    /**
++     * @param array<string, string> $params
++     */
++    #[DataProvider('stateChangingRoutes')]
++    public function test_admin_request_without_csrf_token_should_be_forbidden(string $uri, array $params): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post($uri, ['form_params' => $params + $this->newEventParams(), 'http_errors' => false]);
++
++        $this->assertEquals(403, $response->getStatusCode());
++        $this->assertCount(1, Event::all());
++        $this->assertEquals('Palestra de Acesso', Event::findById((int) $this->event->id)?->title);
++    }
++
++    public function test_admin_request_with_wrong_csrf_token_should_be_forbidden(): void
++    {
++        $client = $this->loggedClient($this->admin);
++        $this->csrfToken($client);
++
++        $response = $client->post("/admin/events/{$this->event->id}", [
++            'form_params' => ['_method' => 'DELETE', '_token' => str_repeat('0', 64)],
++            'http_errors' => false,
++        ]);
++
++        $this->assertEquals(403, $response->getStatusCode());
++        $this->assertNotNull(Event::findById((int) $this->event->id));
++    }
++
++    public function test_admin_should_create_event_with_csrf_token(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post('/admin/events', [
++            'form_params' => ['_token' => $this->csrfToken($client)] + $this->newEventParams(),
++        ]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertNotNull(Event::findBy(['title' => 'Evento via POST']));
++    }
++
++    public function test_csrf_token_from_another_session_should_be_forbidden(): void
++    {
++        $other = $this->loggedClient($this->admin);
++        $token = $this->csrfToken($other);
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->post("/admin/events/{$this->event->id}", [
++            'form_params' => ['_method' => 'DELETE', '_token' => $token],
++            'http_errors' => false,
++        ]);
++
++        $this->assertEquals(403, $response->getStatusCode());
++        $this->assertNotNull(Event::findById((int) $this->event->id));
++    }
++
+     public function test_admin_should_access_events_index_and_new(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..b2986fe 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -52,6 +52,8 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 6', $page1);
+         $this->assertStringContainsString('/admin/events/page/2', $page1);
+         $this->assertStringContainsString('Evento 6', $page2);
++        // Q5: o form "Remover" de cada linha traz o token CSRF.
++        $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $page1);
+         $this->assertStringContainsString('Evento 7', $page2);
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+@@ -80,6 +82,8 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('type="date"', $response);
+         $this->assertStringContainsString('Salvar', $response);
+         $this->assertStringNotContainsString('name="_method"', $response);
++        // Q5: o form traz o token CSRF da sessão.
++        $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $response);
+     }
+ 
+     public function test_create_with_valid_data_saves_event_for_logged_admin(): void
+@@ -182,6 +186,7 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('value="Para Editar"', $response);
+         $this->assertStringContainsString("action=\"/admin/events/{$event->id}\"", $response);
+         $this->assertStringContainsString('name="_method" value="PUT"', $response);
++        $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $response);
+         $this->assertMatchesRegularExpression('/id="event_modality_online"[^>]*checked/', $response);
+         $this->assertMatchesRegularExpression('/id="event_audience_professors"[^>]*checked/', $response);
+         $this->assertMatchesRegularExpression('/id="event_audience_staff"[^>]*checked/', $response);
+diff --git a/tests/Unit/App/Middleware/VerifyCsrfDouble.php b/tests/Unit/App/Middleware/VerifyCsrfDouble.php
+new file mode 100644
+index 0000000..6a906d4
+--- /dev/null
++++ b/tests/Unit/App/Middleware/VerifyCsrfDouble.php
+@@ -0,0 +1,18 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use App\Middleware\VerifyCsrf;
++
++/**
++ * Dublê do VerifyCsrf: registra a recusa em vez de responder 403 e dar exit.
++ */
++class VerifyCsrfDouble extends VerifyCsrf
++{
++    public bool $denied = false;
++
++    protected function deny(): void
++    {
++        $this->denied = true;
++    }
++}
+diff --git a/tests/Unit/App/Middleware/VerifyCsrfTest.php b/tests/Unit/App/Middleware/VerifyCsrfTest.php
+new file mode 100644
+index 0000000..b0963c7
+--- /dev/null
++++ b/tests/Unit/App/Middleware/VerifyCsrfTest.php
+@@ -0,0 +1,82 @@
++<?php
++
++namespace Tests\Unit\App\Middleware;
++
++use Core\Http\Request;
++use Lib\Csrf;
++use PHPUnit\Framework\TestCase;
++
++class VerifyCsrfTest extends TestCase
++{
++    public function setUp(): void
++    {
++        $_SERVER['REQUEST_URI'] = '/admin/events';
++        $_POST = [];
++        $_GET = [];
++        $_REQUEST = [];
++        unset($_SESSION['_token']);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI'], $_SESSION['_token']);
++        $_POST = [];
++        $_GET = [];
++        $_REQUEST = [];
++    }
++
++    /**
++     * @param array<string, mixed> $post
++     * @param array<string, mixed> $get
++     */
++    private function handle(string $method, array $post = [], array $get = []): VerifyCsrfDouble
++    {
++        $_SERVER['REQUEST_METHOD'] = $method;
++        $_POST = $post;
++        $_GET = $get;
++        $_REQUEST = array_merge($get, $post);
++
++        $middleware = new VerifyCsrfDouble();
++        $middleware->handle(new Request());
++
++        return $middleware;
++    }
++
++    public function test_get_should_pass_without_token(): void
++    {
++        $this->assertFalse($this->handle('GET')->denied);
++    }
++
++    public function test_post_without_token_should_be_denied(): void
++    {
++        Csrf::token();
++
++        $this->assertTrue($this->handle('POST')->denied);
++    }
++
++    public function test_post_with_wrong_token_should_be_denied(): void
++    {
++        Csrf::token();
++
++        $this->assertTrue($this->handle('POST', ['_token' => 'errado'])->denied);
++    }
++
++    public function test_post_with_session_token_should_pass(): void
++    {
++        $this->assertFalse($this->handle('POST', ['_token' => Csrf::token()])->denied);
++    }
++
++    public function test_put_and_delete_via_method_override_should_require_the_token(): void
++    {
++        $token = Csrf::token();
++
++        $this->assertTrue($this->handle('POST', ['_method' => 'PUT'])->denied);
++        $this->assertTrue($this->handle('POST', ['_method' => 'DELETE'])->denied);
++        $this->assertFalse($this->handle('POST', ['_method' => 'DELETE', '_token' => $token])->denied);
++    }
++
++    public function test_token_only_in_query_string_should_be_denied(): void
++    {
++        $this->assertTrue($this->handle('POST', [], ['_token' => Csrf::token()])->denied);
++    }
++}
+diff --git a/tests/Unit/Lib/CsrfTest.php b/tests/Unit/Lib/CsrfTest.php
+new file mode 100644
+index 0000000..580e3e8
+--- /dev/null
++++ b/tests/Unit/Lib/CsrfTest.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace Tests\Unit\Lib;
++
++use Lib\Csrf;
++use PHPUnit\Framework\TestCase;
++
++class CsrfTest extends TestCase
++{
++    public function setUp(): void
++    {
++        unset($_SESSION['_token']);
++    }
++
++    public function tearDown(): void
++    {
++        unset($_SESSION['_token']);
++    }
++
++    public function test_token_should_be_generated_and_stored_in_session(): void
++    {
++        $token = Csrf::token();
++
++        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $token);
++        $this->assertSame($token, $_SESSION['_token']);
++    }
++
++    public function test_token_should_be_stable_within_session(): void
++    {
++        $this->assertSame(Csrf::token(), Csrf::token());
++    }
++
++    public function test_check_with_session_token_should_return_true(): void
++    {
++        $this->assertTrue(Csrf::check(Csrf::token()));
++    }
++
++    public function test_check_with_wrong_token_should_return_false(): void
++    {
++        $token = Csrf::token();
++
++        $this->assertFalse(Csrf::check(strrev($token)));
++        $this->assertFalse(Csrf::check(substr($token, 0, 63)));
++    }
++
++    public function test_check_without_token_should_return_false(): void
++    {
++        Csrf::token();
++
++        $this->assertFalse(Csrf::check(null));
++        $this->assertFalse(Csrf::check(''));
++        $this->assertFalse(Csrf::check([Csrf::token()]));
++    }
++
++    public function test_check_without_session_token_should_return_false(): void
++    {
++        $this->assertFalse(Csrf::check(''));
++        $this->assertFalse(Csrf::check('abc'));
++    }
++
++    public function test_csrf_field_should_render_a_hidden_input_with_the_token(): void
++    {
++        $this->assertSame(
++            '<input type="hidden" name="_token" value="' . Csrf::token() . '">',
++            csrf_field()
++        );
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+

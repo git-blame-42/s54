@@ -216,6 +216,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - Q4. Perfil Organizador
   `q4-perfil-organizador/`
   - feat: Add organizer role with its own events area
+- Q5. Token CSRF nos forms de Evento (middleware + alias; ordem dos grupos)
+  `q5-token-csrf/`
+  - fix: Accept _method override only from POST body
+  - feat: Protect Event forms with a CSRF token
 - R1. Flash: texto, título do Evento, tipo `warning`
   `r1-flash-titulo-warning/`
   - feat: Show event title in flash messages and add warning type
