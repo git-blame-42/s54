@@ -1,0 +1,390 @@
+From f4b5f1fd888072cf05cbf78434232ae4dfb4ae9e Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:29:46 -0300
+Subject: [PATCH] feat: Event date window with minimum advance and maximum
+ limit
+
+notPastDate gains optional minDays/maxDays; Event requires starts_on between
+today + 3 and today + 365 days on create and when the date changes. The form
+shows the window and sets min/max on the date input.
+---
+ app/Models/Event.php                          | 22 +++++--
+ app/views/admin/events/_form.phtml            |  5 ++
+ lib/Validations.php                           | 24 ++++++-
+ .../admin/events/BaseEventsCest.php           |  2 +-
+ .../events/CreateWithInvalidDataCest.php      | 24 +++++++
+ .../Admin/EventsControllerTest.php            | 26 ++++++++
+ .../NumberAndDateValidationsTest.php          | 64 +++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 64 ++++++++++++++++++-
+ 8 files changed, 221 insertions(+), 10 deletions(-)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e3dc2c7 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -44,6 +44,12 @@ class Event extends Model
+         'community' => 'Comunidade externa',
+     ];
+ 
++    /** Antecedência mínima, em dias, para a data do Evento (hoje + 3 em diante). */
++    public const STARTS_ON_MIN_DAYS = 3;
++
++    /** Limite máximo, em dias, para a data do Evento (até hoje + 365). */
++    public const STARTS_ON_MAX_DAYS = 365;
++
+     protected static string $table = 'events';
+     protected static array $columns = [
+         'user_id',
+@@ -74,7 +80,7 @@ class Event extends Model
+ 
+         Validations::notEmpty('starts_on', $this) &&
+             Validations::validDate('starts_on', $this) &&
+-            $this->validatesStartsOnNotPast();
++            $this->validatesStartsOnWindow();
+ 
+         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
+             $this->validatesCapacityAgainstEnrollments();
+@@ -82,10 +88,11 @@ class Event extends Model
+     }
+ 
+     /**
+-     * A data não pode estar no passado ao criar. Na edição, só é cobrada quando `starts_on` muda:
+-     * assim um Evento que já aconteceu ainda pode ter a descrição, o local etc. corrigidos.
++     * A data deve ficar na janela de hoje + STARTS_ON_MIN_DAYS até hoje + STARTS_ON_MAX_DAYS dias ao
++     * criar. Na edição, só é cobrada quando `starts_on` muda: assim um Evento que já aconteceu (ou que
++     * está a menos de 3 dias) ainda pode ter a descrição, o local etc. corrigidos.
+      */
+-    private function validatesStartsOnNotPast(): void
++    private function validatesStartsOnWindow(): void
+     {
+         if (!$this->newRecord()) {
+             $original = self::findById($this->id);
+@@ -95,7 +102,12 @@ class Event extends Model
+             }
+         }
+ 
+-        Validations::notPastDate('starts_on', $this);
++        Validations::notPastDate(
++            'starts_on',
++            $this,
++            minDays: self::STARTS_ON_MIN_DAYS,
++            maxDays: self::STARTS_ON_MAX_DAYS
++        );
+     }
+ 
+     /**
+diff --git a/app/views/admin/events/_form.phtml b/app/views/admin/events/_form.phtml
+index 2e98c21..b47d570 100644
+--- a/app/views/admin/events/_form.phtml
++++ b/app/views/admin/events/_form.phtml
+@@ -70,8 +70,13 @@ $feedback = fn(string $field, string $extra = ''): string => $event->errors($fie
+     <div class="mb-3">
+         <label for="event_starts_on" class="form-label">Data</label>
+         <input type="date" class="form-control<?= $invalid('starts_on') ?>" id="event_starts_on" name="event[starts_on]"
++            min="<?= date('Y-m-d', strtotime('+' . Event::STARTS_ON_MIN_DAYS . ' days')) ?>"
++            max="<?= date('Y-m-d', strtotime('+' . Event::STARTS_ON_MAX_DAYS . ' days')) ?>"
+             value="<?= htmlspecialchars((string) $event->starts_on) ?>">
+         <?= $feedback('starts_on') ?>
++        <div class="form-text">
++            De <?= Event::STARTS_ON_MIN_DAYS ?> a <?= Event::STARTS_ON_MAX_DAYS ?> dias a partir de hoje.
++        </div>
+     </div>
+ 
+     <div class="mb-3">
+diff --git a/lib/Validations.php b/lib/Validations.php
+index f456148..dd2041b 100644
+--- a/lib/Validations.php
++++ b/lib/Validations.php
+@@ -109,6 +109,10 @@ class Validations
+     /**
+      * A data não pode ser anterior a hoje (hoje é permitido). Data inválida também é rejeitada.
+      *
++     * Janela opcional: $minDays exige antecedência mínima (a data deve ser >= hoje + $minDays dias) e
++     * $maxDays limita o quanto ela pode estar à frente (<= hoje + $maxDays dias). Com os padrões
++     * (0 e null) a regra é só "não passada", sem limite máximo.
++     *
+      * "Hoje" é o dia civil no fuso padrão do PHP (America/Sao_Paulo na imagem Docker do projeto).
+      * $now existe para os testes fixarem o instante; ele é convertido para o fuso padrão antes de
+      * calcular o dia, então 01:00 UTC de amanhã ainda é "hoje" às 22:00 em Brasília.
+@@ -117,7 +121,9 @@ class Validations
+         $attribute,
+         $obj,
+         string $format = 'Y-m-d',
+-        ?\DateTimeImmutable $now = null
++        ?\DateTimeImmutable $now = null,
++        int $minDays = 0,
++        ?int $maxDays = null
+     ) {
+         $date = self::parseDate($obj->$attribute, $format);
+ 
+@@ -134,9 +140,25 @@ class Validations
+             return false;
+         }
+ 
++        if ($minDays > 0 && $date < $today->modify("+{$minDays} days")) {
++            $obj->addError($attribute, 'deve ter pelo menos ' . self::days($minDays) . ' de antecedência!');
++            return false;
++        }
++
++        if ($maxDays !== null && $date > $today->modify("+{$maxDays} days")) {
++            $obj->addError($attribute, 'não pode passar de ' . self::days($maxDays) . ' a partir de hoje!');
++            return false;
++        }
++
+         return true;
+     }
+ 
++    /** "1 dia", "3 dias". */
++    private static function days(int $days): string
++    {
++        return $days === 1 ? '1 dia' : "{$days} dias";
++    }
++
+     private static function parseDate(mixed $value, string $format): ?\DateTimeImmutable
+     {
+         if (!is_string($value) || $value === '') {
+diff --git a/tests/Acceptance/admin/events/BaseEventsCest.php b/tests/Acceptance/admin/events/BaseEventsCest.php
+index e511b9c..ef90304 100644
+--- a/tests/Acceptance/admin/events/BaseEventsCest.php
++++ b/tests/Acceptance/admin/events/BaseEventsCest.php
+@@ -168,7 +168,7 @@ class BaseEventsCest extends BaseAcceptanceCest
+             'kind' => Event::KINDS['workshop'],
+             'modality' => 'online',
+             'audience' => ['students', 'staff'],
+-            'starts_on' => date('Y-m-d', strtotime('+1 day')),
++            'starts_on' => date('Y-m-d', strtotime('+7 days')),
+             'location' => 'Laboratório B203',
+             'capacity' => '40',
+         ], $overrides);
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..d62dc56 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -73,4 +73,28 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+ 
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
++
++    public function createWithDateOutsideTheWindow(AcceptanceTester $page): void
++    {
++        $page->wantTo('Tentativa de cadastro com data fora da janela (antecedência mínima e limite máximo)');
++
++        $cases = [
++            date('Y-m-d', strtotime('+1 day')) => 'deve ter pelo menos 3 dias de antecedência!',
++            date('Y-m-d', strtotime('+400 days')) => 'não pode passar de 365 dias a partir de hoje!',
++        ];
++
++        foreach ($cases as $startsOn => $message) {
++            $page->amOnPage('/admin/events/new');
++            $page->see('De 3 a 365 dias a partir de hoje.');
++            $this->fillEventForm($page, $this->validEventData(['starts_on' => $startsOn]));
++            $page->click('Salvar');
++
++            $page->see(self::FLASH);
++            $page->seeElement('#event_starts_on.is-invalid');
++            $page->see($message, '#event_starts_on ~ .invalid-feedback');
++            $page->seeInField('#event_starts_on', $startsOn);
++        }
++
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
+ }
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..2605c0b 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -137,6 +137,32 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('Existem dados incorretos! Por favor, verifique!', $response);
+     }
+ 
++    public function test_create_with_date_outside_the_window_renders_form_with_error(): void
++    {
++        $response = $this->post(
++            action: 'create',
++            controllerName: self::CONTROLLER,
++            params: ['event' => $this->validParams(['starts_on' => '9999-12-31'])]
++        );
++
++        $this->assertCount(0, Event::all());
++        $this->assertMatchesRegularExpression('/<h1>\s*Novo Evento\s*<\/h1>/', $response);
++        $this->assertStringContainsString(
++            '<div class="invalid-feedback">não pode passar de 365 dias a partir de hoje!</div>',
++            $response
++        );
++        $this->assertStringContainsString('value="9999-12-31"', $response);
++    }
++
++    public function test_new_form_limits_the_date_input_to_the_window(): void
++    {
++        $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('min="' . date('Y-m-d', strtotime('+3 days')) . '"', $response);
++        $this->assertStringContainsString('max="' . date('Y-m-d', strtotime('+365 days')) . '"', $response);
++        $this->assertStringContainsString('De 3 a 365 dias a partir de hoje.', $response);
++    }
++
+     public function test_create_without_audience_marks_audience_field(): void
+     {
+         $params = $this->validParams();
+diff --git a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+index 4d2a626..de546a6 100644
+--- a/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
++++ b/tests/Unit/Lib/Validations/NumberAndDateValidationsTest.php
+@@ -125,6 +125,70 @@ class NumberAndDateValidationsTest extends TestCase
+         $this->assertFalse(Validations::notPastDate('day', $this->model, 'd/m/Y'));
+     }
+ 
++    /* ------------------- janela: $minDays e $maxDays ------------------- */
++
++    public function test_not_past_date_without_window_should_accept_any_future_date(): void
++    {
++        $this->model->day = '9999-12-31'; // @phpstan-ignore-line
++
++        $this->assertTrue(Validations::notPastDate('day', $this->model));
++    }
++
++    public function test_not_past_date_should_require_the_minimum_advance(): void
++    {
++        $now = new \DateTimeImmutable('2026-11-05 10:00:00');
++
++        foreach (['2026-11-05', '2026-11-07'] as $value) {
++            $this->model->day = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 3), $value);
++            $this->assertEquals('deve ter pelo menos 3 dias de antecedência!', $this->model->errors('day'), $value);
++        }
++
++        $this->model->day = '2026-11-08'; // @phpstan-ignore-line
++        $this->assertTrue(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 3));
++    }
++
++    public function test_not_past_date_with_minimum_advance_should_keep_the_past_message(): void
++    {
++        $now = new \DateTimeImmutable('2026-11-05 10:00:00');
++        $this->model->day = '2026-11-04'; // @phpstan-ignore-line
++
++        $this->assertFalse(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 3));
++        $this->assertEquals('não pode estar no passado!', $this->model->errors('day'));
++    }
++
++    public function test_not_past_date_should_reject_dates_after_the_maximum(): void
++    {
++        $now = new \DateTimeImmutable('2026-11-05 10:00:00');
++
++        $this->model->day = '2027-11-05'; // @phpstan-ignore-line
++        $this->assertTrue(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, maxDays: 365));
++
++        foreach (['2027-11-06', '9999-12-31'] as $value) {
++            $this->model->day = $value; // @phpstan-ignore-line
++
++            $this->assertFalse(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, maxDays: 365), $value);
++            $this->assertEquals('não pode passar de 365 dias a partir de hoje!', $this->model->errors('day'), $value);
++        }
++    }
++
++    public function test_not_past_date_window_messages_should_use_singular_for_one_day(): void
++    {
++        $now = new \DateTimeImmutable('2026-11-05 10:00:00');
++
++        $this->model->day = '2026-11-05'; // @phpstan-ignore-line
++        $this->assertFalse(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 1, maxDays: 1));
++        $this->assertEquals('deve ter pelo menos 1 dia de antecedência!', $this->model->errors('day'));
++
++        $this->model->day = '2026-11-07'; // @phpstan-ignore-line
++        $this->assertFalse(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 1, maxDays: 1));
++        $this->assertEquals('não pode passar de 1 dia a partir de hoje!', $this->model->errors('day'));
++
++        $this->model->day = '2026-11-06'; // @phpstan-ignore-line
++        $this->assertTrue(Validations::notPastDate('day', $this->model, 'Y-m-d', $now, minDays: 1, maxDays: 1));
++    }
++
+     /* ------------------- fuso America/Sao_Paulo ------------------- */
+ 
+     public function test_php_timezone_should_be_sao_paulo(): void
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..0e6177e 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -225,11 +225,43 @@ class EventTest extends TestCase
+         $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
+     }
+ 
+-    public function test_starts_on_today_should_be_valid(): void
++    public function test_starts_on_should_have_the_minimum_advance(): void
+     {
+-        $event = new Event($this->params(['starts_on' => date('Y-m-d')]));
++        foreach (['today', '+1 day', '+2 days'] as $offset) {
++            $event = new Event($this->params(['starts_on' => date('Y-m-d', strtotime($offset))]));
+ 
+-        $this->assertTrue($event->isValid());
++            $this->assertFalse($event->isValid(), $offset);
++            $this->assertEquals('deve ter pelo menos 3 dias de antecedência!', $event->errors('starts_on'), $offset);
++        }
++    }
++
++    public function test_starts_on_inside_the_window_should_be_valid(): void
++    {
++        foreach (['+3 days', '+30 days', '+365 days'] as $offset) {
++            $event = new Event($this->params(['starts_on' => date('Y-m-d', strtotime($offset))]));
++
++            $this->assertTrue($event->isValid(), $offset);
++        }
++    }
++
++    public function test_starts_on_after_the_maximum_should_be_invalid(): void
++    {
++        foreach ([date('Y-m-d', strtotime('+366 days')), '9999-12-31'] as $value) {
++            $event = new Event($this->params(['starts_on' => $value]));
++
++            $this->assertFalse($event->isValid(), $value);
++            $this->assertEquals('não pode passar de 365 dias a partir de hoje!', $event->errors('starts_on'), $value);
++        }
++    }
++
++    public function test_populate_offsets_should_fit_the_window(): void
++    {
++        // database/Populate/populate.php usa hoje + 14 até hoje + 82 dias.
++        foreach (['+14 days', '+82 days'] as $offset) {
++            $event = new Event($this->params(['starts_on' => date('Y-m-d', strtotime($offset))]));
++
++            $this->assertTrue($event->isValid(), $offset);
++        }
+     }
+ 
+     public function test_invalid_event_should_not_be_saved(): void
+@@ -556,6 +588,32 @@ class EventTest extends TestCase
+         $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
+     }
+ 
++    public function test_new_starts_on_outside_the_window_should_be_rejected_on_edit(): void
++    {
++        $event = $this->createPastEvent();
++
++        $event->starts_on = date('Y-m-d', strtotime('+1 day'));
++        $this->assertFalse($event->save());
++        $this->assertEquals('deve ter pelo menos 3 dias de antecedência!', $event->errors('starts_on'));
++
++        $event->starts_on = '9999-12-31';
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode passar de 365 dias a partir de hoje!', $event->errors('starts_on'));
++    }
++
++    public function test_event_less_than_three_days_ahead_can_be_edited_when_starts_on_does_not_change(): void
++    {
++        $event = $this->createEvent();
++        $soon = date('Y-m-d', strtotime('+1 day'));
++        $this->assertTrue($event->update(['starts_on' => $soon]));
++
++        $found = Event::findById($event->id);
++        $found->location = 'Laboratório B203';
++
++        $this->assertTrue($found->save());
++        $this->assertEquals($soon, Event::findById($event->id)->starts_on);
++    }
++
+     public function test_past_starts_on_should_still_be_rejected_on_create(): void
+     {
+         $event = new Event($this->params(['starts_on' => date('Y-m-d', strtotime('-10 days'))]));
+-- 
+2.54.0 (Apple Git-157)
+

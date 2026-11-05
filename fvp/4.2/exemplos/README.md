@@ -60,6 +60,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M15. Escolher o responsável entre os administradores
   `m15-responsavel-admin/`
   - feat: Choose the responsible admin for an event
+- M18. Janela de datas: antecedência mínima e limite máximo
+  `m18-janela-de-datas/`
+  - feat: Event date window with minimum advance and maximum
 - M2. Validação nova em `lib/Validations.php` (`maxLength`)
   `m2-validacao-maxlength/`
   - feat: Add maxLength validation and limit event title to 100
