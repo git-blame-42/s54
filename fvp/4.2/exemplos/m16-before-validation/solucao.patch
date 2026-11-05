@@ -1,0 +1,393 @@
+From ea5ab92037d3d6da9fd9f15898eb69e1b1fbb8c5 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:41:36 -0300
+Subject: [PATCH 1/2] feat: Add beforeValidation hook to Model::isValid
+
+isValid() now calls the protected beforeValidation() hook right before
+validates(), so subclasses can normalize attributes first. The default
+hook is empty. update() does not go through isValid(), so the hook only
+runs on save().
+---
+ core/Database/ActiveRecord/Model.php          |  9 +++
+ .../ActiveRecord/BeforeValidationTest.php     | 64 +++++++++++++++++++
+ .../Core/Database/ActiveRecord/PlainModel.php | 22 +++++++
+ .../Database/ActiveRecord/TrimmingModel.php   | 36 +++++++++++
+ 4 files changed, 131 insertions(+)
+ create mode 100644 tests/Unit/Core/Database/ActiveRecord/BeforeValidationTest.php
+ create mode 100644 tests/Unit/Core/Database/ActiveRecord/PlainModel.php
+ create mode 100644 tests/Unit/Core/Database/ActiveRecord/TrimmingModel.php
+
+diff --git a/core/Database/ActiveRecord/Model.php b/core/Database/ActiveRecord/Model.php
+index c6a7dab..f161f29 100644
+--- a/core/Database/ActiveRecord/Model.php
++++ b/core/Database/ActiveRecord/Model.php
+@@ -104,11 +104,20 @@ abstract class Model
+     {
+         $this->errors = [];
+ 
++        $this->beforeValidation();
+         $this->validates();
+ 
+         return empty($this->errors);
+     }
+ 
++    /**
++     * Gancho: a subclasse normaliza atributos (ex.: trim) antes das validações.
++     * Roda só via isValid(), ou seja, em save(); update() não passa por aqui.
++     */
++    protected function beforeValidation(): void
++    {
++    }
++
+     public function newRecord(): bool
+     {
+         return $this->id === null;
+diff --git a/tests/Unit/Core/Database/ActiveRecord/BeforeValidationTest.php b/tests/Unit/Core/Database/ActiveRecord/BeforeValidationTest.php
+new file mode 100644
+index 0000000..e724846
+--- /dev/null
++++ b/tests/Unit/Core/Database/ActiveRecord/BeforeValidationTest.php
+@@ -0,0 +1,64 @@
++<?php
++
++namespace Tests\Unit\Core\Database\ActiveRecord;
++
++use PHPUnit\Framework\TestCase;
++
++/**
++ * Gancho Model::beforeValidation(): roda dentro de isValid(), antes de validates().
++ * Não usa banco: isValid() só chama os dois métodos.
++ */
++class BeforeValidationTest extends TestCase
++{
++    public function test_is_valid_should_call_before_validation_before_validates(): void
++    {
++        $model = new TrimmingModel(['name' => 'Ana']);
++
++        $this->assertTrue($model->isValid());
++        $this->assertSame(['beforeValidation', 'validates'], $model->calls);
++    }
++
++    public function test_hook_should_run_on_every_is_valid_call(): void
++    {
++        $model = new TrimmingModel(['name' => 'Ana']);
++
++        $model->isValid();
++        $model->isValid();
++
++        $this->assertSame(['beforeValidation', 'validates', 'beforeValidation', 'validates'], $model->calls);
++    }
++
++    public function test_validates_should_see_the_normalized_value(): void
++    {
++        $model = new TrimmingModel(['name' => "   \t\n"]);
++
++        $this->assertFalse($model->isValid());
++        $this->assertSame('não pode ser vazio!', $model->errors('name'));
++        $this->assertSame('', $model->name);
++    }
++
++    public function test_normalized_value_should_stay_on_the_object(): void
++    {
++        $model = new TrimmingModel(['name' => '  Ana  ']);
++
++        $this->assertTrue($model->isValid());
++        $this->assertSame('Ana', $model->name);
++    }
++
++    public function test_hook_should_not_touch_null(): void
++    {
++        $model = new TrimmingModel();
++
++        $this->assertFalse($model->isValid());
++        $this->assertNull($model->name);
++        $this->assertSame('não pode ser vazio!', $model->errors('name'));
++    }
++
++    public function test_default_hook_should_change_nothing(): void
++    {
++        $model = new PlainModel(['name' => '   ']);
++
++        $this->assertTrue($model->isValid());
++        $this->assertSame('   ', $model->name);
++    }
++}
+diff --git a/tests/Unit/Core/Database/ActiveRecord/PlainModel.php b/tests/Unit/Core/Database/ActiveRecord/PlainModel.php
+new file mode 100644
+index 0000000..22219cb
+--- /dev/null
++++ b/tests/Unit/Core/Database/ActiveRecord/PlainModel.php
+@@ -0,0 +1,22 @@
++<?php
++
++namespace Tests\Unit\Core\Database\ActiveRecord;
++
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++
++/**
++ * Model de teste que NÃO sobrescreve beforeValidation(): usa o gancho vazio do core.
++ *
++ * @property string|null $name
++ */
++class PlainModel extends Model
++{
++    protected static string $table = 'plain_models';
++    protected static array $columns = ['name'];
++
++    public function validates(): void
++    {
++        Validations::notEmpty('name', $this);
++    }
++}
+diff --git a/tests/Unit/Core/Database/ActiveRecord/TrimmingModel.php b/tests/Unit/Core/Database/ActiveRecord/TrimmingModel.php
+new file mode 100644
+index 0000000..dbc4d76
+--- /dev/null
++++ b/tests/Unit/Core/Database/ActiveRecord/TrimmingModel.php
+@@ -0,0 +1,36 @@
++<?php
++
++namespace Tests\Unit\Core\Database\ActiveRecord;
++
++use Core\Database\ActiveRecord\Model;
++use Lib\Validations;
++
++/**
++ * Model de teste que sobrescreve o gancho beforeValidation() e registra a ordem das chamadas.
++ *
++ * @property string|null $name
++ */
++class TrimmingModel extends Model
++{
++    protected static string $table = 'trimming_models';
++    protected static array $columns = ['name'];
++
++    /** @var array<int, string> */
++    public array $calls = [];
++
++    protected function beforeValidation(): void
++    {
++        $this->calls[] = 'beforeValidation';
++
++        if (is_string($this->name)) {
++            $this->name = trim($this->name);
++        }
++    }
++
++    public function validates(): void
++    {
++        $this->calls[] = 'validates';
++
++        Validations::notEmpty('name', $this);
++    }
++}
+-- 
+2.54.0 (Apple Git-157)
+
+
+From b1087e573b791a31cc88799a173a4cf9b4efbfb9 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:41:36 -0300
+Subject: [PATCH 2/2] feat: Trim Event title, description and location before
+ validation
+
+A title made only of spaces used to pass notEmpty. Event overrides the
+new hook and trims the free text fields when they are strings.
+---
+ app/Models/Event.php                          | 14 ++++
+ .../admin/events/CreateSuccessfullyCest.php   | 24 ++++++
+ .../events/CreateWithInvalidDataCest.php      | 25 ++++++
+ tests/Unit/Models/Events/EventTest.php        | 82 +++++++++++++++++++
+ 4 files changed, 145 insertions(+)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..bfa84a0 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -57,6 +57,20 @@ class Event extends Model
+         'capacity',
+     ];
+ 
++    /**
++     * Tira os espaços das pontas dos campos de texto livre (title, description, location): sem
++     * isso, um título só com espaços passaria no notEmpty. Valores que não são string (ex.: null)
++     * ficam como estão. Os demais campos são ENUM/SET/data/número e já são validados por valor.
++     */
++    protected function beforeValidation(): void
++    {
++        foreach (['title', 'description', 'location'] as $field) {
++            if (is_string($this->$field)) {
++                $this->$field = trim($this->$field);
++            }
++        }
++    }
++
+     public function validates(): void
+     {
+         Validations::notEmpty('title', $this);
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..5fbdeab 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -45,4 +45,28 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         Assert::assertEquals(40, $event->capacity);
+         Assert::assertSame(0, $event->enrollmentsCount());
+     }
++
++    public function createEventTrimsOuterSpaces(AcceptanceTester $page): void
++    {
++        $data = $this->validEventData([
++            'title' => '   Oficina de Git   ',
++            'description' => '  Versionamento na prática.  ',
++            'location' => '  Laboratório B204  ',
++        ]);
++
++        $page->wantTo('Cadastro com espaços nas pontas: título, descrição e local são gravados sem eles');
++        $page->amOnPage('/admin/events/new');
++        $this->fillEventForm($page, $data);
++        $page->click('Salvar');
++
++        $event = Event::findBy(['title' => 'Oficina de Git']);
++        Assert::assertNotNull($event);
++        $page->seeCurrentUrlEquals("/admin/events/{$event->id}");
++        $page->see('Evento cadastrado com sucesso!');
++        $page->see('Oficina de Git', 'h1');
++
++        Assert::assertSame('Versionamento na prática.', $event->description);
++        Assert::assertSame('Laboratório B204', $event->location);
++        Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
++    }
+ }
+diff --git a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+index 456a47e..7983684 100644
+--- a/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
++++ b/tests/Acceptance/admin/events/CreateWithInvalidDataCest.php
+@@ -30,6 +30,31 @@ class CreateWithInvalidDataCest extends BaseEventsCest
+         Assert::assertCount(self::TOTAL_EVENTS, Event::all());
+     }
+ 
++    public function createWithOnlySpacesInTextFields(AcceptanceTester $page): void
++    {
++        $page->wantTo('Tentativa de cadastro com título, descrição e local só com espaços');
++        $page->amOnPage('/admin/events/new');
++
++        $this->fillEventForm($page, $this->validEventData([
++            'title' => '   ',
++            'description' => '   ',
++            'location' => '   ',
++        ]));
++        $page->click('Salvar');
++
++        $page->see(self::FLASH);
++        $page->see('Novo Evento', 'h1');
++        foreach (['title', 'description', 'location'] as $field) {
++            $page->seeElement("#event_{$field}.is-invalid");
++            $page->see('não pode ser vazio!', "#event_{$field} ~ .invalid-feedback");
++        }
++        foreach (['kind', 'starts_on', 'capacity'] as $field) {
++            $page->dontSeeElement("#event_{$field}.is-invalid");
++        }
++
++        Assert::assertCount(self::TOTAL_EVENTS, Event::all());
++    }
++
+     public function createWithInvalidDataKeepsValidValues(AcceptanceTester $page): void
+     {
+         $page->wantTo('Tentativa de cadastro com dados incorretos (valores válidos são mantidos)');
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..41ba8b2 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -241,6 +241,88 @@ class EventTest extends TestCase
+         $this->assertCount(0, Event::all());
+     }
+ 
++    /* ------------------- beforeValidation: espaços nas pontas ------------------- */
++
++    /**
++     * @return array<string, array{string}>
++     */
++    public static function trimmedFieldsProvider(): array
++    {
++        return [
++            'title' => ['title'],
++            'description' => ['description'],
++            'location' => ['location'],
++        ];
++    }
++
++    #[DataProvider('trimmedFieldsProvider')]
++    public function test_field_with_only_spaces_should_be_invalid(string $field): void
++    {
++        $event = new Event($this->params([$field => "   \t\n "]));
++
++        $this->assertFalse($event->isValid());
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode ser vazio!', $event->errors($field));
++        $this->assertCount(1, $this->errorsOf($event));
++        $this->assertSame('', $event->$field);
++    }
++
++    public function test_save_should_store_title_description_and_location_without_outer_spaces(): void
++    {
++        $event = $this->createEvent([
++            'title' => ' Oficina ',
++            'description' => "  Oficina de Git.\n",
++            'location' => "\tLaboratório B203  ",
++        ]);
++
++        $this->assertSame('Oficina', $event->title);
++
++        $found = Event::findById($event->id);
++        $this->assertNotNull($found);
++        $this->assertSame('Oficina', $found->title);
++        $this->assertSame('Oficina de Git.', $found->description);
++        $this->assertSame('Laboratório B203', $found->location);
++    }
++
++    public function test_trim_should_keep_inner_spaces(): void
++    {
++        $event = $this->createEvent(['title' => '  Semana   Acadêmica  ']);
++
++        $this->assertSame('Semana   Acadêmica', $event->title);
++    }
++
++    public function test_save_on_existing_event_should_also_trim(): void
++    {
++        $event = $this->createEvent();
++
++        $event->title = '  Título Editado  ';
++        $this->assertTrue($event->save());
++
++        $found = Event::findById($event->id);
++        $this->assertNotNull($found);
++        $this->assertSame('Título Editado', $found->title);
++    }
++
++    public function test_trim_should_not_apply_to_enum_fields(): void
++    {
++        $event = new Event($this->params(['kind' => ' lecture ']));
++
++        $this->assertFalse($event->isValid());
++        $this->assertEquals('não é uma opção válida!', $event->errors('kind'));
++    }
++
++    public function test_update_should_not_run_before_validation(): void
++    {
++        // update() grava direto, sem isValid(): o gancho vale só para save().
++        $event = $this->createEvent();
++
++        $this->assertTrue($event->update(['title' => ' Sem Trim ']));
++
++        $found = Event::findById($event->id);
++        $this->assertNotNull($found);
++        $this->assertSame(' Sem Trim ', $found->title);
++    }
++
+     /* ------------------- audience (SET) ------------------- */
+ 
+     public function test_audience_list_should_return_an_array(): void
+-- 
+2.54.0 (Apple Git-157)
+
