@@ -9,7 +9,8 @@ Chance: alta. Tempo estimado: 20-30 min. Catálogo:
 `s50/fvp/4.2/catalogo.md`, S1.
 
 Branch no clone: `fvp/s1-teste-aceitacao-filtro`, empilhada sobre
-`fvp/n1-filtro-por-tipo-paginacao` (que sai de `main`, `f31006b`).
+`fvp/n1-filtro-por-tipo-paginacao` (que sai de `main`, `f31006b`; no bundle
+`5dedab5`).
 
 | Commit    | Mensagem                                                       |
 |-----------|----------------------------------------------------------------|
