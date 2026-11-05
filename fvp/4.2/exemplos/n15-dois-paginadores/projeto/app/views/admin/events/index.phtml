@@ -1,0 +1,21 @@
+<div class="mb-3">
+    <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+</div>
+
+<section id="upcoming-events" class="mb-5">
+    <h2 class="h4">Próximos</h2>
+    <?php
+    $paginator = $upcoming;
+    $emptyMessage = 'Nenhum evento próximo.';
+    require __DIR__ . '/_table.phtml';
+    ?>
+</section>
+
+<section id="past-events">
+    <h2 class="h4">Passados</h2>
+    <?php
+    $paginator = $past;
+    $emptyMessage = 'Nenhum evento passado.';
+    require __DIR__ . '/_table.phtml';
+    ?>
+</section>

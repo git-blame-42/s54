@@ -1,0 +1,818 @@
+From d8d1dc62379fa9054ef8b194b1f428d3e989742e Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:33:51 -0300
+Subject: [PATCH] feat: Paginate upcoming and past events in two tables
+
+The Paginator takes an optional page param name, fixed route params,
+comparisons and order, so two paginators can share the same screen.
+---
+ app/Controllers/Admin/EventsController.php    |  33 ++++-
+ app/Models/Event.php                          |  61 ++++++++
+ app/views/admin/events/_table.phtml           |  47 +++++++
+ app/views/admin/events/index.phtml            |  52 +++----
+ app/views/paginator/_pages.phtml              |  11 +-
+ lib/Paginator.php                             |  57 ++++++--
+ .../admin/events/CreateSuccessfullyCest.php   |   8 +-
+ .../admin/events/TwoPaginatorsCest.php        |  83 +++++++++++
+ .../Admin/EventsControllerTest.php            | 131 ++++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 108 +++++++++++++++
+ 10 files changed, 534 insertions(+), 57 deletions(-)
+ create mode 100644 app/views/admin/events/_table.phtml
+ create mode 100644 tests/Acceptance/admin/events/TwoPaginatorsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..0cb3086 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -11,19 +11,34 @@ class EventsController extends Controller
+ {
+     private const PER_PAGE = 5;
+ 
++    /** Parâmetro de página da tabela "Passados" (a de "Próximos" usa o `page` de sempre). */
++    private const PAST_PAGE_PARAM = 'past_page';
++
+     private const FIELDS = ['title', 'description', 'kind', 'modality', 'starts_on', 'location', 'capacity'];
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
++        // Duas tabelas paginadas na mesma tela: cada uma lê o seu parâmetro de página
++        // e os links de uma repetem a página atual da outra (página 1 fica fora da URL).
++        $page = $this->pageNumber($request, 'page');
++        $pastPage = $this->pageNumber($request, self::PAST_PAGE_PARAM);
++
++        $upcoming = Event::paginateUpcoming(
++            page: $page,
+             per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
++            route: 'admin.events.paginate',
++            routeParams: $pastPage > 1 ? [self::PAST_PAGE_PARAM => $pastPage] : []
++        );
++        $past = Event::paginatePast(
++            page: $pastPage,
++            per_page: self::PER_PAGE,
++            route: 'admin.events.index',
++            pageParam: self::PAST_PAGE_PARAM,
++            routeParams: $page > 1 ? ['page' => $page] : []
+         );
+-        $events = $paginator->registers();
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('upcoming', 'past', 'title'));
+     }
+ 
+     public function show(Request $request): void
+@@ -110,6 +125,14 @@ class EventsController extends Controller
+         $this->redirectTo(route('admin.events.index'));
+     }
+ 
++    /**
++     * Número de página lido do parâmetro informado; ausente, zero ou negativo vira 1.
++     */
++    private function pageNumber(Request $request, string $param): int
++    {
++        return max(1, (int) $request->getParam($param, 1));
++    }
++
+     /**
+      * Copia para o Evento só os campos do formulário (nunca user_id nem id).
+      */
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..d846e00 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,6 +4,7 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Lib\Paginator;
+ use Lib\Validations;
+ use PDOException;
+ 
+@@ -144,6 +145,66 @@ class Event extends Model
+         return $this->enrollmentsCount() > 0;
+     }
+ 
++    /**
++     * Eventos de hoje em diante (tabela "Próximos" da listagem), paginados, do mais próximo ao mais distante.
++     *
++     * @param array<string, mixed> $routeParams parâmetros fixos dos links de página
++     */
++    public static function paginateUpcoming(
++        int $page = 1,
++        int $per_page = 10,
++        ?string $route = null,
++        string $pageParam = 'page',
++        array $routeParams = []
++    ): Paginator {
++        return self::paginateByStartsOn('>=', 'starts_on, id', $page, $per_page, $route, $pageParam, $routeParams);
++    }
++
++    /**
++     * Eventos anteriores a hoje (tabela "Passados" da listagem), paginados, do mais recente ao mais antigo.
++     *
++     * @param array<string, mixed> $routeParams parâmetros fixos dos links de página
++     */
++    public static function paginatePast(
++        int $page = 1,
++        int $per_page = 10,
++        ?string $route = null,
++        string $pageParam = 'page',
++        array $routeParams = []
++    ): Paginator {
++        return self::paginateByStartsOn('<', 'starts_on DESC, id DESC', $page, $per_page, $route, $pageParam, $routeParams);
++    }
++
++    /**
++     * "Hoje" vem do PHP (date), o mesmo relógio da validação "não pode estar no passado!".
++     * ORDER BY explícito: com o WHERE por starts_on o MySQL pode ler pelo índice da coluna,
++     * e a ordem "do banco" deixa de ser a do id.
++     *
++     * @param array<string, mixed> $routeParams
++     */
++    private static function paginateByStartsOn(
++        string $operator,
++        string $orderBy,
++        int $page,
++        int $per_page,
++        ?string $route,
++        string $pageParam,
++        array $routeParams
++    ): Paginator {
++        return new Paginator(
++            class: static::class,
++            page: $page,
++            per_page: $per_page,
++            table: static::table(),
++            attributes: static::columns(),
++            route: $route,
++            routeParams: $routeParams,
++            pageParam: $pageParam,
++            comparisons: ['starts_on' => [$operator, date('Y-m-d')]],
++            orderBy: $orderBy
++        );
++    }
++
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+      * retorna false e registra o motivo em errors('base').
+diff --git a/app/views/admin/events/_table.phtml b/app/views/admin/events/_table.phtml
+new file mode 100644
+index 0000000..297d231
+--- /dev/null
++++ b/app/views/admin/events/_table.phtml
+@@ -0,0 +1,47 @@
++<?php
++/**
++ * Tabela paginada de Eventos, usada duas vezes no index (Próximos e Passados).
++ *
++ * Espera: $paginator (Lib\Paginator) e $emptyMessage (texto quando não há Eventos).
++ */
++$events = $paginator->registers();
++?>
++<?php if (empty($events)) : ?>
++    <p><?= htmlspecialchars($emptyMessage) ?></p>
++<?php else : ?>
++    <table class="table table-striped align-middle">
++        <thead>
++            <tr>
++                <th>Título</th>
++                <th>Tipo</th>
++                <th>Data</th>
++                <th>Local</th>
++                <th>Vagas</th>
++                <th>Ações</th>
++            </tr>
++        </thead>
++        <tbody>
++            <?php foreach ($events as $event) : ?>
++                <tr>
++                    <td><?= htmlspecialchars($event->title) ?></td>
++                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
++                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
++                    <td><?= htmlspecialchars($event->location) ?></td>
++                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
++                    <td>
++                        <a class="btn btn-sm btn-outline-secondary"
++                           href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
++                        <a class="btn btn-sm btn-outline-primary"
++                           href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
++                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
++                            <input type="hidden" name="_method" value="DELETE">
++                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
++                        </form>
++                    </td>
++                </tr>
++            <?php endforeach; ?>
++        </tbody>
++    </table>
++
++    <?php $paginator->renderPagesNavigation(); ?>
++<?php endif; ?>
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..8bf6c0b 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -2,40 +2,20 @@
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
+-<?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
+-<?php else : ?>
+-    <table class="table table-striped align-middle">
+-        <thead>
+-            <tr>
+-                <th>Título</th>
+-                <th>Tipo</th>
+-                <th>Data</th>
+-                <th>Local</th>
+-                <th>Vagas</th>
+-                <th>Ações</th>
+-            </tr>
+-        </thead>
+-        <tbody>
+-            <?php foreach ($events as $event) : ?>
+-                <tr>
+-                    <td><?= htmlspecialchars($event->title) ?></td>
+-                    <td><?= \App\Models\Event::KINDS[$event->kind] ?? htmlspecialchars($event->kind) ?></td>
+-                    <td><?= date('d/m/Y', strtotime($event->starts_on)) ?></td>
+-                    <td><?= htmlspecialchars($event->location) ?></td>
+-                    <td><?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?></td>
+-                    <td>
+-                        <a class="btn btn-sm btn-outline-secondary" href="<?= route('admin.events.show', ['id' => $event->id]) ?>">Ver</a>
+-                        <a class="btn btn-sm btn-outline-primary" href="<?= route('admin.events.edit', ['id' => $event->id]) ?>">Editar</a>
+-                        <form class="d-inline" action="<?= route('admin.events.destroy', ['id' => $event->id]) ?>" method="post">
+-                            <input type="hidden" name="_method" value="DELETE">
+-                            <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+-                        </form>
+-                    </td>
+-                </tr>
+-            <?php endforeach; ?>
+-        </tbody>
+-    </table>
++<section id="upcoming-events" class="mb-5">
++    <h2 class="h4">Próximos</h2>
++    <?php
++    $paginator = $upcoming;
++    $emptyMessage = 'Nenhum evento próximo.';
++    require __DIR__ . '/_table.phtml';
++    ?>
++</section>
+ 
+-    <?php $paginator->renderPagesNavigation(); ?>
+-<?php endif; ?>
++<section id="past-events">
++    <h2 class="h4">Passados</h2>
++    <?php
++    $paginator = $past;
++    $emptyMessage = 'Nenhum evento passado.';
++    require __DIR__ . '/_table.phtml';
++    ?>
++</section>
+diff --git a/app/views/paginator/_pages.phtml b/app/views/paginator/_pages.phtml
+index 2ace0d2..3568f12 100644
+--- a/app/views/paginator/_pages.phtml
++++ b/app/views/paginator/_pages.phtml
+@@ -1,9 +1,14 @@
++<?php
++// Link de cada página: parâmetro de página deste paginador + parâmetros fixos (ex.: a página da outra tabela).
++// htmlspecialchars: com mais de um parâmetro na query string, o href leva '&' (vira '&amp;').
++$pageUrl = fn (int $page): string => htmlspecialchars(route($paginator->getRouteName(), $paginator->routeParams($page)));
++?>
+ <nav aria-label="Page navigation">
+     <ul class="pagination justify-content-end">
+ 
+         <?php if ($paginator->hasPreviousPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->previousPage()]) ?>">Anterior</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->previousPage()) ?>">Anterior</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+@@ -13,13 +18,13 @@
+ 
+         <?php for ($page = 1; $page <= $paginator->totalOfPages(); $page++) : ?>
+             <li class="page-item <?= $paginator->isPage($page) ? 'active' : '' ?>">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $page]) ?>"><?= $page ?></a>
++                <a class="page-link" href="<?= $pageUrl($page) ?>"><?= $page ?></a>
+             </li>
+         <?php endfor; ?>
+ 
+         <?php if ($paginator->hasNextPage()) : ?>
+             <li class="page-item">
+-                <a class="page-link" href="<?= route($paginator->getRouteName(), ['page' => $paginator->nextPage()]) ?>">Próxima</a>
++                <a class="page-link" href="<?= $pageUrl($paginator->nextPage()) ?>">Próxima</a>
+             </li>
+         <?php else : ?>
+             <li class="page-item disabled">
+diff --git a/lib/Paginator.php b/lib/Paginator.php
+index 065ee46..dd02b65 100644
+--- a/lib/Paginator.php
++++ b/lib/Paginator.php
+@@ -4,17 +4,28 @@ namespace Lib;
+ 
+ use Core\Constants\Constants;
+ use Core\Database\Database;
++use InvalidArgumentException;
+ use PDO;
+ use PDOStatement;
+ 
+ class Paginator
+ {
++    /** Operadores aceitos em $comparisons (lista fechada: o operador entra no SQL). */
++    private const COMPARISON_OPERATORS = ['<', '<=', '>', '>=', '<>'];
++
+     private int $totalOfRegisters = 0;
+     private int $totalOfPages = 0;
+     private int $totalOfRegistersOfPage = 0;
+     private int $offset = 0;
+     private array $registers = [];
+ 
++    /**
++     * @param array<string, mixed> $conditions igualdades (coluna = valor)
++     * @param array<string, mixed> $routeParams parâmetros fixos dos links de página (ex.: a página da outra tabela)
++     * @param string $pageParam nome do parâmetro de página nos links (dois paginadores na mesma tela: um nome para cada)
++     * @param array<string, array{0: string, 1: mixed}> $comparisons ex.: ['starts_on' => ['>=', '2026-11-05']]
++     * @param string|null $orderBy texto fixo do model (ex.: 'starts_on, id'); nunca valor vindo do usuário
++     */
+     public function __construct(
+         private string $class,
+         private int $page,
+@@ -22,7 +33,11 @@ class Paginator
+         private string $table,
+         private array $attributes,
+         private array $conditions = [],
+-        private ?string $route = null
++        private ?string $route = null,
++        private array $routeParams = [],
++        private string $pageParam = 'page',
++        private array $comparisons = [],
++        private ?string $orderBy = null
+     ) {
+         $this->loadTotals();
+         $this->loadRegisters();
+@@ -101,6 +116,21 @@ class Paginator
+         return $this->route ?? "$this->table.paginate";
+     }
+ 
++    public function getPageParam(): string
++    {
++        return $this->pageParam;
++    }
++
++    /**
++     * Parâmetros da rota do link para $page: os fixos mais o parâmetro de página deste paginador.
++     *
++     * @return array<string, mixed>
++     */
++    public function routeParams(int $page): array
++    {
++        return array_merge($this->routeParams, [$this->pageParam => $page]);
++    }
++
+     private function loadTotals(): void
+     {
+         $pdo = Database::getDatabaseConn();
+@@ -120,10 +150,12 @@ class Paginator
+         $this->offset = $this->per_page * ($this->page - 1);
+ 
+         $attributes = implode(', ', $this->attributes);
++        $orderBy = $this->orderBy === null ? '' : "ORDER BY {$this->orderBy}";
+ 
+         $sql = <<<SQL
+             SELECT id, {$attributes} FROM {$this->table}
+             {$this->buildConditions()}
++            {$orderBy}
+             LIMIT :limit OFFSET :offset
+         SQL;
+ 
+@@ -146,25 +178,32 @@ class Paginator
+ 
+     private function buildConditions(): string
+     {
+-        if (empty($this->conditions)) {
+-            return '';
+-        }
+-
+         $sqlConditions = array_map(function ($column) {
+             return "{$column} = :{$column}";
+         }, array_keys($this->conditions));
+ 
++        foreach ($this->comparisons as $column => [$operator]) {
++            if (!in_array($operator, self::COMPARISON_OPERATORS, true)) {
++                throw new InvalidArgumentException("Operador inválido no Paginator: {$operator}");
++            }
++            $sqlConditions[] = "{$column} {$operator} :{$column}_cmp";
++        }
++
++        if (empty($sqlConditions)) {
++            return '';
++        }
++
+         return ' WHERE ' . implode(' AND ', $sqlConditions);
+     }
+ 
+     private function bindConditions(PDOStatement $stmt): void
+     {
+-        if (empty($this->conditions)) {
+-            return;
+-        }
+-
+         foreach ($this->conditions as $column => $value) {
+             $stmt->bindValue($column, $value);
+         }
++
++        foreach ($this->comparisons as $column => [, $value]) {
++            $stmt->bindValue("{$column}_cmp", $value);
++        }
+     }
+ }
+diff --git a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+index f051af8..7132e51 100644
+--- a/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
++++ b/tests/Acceptance/admin/events/CreateSuccessfullyCest.php
+@@ -29,10 +29,10 @@ class CreateSuccessfullyCest extends BaseEventsCest
+         $page->see($data['title'], 'h1');
+         $page->see($data['location']);
+ 
+-        // O Evento novo vai para o fim da listagem (ordem do banco): 17 Eventos, 4ª página.
+-        $page->amOnPage('/admin/events/page/4');
+-        $page->see($data['title'], 'table');
+-        $page->see('Mostrando 16 - 17 de 17');
++        // "Próximos" vem em ordem de data: o Evento novo (amanhã) abre a 1ª página; 17 Eventos.
++        $page->amOnPage('/admin/events');
++        $page->see($data['title'], '#upcoming-events table tbody tr:first-child');
++        $page->see('Mostrando 1 - 5 de 17');
+ 
+         Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
+         Assert::assertEquals($this->admin->id, $event->user_id);
+diff --git a/tests/Acceptance/admin/events/TwoPaginatorsCest.php b/tests/Acceptance/admin/events/TwoPaginatorsCest.php
+new file mode 100644
+index 0000000..a11ffe0
+--- /dev/null
++++ b/tests/Acceptance/admin/events/TwoPaginatorsCest.php
+@@ -0,0 +1,83 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++/**
++ * Listagem com duas tabelas paginadas na mesma tela: "Próximos" (parâmetro `page`) e
++ * "Passados" (parâmetro `past_page`). Trocar de página numa tabela não mexe na outra.
++ */
++class TwoPaginatorsCest extends BaseEventsCest
++{
++    private const UPCOMING = '#upcoming-events';
++    private const PAST = '#past-events';
++
++    /** Eventos 01 a 07 vão para o passado: Passados = 01-05 / 06-07; Próximos = 08-12 / 13-16. */
++    private function movePastEvents(): void
++    {
++        for ($number = 1; $number <= 7; $number++) {
++            $this->events[$number]->update(['starts_on' => date('Y-m-d', (int) strtotime("-{$number} days"))]);
++        }
++    }
++
++    /**
++     * Confere as linhas de uma tabela: exatamente os Eventos de $first a $last.
++     */
++    private function seeRows(AcceptanceTester $page, string $section, int $first, int $last): void
++    {
++        $page->seeNumberOfElements("{$section} table tbody tr", $last - $first + 1);
++        $page->see($this->title($first), $section);
++        $page->see($this->title($last), $section);
++        if ($first > 1) {
++            $page->dontSee($this->title($first - 1), $section);
++        }
++        if ($last < self::TOTAL_EVENTS) {
++            $page->dontSee($this->title($last + 1), $section);
++        }
++    }
++
++    public function paginateEachTableIndependently(AcceptanceTester $page): void
++    {
++        $page->wantTo('Paginar Próximos e Passados de forma independente na mesma tela');
++        $this->movePastEvents();
++        $page->amOnPage('/admin/events');
++
++        $page->see('Próximos', self::UPCOMING . ' h2');
++        $page->see('Passados', self::PAST . ' h2');
++        $this->seeRows($page, self::UPCOMING, 8, 12);
++        $page->see('Mostrando 1 - 5 de 9', self::UPCOMING);
++        $this->seeRows($page, self::PAST, 1, 5);
++        $page->see('Mostrando 1 - 5 de 7', self::PAST);
++
++        // Página 2 de Passados: Próximos continua na página 1.
++        $page->click('2', self::PAST . ' .pagination');
++        $page->seeCurrentUrlEquals('/admin/events?past_page=2');
++        $this->seeRows($page, self::PAST, 6, 7);
++        $this->seeRows($page, self::UPCOMING, 8, 12);
++
++        // "Próxima" de Próximos: Passados continua na página 2.
++        $page->click('Próxima', self::UPCOMING . ' .pagination');
++        $page->seeCurrentUrlEquals('/admin/events/page/2?past_page=2');
++        $this->seeRows($page, self::UPCOMING, 13, 16);
++        $this->seeRows($page, self::PAST, 6, 7);
++
++        // "Anterior" de Passados: Próximos continua na página 2.
++        $page->click('Anterior', self::PAST . ' .pagination');
++        $page->seeCurrentUrlEquals('/admin/events?page=2&past_page=1');
++        $this->seeRows($page, self::PAST, 1, 5);
++        $this->seeRows($page, self::UPCOMING, 13, 16);
++    }
++
++    public function noPastEventsShowsEmptyMessage(AcceptanceTester $page): void
++    {
++        $page->wantTo('Ver a tabela de Passados vazia quando todos os Eventos são futuros');
++        $page->amOnPage('/admin/events');
++
++        $page->see('Nenhum evento passado.', self::PAST);
++        $page->dontSeeElement(self::PAST . ' table');
++        $page->dontSeeElement(self::PAST . ' .pagination');
++        $page->seeNumberOfElements('.pagination', 1);
++        $page->see('Mostrando 1 - 5 de 16', self::UPCOMING);
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..a40cdb3 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -6,6 +6,7 @@ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
+ use Lib\Authentication\Auth;
++use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\Integration\Controllers\ControllerTestCase;
+ 
+ class EventsControllerTest extends ControllerTestCase
+@@ -67,6 +68,136 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    /* ------------------- dois paginadores (próximos/passados) ------------------- */
++
++    /** 6 Eventos futuros ("Próximo 1..6") e 6 passados ("Passado 1..6"): duas páginas em cada tabela. */
++    private function createUpcomingAndPastEvents(): void
++    {
++        for ($i = 1; $i <= 6; $i++) {
++            $this->createEvent(['title' => "Próximo {$i}", 'starts_on' => date('Y-m-d', strtotime("+{$i} days"))]);
++        }
++        for ($i = 1; $i <= 6; $i++) {
++            $event = $this->createEvent(['title' => "Passado {$i}"]);
++            $event->update(['starts_on' => date('Y-m-d', strtotime("-{$i} days"))]);
++        }
++    }
++
++    /** Recorte do HTML de uma das seções do index (upcoming-events ou past-events). */
++    private function section(string $html, string $id): string
++    {
++        $this->assertMatchesRegularExpression("/<section id=\"{$id}\".*?<\/section>/s", $html);
++        preg_match("/<section id=\"{$id}\".*?<\/section>/s", $html, $matches);
++
++        return $matches[0];
++    }
++
++    public function test_index_paginates_upcoming_and_past_separately(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $upcoming = $this->section($response, 'upcoming-events');
++        $past = $this->section($response, 'past-events');
++
++        $this->assertStringContainsString('Próximos', $upcoming);
++        $this->assertStringContainsString('Próximo 5', $upcoming);
++        $this->assertStringNotContainsString('Próximo 6', $upcoming);
++        $this->assertStringNotContainsString('Passado', $upcoming);
++        $this->assertStringContainsString('href="/admin/events/page/2"', $upcoming);
++
++        $this->assertStringContainsString('Passados', $past);
++        $this->assertStringContainsString('Passado 5', $past);
++        $this->assertStringNotContainsString('Passado 6', $past);
++        $this->assertStringNotContainsString('Próximo', $past);
++        $this->assertStringContainsString('href="/admin/events?past_page=2"', $past);
++    }
++
++    public function test_index_past_page_does_not_move_upcoming_table(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => 2]);
++        $upcoming = $this->section($response, 'upcoming-events');
++        $past = $this->section($response, 'past-events');
++
++        $this->assertStringContainsString('Passado 6', $past);
++        $this->assertStringNotContainsString('Passado 5', $past);
++        $this->assertStringContainsString('Próximo 1', $upcoming);
++        $this->assertStringNotContainsString('Próximo 6', $upcoming);
++        // Os links de "Próximos" levam junto a página atual de "Passados".
++        $this->assertStringContainsString('href="/admin/events/page/2?past_page=2"', $upcoming);
++        $this->assertStringContainsString('href="/admin/events?past_page=1"', $past);
++    }
++
++    public function test_index_both_tables_on_page_two_keep_each_other(): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(
++            action: 'index',
++            controllerName: self::CONTROLLER,
++            params: ['page' => 2, 'past_page' => 2]
++        );
++        $upcoming = $this->section($response, 'upcoming-events');
++        $past = $this->section($response, 'past-events');
++
++        $this->assertStringContainsString('Próximo 6', $upcoming);
++        $this->assertStringNotContainsString('Próximo 5', $upcoming);
++        $this->assertStringContainsString('Passado 6', $past);
++        $this->assertStringNotContainsString('Passado 5', $past);
++        $this->assertStringContainsString('href="/admin/events/page/1?past_page=2"', $upcoming);
++        // Dois parâmetros na query string: o '&' sai escapado no href.
++        $this->assertStringContainsString('href="/admin/events?page=2&amp;past_page=1"', $past);
++    }
++
++    public function test_index_without_past_events_shows_empty_message(): void
++    {
++        $this->createEvent(['title' => 'Só futuro']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Só futuro', $this->section($response, 'upcoming-events'));
++        $past = $this->section($response, 'past-events');
++        $this->assertStringContainsString('Nenhum evento passado.', $past);
++        $this->assertStringNotContainsString('<table', $past);
++        $this->assertStringNotContainsString('pagination', $past);
++    }
++
++    public function test_index_without_upcoming_events_shows_empty_message(): void
++    {
++        $event = $this->createEvent(['title' => 'Já foi']);
++        $event->update(['starts_on' => date('Y-m-d', strtotime('-1 day'))]);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('Nenhum evento próximo.', $this->section($response, 'upcoming-events'));
++        $this->assertStringContainsString('Já foi', $this->section($response, 'past-events'));
++    }
++
++    /**
++     * @return array<string, array{0: mixed}>
++     */
++    public static function invalidPastPages(): array
++    {
++        return [
++            'zero' => [0],
++            'negativa' => [-3],
++            'texto' => ['abc'],
++        ];
++    }
++
++    #[DataProvider('invalidPastPages')]
++    public function test_index_invalid_past_page_falls_back_to_first_page(mixed $pastPage): void
++    {
++        $this->createUpcomingAndPastEvents();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['past_page' => $pastPage]);
++        $past = $this->section($response, 'past-events');
++
++        $this->assertStringContainsString('Passado 1', $past);
++        $this->assertStringNotContainsString('Passado 6', $past);
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..184e1d3 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -5,6 +5,8 @@ namespace Tests\Unit\Models\Events;
+ use App\Models\Enrollment;
+ use App\Models\Event;
+ use App\Models\User;
++use InvalidArgumentException;
++use Lib\Paginator;
+ use PDOException;
+ use PHPUnit\Framework\Attributes\DataProvider;
+ use Tests\TestCase;
+@@ -438,6 +440,112 @@ class EventTest extends TestCase
+         $this->assertEquals('events.paginate', Event::paginate(1, 5)->getRouteName());
+     }
+ 
++    /* ------------------- dois paginadores (próximos/passados) ------------------- */
++
++    /** Cria um Evento e muda a data com update() (sem validação), para poder ir ao passado. */
++    private function createEventOn(string $title, string $relative): Event
++    {
++        $event = $this->createEvent(['title' => $title]);
++        $this->assertTrue($event->update(['starts_on' => date('Y-m-d', strtotime($relative))]));
++
++        return $event;
++    }
++
++    /**
++     * @param array<Event> $events
++     * @return array<int, string>
++     */
++    private function titles(array $events): array
++    {
++        return array_map(fn(Event $event) => $event->title, $events);
++    }
++
++    public function test_paginate_upcoming_should_page_only_events_from_today_on(): void
++    {
++        // Criados fora de ordem de data: a ordem da página vem do ORDER BY, não do id.
++        for ($i = 5; $i >= 1; $i--) {
++            $this->createEventOn("Futuro {$i}", "+{$i} days");
++        }
++        $this->createEventOn('Ontem', '-1 day');
++        $this->createEventOn('Hoje', 'today');
++
++        $page1 = Event::paginateUpcoming(1, 5);
++        $page2 = Event::paginateUpcoming(2, 5);
++
++        $this->assertEquals(6, $page1->totalOfRegisters());
++        $this->assertEquals(2, $page1->totalOfPages());
++        $this->assertEquals(['Hoje', 'Futuro 1', 'Futuro 2', 'Futuro 3', 'Futuro 4'], $this->titles($page1->registers()));
++        $this->assertEquals(['Futuro 5'], $this->titles($page2->registers()));
++        $this->assertInstanceOf(Event::class, $page1->registers()[0]);
++    }
++
++    public function test_paginate_past_should_page_only_events_before_today(): void
++    {
++        $this->createEventOn('Hoje', 'today');
++        for ($i = 6; $i >= 1; $i--) {
++            $this->createEventOn("Passado {$i}", "-{$i} days");
++        }
++
++        $page1 = Event::paginatePast(1, 5);
++        $page2 = Event::paginatePast(2, 5);
++
++        // Do mais recente ao mais antigo; "Hoje" não é passado.
++        $this->assertEquals(6, $page1->totalOfRegisters());
++        $this->assertEquals(2, $page1->totalOfPages());
++        $this->assertEquals(
++            ['Passado 1', 'Passado 2', 'Passado 3', 'Passado 4', 'Passado 5'],
++            $this->titles($page1->registers())
++        );
++        $this->assertEquals(['Passado 6'], $this->titles($page2->registers()));
++    }
++
++    public function test_paginate_past_without_past_events_should_be_empty(): void
++    {
++        $this->createEvent();
++
++        $past = Event::paginatePast(1, 5);
++
++        $this->assertEquals(0, $past->totalOfRegisters());
++        $this->assertSame([], $past->registers());
++    }
++
++    public function test_paginator_should_keep_page_as_default_page_param(): void
++    {
++        $paginator = Event::paginate(1, 5, 'admin.events.paginate');
++
++        $this->assertEquals('page', $paginator->getPageParam());
++        $this->assertEquals(['page' => 3], $paginator->routeParams(3));
++    }
++
++    public function test_paginator_should_use_custom_page_param_and_keep_fixed_route_params(): void
++    {
++        $past = Event::paginatePast(
++            page: 1,
++            per_page: 5,
++            route: 'admin.events.index',
++            pageParam: 'past_page',
++            routeParams: ['page' => 2]
++        );
++
++        $this->assertEquals('past_page', $past->getPageParam());
++        $this->assertEquals('admin.events.index', $past->getRouteName());
++        $this->assertEquals(['page' => 2, 'past_page' => 3], $past->routeParams(3));
++    }
++
++    public function test_paginator_should_reject_unknown_comparison_operator(): void
++    {
++        $this->expectException(InvalidArgumentException::class);
++
++        new Paginator(
++            class: Event::class,
++            page: 1,
++            per_page: 5,
++            table: Event::table(),
++            attributes: Event::columns(),
++            comparisons: ['starts_on' => ['LIKE', '%']]
++        );
++    }
++
+     /* ------------------- relações ------------------- */
+ 
+     public function test_event_should_belong_to_its_creator(): void
+-- 
+2.54.0 (Apple Git-157)
+

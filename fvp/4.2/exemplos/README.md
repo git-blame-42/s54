@@ -60,6 +60,10 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - M15. Escolher o responsável entre os administradores
   `m15-responsavel-admin/`
   - feat: Choose the responsible admin for an event
+- M16. Gancho `beforeValidation` no core (espaços nas pontas)
+  `m16-before-validation/`
+  - feat: Add beforeValidation hook to Model::isValid
+  - feat: Trim Event title, description and location before
 - M17. Campo sim/não por checkbox (`has_certificate`)
   `m17-checkbox-certificado/`
   - feat: Add certificate checkbox to events
@@ -124,6 +128,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
   `n14-query-builder/`
   - feat: Add minimal query builder to the core
   - feat: Order events listing by date with the query builder
+- N15. Dois paginadores na mesma tela (próximos/passados)
+  `n15-dois-paginadores/`
+  - feat: Paginate upcoming and past events in two tables
 - N2. Busca por título (`LIKE`)
   `n2-busca-por-titulo/`
   - feat: Search events by title
