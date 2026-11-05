@@ -1,0 +1,155 @@
+From 306b19d35b606892b5623726ebc8a953a623ea9f Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:15:33 -0300
+Subject: [PATCH] feat: Return JSON for admin events listing
+
+When the client sends Accept: application/json, EventsController::index renders admin/events/index.json.php through renderJson with the page events, the page number and the total; otherwise it renders the HTML listing.
+---
+ app/Controllers/Admin/EventsController.php    |  6 +++
+ app/views/admin/events/index.json.php         | 23 +++++++++
+ tests/Integration/Access/EventsAccessTest.php | 22 +++++++++
+ .../Admin/EventsControllerTest.php            | 48 +++++++++++++++++++
+ 4 files changed, 99 insertions(+)
+ create mode 100644 app/views/admin/events/index.json.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..bd73693 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -22,6 +22,12 @@ class EventsController extends Controller
+         );
+         $events = $paginator->registers();
+ 
++        // Mesma rota, duas representações: JSON quando o cliente pede (Accept: application/json).
++        if ($request->acceptJson()) {
++            $this->renderJson('admin/events/index', compact('events', 'paginator'));
++            return;
++        }
++
+         $title = 'Eventos';
+         $this->render('admin/events/index', compact('events', 'paginator', 'title'));
+     }
+diff --git a/app/views/admin/events/index.json.php b/app/views/admin/events/index.json.php
+new file mode 100644
+index 0000000..f6d9bca
+--- /dev/null
++++ b/app/views/admin/events/index.json.php
+@@ -0,0 +1,23 @@
++<?php
++
++/**
++ * Listagem de Eventos em JSON (usada pelo renderJson quando Accept: application/json).
++ * Campos um a um: nunca serializar o objeto inteiro.
++ *
++ * @var array<\App\Models\Event> $events
++ * @var \Lib\Paginator $paginator
++ */
++
++$json['events'] = array_map(fn(\App\Models\Event $event) => [
++    'id' => $event->id,
++    'title' => $event->title,
++    'kind' => $event->kind,
++    'modality' => $event->modality,
++    'starts_on' => $event->starts_on,
++    'location' => $event->location,
++    'capacity' => (int) $event->capacity,
++    'enrollments' => $event->enrollmentsCount(),
++    'available_spots' => $event->availableSpots(),
++], $events);
++$json['page'] = $paginator->getPage();
++$json['total'] = $paginator->totalOfRegisters();
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..5a2b949 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -172,6 +172,28 @@ class EventsAccessTest extends TestCase
+         $this->assertStringContainsString('Novo Evento', (string) $new->getBody());
+     }
+ 
++    public function test_events_index_as_json_should_redirect_to_login_without_session(): void
++    {
++        $response = $this->newClient()->get('/admin/events', ['headers' => ['Accept' => 'application/json']]);
++
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals('/login', $response->getHeaderLine('Location'));
++    }
++
++    public function test_admin_should_get_events_index_as_json(): void
++    {
++        $client = $this->loggedClient($this->admin);
++
++        $response = $client->get('/admin/events', ['headers' => ['Accept' => 'application/json']]);
++        $json = json_decode((string) $response->getBody(), true);
++
++        $this->assertEquals(200, $response->getStatusCode());
++        $this->assertStringStartsWith('application/json', $response->getHeaderLine('Content-Type'));
++        $this->assertIsArray($json);
++        $this->assertSame('Palestra de Acesso', $json['events'][0]['title']);
++        $this->assertSame(1, $json['total']);
++    }
++
+     public function test_admin_should_be_redirected_to_index_when_event_does_not_exist(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..6a24c59 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -67,6 +67,54 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString('1/10', $response);
+     }
+ 
++    public function test_index_returns_json_when_client_accepts_json(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}", 'capacity' => 10]);
++        }
++        $this->enroll(Event::findBy(['title' => 'Evento 1']));
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++        $json = json_decode($response, true);
++
++        $this->assertIsArray($json);
++        $this->assertSame(1, $json['page']);
++        $this->assertSame(7, $json['total']);
++        $this->assertCount(5, $json['events']);
++        $this->assertSame('Evento 1', $json['events'][0]['title']);
++        $this->assertSame('workshop', $json['events'][0]['kind']);
++        $this->assertSame(10, $json['events'][0]['capacity']);
++        $this->assertSame(1, $json['events'][0]['enrollments']);
++        $this->assertSame(9, $json['events'][0]['available_spots']);
++        $this->assertStringNotContainsString('<table', $response);
++    }
++
++    public function test_index_returns_json_for_the_requested_page(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => "Evento {$i}"]);
++        }
++        $_SERVER['HTTP_ACCEPT'] = 'application/json';
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['page' => 2]);
++        $json = json_decode($response, true);
++
++        $this->assertIsArray($json);
++        $this->assertSame(2, $json['page']);
++        $this->assertSame(['Evento 6', 'Evento 7'], array_column($json['events'], 'title'));
++    }
++
++    public function test_index_renders_html_without_json_accept_header(): void
++    {
++        $this->createEvent(['title' => 'Evento HTML']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString('<table', $response);
++        $this->assertNull(json_decode($response, true));
++    }
++
+     public function test_new_renders_form(): void
+     {
+         $response = $this->get(action: 'new', controllerName: self::CONTROLLER);
+-- 
+2.54.0 (Apple Git-157)
+

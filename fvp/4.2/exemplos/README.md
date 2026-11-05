@@ -71,6 +71,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - O3. Inscritos no `show` (`participants()`)
   `o3-inscritos-no-show/`
   - feat: Show event participants in admin area
+- O4. Resposta JSON da listagem
+  `o4-resposta-json/`
+  - feat: Return JSON for admin events listing
 - P1. Código de check-in aleatório (1000–9999) por Evento
   `p1-codigo-checkin-aleatorio/`
   - feat: Generate a random check-in code for each Event
