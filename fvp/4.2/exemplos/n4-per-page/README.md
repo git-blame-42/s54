@@ -12,7 +12,7 @@ bundle `5dedab5`, ver README raiz).
 
 | Commit    | Mensagem                                                    |
 |-----------|-------------------------------------------------------------|
-| `2fa21bc` | `feat: Show 10 events per page and allow choosing per_page` |
+| `13212df` | `feat: Show 10 events per page and allow choosing per_page` |
 
 ## O que mudou
 
@@ -32,9 +32,12 @@ bundle `5dedab5`, ver README raiz).
 - `core/Database/ActiveRecord/Model.php`: `paginate()` ganha
   `array $queryParams = []` (PHPDoc `array<string, mixed>`) e
   repassa ao `Paginator` com `queryParams: $queryParams`.
-- `app/views/paginator/_pages.phtml`: os três links usam
-  `array_merge(['page' => X], $paginator->queryParams())`. O
-  `route()` põe o que não está na URI como query string:
+- `app/views/paginator/_pages.phtml`: no topo, a closure
+  `$pageUrl = fn (int $p) => route($paginator->getRouteName(),
+  array_merge(['page' => $p], $paginator->queryParams()));`, e os
+  três links usam `$pageUrl(X)` (cada linha fica abaixo de 130
+  colunas; o phpcs não varre `.phtml`). O `route()` põe o que não
+  está na URI como query string:
   `/admin/events/page/2?per_page=5`.
 - `app/views/admin/events/index.phtml`: bloco "Por página:" (classe
   `per-page`) com um link por opção, `active` na atual.
@@ -124,7 +127,7 @@ Pré-requisito: o repositório alvo descende de `f31006b` do público
 cd /caminho/do/seu/repositorio
 git remote add fvp-n4 s50/fvp/4.2/exemplos/n4-per-page/projeto
 git fetch fvp-n4 fvp/n4-per-page
-git cherry-pick 2fa21bc
+git cherry-pick 13212df
 git remote remove fvp-n4
 ```
 
@@ -134,7 +137,7 @@ git remote remove fvp-n4
 git fetch s50/fvp/4.2/exemplos/n4-per-page/solucao.bundle \
     fvp/n4-per-page:fvp-n4
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 2fa21bc
+git cherry-pick 13212df
 # opcional, limpa a ref
 git branch -D fvp-n4
 ```
@@ -167,8 +170,8 @@ Arquivos que costumam conflitar neste cenário e por quê:
   aparece uma vez só.
 - `EventsController::index`: junte os argumentos nomeados na mesma
   chamada de `Event::paginate(...)`.
-- `_pages.phtml`: se o outro lado já tem o `array_merge`, fique com
-  ele (é o mesmo código).
+- `_pages.phtml`: se o outro lado já tem a closure `$pageUrl`,
+  fique com ela (é o mesmo código).
 - `PaginateEventsCest`, `ListEventsCest`, `CreateSuccessfullyCest`:
   fique com a versão deste cenário se a outra ainda conta 5 por
   página; se a outra mudou a ordem (N3), ajuste a página esperada.

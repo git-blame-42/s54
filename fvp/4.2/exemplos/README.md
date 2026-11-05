@@ -25,8 +25,9 @@ no `README.md` e na wiki. Por isso o `git log` do bundle não mostra
 `f31006b`; cherry-pick e patch aplicam igual sobre o `f31006b` do público.
 
 Pré-requisito para aplicar: o repositório alvo descende de `f31006b`.
-Cenários empilhados trazem a base junto no bundle; o README de cada um
-diz se pega só o topo ou o intervalo.
+Cenários empilhados (P2 sobre O2; P3, P7 e P9 sobre P2; P4 sobre P2 e P1;
+Q2 sobre P5; S1 sobre N1; S2 sobre O1; S3 sobre P6) trazem a base junto
+no bundle; o README de cada um diz se pega só o topo ou o intervalo.
 
 ## Como foram verificados
 
