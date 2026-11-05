@@ -12,7 +12,7 @@ Branch no clone: `fvp/n5-eventos-futuros-passados`, a partir de
 
 | Commit    | Mensagem                                  |
 |-----------|-------------------------------------------|
-| `0519317` | `feat: Add upcoming and past events tabs` |
+| `80733fb` | `feat: Add upcoming and past events tabs` |
 
 ## O que mudou
 
@@ -131,7 +131,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-n5 \
     s50/fvp/4.2/exemplos/n5-eventos-futuros-passados/projeto
 git fetch fvp-n5 fvp/n5-eventos-futuros-passados
-git cherry-pick 0519317
+git cherry-pick 80733fb
 git remote remove fvp-n5
 ```
 
@@ -142,7 +142,7 @@ git fetch \
     s50/fvp/4.2/exemplos/n5-eventos-futuros-passados/solucao.bundle \
     fvp/n5-eventos-futuros-passados:fvp-n5
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick 0519317
+git cherry-pick 80733fb
 # opcional, limpa a ref
 git branch -D fvp-n5
 ```

@@ -1,4 +1,4 @@
-From 05193177d4c7f8c64b28686e9c9ea401c4568802 Mon Sep 17 00:00:00 2001
+From 80733fb379a851c0fd62ce598e3bf0c6216355e0 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 16:21:26 -0300
 Subject: [PATCH] feat: Add upcoming and past events tabs
@@ -300,7 +300,7 @@ index bc62d1d..49c1734 100644
      {
          $user = User::findByEmail($email) ?? new User([
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..eede276 100644
+index f961b4c..a60ea67 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -375,6 +375,31 @@ class EventTest extends TestCase
@@ -335,10 +335,10 @@ index f961b4c..eede276 100644
      public function test_find_by_and_exists(): void
      {
          $event = $this->createEvent(['title' => 'Único']);
-@@ -496,6 +521,17 @@ class EventTest extends TestCase
-      * Cria um Evento e move `starts_on` para o passado direto no banco (update não valida),
-      * simulando um Evento que já aconteceu.
-      */
+@@ -508,6 +533,17 @@ class EventTest extends TestCase
+         return $found;
+     }
+ 
 +    /**
 +     * Evento numa data relativa (pode ser passada): grava com update, que não valida (como createPastEvent).
 +     */
@@ -350,9 +350,9 @@ index f961b4c..eede276 100644
 +        return Event::findById($event->id);
 +    }
 +
-     private function createPastEvent(): Event
+     public function test_past_event_can_be_edited_when_starts_on_does_not_change(): void
      {
-         $event = $this->createEvent();
+         $event = $this->createPastEvent();
 -- 
 2.54.0 (Apple Git-157)
 

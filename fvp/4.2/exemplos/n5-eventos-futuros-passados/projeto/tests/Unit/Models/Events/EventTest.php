@@ -521,17 +521,6 @@ class EventTest extends TestCase
      * Cria um Evento e move `starts_on` para o passado direto no banco (update não valida),
      * simulando um Evento que já aconteceu.
      */
-    /**
-     * Evento numa data relativa (pode ser passada): grava com update, que não valida (como createPastEvent).
-     */
-    private function createEventOn(string $title, string $relative): Event
-    {
-        $event = $this->createEvent(['title' => $title]);
-        $this->assertTrue($event->update(['starts_on' => date('Y-m-d', strtotime($relative))]));
-
-        return Event::findById($event->id);
-    }
-
     private function createPastEvent(): Event
     {
         $event = $this->createEvent();
@@ -542,6 +531,17 @@ class EventTest extends TestCase
         $this->assertEquals($past, $found->starts_on);
 
         return $found;
+    }
+
+    /**
+     * Evento numa data relativa (pode ser passada): grava com update, que não valida (como createPastEvent).
+     */
+    private function createEventOn(string $title, string $relative): Event
+    {
+        $event = $this->createEvent(['title' => $title]);
+        $this->assertTrue($event->update(['starts_on' => date('Y-m-d', strtotime($relative))]));
+
+        return Event::findById($event->id);
     }
 
     public function test_past_event_can_be_edited_when_starts_on_does_not_change(): void
