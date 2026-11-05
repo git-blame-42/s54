@@ -28,18 +28,6 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   Como o framework funciona por dentro, peça por peça, com código do
   projeto e do problem-track. Para quem vai programar ou explicar.
 
-- `fvp-possiveis-modificacoes.md`
-  Catálogo das alterações que o professor pode pedir na validação
-  prática (FVP): arquivos, passos, código e testes de cada uma.
-
-- `fvp.sh`
-  Busca no catálogo: `./fvp.sh senha` lista os cenários que citam o
-  termo (título vale mais) e o exemplo pronto em `exemplos-fvp/`; frase
-  entre aspas (`./fvp.sh "lista fechada"`) conta como um só termo;
-  `./fvp.sh -s B10` mostra o cenário inteiro; `./fvp.sh -l` lista os
-  títulos; `./fvp.sh -c` ordena por chance (alta primeiro) com o tempo.
-  Só bash, awk, grep e sort; roda no Ubuntu do laboratório.
-
 - `diretorios-do-framework.md`
   Para que serve cada diretório e arquivo da raiz: dono (framework,
   equipe, infra, gerado), o que entra, o que não entra, e um índice
@@ -56,16 +44,43 @@ Quando o texto diz "nosso projeto", fala do projeto da equipe
   a passo de um cenário do FVP no editor. Pressupõe o
   `scripts/10-install-neovim.sh`.
 
-- `exemplos-fvp/`
-  Uma solução pronta e testada para cada cenário do catálogo: cópia
-  do projeto já modificada (sem `vendor/`), `solucao.patch`,
-  `solucao.bundle` para `fetch` + `cherry-pick` com o mesmo SHA, e
-  `recriar.sh` para recriar o clone completo. Ver
-  `exemplos-fvp/README.md`.
-
-Ordem sugerida: resumo, completo, catálogo do FVP com o projeto
-aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
+Ordem sugerida: resumo, completo, catálogo do FVP da entrega com o
+projeto aberto. O de PHP é consulta: abra quando travar numa sintaxe ou
 quando estiver sem rede.
+
+## FVP
+
+A validação prática (FVP) de cada entrega tem o seu escopo. O diretório
+`fvp/` separa por entrega; os docs do framework acima valem para todas.
+
+- `fvp/4.1/catalogo.md`
+  Catálogo das alterações que o professor pode pedir na FVP da
+  Entrega 4.1 (login, perfis, middlewares, sessão): arquivos, passos,
+  código e testes de cada uma.
+
+- `fvp/4.1/exemplos/`
+  Uma solução pronta e testada para cada cenário do catálogo 4.1:
+  cópia do projeto já modificada (sem `vendor/`), `solucao.patch` e
+  `solucao.bundle` para `fetch` + `cherry-pick` com o mesmo SHA. Ver
+  `fvp/4.1/exemplos/README.md`.
+
+- `fvp/4.2/catalogo.md` e `fvp/4.2/exemplos/`
+  O mesmo para a Entrega 4.2 (CRUD de Eventos: rotas RESTful,
+  `where`, validações, paginação), no mesmo formato.
+
+- `fvp/recriar.sh`
+  Devolve o `.git` ao `projeto/` de um cenário a partir do bundle,
+  offline: `fvp/recriar.sh fvp/4.1/exemplos/<cenario>` (caminho
+  relativo ou absoluto); `FVP_REPO_URL=<url>` define o `origin`;
+  `--todos` recria todos os cenários.
+
+- `fvp.sh`
+  Busca nos catálogos: `./fvp.sh` lista todos os cenários; `./fvp.sh
+  4.2` só os da 4.2; `./fvp.sh 4.2 termo` filtra pelo termo (título
+  vale mais) e aponta o exemplo pronto; frase entre aspas conta como
+  um só termo; `./fvp.sh -s B10` mostra o cenário inteiro; `./fvp.sh
+  -h` lista as opções. Só bash, awk, grep e sort; roda no Ubuntu do
+  laboratório.
 
 ## Scripts
 

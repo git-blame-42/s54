@@ -92,7 +92,7 @@ Terminal e git:
 
 ## 5. Fluxo de um cenário do FVP
 
-Exemplo com o A2 do `fvp-possiveis-modificacoes.md` (logout via
+Exemplo com o A2 do `fvp/4.1/catalogo.md` (logout via
 DELETE). Serve de molde para os outros.
 
 1. Abra o editor na raiz do projeto:

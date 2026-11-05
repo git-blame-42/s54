@@ -311,7 +311,7 @@ class Admin implements Middleware
 ```
 
 O professor apontou essa duplicação na avaliação da 4.1 ("avaliem
-como centralizar"). Solução no `fvp-possiveis-modificacoes.md`, item 1.
+como centralizar"). Solução no `fvp/4.1/catalogo.md`, item 1.
 
 Autorização mora aqui, nunca dentro da ação.
 

@@ -1,17 +1,17 @@
-# exemplos-fvp/*/projeto/ é versionado como arquivos (sem .git interno; o
-# histórico de cada cenário está em solucao.bundle e recriar.sh devolve o
-# clone). Só fica de fora o que o composer/docker recriam.
-exemplos-fvp/*/projeto/vendor/
-exemplos-fvp/*/projeto/.cache/
-exemplos-fvp/*/projeto/.env
-exemplos-fvp/*/projeto/docker-compose.override.yml
-exemplos-fvp/*/projeto/tests/Acceptance/_output/*
-!exemplos-fvp/*/projeto/tests/Acceptance/_output/.gitignore
-exemplos-fvp/*/projeto/tests/Support/_generated/*
-!exemplos-fvp/*/projeto/tests/Support/_generated/.gitignore
-exemplos-fvp/*/projeto/log/**/*.log
-exemplos-fvp/*/projeto/public/assets/uploads/*
-!exemplos-fvp/*/projeto/public/assets/uploads/.gitkeep
+# fvp/*/exemplos/*/projeto/ é versionado como arquivos (sem .git interno; o
+# histórico de cada cenário está em solucao.bundle e fvp/recriar.sh devolve
+# o clone). Só fica de fora o que o composer/docker recriam.
+fvp/*/exemplos/*/projeto/vendor/
+fvp/*/exemplos/*/projeto/.cache/
+fvp/*/exemplos/*/projeto/.env
+fvp/*/exemplos/*/projeto/docker-compose.override.yml
+fvp/*/exemplos/*/projeto/tests/Acceptance/_output/*
+!fvp/*/exemplos/*/projeto/tests/Acceptance/_output/.gitignore
+fvp/*/exemplos/*/projeto/tests/Support/_generated/*
+!fvp/*/exemplos/*/projeto/tests/Support/_generated/.gitignore
+fvp/*/exemplos/*/projeto/log/**/*.log
+fvp/*/exemplos/*/projeto/public/assets/uploads/*
+!fvp/*/exemplos/*/projeto/public/assets/uploads/.gitkeep
 
 # macOS
 .DS_Store

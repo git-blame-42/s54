@@ -285,7 +285,7 @@ Referências de livro para cada um: seção 10 do `framework-completo.md`.
 2. Suba o projeto e faça login com os usuários do populate.
 3. Siga uma requisição no código: rota, middleware, controller,
    model, view.
-4. Faça um item do `fvp-possiveis-modificacoes.md`, com teste.
+4. Faça um item do `fvp/4.1/catalogo.md`, com teste.
 5. Para a 4.2, a seção 12 do `framework-completo.md` dá arquivo:linha
    de cada item da rubrica (where, Validations, Paginator, rotas
    RESTful) no commit `f31006b` do nosso projeto.
