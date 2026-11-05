@@ -6915,9 +6915,9 @@ Arquivos: `SCH:21-38` (`:31` é `capacity`), `EV:10-21` (`@property`),
 `EV:48-58` (`$columns`), `US:28-35` (molde de padrão no construtor),
 `MODEL:32-42` (construtor zera as colunas e copia `$params`),
 `MODEL:139-184` (`save()` grava todas as colunas), `MODEL:255`,
-`MODEL:278`, `MODEL:327` e `PAG:143` (`new static($row)`: o construtor
-roda também
-ao ler do banco), `EC:14` (`FIELDS`: o código não entra), `EC:77-94`
+`MODEL:278`, `MODEL:327` (`new static($row)`) e `PAG:143`
+(`new $this->class($row)`): o construtor roda também ao ler do
+banco, `EC:14` (`FIELDS`: o código não entra), `EC:77-94`
 (`update`, variante), `EC:96-111` (`destroy`),
 `core/Http/Request.php:57-60` (`getParam` devolve `mixed`), `SHOW:1-5`,
 `SHOW:35-36`, `IDX:30-33`, `FORM:16-19`, `ECT:242-266` (destroy),
