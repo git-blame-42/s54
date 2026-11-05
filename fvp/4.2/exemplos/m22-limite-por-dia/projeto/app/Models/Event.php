@@ -77,7 +77,11 @@ class Event extends Model
 
         if (Validations::notEmpty('starts_on', $this) && Validations::validDate('starts_on', $this)) {
             $this->validatesStartsOnNotPast();
-            $this->validatesEventsPerDayLimit();
+
+            // Cada campo guarda uma mensagem só: sem esta guarda, o limite sobrescreveria "não pode estar no passado!".
+            if ($this->errors('starts_on') === null) {
+                $this->validatesEventsPerDayLimit();
+            }
         }
 
         if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {

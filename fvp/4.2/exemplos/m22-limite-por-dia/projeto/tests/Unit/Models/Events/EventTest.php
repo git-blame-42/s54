@@ -625,6 +625,21 @@ class EventTest extends TestCase
         $this->assertEquals('Título corrigido', Event::findById($event->id)?->title);
     }
 
+    public function test_past_date_on_a_full_day_should_show_the_past_date_error(): void
+    {
+        $past = date('Y-m-d', strtotime('-5 days'));
+        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
+            // update() grava sem validar: é o único jeito de ter Eventos no passado.
+            $this->assertTrue($this->createEvent(['title' => "Evento {$i}"])->update(['starts_on' => $past]));
+        }
+
+        $event = new Event($this->params(['title' => 'Evento a mais', 'starts_on' => $past]));
+
+        $this->assertFalse($event->save());
+        $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
+        $this->assertCount(Event::MAX_EVENTS_PER_DAY, Event::all());
+    }
+
     public function test_update_moving_to_a_full_day_should_be_invalid(): void
     {
         for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {

@@ -1,4 +1,4 @@
-From ba3601032da51df156dce456a02143a9d3f80aa0 Mon Sep 17 00:00:00 2001
+From 61fed16c3eca72abd578799a7675baae67d9c0b4 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:23:02 -0300
 Subject: [PATCH] feat: Limit events per day
@@ -7,13 +7,13 @@ Event validation rejects a fourth event on the same starts_on date. The
 count excludes the event itself, so editing an event on a full day still
 works. Pagination tests now spread their events over different days.
 ---
- app/Models/Event.php                          | 24 ++++++-
- .../Admin/EventsControllerTest.php            | 40 ++++++++++-
- tests/Unit/Models/Events/EventTest.php        | 68 ++++++++++++++++++-
- 3 files changed, 127 insertions(+), 5 deletions(-)
+ app/Models/Event.php                          | 28 ++++++-
+ .../Admin/EventsControllerTest.php            | 40 ++++++++-
+ tests/Unit/Models/Events/EventTest.php        | 83 ++++++++++++++++++-
+ 3 files changed, 146 insertions(+), 5 deletions(-)
 
 diff --git a/app/Models/Event.php b/app/Models/Event.php
-index ba66870..6bf8c20 100644
+index ba66870..298250f 100644
 --- a/app/Models/Event.php
 +++ b/app/Models/Event.php
 @@ -44,6 +44,9 @@ class Event extends Model
@@ -26,7 +26,7 @@ index ba66870..6bf8c20 100644
      protected static string $table = 'events';
      protected static array $columns = [
          'user_id',
-@@ -72,9 +75,10 @@ class Event extends Model
+@@ -72,10 +75,15 @@ class Event extends Model
          Validations::notEmpty('audience', $this) &&
              Validations::inclusionOfAll('audience', $this, array_keys(self::AUDIENCES));
  
@@ -34,12 +34,17 @@ index ba66870..6bf8c20 100644
 -            Validations::validDate('starts_on', $this) &&
 +        if (Validations::notEmpty('starts_on', $this) && Validations::validDate('starts_on', $this)) {
              $this->validatesStartsOnNotPast();
-+            $this->validatesEventsPerDayLimit();
-+        }
  
++            // Cada campo guarda uma mensagem só: sem esta guarda, o limite sobrescreveria "não pode estar no passado!".
++            if ($this->errors('starts_on') === null) {
++                $this->validatesEventsPerDayLimit();
++            }
++        }
++
          if (Validations::notEmpty('capacity', $this) && Validations::integerMin('capacity', $this, 1)) {
              $this->validatesCapacityAgainstEnrollments();
-@@ -98,6 +102,22 @@ class Event extends Model
+         }
+@@ -98,6 +106,22 @@ class Event extends Model
          Validations::notPastDate('starts_on', $this);
      }
  
@@ -121,7 +126,7 @@ index bc62d1d..ceef18d 100644
      {
          $event = $this->createEvent();
 diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
-index f961b4c..5289cf3 100644
+index f961b4c..c851c84 100644
 --- a/tests/Unit/Models/Events/EventTest.php
 +++ b/tests/Unit/Models/Events/EventTest.php
 @@ -390,7 +390,7 @@ class EventTest extends TestCase
@@ -142,7 +147,7 @@ index f961b4c..5289cf3 100644
          }
  
          $page1 = Event::paginate(1, 5);
-@@ -575,6 +575,70 @@ class EventTest extends TestCase
+@@ -575,6 +575,85 @@ class EventTest extends TestCase
          $this->assertEquals('não é uma data válida!', $event->errors('starts_on'));
      }
  
@@ -194,6 +199,21 @@ index f961b4c..5289cf3 100644
 +
 +        $this->assertTrue($event->save());
 +        $this->assertEquals('Título corrigido', Event::findById($event->id)?->title);
++    }
++
++    public function test_past_date_on_a_full_day_should_show_the_past_date_error(): void
++    {
++        $past = date('Y-m-d', strtotime('-5 days'));
++        for ($i = 1; $i <= Event::MAX_EVENTS_PER_DAY; $i++) {
++            // update() grava sem validar: é o único jeito de ter Eventos no passado.
++            $this->assertTrue($this->createEvent(['title' => "Evento {$i}"])->update(['starts_on' => $past]));
++        }
++
++        $event = new Event($this->params(['title' => 'Evento a mais', 'starts_on' => $past]));
++
++        $this->assertFalse($event->save());
++        $this->assertEquals('não pode estar no passado!', $event->errors('starts_on'));
++        $this->assertCount(Event::MAX_EVENTS_PER_DAY, Event::all());
 +    }
 +
 +    public function test_update_moving_to_a_full_day_should_be_invalid(): void

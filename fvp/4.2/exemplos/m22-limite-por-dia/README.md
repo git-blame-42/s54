@@ -12,7 +12,7 @@ Branch no clone: `fvp/m22-limite-por-dia`, a partir de `main`
 
 | Commit | Mensagem |
 |--------|----------|
-| `ba36010` | `feat: Limit events per day` |
+| `61fed16` | `feat: Limit events per day` |
 
 ## O que mudou
 
@@ -20,14 +20,18 @@ Branch no clone: `fvp/m22-limite-por-dia`, a partir de `main`
   - constante `MAX_EVENTS_PER_DAY = 3`;
   - o encadeamento de `starts_on` em `validates()` virou `if`, porque
     `validatesStartsOnNotPast()` devolve `void` e não dá para
-    encadear mais uma regra depois dela com `&&` (aqui os trechos
-    estão quebrados para caber em 80 colunas):
+    encadear mais uma regra depois dela com `&&`. O limite só é
+    conferido se a data ainda não tem erro (aqui os trechos estão
+    quebrados para caber em 80 colunas):
 
 ```php
 if (Validations::notEmpty('starts_on', $this)
     && Validations::validDate('starts_on', $this)) {
     $this->validatesStartsOnNotPast();
-    $this->validatesEventsPerDayLimit();
+
+    if ($this->errors('starts_on') === null) {
+        $this->validatesEventsPerDayLimit();
+    }
 }
 ```
 
@@ -51,10 +55,11 @@ private function validatesEventsPerDayLimit(): void
 
 - Controller e views sem mudança: o erro sai em `errors('starts_on')`
   e o `_form.phtml` já o mostra sob o campo de data.
-- `tests/Unit/Models/Events/EventTest.php`: 5 testes novos (3 no mesmo
+- `tests/Unit/Models/Events/EventTest.php`: 6 testes novos (3 no mesmo
   dia é válido; o 4º falha com a mensagem e não grava; outro dia não
   conta; editar um dos 3 sem mudar a data funciona; mover um Evento
-  de outro dia para o dia cheio falha e não grava).
+  de outro dia para o dia cheio falha e não grava; data no passado
+  num dia cheio mostra "não pode estar no passado!", não o limite).
 - `tests/Integration/Controllers/Admin/EventsControllerTest.php`: 2
   testes novos (create no dia cheio volta ao form com o erro e o
   flash; update de um dos 3 mantendo a data redireciona para o show).
@@ -75,12 +80,20 @@ private function validatesEventsPerDayLimit(): void
   no dia, ele seria o 4º.
 - Erro em `starts_on` (não em `base`): o form marca o campo de data,
   que é o que o usuário precisa trocar.
-- Só roda depois de `notEmpty` e `validDate`: com data vazia ou
-  inválida não há o que contar, e a mensagem de limite não pode
-  sobrescrever "não é uma data válida!" (cada campo guarda uma
-  mensagem só).
-- Constante pública: os testes usam `Event::MAX_EVENTS_PER_DAY`, e
-  mudar o N é trocar um número.
+- Só roda depois de `notEmpty` e `validDate`, e só se `starts_on`
+  ainda não tem erro: cada campo guarda uma mensagem só
+  (`addError` sobrescreve), então o limite não pode apagar "não é uma
+  data válida!" nem "não pode estar no passado!".
+- Constante pública `MAX_EVENTS_PER_DAY`: o model e os laços dos
+  testes usam a constante, e a mensagem é montada com ela. Trocar o N
+  no model não basta, porém: três asserções fixam o texto
+  "já tem 3 eventos neste dia" (`EventTest`, dia cheio no create e no
+  update; `EventsControllerTest`, create no dia cheio), e dois testes
+  antigos do `EventTest` criam 3 Eventos na data padrão
+  (`test_where_should_filter_by_conditions` e
+  `test_user_should_have_many_events`). Com N = 2, as três asserções
+  e esses dois testes quebram: monte o texto esperado com a constante
+  e espalhe as datas dos dois testes (`+{$i} days`).
 
 ## Como verificar
 
@@ -96,7 +109,7 @@ docker compose stop selenium
 ./run db:populate
 ```
 
-Resultado obtido: Unit 164 testes, Integration 47, Acceptance 23
+Resultado obtido: Unit 165 testes, Integration 47, Acceptance 23
 (eram 159 / 45 / 23 na base). PHPCS e PHPStan sem erros. Schema não
 mudou; `db:populate` cria os 16 Eventos sem erro.
 
@@ -114,10 +127,10 @@ três primeiros POST deram `302`, o quarto `200` com o erro.
 
 - M6 (`m6-unicidade-titulo-data`): também valida pela data, mas com
   `Validations::uniqueness` (no máximo 1 com o mesmo título e data).
-  A variante "mesmo local no mesmo dia" do M6 é este cenário com
-  N = 1. Se aplicar os dois, os dois blocos ficam em `validates()`;
-  ponha o do M6 depois, já que ele só roda se `starts_on` não tiver
-  erro.
+  "Um só Evento por local no mesmo dia" é a variante local + dia
+  abaixo, com N = 1. Se aplicar os dois, os dois blocos ficam em
+  `validates()`, dentro da mesma guarda `errors('starts_on') === null`:
+  o primeiro erro de `starts_on` é o que aparece.
 - Variante local + dia: troque a condição por
   `self::where(['starts_on' => $this->starts_on,
   'location' => $this->location])` e rode a regra só se `location`
@@ -148,7 +161,7 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-m22 \
     s50/fvp/4.2/exemplos/m22-limite-por-dia/projeto
 git fetch fvp-m22 fvp/m22-limite-por-dia
-git cherry-pick ba36010
+git cherry-pick 61fed16
 git remote remove fvp-m22
 ```
 
@@ -159,7 +172,7 @@ git fetch \
     s50/fvp/4.2/exemplos/m22-limite-por-dia/solucao.bundle \
     fvp/m22-limite-por-dia:fvp-m22
 # o bundle traz o objeto; o cherry-pick cria commit novo
-git cherry-pick ba36010
+git cherry-pick 61fed16
 # opcional, limpa a ref
 git branch -D fvp-m22
 ```
@@ -190,7 +203,7 @@ git cherry-pick --continue
 
 Arquivos que costumam conflitar neste cenário e por quê:
 
-- `Event.php`, bloco de `starts_on` em `validates()`: M4, M6, G2 e
+- `Event.php`, bloco de `starts_on` em `validates()`: M4, M6, M18 e
   outros cenários de data mexem nas mesmas linhas. Mantenha um `if`
   com `notEmpty` + `validDate` e chame as regras dos dois dentro dele.
 - `EventTest.php` e `EventsControllerTest.php`: testes novos no mesmo
@@ -204,6 +217,10 @@ Arquivos que costumam conflitar neste cenário e por quê:
   Eventos não deixa editar nem a descrição de nenhum deles. Teste a
   edição, não só o create.
 - Use `>=` com a contagem dos outros. `> 3` deixaria entrar o 4º.
+- Sem a guarda `errors('starts_on') === null`, uma data no passado
+  num dia já cheio mostra "já tem 3 eventos neste dia" em vez de "não
+  pode estar no passado!": as duas regras gravam no mesmo campo e a
+  última vence.
 - Testes existentes que criam muitos Eventos com a mesma data
   (paginação) quebram com a regra nova; o erro aparece como
   "Failed asserting that false is true" no `createEvent`. Espalhe as
