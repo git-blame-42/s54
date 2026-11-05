@@ -2820,8 +2820,9 @@ Passos:
 
 Armadilhas:
 
-- Placeholders numerados (`:p0`, `:p1`): a mesma coluna duas vezes
-  (de/até) quebra com `:starts_on`.
+- Placeholders numerados (`:p0`, `:p1`). Com `:starts_on` nas duas
+  pontas (de/até), o segundo `bindValue` sobrescreve o primeiro e a
+  faixa some sem erro (`>= :s AND <= :s` com 2000 e 2100 conta 0).
 - Coluna e direção não aceitam bind: lista permitida
   (`in_array($column, ['id', ...static::$columns], true)`, `ASC`/`DESC`),
   senão é injeção de SQL.
