@@ -56,6 +56,9 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - N1. Filtro por tipo com `where`, mantido na paginação
   `n1-filtro-por-tipo-paginacao/`
   - feat: Filter events by kind keeping the filter in pagination
+- N2. Busca por título (`LIKE`)
+  `n2-busca-por-titulo/`
+  - feat: Search events by title
 - N3. Ordenar a listagem por data no Paginator
   `n3-ordenar-por-data/`
   - feat: Order events listing by date in the Paginator

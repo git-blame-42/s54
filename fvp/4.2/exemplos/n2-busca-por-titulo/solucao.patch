@@ -1,0 +1,280 @@
+From 8e556dedf9c76880dea79cd672e4541f8f6bf61a Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:16:15 -0300
+Subject: [PATCH] feat: Search events by title
+
+Event::searchByTitle uses LIKE with a bound parameter. With a search term
+the listing shows every match without pagination.
+---
+ app/Controllers/Admin/EventsController.php    | 23 +++++---
+ app/Models/Event.php                          | 23 ++++++++
+ app/views/admin/events/index.phtml            | 17 +++++-
+ .../admin/events/SearchEventsCest.php         | 54 +++++++++++++++++++
+ .../Admin/EventsControllerTest.php            | 45 ++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 21 ++++++++
+ 6 files changed, 174 insertions(+), 9 deletions(-)
+ create mode 100644 tests/Acceptance/admin/events/SearchEventsCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..7b04c72 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -15,15 +15,24 @@ class EventsController extends Controller
+ 
+     public function index(Request $request): void
+     {
+-        $paginator = Event::paginate(
+-            page: max(1, (int) $request->getParam('page', 1)),
+-            per_page: self::PER_PAGE,
+-            route: 'admin.events.paginate'
+-        );
+-        $events = $paginator->registers();
++        $q = $request->getParam('q');
++        $q = is_string($q) ? trim($q) : '';
++
++        if ($q !== '') {
++            // Com busca, sem paginação: todos os Eventos cujo título contém o termo.
++            $events = Event::searchByTitle($q);
++            $paginator = null;
++        } else {
++            $paginator = Event::paginate(
++                page: max(1, (int) $request->getParam('page', 1)),
++                per_page: self::PER_PAGE,
++                route: 'admin.events.paginate'
++            );
++            $events = $paginator->registers();
++        }
+ 
+         $title = 'Eventos';
+-        $this->render('admin/events/index', compact('events', 'paginator', 'title'));
++        $this->render('admin/events/index', compact('events', 'paginator', 'q', 'title'));
+     }
+ 
+     public function show(Request $request): void
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..8cedc50 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -4,7 +4,9 @@ namespace App\Models;
+ 
+ use Core\Database\ActiveRecord\BelongsTo;
+ use Core\Database\ActiveRecord\Model;
++use Core\Database\Database;
+ use Lib\Validations;
++use PDO;
+ use PDOException;
+ 
+ /**
+@@ -144,6 +146,27 @@ class Event extends Model
+         return $this->enrollmentsCount() > 0;
+     }
+ 
++    /**
++     * Eventos cujo título contém o termo (LIKE). O termo vai por bindValue, nunca concatenado no SQL.
++     *
++     * @return array<static>
++     */
++    public static function searchByTitle(string $term): array
++    {
++        $columns = implode(', ', static::$columns);
++        $table = static::$table;
++
++        $stmt = Database::getDatabaseConn()->prepare(
++            "SELECT id, {$columns} FROM {$table} WHERE title LIKE :term"
++        );
++        $stmt->bindValue(':term', "%{$term}%");
++        $stmt->execute();
++
++        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
++
++        return array_map(fn($row) => new static($row), $rows);
++    }
++
+     /**
+      * Remove o Evento sem lançar exceção (P03): se houver Inscrições, não remove,
+      * retorna false e registra o motivo em errors('base').
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..eb59fc4 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -2,8 +2,19 @@
+     <a class="btn btn-primary" href="<?= route('admin.events.new') ?>">Novo Evento</a>
+ </div>
+ 
++<form class="row g-2 align-items-center mb-3" method="get" action="<?= route('admin.events.index') ?>">
++    <div class="col-auto">
++        <label class="visually-hidden" for="search_q">Buscar por título</label>
++        <input class="form-control" type="search" id="search_q" name="q" placeholder="Buscar por título"
++               value="<?= htmlspecialchars($q) ?>">
++    </div>
++    <div class="col-auto">
++        <button type="submit" class="btn btn-outline-secondary">Buscar</button>
++    </div>
++</form>
++
+ <?php if (empty($events)) : ?>
+-    <p>Nenhum evento cadastrado.</p>
++    <p><?= $q !== '' ? 'Nenhum evento encontrado para "' . htmlspecialchars($q) . '".' : 'Nenhum evento cadastrado.' ?></p>
+ <?php else : ?>
+     <table class="table table-striped align-middle">
+         <thead>
+@@ -37,5 +48,7 @@
+         </tbody>
+     </table>
+ 
+-    <?php $paginator->renderPagesNavigation(); ?>
++    <?php if ($paginator !== null) : ?>
++        <?php $paginator->renderPagesNavigation(); ?>
++    <?php endif; ?>
+ <?php endif; ?>
+diff --git a/tests/Acceptance/admin/events/SearchEventsCest.php b/tests/Acceptance/admin/events/SearchEventsCest.php
+new file mode 100644
+index 0000000..f82c046
+--- /dev/null
++++ b/tests/Acceptance/admin/events/SearchEventsCest.php
+@@ -0,0 +1,54 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use Tests\Support\AcceptanceTester;
++
++class SearchEventsCest extends BaseEventsCest
++{
++    public function searchByTitle(AcceptanceTester $page): void
++    {
++        $page->wantTo('Buscar Eventos por parte do título');
++        $page->amOnPage('/admin/events');
++
++        // "Evento 1" casa com Evento 10 a 16 (7 Eventos), não com "Evento 01".
++        $page->fillField('#search_q', 'Evento 1');
++        $page->click('Buscar');
++
++        $page->seeCurrentUrlEquals('/admin/events?q=Evento+1');
++        $page->seeInField('#search_q', 'Evento 1');
++        $page->seeNumberOfElements('table tbody tr', 7);
++        for ($i = 1; $i <= self::TOTAL_EVENTS; $i++) {
++            if ($i >= 10) {
++                $page->see($this->title($i), 'table');
++            } else {
++                $page->dontSee($this->title($i), 'table');
++            }
++        }
++        // Com busca, sem paginação.
++        $page->dontSeeElement('.pagination');
++    }
++
++    public function searchWithoutResults(AcceptanceTester $page): void
++    {
++        $page->wantTo('Buscar Eventos sem resultado');
++        $page->amOnPage('/admin/events?q=Inexistente');
++
++        $page->see('Nenhum evento encontrado para "Inexistente".');
++        $page->dontSeeElement('table');
++    }
++
++    public function emptySearchShowsPaginatedListing(AcceptanceTester $page): void
++    {
++        $page->wantTo('Busca vazia mostra a listagem normal');
++        $page->amOnPage('/admin/events');
++
++        $page->fillField('#search_q', '   ');
++        $page->click('Buscar');
++
++        $page->seeNumberOfElements('table tbody tr', self::PER_PAGE);
++        $page->see($this->title(1), 'table');
++        $page->seeElement('.pagination');
++        $page->see('Mostrando 1 - 5 de 16');
++    }
++}
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..122bbe0 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -56,6 +56,51 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringNotContainsString('Evento 5', $page2);
+     }
+ 
++    public function test_index_searches_by_title_without_pagination(): void
++    {
++        // 7 Eventos com "Git" no título: com busca, todos aparecem numa página só.
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => sprintf('Oficina de Git %02d', $i)]);
++        }
++        $this->createEvent(['title' => 'Palestra de Segurança']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['q' => ' git ']);
++
++        $this->assertStringContainsString('Oficina de Git 01', $response);
++        $this->assertStringContainsString('Oficina de Git 07', $response);
++        $this->assertStringNotContainsString('Palestra de Segurança', $response);
++        $this->assertStringContainsString('value="git"', $response);
++        $this->assertStringNotContainsString('class="pagination', $response);
++    }
++
++    public function test_index_search_without_results_shows_message_and_escapes_term(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['q' => '<b>x</b>']);
++
++        $this->assertStringContainsString('Nenhum evento encontrado para "&lt;b&gt;x&lt;/b&gt;".', $response);
++        $this->assertStringContainsString('value="&lt;b&gt;x&lt;/b&gt;"', $response);
++        $this->assertStringNotContainsString('<b>x</b>', $response);
++        $this->assertStringNotContainsString('Oficina de Git', $response);
++    }
++
++    public function test_index_with_empty_or_invalid_search_lists_paginated(): void
++    {
++        for ($i = 1; $i <= 7; $i++) {
++            $this->createEvent(['title' => sprintf('Evento %02d', $i)]);
++        }
++
++        foreach (['', '   ', ['git']] as $q) {
++            $response = $this->get(action: 'index', controllerName: self::CONTROLLER, params: ['q' => $q]);
++
++            $this->assertStringContainsString('Evento 05', $response);
++            $this->assertStringNotContainsString('Evento 06', $response);
++            $this->assertStringContainsString('/admin/events/page/2', $response);
++            $this->assertStringContainsString('value=""', $response);
++        }
++    }
++
+     public function test_index_shows_date_and_enrollments_over_capacity(): void
+     {
+         $event = $this->createEvent(['capacity' => 10, 'starts_on' => date('Y-m-d', strtotime('+10 days'))]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..e43d1f6 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -375,6 +375,27 @@ class EventTest extends TestCase
+         $this->assertCount(0, Event::where(['kind' => 'short_course']));
+     }
+ 
++    public function test_search_by_title_should_match_part_of_the_title(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++        $this->createEvent(['title' => 'Palestra de Segurança']);
++
++        $found = Event::searchByTitle('git');
++
++        $this->assertCount(1, $found);
++        $this->assertInstanceOf(Event::class, $found[0]);
++        $this->assertEquals('Oficina de Git', $found[0]->title);
++        $this->assertCount(2, Event::searchByTitle('de'));
++        $this->assertCount(0, Event::searchByTitle('Python'));
++    }
++
++    public function test_search_by_title_should_not_inject_sql(): void
++    {
++        $this->createEvent(['title' => 'Oficina de Git']);
++
++        $this->assertCount(0, Event::searchByTitle("' OR '1'='1"));
++    }
++
+     public function test_find_by_and_exists(): void
+     {
+         $event = $this->createEvent(['title' => 'Único']);
+-- 
+2.54.0 (Apple Git-157)
+
