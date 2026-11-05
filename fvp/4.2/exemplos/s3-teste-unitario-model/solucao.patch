@@ -1,0 +1,381 @@
+From b0e1b12fabfdb7aaf18b88bbf37774856906f549 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:20:23 -0300
+Subject: [PATCH 1/2] feat: Duplicate an Event from the listing
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+POST /admin/events/{id}/duplicate saves Event::duplicate() (all columns, title + ' (cópia)', starts_on in 7 days, no enrollments) and redirects to the copy's edit form with a flash.
+---
+ app/Controllers/Admin/EventsController.php    | 19 +++++++
+ app/Models/Event.php                          | 20 +++++++
+ app/views/admin/events/index.phtml            |  3 ++
+ config/routes.php                             |  2 +
+ .../admin/events/DuplicateEventCest.php       | 40 ++++++++++++++
+ tests/Integration/Access/EventsAccessTest.php | 20 ++++++-
+ .../Admin/EventsControllerTest.php            | 52 +++++++++++++++++++
+ 7 files changed, 155 insertions(+), 1 deletion(-)
+ create mode 100644 tests/Acceptance/admin/events/DuplicateEventCest.php
+
+diff --git a/app/Controllers/Admin/EventsController.php b/app/Controllers/Admin/EventsController.php
+index ca4ada1..6a2da36 100644
+--- a/app/Controllers/Admin/EventsController.php
++++ b/app/Controllers/Admin/EventsController.php
+@@ -110,6 +110,25 @@ class EventsController extends Controller
+         $this->redirectTo(route('admin.events.index'));
+     }
+ 
++    public function duplicate(Request $request): void
++    {
++        $event = $this->findEvent($request);
++        if ($event === null) {
++            $this->eventNotFound();
++            return;
++        }
++
++        $copy = $event->duplicate();
++
++        if ($copy->save()) {
++            FlashMessage::success('Evento duplicado! Revise os dados.');
++            $this->redirectTo(route('admin.events.edit', ['id' => $copy->id]));
++        } else {
++            FlashMessage::danger('Não foi possível duplicar o evento!');
++            $this->redirectTo(route('admin.events.show', ['id' => $event->id]));
++        }
++    }
++
+     /**
+      * Copia para o Evento só os campos do formulário (nunca user_id nem id).
+      */
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..e0708f7 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -114,6 +114,26 @@ class Event extends Model
+         }
+     }
+ 
++    /**
++     * P6: cópia do Evento, ainda não salva (o controller chama save()). Copia todas as colunas,
++     * acrescenta " (cópia)" ao título e marca a data para daqui a 7 dias. Inscrições não são
++     * copiadas: ficam em event_user, e a cópia nasce sem nenhuma.
++     */
++    public function duplicate(): Event
++    {
++        $copy = new Event();
++
++        foreach (static::$columns as $column) {
++            $copy->$column = $this->$column;
++        }
++
++        // title é VARCHAR(255) e " (cópia)" tem 8 caracteres.
++        $copy->title = mb_substr($this->title, 0, 247) . ' (cópia)';
++        $copy->starts_on = date('Y-m-d', strtotime('+7 days'));
++
++        return $copy;
++    }
++
+     public function user(): BelongsTo
+     {
+         return $this->belongsTo(User::class, 'user_id');
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..35811ef 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -31,6 +31,9 @@
+                             <input type="hidden" name="_method" value="DELETE">
+                             <button type="submit" class="btn btn-sm btn-outline-danger">Remover</button>
+                         </form>
++                        <form class="d-inline" action="<?= route('admin.events.duplicate', ['id' => $event->id]) ?>" method="post">
++                            <button type="submit" class="btn btn-sm btn-outline-dark">Duplicar</button>
++                        </form>
+                     </td>
+                 </tr>
+             <?php endforeach; ?>
+diff --git a/config/routes.php b/config/routes.php
+index 9ee0c90..838477d 100644
+--- a/config/routes.php
++++ b/config/routes.php
+@@ -33,5 +33,7 @@ Route::middleware('auth')->group(function () {
+         Route::put('/admin/events/{id}', [AdminEventsController::class, 'update'])->name('admin.events.update');
+         Route::delete('/admin/events/{id}', [AdminEventsController::class, 'destroy'])
+             ->name('admin.events.destroy');
++        Route::post('/admin/events/{id}/duplicate', [AdminEventsController::class, 'duplicate'])
++            ->name('admin.events.duplicate');
+     });
+ });
+diff --git a/tests/Acceptance/admin/events/DuplicateEventCest.php b/tests/Acceptance/admin/events/DuplicateEventCest.php
+new file mode 100644
+index 0000000..de26b36
+--- /dev/null
++++ b/tests/Acceptance/admin/events/DuplicateEventCest.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace Tests\Acceptance\admin\events;
++
++use App\Models\Event;
++use PHPUnit\Framework\Assert;
++use Tests\Support\AcceptanceTester;
++
++/**
++ * P6: duplicar um Evento pela listagem abre a edição da cópia.
++ */
++class DuplicateEventCest extends BaseEventsCest
++{
++    public function duplicateEventOpensTheCopyForEditing(AcceptanceTester $page): void
++    {
++        $original = $this->events[1];
++
++        $page->wantTo('Duplicar um Evento');
++        $page->amOnPage('/admin/events');
++        $page->click('Duplicar', $this->rowOf('Evento 01'));
++
++        $copy = Event::findBy(['title' => 'Evento 01 (cópia)']);
++        Assert::assertNotNull($copy);
++        $page->seeCurrentUrlEquals("/admin/events/{$copy->id}/edit");
++        $page->see('Evento duplicado! Revise os dados.');
++        $page->see('Editar Evento', 'h1');
++        $page->seeInField('#event_title', 'Evento 01 (cópia)');
++        $page->seeInField('#event_starts_on', date('Y-m-d', strtotime('+7 days')));
++        $page->seeInField('#event_location', $original->location);
++
++        // A cópia nasce sem Inscrições; o original (lotado) continua com as 3.
++        Assert::assertSame(0, $copy->enrollmentsCount());
++        Assert::assertSame(3, $original->enrollmentsCount());
++        Assert::assertCount(self::TOTAL_EVENTS + 1, Event::all());
++
++        $page->amOnPage('/admin/events/page/4');
++        $page->see('Evento 01 (cópia)', 'table');
++        $page->see('0/3', $this->rowOf('Evento 01 (cópia)'));
++    }
++}
+diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
+index 4396d14..b57d1c5 100644
+--- a/tests/Integration/Access/EventsAccessTest.php
++++ b/tests/Integration/Access/EventsAccessTest.php
+@@ -78,7 +78,7 @@ class EventsAccessTest extends TestCase
+     }
+ 
+     /**
+-     * As 8 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy).
++     * As 9 rotas admin.events.* (index, paginate, new, create, show, edit, update, destroy, duplicate).
+      *
+      * @return array<string, array{string, string}>
+      */
+@@ -106,6 +106,7 @@ class EventsAccessTest extends TestCase
+         return [
+             'admin.events.update' => ['PUT', '/admin/events/1'],
+             'admin.events.destroy' => ['DELETE', '/admin/events/1'],
++            'admin.events.duplicate' => ['POST', '/admin/events/1/duplicate'],
+         ];
+     }
+ 
+@@ -159,6 +160,23 @@ class EventsAccessTest extends TestCase
+         $this->assertEquals('Palestra de Acesso', $events[0]->title);
+     }
+ 
++    public function test_participant_should_not_duplicate_events(): void
++    {
++        $this->loggedClient($this->participant)->post("/admin/events/{$this->event->id}/duplicate");
++
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_admin_should_duplicate_an_event(): void
++    {
++        $response = $this->loggedClient($this->admin)->post("/admin/events/{$this->event->id}/duplicate");
++
++        $copy = Event::findBy(['title' => 'Palestra de Acesso (cópia)']);
++        $this->assertNotNull($copy);
++        $this->assertEquals(302, $response->getStatusCode());
++        $this->assertEquals("/admin/events/{$copy->id}/edit", $response->getHeaderLine('Location'));
++    }
++
+     public function test_admin_should_access_events_index_and_new(): void
+     {
+         $client = $this->loggedClient($this->admin);
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..7e0bd21 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -265,6 +265,58 @@ class EventsControllerTest extends ControllerTestCase
+         );
+     }
+ 
++    /* ------------------- P6: duplicar ------------------- */
++
++    public function test_index_has_a_duplicate_button(): void
++    {
++        $event = $this->createEvent();
++
++        $response = $this->get(action: 'index', controllerName: self::CONTROLLER);
++
++        $this->assertStringContainsString("action=\"/admin/events/{$event->id}/duplicate\" method=\"post\"", $response);
++        $this->assertStringContainsString('Duplicar', $response);
++    }
++
++    public function test_duplicate_creates_a_copy_and_redirects_to_its_edit_form(): void
++    {
++        $event = $this->createEvent(['title' => 'Oficina Original', 'audience' => ['students', 'staff']]);
++        $this->enroll($event);
++
++        $response = $this->post(action: 'duplicate', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertCount(2, Event::all());
++        $copy = Event::findBy(['title' => 'Oficina Original (cópia)']);
++        $this->assertNotNull($copy);
++        $this->assertNotEquals($event->id, $copy->id);
++        $this->assertEquals(['students', 'staff'], $copy->audienceList());
++        $this->assertEquals(date('Y-m-d', strtotime('+7 days')), $copy->starts_on);
++        $this->assertSame(0, $copy->enrollmentsCount());
++        $this->assertSame("Location: /admin/events/{$copy->id}/edit", $response);
++        $this->assertEquals('Evento duplicado! Revise os dados.', $_SESSION['flash']['success']);
++    }
++
++    public function test_duplicate_keeps_the_original_unchanged(): void
++    {
++        $event = $this->createEvent(['title' => 'Oficina Original']);
++        $this->enroll($event);
++
++        $this->post(action: 'duplicate', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $original = Event::findById($event->id);
++        $this->assertEquals('Oficina Original', $original->title);
++        $this->assertEquals($event->starts_on, $original->starts_on);
++        $this->assertSame(1, $original->enrollmentsCount());
++    }
++
++    public function test_duplicate_with_unknown_id_redirects_to_index(): void
++    {
++        $response = $this->post(action: 'duplicate', controllerName: self::CONTROLLER, params: ['id' => 9999]);
++
++        $this->assertSame('Location: /admin/events', $response);
++        $this->assertEquals('Evento não encontrado!', $_SESSION['flash']['danger']);
++        $this->assertCount(0, Event::all());
++    }
++
+     /**
+      * @param array<string, mixed> $overrides
+      * @return array<string, mixed>
+-- 
+2.54.0 (Apple Git-157)
+
+
+From af1a650d7d7b50a2588ceaba0e2c21891b707be2 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 16:22:21 -0300
+Subject: [PATCH 2/2] test: Cover Event::duplicate() with unit tests
+
+---
+ tests/Unit/Models/Events/EventTest.php | 93 ++++++++++++++++++++++++++
+ 1 file changed, 93 insertions(+)
+
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..c24e3da 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,99 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    /* ------------------- P6: duplicate ------------------- */
++
++    public function test_duplicate_should_return_a_new_unsaved_event(): void
++    {
++        $event = $this->createEvent();
++
++        $copy = $event->duplicate();
++
++        $this->assertTrue($copy->newRecord());
++        $this->assertCount(1, Event::all());
++    }
++
++    public function test_duplicate_should_append_copy_to_the_title(): void
++    {
++        $copy = $this->createEvent(['title' => 'Oficina de Git'])->duplicate();
++
++        $this->assertEquals('Oficina de Git (cópia)', $copy->title);
++    }
++
++    public function test_duplicate_should_keep_the_title_within_255_characters(): void
++    {
++        $copy = $this->createEvent(['title' => str_repeat('a', 255)])->duplicate();
++
++        $this->assertEquals(255, mb_strlen($copy->title));
++        $this->assertStringEndsWith(' (cópia)', $copy->title);
++        $this->assertTrue($copy->save());
++    }
++
++    public function test_duplicate_should_move_starts_on_to_seven_days_from_today(): void
++    {
++        $copy = $this->createEvent(['starts_on' => date('Y-m-d', strtotime('+60 days'))])->duplicate();
++
++        $this->assertEquals(date('Y-m-d', strtotime('+7 days')), $copy->starts_on);
++    }
++
++    public function test_duplicate_of_a_past_event_should_be_valid(): void
++    {
++        $copy = $this->createPastEvent()->duplicate();
++
++        $this->assertTrue($copy->isValid());
++    }
++
++    public function test_duplicate_should_keep_the_other_columns_and_the_user(): void
++    {
++        $other = $this->createUser('Outro Admin', 'other@example.com', 'admin');
++        $event = $this->createEvent([
++            'user_id' => $other->id,
++            'kind' => 'workshop',
++            'modality' => 'hybrid',
++            'audience' => 'staff,community',
++            'location' => 'Laboratório B203',
++            'capacity' => 25,
++        ]);
++
++        $copy = $event->duplicate();
++
++        $this->assertEquals($other->id, $copy->user_id);
++        $this->assertEquals('workshop', $copy->kind);
++        $this->assertEquals('hybrid', $copy->modality);
++        $this->assertEquals(['staff', 'community'], $copy->audienceList());
++        $this->assertEquals($event->description, $copy->description);
++        $this->assertEquals('Laboratório B203', $copy->location);
++        $this->assertEquals(25, $copy->capacity);
++    }
++
++    public function test_duplicate_should_be_persisted_without_enrollments(): void
++    {
++        $event = $this->createEvent(['capacity' => 5]);
++        $this->enroll($event, 3);
++
++        $copy = $event->duplicate();
++        $this->assertTrue($copy->save());
++
++        $found = Event::findById($copy->id);
++        $this->assertNotNull($found);
++        $this->assertNotEquals($event->id, $found->id);
++        $this->assertEquals("{$event->title} (cópia)", $found->title);
++        $this->assertSame(0, $found->enrollmentsCount());
++        $this->assertSame(3, $event->enrollmentsCount());
++        $this->assertCount(2, Event::all());
++    }
++
++    public function test_duplicate_should_not_change_the_original(): void
++    {
++        $event = $this->createEvent(['title' => 'Original']);
++
++        $event->duplicate()->save();
++
++        $original = Event::findById($event->id);
++        $this->assertEquals('Original', $original->title);
++        $this->assertEquals($event->starts_on, $original->starts_on);
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+
