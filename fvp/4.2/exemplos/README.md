@@ -136,6 +136,11 @@ Acceptance 23. A contagem de cada cenário está no README dele.
 - P13. Admin inscreve e remove um Participante pelo show
   `p13-admin-inscreve-remove-participante/`
   - feat: Admin enrolls and removes participants from event show
+- P14. Comprovante de inscrição
+  `p14-comprovante-inscricao/`
+  - feat: Add events listing and details for participants
+  - feat: Allow participants to enroll in events
+  - feat: Add enrollment receipt code
 - P16. Remover Evento só com código de confirmação gerado no backend
   `p16-remover-com-codigo-confirmacao/`
   - feat: Require a confirmation code to remove an Event
