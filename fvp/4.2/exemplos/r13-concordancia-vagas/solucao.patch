@@ -1,0 +1,151 @@
+From cac97757d08c74d4cc820d9b6d5e6abe44287498 Mon Sep 17 00:00:00 2001
+From: blame42 <346530647+git-blame-42@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 17:45:17 -0300
+Subject: [PATCH] feat: Show available spots with number agreement
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Event::availableSpotsLabel() returns 'Lotado', '1 vaga disponível' or
+'N vagas disponíveis'. The show page uses it instead of the fixed
+'disponíveis', and the spots column is now labeled Inscritos/Vagas.
+---
+ app/Models/Event.php                          | 14 ++++++++++
+ app/views/admin/events/index.phtml            |  2 +-
+ app/views/admin/events/show.phtml             |  4 +--
+ .../Admin/EventsControllerTest.php            | 24 ++++++++++++++++
+ tests/Unit/Models/Events/EventTest.php        | 28 +++++++++++++++++++
+ 5 files changed, 69 insertions(+), 3 deletions(-)
+
+diff --git a/app/Models/Event.php b/app/Models/Event.php
+index ba66870..06998be 100644
+--- a/app/Models/Event.php
++++ b/app/Models/Event.php
+@@ -139,6 +139,20 @@ class Event extends Model
+         return max(0, (int) $this->capacity - $this->enrollmentsCount());
+     }
+ 
++    /**
++     * Vagas restantes em texto, com concordância: "Lotado", "1 vaga disponível" ou "N vagas disponíveis".
++     */
++    public function availableSpotsLabel(): string
++    {
++        $spots = $this->availableSpots();
++
++        return match ($spots) {
++            0 => 'Lotado',
++            1 => '1 vaga disponível',
++            default => "{$spots} vagas disponíveis",
++        };
++    }
++
+     public function hasEnrollments(): bool
+     {
+         return $this->enrollmentsCount() > 0;
+diff --git a/app/views/admin/events/index.phtml b/app/views/admin/events/index.phtml
+index 6835d74..5a95429 100644
+--- a/app/views/admin/events/index.phtml
++++ b/app/views/admin/events/index.phtml
+@@ -12,7 +12,7 @@
+                 <th>Tipo</th>
+                 <th>Data</th>
+                 <th>Local</th>
+-                <th>Vagas</th>
++                <th>Inscritos/Vagas</th>
+                 <th>Ações</th>
+             </tr>
+         </thead>
+diff --git a/app/views/admin/events/show.phtml b/app/views/admin/events/show.phtml
+index 6cab74e..3907d14 100644
+--- a/app/views/admin/events/show.phtml
++++ b/app/views/admin/events/show.phtml
+@@ -25,10 +25,10 @@ $audience = array_map(fn(string $value) => Event::AUDIENCES[$value] ?? $value, $
+     <dt class="col-sm-3">Local</dt>
+     <dd class="col-sm-9"><?= htmlspecialchars($event->location) ?></dd>
+ 
+-    <dt class="col-sm-3">Vagas</dt>
++    <dt class="col-sm-3">Inscritos/Vagas</dt>
+     <dd class="col-sm-9">
+         <?= $event->enrollmentsCount() ?>/<?= (int) $event->capacity ?>
+-        (<?= $event->availableSpots() ?> disponíveis)
++        (<?= htmlspecialchars($event->availableSpotsLabel()) ?>)
+     </dd>
+ </dl>
+ 
+diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+index bc62d1d..108927a 100644
+--- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
++++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
+@@ -160,6 +160,30 @@ class EventsControllerTest extends ControllerTestCase
+         $this->assertStringContainsString("/admin/events/{$event->id}/edit", $response);
+     }
+ 
++    public function test_show_renders_available_spots_with_agreement(): void
++    {
++        $event = $this->createEvent(['title' => 'Oficina Pequena', 'capacity' => 2]);
++        $this->enroll($event);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('Inscritos/Vagas', $response);
++        $this->assertStringContainsString('1/2', $response);
++        $this->assertStringContainsString('(1 vaga disponível)', $response);
++        $this->assertStringNotContainsString('disponíveis', $response);
++    }
++
++    public function test_show_renders_full_event(): void
++    {
++        $event = $this->createEvent(['title' => 'Oficina Cheia', 'capacity' => 1]);
++        $this->enroll($event);
++
++        $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => $event->id]);
++
++        $this->assertStringContainsString('1/1', $response);
++        $this->assertStringContainsString('(Lotado)', $response);
++    }
++
+     public function test_show_with_unknown_id_redirects_to_index(): void
+     {
+         $response = $this->get(action: 'show', controllerName: self::CONTROLLER, params: ['id' => 9999]);
+diff --git a/tests/Unit/Models/Events/EventTest.php b/tests/Unit/Models/Events/EventTest.php
+index f961b4c..4b3bbe4 100644
+--- a/tests/Unit/Models/Events/EventTest.php
++++ b/tests/Unit/Models/Events/EventTest.php
+@@ -490,6 +490,34 @@ class EventTest extends TestCase
+         $this->assertEquals(3, $event->availableSpots());
+     }
+ 
++    public function test_available_spots_label_should_agree_with_the_number(): void
++    {
++        $empty = $this->createEvent(['title' => 'Sem inscrições', 'capacity' => 3]);
++        $this->assertEquals('3 vagas disponíveis', $empty->availableSpotsLabel());
++
++        $almostFull = $this->createEvent(['title' => 'Quase cheio', 'capacity' => 3]);
++        $this->enroll($almostFull, 2);
++        $this->assertEquals('1 vaga disponível', $almostFull->availableSpotsLabel());
++
++        $full = $this->createEvent(['title' => 'Cheio', 'capacity' => 3]);
++        $this->enroll($full, 3);
++        $this->assertEquals('Lotado', $full->availableSpotsLabel());
++    }
++
++    public function test_available_spots_label_should_be_full_when_capacity_is_below_enrollments(): void
++    {
++        $event = $this->createEvent(['capacity' => 3]);
++        $this->enroll($event, 2);
++
++        // update() grava sem validar: capacity fica abaixo das Inscrições.
++        $this->assertTrue($event->update(['capacity' => 1]));
++        $stored = Event::findById($event->id);
++        $this->assertInstanceOf(Event::class, $stored);
++
++        $this->assertEquals(0, $stored->availableSpots());
++        $this->assertEquals('Lotado', $stored->availableSpotsLabel());
++    }
++
+     /* ------------------- starts_on: "não passada" só no create e quando a data muda ------------------- */
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+
