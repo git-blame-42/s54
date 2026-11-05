@@ -220,7 +220,7 @@ class EventsAccessTest extends TestCase
         $this->assertNull(Event::findById((int) $this->event->id));
     }
 
-    /* ------------------- Q5: token CSRF ------------------- */
+    /* ------------------- token CSRF ------------------- */
 
     /**
      * Lê o token CSRF da sessão do cliente na página do formulário (como o navegador faria).

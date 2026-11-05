@@ -7,7 +7,7 @@ use Core\Http\Request;
 use Lib\Csrf;
 
 /**
- * Q5: requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da
+ * Requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da
  * sessão. GET passa direto. Sem token ou com token errado: 403.
  */
 class VerifyCsrf implements Middleware
@@ -20,14 +20,14 @@ class VerifyCsrf implements Middleware
             return;
         }
 
-        // Só do corpo do POST (como o _method do O9): token na query string vaza em log e Referer.
+        // Só do corpo do POST (como o _method, que também só vale no corpo): token na query string vaza em log e Referer.
         if (!Csrf::check($_POST[Csrf::FIELD] ?? null)) {
             $this->deny();
         }
     }
 
     /**
-     * protected para o teste unitário trocar o exit por um registro (dublê, como no F2 da 4.1).
+     * protected para o teste unitário trocar o exit por um registro (dublê).
      */
     protected function deny(): void
     {

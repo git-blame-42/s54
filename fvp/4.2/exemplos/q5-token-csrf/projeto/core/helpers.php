@@ -12,7 +12,7 @@ if (!function_exists('dd')) {
 
 if (!function_exists('csrf_field')) {
     /**
-     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE (Q5).
+     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE.
      */
     function csrf_field(): string
     {

@@ -220,7 +220,7 @@ index 2b82ddc..d43262a 100644
 2.54.0 (Apple Git-157)
 
 
-From 41fd8bac627ebdab7915e8ab697d41d198a49da0 Mon Sep 17 00:00:00 2001
+From f0f5debd473ef5ba0aabdabab2bd2b8b9dc56113 Mon Sep 17 00:00:00 2001
 From: blame42 <346530647+git-blame-42@users.noreply.github.com>
 Date: Thu, 5 Nov 2026 17:07:13 -0300
 Subject: [PATCH 2/2] feat: Protect Event forms with a CSRF token
@@ -248,7 +248,7 @@ Adds Lib\Csrf (session token, hash_equals), the csrf_field() helper and the Veri
 
 diff --git a/app/Middleware/VerifyCsrf.php b/app/Middleware/VerifyCsrf.php
 new file mode 100644
-index 0000000..273f4d7
+index 0000000..0157c5c
 --- /dev/null
 +++ b/app/Middleware/VerifyCsrf.php
 @@ -0,0 +1,39 @@
@@ -261,7 +261,7 @@ index 0000000..273f4d7
 +use Lib\Csrf;
 +
 +/**
-+ * Q5: requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da
++ * Requisições que alteram estado (POST, PUT, DELETE) precisam do campo _token igual ao da
 + * sessão. GET passa direto. Sem token ou com token errado: 403.
 + */
 +class VerifyCsrf implements Middleware
@@ -274,14 +274,14 @@ index 0000000..273f4d7
 +            return;
 +        }
 +
-+        // Só do corpo do POST (como o _method do O9): token na query string vaza em log e Referer.
++        // Só do corpo do POST (como o _method, que também só vale no corpo): token na query string vaza em log e Referer.
 +        if (!Csrf::check($_POST[Csrf::FIELD] ?? null)) {
 +            $this->deny();
 +        }
 +    }
 +
 +    /**
-+     * protected para o teste unitário trocar o exit por um registro (dublê, como no F2 da 4.1).
++     * protected para o teste unitário trocar o exit por um registro (dublê).
 +     */
 +    protected function deny(): void
 +    {
@@ -327,7 +327,7 @@ index b58901e..a01559e 100644
      ];
  }
 diff --git a/config/routes.php b/config/routes.php
-index 9ee0c90..e0a9234 100644
+index 9ee0c90..f3854d8 100644
 --- a/config/routes.php
 +++ b/config/routes.php
 @@ -14,24 +14,30 @@ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.log
@@ -337,7 +337,7 @@ index 9ee0c90..e0a9234 100644
 -// Área do usuário (somente autenticados)
 -Route::middleware('auth')->group(function () {
 -    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
-+// Q5: token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do 'auth': o
++// Token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do 'auth': o
 +// RouteWrapperMiddleware acrescenta os middlewares quando cada grupo fecha, então o grupo interno roda
 +// primeiro. Assim auth e admin decidem antes (sem sessão -> /login; Participante -> /dashboard) e o
 +// csrf só confere quem já pode estar ali.
@@ -379,7 +379,7 @@ index 9ee0c90..e0a9234 100644
      });
  });
 diff --git a/core/helpers.php b/core/helpers.php
-index 50cb552..d533dd1 100644
+index 50cb552..0cf84c2 100644
 --- a/core/helpers.php
 +++ b/core/helpers.php
 @@ -10,6 +10,17 @@ if (!function_exists('dd')) {
@@ -388,7 +388,7 @@ index 50cb552..d533dd1 100644
  
 +if (!function_exists('csrf_field')) {
 +    /**
-+     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE (Q5).
++     * Campo oculto com o token CSRF da sessão, para os forms que fazem POST/PUT/DELETE.
 +     */
 +    function csrf_field(): string
 +    {
@@ -402,7 +402,7 @@ index 50cb552..d533dd1 100644
       * @param string $name
 diff --git a/lib/Csrf.php b/lib/Csrf.php
 new file mode 100644
-index 0000000..dfa67b8
+index 0000000..123bf40
 --- /dev/null
 +++ b/lib/Csrf.php
 @@ -0,0 +1,41 @@
@@ -411,7 +411,7 @@ index 0000000..dfa67b8
 +namespace Lib;
 +
 +/**
-+ * Token CSRF por sessão (Q5; mesmo modelo do A15 da 4.1).
++ * Token CSRF por sessão.
 + *
 + * token() gera 32 bytes aleatórios (64 caracteres hex) na primeira chamada e guarda em
 + * $_SESSION['_token']; as chamadas seguintes devolvem o mesmo valor. check() compara com
@@ -448,7 +448,7 @@ index 0000000..dfa67b8
 +    }
 +}
 diff --git a/tests/Integration/Access/EventsAccessTest.php b/tests/Integration/Access/EventsAccessTest.php
-index 17dc2d5..300d09e 100644
+index 17dc2d5..59a8cb1 100644
 --- a/tests/Integration/Access/EventsAccessTest.php
 +++ b/tests/Integration/Access/EventsAccessTest.php
 @@ -210,13 +210,116 @@ class EventsAccessTest extends TestCase
@@ -466,7 +466,7 @@ index 17dc2d5..300d09e 100644
          $this->assertNull(Event::findById((int) $this->event->id));
      }
  
-+    /* ------------------- Q5: token CSRF ------------------- */
++    /* ------------------- token CSRF ------------------- */
 +
 +    /**
 +     * Lê o token CSRF da sessão do cliente na página do formulário (como o navegador faria).
@@ -570,14 +570,14 @@ index 17dc2d5..300d09e 100644
      {
          $client = $this->loggedClient($this->admin);
 diff --git a/tests/Integration/Controllers/Admin/EventsControllerTest.php b/tests/Integration/Controllers/Admin/EventsControllerTest.php
-index bc62d1d..b2986fe 100644
+index bc62d1d..302c262 100644
 --- a/tests/Integration/Controllers/Admin/EventsControllerTest.php
 +++ b/tests/Integration/Controllers/Admin/EventsControllerTest.php
 @@ -52,6 +52,8 @@ class EventsControllerTest extends ControllerTestCase
          $this->assertStringNotContainsString('Evento 6', $page1);
          $this->assertStringContainsString('/admin/events/page/2', $page1);
          $this->assertStringContainsString('Evento 6', $page2);
-+        // Q5: o form "Remover" de cada linha traz o token CSRF.
++        // O form "Remover" de cada linha traz o token CSRF.
 +        $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $page1);
          $this->assertStringContainsString('Evento 7', $page2);
          $this->assertStringNotContainsString('Evento 5', $page2);
@@ -586,7 +586,7 @@ index bc62d1d..b2986fe 100644
          $this->assertStringContainsString('type="date"', $response);
          $this->assertStringContainsString('Salvar', $response);
          $this->assertStringNotContainsString('name="_method"', $response);
-+        // Q5: o form traz o token CSRF da sessão.
++        // O form traz o token CSRF da sessão.
 +        $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $response);
      }
  

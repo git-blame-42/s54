@@ -3,7 +3,7 @@
 namespace Lib;
 
 /**
- * Token CSRF por sessão (Q5; mesmo modelo do A15 da 4.1).
+ * Token CSRF por sessão.
  *
  * token() gera 32 bytes aleatórios (64 caracteres hex) na primeira chamada e guarda em
  * $_SESSION['_token']; as chamadas seguintes devolvem o mesmo valor. check() compara com

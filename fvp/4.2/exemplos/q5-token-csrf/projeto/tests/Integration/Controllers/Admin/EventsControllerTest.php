@@ -52,7 +52,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringNotContainsString('Evento 6', $page1);
         $this->assertStringContainsString('/admin/events/page/2', $page1);
         $this->assertStringContainsString('Evento 6', $page2);
-        // Q5: o form "Remover" de cada linha traz o token CSRF.
+        // O form "Remover" de cada linha traz o token CSRF.
         $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $page1);
         $this->assertStringContainsString('Evento 7', $page2);
         $this->assertStringNotContainsString('Evento 5', $page2);
@@ -82,7 +82,7 @@ class EventsControllerTest extends ControllerTestCase
         $this->assertStringContainsString('type="date"', $response);
         $this->assertStringContainsString('Salvar', $response);
         $this->assertStringNotContainsString('name="_method"', $response);
-        // Q5: o form traz o token CSRF da sessão.
+        // O form traz o token CSRF da sessão.
         $this->assertStringContainsString('name="_token" value="' . \Lib\Csrf::token() . '"', $response);
     }
 

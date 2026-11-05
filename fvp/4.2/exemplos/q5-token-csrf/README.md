@@ -15,7 +15,7 @@ Branch no clone: `fvp/q5-token-csrf`, empilhada sobre O9
 | Commit    | Mensagem                                                 |
 |-----------|----------------------------------------------------------|
 | `7b2351f` | (base, O9) `fix: Accept _method override only from ...`  |
-| `41fd8ba` | `feat: Protect Event forms with a CSRF token`            |
+| `f0f5deb` | `feat: Protect Event forms with a CSRF token`            |
 
 A mensagem completa do commit de O9 é `fix: Accept _method override
 only from POST body`.
@@ -150,9 +150,9 @@ público. `<caminho>` abaixo é `s50/fvp/4.2/exemplos/q5-token-csrf`.
 
 Escolha o que aplicar:
 
-- Sem O9: aplique o range inteiro `5dedab5..41fd8ba` (O9 + Q5, dois
+- Sem O9: aplique o range inteiro `5dedab5..f0f5deb` (O9 + Q5, dois
   commits, nessa ordem).
-- Com O9 já aplicado: aplique só o topo, `41fd8ba`.
+- Com O9 já aplicado: aplique só o topo, `f0f5deb`.
 
 ### 1. A partir do clone `projeto/` (remote temporário)
 
@@ -161,9 +161,9 @@ cd /caminho/do/seu/repositorio
 git remote add fvp-q5 s50/fvp/4.2/exemplos/q5-token-csrf/projeto
 git fetch fvp-q5 fvp/q5-token-csrf
 # range (O9 + Q5):
-git cherry-pick 5dedab5..41fd8ba
+git cherry-pick 5dedab5..f0f5deb
 # ou só o topo, se já tem O9:
-# git cherry-pick 41fd8ba
+# git cherry-pick f0f5deb
 git remote remove fvp-q5
 ```
 
@@ -172,8 +172,8 @@ git remote remove fvp-q5
 ```
 git fetch s50/fvp/4.2/exemplos/q5-token-csrf/solucao.bundle \
     fvp/q5-token-csrf:fvp-q5
-git cherry-pick 5dedab5..41fd8ba
-# ou só o topo: git cherry-pick 41fd8ba
+git cherry-pick 5dedab5..f0f5deb
+# ou só o topo: git cherry-pick f0f5deb
 # opcional, limpa a ref
 git branch -D fvp-q5
 ```

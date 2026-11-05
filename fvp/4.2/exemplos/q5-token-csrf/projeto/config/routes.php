@@ -14,7 +14,7 @@ Route::get('/login', [AuthenticationsController::class, 'new'])->name('users.log
 Route::post('/login', [AuthenticationsController::class, 'authenticate'])->name('users.authenticate');
 Route::get('/logout', [AuthenticationsController::class, 'destroy'])->name('users.logout');
 
-// Q5: token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do 'auth': o
+// Token CSRF em todo POST/PUT/DELETE da área logada (GET passa). Fica POR FORA do 'auth': o
 // RouteWrapperMiddleware acrescenta os middlewares quando cada grupo fecha, então o grupo interno roda
 // primeiro. Assim auth e admin decidem antes (sem sessão -> /login; Participante -> /dashboard) e o
 // csrf só confere quem já pode estar ali.
